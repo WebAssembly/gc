@@ -48,6 +48,9 @@ let nat s at =
 let nat32 s at =
   try I32.of_string_u s with Failure _ -> error at "i32 constant out of range"
 
+let to_obj_type s at =
+  try Object.Obj.of_string s with Failure _ -> error at "i32 constant out of range"
+
 
 (* Symbolic variables *)
 
@@ -56,7 +59,10 @@ module VarMap = Map.Make(String)
 type space = {mutable map : int32 VarMap.t; mutable count : int32}
 let empty () = {map = VarMap.empty; count = 0l}
 
-type types = {mutable tmap : int32 VarMap.t; mutable tlist : Types.func_type list}
+type types = {
+    mutable tmap : int32 VarMap.t;
+    mutable tlist : Types.func_or_type_descr_type list
+}
 let empty_types () = {tmap = VarMap.empty; tlist = []}
 
 type context =
@@ -134,14 +140,18 @@ let explicit_sig (c : context) var_sem ty at =
   if
     x.it < Lib.List32.length c.types.tlist &&
     ty <> empty_type &&
-    ty <> Lib.List32.nth c.types.tlist x.it
+    (* ty <> Lib.List32.nth c.types.tlist x.it *)
+    match Lib.List32.nth c.types.tlist x.it with
+    | FuncElemType f -> ty <> f
+    | TypeDescrElemType t -> true
   then
     error at "signature mismatch";
   x
 
 let inline_type (c : context) ty at =
-  match Lib.List.index_of ty c.types.tlist with
-  | None -> let i = Lib.List32.length c.types.tlist in anon_type c ty; i @@ at
+  let fty = FuncElemType ty in
+  match Lib.List.index_of fty c.types.tlist with
+  | None -> let i = Lib.List32.length c.types.tlist in anon_type c fty; i @@ at
   | Some i -> Int32.of_int i @@ at
 
 %}
@@ -150,6 +160,7 @@ let inline_type (c : context) ty at =
 %token NOP DROP BLOCK END IF THEN ELSE SELECT LOOP BR BR_IF BR_TABLE
 %token CALL CALL_INDIRECT RETURN
 %token GET_LOCAL SET_LOCAL TEE_LOCAL GET_GLOBAL SET_GLOBAL
+%token NEW_OBJECT TYPE_DESCR TYPES
 %token LOAD STORE OFFSET_EQ_NAT ALIGN_EQ_NAT
 %token CONST UNARY BINARY COMPARE CONVERT
 %token UNREACHABLE CURRENT_MEMORY GROW_MEMORY
@@ -200,6 +211,7 @@ text_list :
 value_type_list :
   | /* empty */ { [] }
   | VALUE_TYPE value_type_list { $1 :: $2 }
+  | NAT value_type_list { ObjType (to_obj_type $1 (ati 1)) :: $2 }
 
 elem_type :
   | ANYFUNC { AnyFuncType }
@@ -305,6 +317,7 @@ plain_instr :
   | RETURN { fun c -> return }
   | CALL var { fun c -> call ($2 c func) }
   | CALL_INDIRECT var { fun c -> call_indirect ($2 c type_) }
+  | NEW_OBJECT var { fun c -> new_object ($2 c local) }
   | DROP { fun c -> drop }
   | SELECT { fun c -> select }
   | GET_LOCAL var { fun c -> get_local ($2 c local) }
@@ -581,9 +594,16 @@ inline_export :
 
 type_def :
   | LPAR TYPE func_type RPAR
-    { fun c -> anon_type c $3 }
+    { fun c -> anon_type c (FuncElemType $3) }
   | LPAR TYPE bind_var func_type RPAR  /* Sugar */
-    { fun c -> bind_type c $3 $4 }
+    { fun c -> bind_type c $3 (FuncElemType $4) }
+
+types :
+  | LPAR TYPES value_type_list RPAR { TypeDescrType $3 }
+
+type_descr :
+  | LPAR TYPE_DESCR types RPAR
+    { fun c -> anon_type c (TypeDescrElemType $3) }
 
 start :
   | LPAR START var RPAR
@@ -593,6 +613,8 @@ module_fields :
   | /* empty */
     { fun (c : context) -> {empty_module with types = c.types.tlist} }
   | type_def module_fields
+    { fun c -> $1 c; $2 c }
+  | type_descr module_fields
     { fun c -> $1 c; $2 c }
   | global module_fields
     { fun c -> let g, exs = $1 c in let m = $2 c in

@@ -1,9 +1,15 @@
 (* Types *)
 
 type value_type = I32Type | I64Type | F32Type | F64Type
+    | ObjType of Object.Obj.t
 type elem_type = AnyFuncType
 type stack_type = value_type list
 type func_type = FuncType of stack_type * stack_type
+type type_descr_type = TypeDescrType of stack_type
+
+type func_or_type_descr_type =
+        FuncElemType of func_type
+        | TypeDescrElemType of type_descr_type
 
 type 'a limits = {min : 'a; max : 'a option}
 type mutability = Immutable | Mutable
@@ -22,6 +28,7 @@ type external_type =
 let size = function
   | I32Type | F32Type -> 4
   | I64Type | F64Type -> 8
+  | ObjType _ -> 8 (* TODO: does this size depend on platform? *)
 
 
 (* String conversion *)
@@ -31,6 +38,7 @@ let string_of_value_type = function
   | I64Type -> "i64"
   | F32Type -> "f32"
   | F64Type -> "f64"
+  | ObjType o -> Object.Obj.to_string o
 
 let string_of_value_types = function
   | [t] -> string_of_value_type t

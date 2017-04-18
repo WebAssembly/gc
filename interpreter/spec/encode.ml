@@ -94,6 +94,7 @@ let encode m =
       | I64Type -> vs7 (-0x02)
       | F32Type -> vs7 (-0x03)
       | F64Type -> vs7 (-0x04)
+      | ObjType o -> vs7 (-0x05) ; vs32 (Object.Obj.get_type_index o)
 
     let elem_type = function
       | AnyFuncType -> vs7 (-0x10)
@@ -107,6 +108,10 @@ let encode m =
 
     let func_type = function
       | FuncType (ins, out) -> vs7 (-0x20); vec value_type ins; vec value_type out
+
+    let func_or_type_descr_type = function
+        | FuncElemType f -> func_type f
+        | TypeDescrElemType t -> assert false
 
     let limits vu {min; max} =
       bool (max <> None); vu min; opt vu max
@@ -157,6 +162,8 @@ let encode m =
       | Call x -> op 0x10; var x
       | CallIndirect x -> op 0x11; var x; u8 0x00
 
+      | NewObject x -> op 0x12; var x
+
       | Drop -> op 0x1a
       | Select -> op 0x1b
 
@@ -194,6 +201,7 @@ let encode m =
         op 0x35; memop mo
       | Load {ty = F32Type | F64Type; sz = Some _; _} ->
         assert false
+      | Load {ty = ObjType _; _} -> assert false
 
       | Store ({ty = I32Type; sz = None; _} as mo) -> op 0x36; memop mo
       | Store ({ty = I64Type; sz = None; _} as mo) -> op 0x37; memop mo
@@ -206,6 +214,7 @@ let encode m =
       | Store ({ty = I64Type; sz = Some Mem16; _} as mo) -> op 0x3d; memop mo
       | Store ({ty = I64Type; sz = Some Mem32; _} as mo) -> op 0x3e; memop mo
       | Store {ty = F32Type | F64Type; sz = Some _; _} -> assert false
+      | Store {ty = ObjType _; _} -> assert false
 
       | CurrentMemory -> op 0x3f; u8 0x00
       | GrowMemory -> op 0x40; u8 0x00
@@ -214,11 +223,13 @@ let encode m =
       | Const {it = I64 c; _} -> op 0x42; vs64 c
       | Const {it = F32 c; _} -> op 0x43; f32 c
       | Const {it = F64 c; _} -> op 0x44; f64 c
+      | Const {it = Obj c; _} -> assert false
 
       | Test (I32 I32Op.Eqz) -> op 0x45
       | Test (I64 I64Op.Eqz) -> op 0x50
       | Test (F32 _) -> assert false
       | Test (F64 _) -> assert false
+      | Test (Obj _) -> assert false (* TODO implement this opcode? *)
 
       | Compare (I32 I32Op.Eq) -> op 0x46
       | Compare (I32 I32Op.Ne) -> op 0x47
@@ -255,6 +266,7 @@ let encode m =
       | Compare (F64 F64Op.Gt) -> op 0x64
       | Compare (F64 F64Op.Le) -> op 0x65
       | Compare (F64 F64Op.Ge) -> op 0x66
+      | Compare (Obj _) -> assert false
 
       | Unary (I32 I32Op.Clz) -> op 0x67
       | Unary (I32 I32Op.Ctz) -> op 0x68
@@ -279,6 +291,7 @@ let encode m =
       | Unary (F64 F64Op.Trunc) -> op 0x9d
       | Unary (F64 F64Op.Nearest) -> op 0x9e
       | Unary (F64 F64Op.Sqrt) -> op 0x9f
+      | Unary (Obj _) -> assert false
 
       | Binary (I32 I32Op.Add) -> op 0x6a
       | Binary (I32 I32Op.Sub) -> op 0x6b
@@ -327,6 +340,7 @@ let encode m =
       | Binary (F64 F64Op.Min) -> op 0xa4
       | Binary (F64 F64Op.Max) -> op 0xa5
       | Binary (F64 F64Op.CopySign) -> op 0xa6
+      | Binary (Obj _) -> assert false
 
       | Convert (I32 I32Op.ExtendSI32) -> assert false
       | Convert (I32 I32Op.ExtendUI32) -> assert false
@@ -361,6 +375,7 @@ let encode m =
       | Convert (F64 F64Op.PromoteF32) -> op 0xbb
       | Convert (F64 F64Op.DemoteF64) -> assert false
       | Convert (F64 F64Op.ReinterpretInt) -> op 0xbf
+      | Convert (Obj _) -> assert false
 
     let const c =
       list instr c.it; end_ ()
@@ -378,7 +393,7 @@ let encode m =
 
     (* Type section *)
     let type_section ts =
-      section 1 (vec func_type) ts (ts <> [])
+      section 1 (vec func_or_type_descr_type) ts (ts <> [])
 
     (* Import section *)
     let import_kind k =

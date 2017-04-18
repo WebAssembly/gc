@@ -178,24 +178,29 @@ let eq_of = function
   | I64Type -> Values.I64 I64Op.Eq
   | F32Type -> Values.F32 F32Op.Eq
   | F64Type -> Values.F64 F64Op.Eq
+  | ObjType _ -> assert false
 
 let and_of = function
   | I32Type | F32Type -> Values.I32 I32Op.And
   | I64Type | F64Type -> Values.I64 I64Op.And
+  | ObjType _ -> assert false
 
 let reinterpret_of = function
   | I32Type -> I32Type, Nop
   | I64Type -> I64Type, Nop
   | F32Type -> I32Type, Convert (Values.I32 I32Op.ReinterpretFloat)
   | F64Type -> I64Type, Convert (Values.I64 I64Op.ReinterpretFloat)
+  | ObjType _ -> assert false
 
 let canonical_nan_of = function
   | I32Type | F32Type -> Values.I32 (F32.to_bits F32.pos_nan)
   | I64Type | F64Type -> Values.I64 (F64.to_bits F64.pos_nan)
+  | ObjType _ -> assert false
 
 let abs_mask_of = function
   | I32Type | F32Type -> Values.I32 Int32.max_int
   | I64Type | F64Type -> Values.I64 Int64.max_int
+  | ObjType _ -> assert false
 
 let invoke t lits at =
   [t], FuncImport (1l @@ at) @@ at,
@@ -242,7 +247,7 @@ let wrap module_name item_name wrap_action wrap_assertion at =
   let itypes, ikind, action = wrap_action at in
   let locals, assertion = wrap_assertion at in
   let item = Lib.List32.length itypes @@ at in
-  let types = FuncType ([], []) :: itypes in
+  let types = FuncElemType (FuncType ([], [])) :: itypes in
   let imports = [{module_name; item_name; ikind} @@ at] in
   let ekind = FuncExport @@ at in
   let exports = [{name = "run"; ekind; item} @@ at] in
@@ -258,6 +263,7 @@ let wrap module_name item_name wrap_action wrap_assertion at =
 let is_js_value_type = function
   | I32Type -> true
   | I64Type | F32Type | F64Type -> false
+  | ObjType _ -> false
 
 let is_js_global_type = function
   | GlobalType (t, mut) -> is_js_value_type t && mut = Immutable
@@ -301,6 +307,7 @@ let of_literal lit =
   | Values.I64 i -> "int64(\"" ^ I64.to_string_s i ^ "\")"
   | Values.F32 z -> of_float (F32.to_float z)
   | Values.F64 z -> of_float (F64.to_float z)
+  | Values.Obj z -> assert false
 
 let of_definition def =
   let bs =
@@ -323,7 +330,7 @@ let of_action mods act =
     (match lookup mods x_opt name act.at with
     | ExternalFuncType ft when not (is_js_func_type ft) ->
       let FuncType (_, out) = ft in
-      Some (of_wrapper mods x_opt name (invoke ft lits), out)
+      Some (of_wrapper mods x_opt name (invoke (FuncElemType ft) lits), out)
     | _ -> None
     )
   | Get (x_opt, name) ->

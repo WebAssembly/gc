@@ -4,6 +4,8 @@ open Instance
 open Ast
 open Source
 
+open Object
+
 
 (* Errors *)
 
@@ -87,7 +89,11 @@ let func_elem inst x i at =
   | _ -> Crash.error at ("type mismatch for element " ^ Int32.to_string i)
 
 let func_type_of = function
-  | AstFunc (inst, f) -> lookup "type" (!inst).module_.it.types f.it.ftype
+  | AstFunc (inst, f) ->
+    let x = match lookup "type" (!inst).module_.it.types f.it.ftype with
+    | FuncElemType f -> f
+    | TypeDescrElemType t -> assert false
+    in x
   | HostFunc (t, _) -> t
 
 let take n (vs : 'a stack) at =
@@ -155,7 +161,10 @@ let rec step (inst : instance) (c : config) : config =
 
       | CallIndirect x, I32 i :: vs ->
         let clos = func_elem inst (0l @@ e.at) i e.at in
-        if type_ inst x <> func_type_of clos then
+        let fn = match type_ inst x with
+        | FuncElemType f -> f
+        | TypeDescrElemType t -> assert false
+        in if fn <> func_type_of clos then
           Trap.error e.at "indirect call signature mismatch";
         vs, [Invoke clos @@ e.at]
 
@@ -169,6 +178,7 @@ let rec step (inst : instance) (c : config) : config =
         v1 :: vs', []
 
       | GetLocal x, vs ->
+        Printf.eprintf "GetLocal x=%ld v=%s\n" x.it (string_of_values (List.rev vs));
         !(local c.locals x) :: vs, []
 
       | SetLocal x, v :: vs' ->
@@ -176,6 +186,7 @@ let rec step (inst : instance) (c : config) : config =
         vs', []
 
       | TeeLocal x, v :: vs' ->
+        Printf.eprintf "TeeLocal x=%ld v=%s\n" x.it (string_of_values (v::vs'));
         local c.locals x := v;
         v :: vs', []
 
@@ -185,6 +196,14 @@ let rec step (inst : instance) (c : config) : config =
       | SetGlobal x, v :: vs' ->
         global inst x := v;
         vs', []
+
+      | NewObject x, vs ->
+        Printf.eprintf "NewObject x=%ld v=%s\n" x.it (string_of_values (List.rev vs));
+        let obj = {
+            Obj.type_index = x.it;
+        } in
+        Printf.eprintf "obj=%s\n" (Obj.to_string obj);
+        Obj obj :: vs, []
 
       | Load {offset; ty; sz; _}, I32 i :: vs' ->
         let mem = memory inst (0l @@ e.at) in
@@ -398,8 +417,11 @@ let check_limits actual expected at =
 let add_import (ext : extern) (im : import) (inst : instance) : instance =
   let {ikind; _} = im.it in
   match ext, ikind.it with
-  | ExternalFunc clos, FuncImport x when func_type_of clos = type_ inst x ->
-    {inst with funcs = clos :: inst.funcs}
+  | ExternalFunc clos, FuncImport x
+    when func_type_of clos = match type_ inst x with
+    | FuncElemType f -> f
+    | TypeDescrElemType t -> assert false
+    -> {inst with funcs = clos :: inst.funcs}
   | ExternalTable tab, TableImport (TableType (lim, t))
     when Table.elem_type tab = t ->
     check_limits (Table.limits tab) lim ikind.at;

@@ -57,7 +57,9 @@ let stack_type ts = list (atom value_type) ts
 let func_type (FuncType (ins, out)) =
   Node ("func", decls "param" ins @ decls "result" out)
 
-let struct_type = func_type
+let struct_type = function
+    | FuncElemType f -> func_type f
+    | TypeDescrElemType t -> assert false
 
 let limits nat {min; max} =
   String.concat " " (nat min :: opt nat max)
@@ -170,6 +172,7 @@ let oper (intop, floatop) op =
   | I64 o -> intop "64" o
   | F32 o -> floatop "32" o
   | F64 o -> floatop "64" o
+  | Obj o -> assert false
   )
 
 let unop = oper (IntOp.unop, FloatOp.unop)
@@ -226,6 +229,7 @@ let rec instr e =
     | Return -> "return", []
     | Call x -> "call " ^ var x, []
     | CallIndirect x -> "call_indirect " ^ var x, []
+    | NewObject x -> "new_object " ^ var x, []
     | Drop -> "drop", []
     | Select -> "select", []
     | GetLocal x -> "get_local " ^ var x, []
@@ -378,6 +382,7 @@ let literal lit =
   | Values.I64 i -> Node ("i64.const " ^ I64.to_string_s i, [])
   | Values.F32 z -> Node ("f32.const " ^ F32.to_string z, [])
   | Values.F64 z -> Node ("f64.const " ^ F64.to_string z, [])
+  | Values.Obj z -> assert false
 
 let definition mode x_opt def =
   match mode, def.it with

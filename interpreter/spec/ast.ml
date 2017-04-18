@@ -44,16 +44,25 @@ struct
              | ReinterpretInt
 end
 
+module ObjOp =
+struct
+  type unop
+  type binop
+  type testop
+  type relop = Eq | Ne
+  type cvtop
+end
+
 module I32Op = IntOp
 module I64Op = IntOp
 module F32Op = FloatOp
 module F64Op = FloatOp
 
-type unop = (I32Op.unop, I64Op.unop, F32Op.unop, F64Op.unop) Values.op
-type binop = (I32Op.binop, I64Op.binop, F32Op.binop, F64Op.binop) Values.op
-type testop = (I32Op.testop, I64Op.testop, F32Op.testop, F64Op.testop) Values.op
-type relop = (I32Op.relop, I64Op.relop, F32Op.relop, F64Op.relop) Values.op
-type cvtop = (I32Op.cvtop, I64Op.cvtop, F32Op.cvtop, F64Op.cvtop) Values.op
+type unop = (I32Op.unop, I64Op.unop, F32Op.unop, F64Op.unop, ObjOp.unop) Values.op
+type binop = (I32Op.binop, I64Op.binop, F32Op.binop, F64Op.binop, ObjOp.binop) Values.op
+type testop = (I32Op.testop, I64Op.testop, F32Op.testop, F64Op.testop, ObjOp.binop) Values.op
+type relop = (I32Op.relop, I64Op.relop, F32Op.relop, F64Op.relop, ObjOp.relop) Values.op
+type cvtop = (I32Op.cvtop, I64Op.cvtop, F32Op.cvtop, F64Op.cvtop, ObjOp.cvtop) Values.op
 
 type 'a memop =
   {ty : value_type; align : int; offset : Memory.offset; sz : 'a option}
@@ -86,6 +95,7 @@ and instr' =
   | TeeLocal of var                   (* write local variable and keep value *)
   | GetGlobal of var                  (* read global variable *)
   | SetGlobal of var                  (* write global variable *)
+  | NewObject of var                  (* zero-initialise a GC object *)
   | Load of loadop                    (* read memory at address *)
   | Store of storeop                  (* write memory at address *)
   | CurrentMemory                     (* size of linear memory *)
@@ -175,7 +185,7 @@ and import' =
 type module_ = module_' Source.phrase
 and module_' =
 {
-  types : func_type list;
+  types : func_or_type_descr_type list;
   globals : global list;
   tables : table list;
   memories : memory list;
@@ -215,7 +225,11 @@ let export_kind_of_import_kind = function
 let import_type (m : module_) (im : import) : external_type =
   let {ikind; _} = im.it in
   match ikind.it with
-  | FuncImport x -> ExternalFuncType (Lib.List32.nth m.it.types x.it)
+  | FuncImport x ->
+    let fn = match (Lib.List32.nth m.it.types x.it) with
+    | FuncElemType f -> f
+    | TypeDescrElemType t -> assert false
+    in ExternalFuncType fn
   | TableImport t -> ExternalTableType t
   | MemoryImport t -> ExternalMemoryType t
   | GlobalImport t -> ExternalGlobalType t
@@ -230,7 +244,10 @@ let export_type (m : module_) (ex : export) : external_type =
       let open Lib.List32 in
       match ekind.it with
       | FuncExport ->
-        ExternalFuncType (nth m.it.types (nth m.it.funcs i).it.ftype.it)
+        let fn = match (nth m.it.types (nth m.it.funcs i).it.ftype.it) with
+        | FuncElemType f -> f
+        | TypeDescrElemType t -> assert false
+        in ExternalFuncType fn
       | TableExport -> ExternalTableType (nth m.it.tables i).it.ttype
       | MemoryExport -> ExternalMemoryType (nth m.it.memories i).it.mtype
       | GlobalExport -> ExternalGlobalType (nth m.it.globals i).it.gtype

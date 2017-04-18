@@ -17,7 +17,7 @@ let require b at s = if not b then error at s
 type context =
 {
   module_ : module_;
-  types : func_type list;
+  types : func_or_type_descr_type list;
   funcs : func_type list;
   tables : table_type list;
   memories : memory_type list;
@@ -125,6 +125,7 @@ let type_cvtop at = function
     | PromoteF32 -> F32Type
     | DemoteF64 -> error at "invalid conversion"
     ), F64Type
+  | Values.Obj _ -> assert false
 
 
 (* Expressions *)
@@ -203,8 +204,15 @@ let rec check_instr (c : context) (e : instr) (s : infer_stack_type) : op_type =
 
   | CallIndirect x ->
     ignore (table c (0l @@ e.at));
-    let FuncType (ins, out) = type_ c x in
+    let FuncType (ins, out) = match type_ c x with
+    | FuncElemType f -> f
+    | TypeDescrElemType t -> assert false
+    in
     (ins @ [I32Type]) --> out
+
+  | NewObject x ->
+    (* TODO verify that 'x' is a valid type descriptor index *)
+    [] --> [ObjType(Object.Obj.init x.it)]
 
   | Drop ->
     [peek 0 s] -~> []
@@ -305,7 +313,10 @@ and check_block (c : context) (es : instr list) (ts : stack_type) at =
 
 let check_func (c : context) (f : func) =
   let {ftype; locals; body} = f.it in
-  let FuncType (ins, out) = type_ c ftype in
+  let FuncType (ins, out) = match type_ c ftype with
+  | FuncElemType f -> f
+  | TypeDescrElemType t -> assert false
+  in
   check_arity (List.length out) f.at;
   let c' = {c with locals = ins @ locals; results = out; labels = [out]} in
   check_block c' body out f.at
@@ -382,7 +393,10 @@ let check_import (im : import) (c : context) : context =
   let {module_name = _; item_name = _; ikind} = im.it in
   match ikind.it with
   | FuncImport x ->
-    {c with funcs = type_ c x :: c.funcs}
+    let fn = match type_ c x with
+    | FuncElemType f -> f
+    | TypeDescrElemType t -> assert false
+    in {c with funcs = fn :: c.funcs}
   | TableImport t ->
     check_table_type t ikind.at; {c with tables = t :: c.tables}
   | MemoryImport t ->
@@ -417,7 +431,11 @@ let check_module (m : module_) =
   let c0 = List.fold_right check_import imports {(context m) with types} in
   let c1 =
     { c0 with
-      funcs = c0.funcs @ List.map (fun f -> type_ c0 f.it.ftype) funcs;
+      funcs = c0.funcs @ List.map (fun f ->
+          match type_ c0 f.it.ftype with
+          | FuncElemType f -> f
+          | TypeDescrElemType t -> assert false
+      ) funcs;
       tables = c0.tables @ List.map (fun tab -> tab.it.ttype) tables;
       memories = c0.memories @ List.map (fun mem -> mem.it.mtype) memories;
     }

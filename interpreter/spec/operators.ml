@@ -31,6 +31,8 @@ let tee_local x = TeeLocal x
 let get_global x = GetGlobal x
 let set_global x = SetGlobal x
 
+let new_object x = NewObject x
+
 let i32_load align offset = Load {ty = I32Type; align; offset; sz = None}
 let i64_load align offset = Load {ty = I64Type; align; offset; sz = None}
 let f32_load align offset = Load {ty = F32Type; align; offset; sz = None}

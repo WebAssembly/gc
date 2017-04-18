@@ -144,12 +144,15 @@ let stack_type s =
   | Some 0x40 -> skip 1 s; []
   | _ -> [value_type s]
 
-let func_type s =
+let func_or_type_descr_type s =
   match vs7 s with
   | -0x20 ->
     let ins = vec value_type s in
     let out = vec value_type s in
-    FuncType (ins, out)
+    FuncElemType ( FuncType (ins, out) )
+  | -0x5 ->
+    let types = vec value_type s in
+    TypeDescrElemType ( TypeDescrType (types) )
   | _ -> error s (pos s - 1) "invalid function type"
 
 let limits vu s =
@@ -477,7 +480,7 @@ let section tag f default s =
 (* Type section *)
 
 let type_section s =
-  section `TypeSection (vec func_type) [] s
+  section `TypeSection (vec func_or_type_descr_type) [] s
 
 
 (* Import section *)

@@ -99,6 +99,7 @@ let load mem a o t =
   | I64Type -> I64 (loadn mem 8 ea)
   | F32Type -> F32 (F32.of_bits (Int64.to_int32 (loadn mem 4 ea)))
   | F64Type -> F64 (F64.of_bits (loadn mem 8 ea))
+  | ObjType _ -> assert false
 
 let store mem a o v =
   let ea = effective_address a o in
@@ -107,6 +108,7 @@ let store mem a o v =
   | I64 x -> storen mem 8 ea x
   | F32 x -> storen mem 4 ea (Int64.of_int32 (F32.to_bits x))
   | F64 x -> storen mem 8 ea (F64.to_bits x)
+  | Obj x -> assert false
 
 let loadn_sx mem n ea =
   assert (n > 0 && n <= 8);

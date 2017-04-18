@@ -181,17 +181,36 @@ struct
     | DemoteF64 -> raise (TypeError (1, v, F64Type))
 end
 
+module ObjOp =
+struct
+  let unop op v =
+    match op with
+    | _ -> assert false
+  let binop op v =
+    match op with
+    | _ -> assert false
+  let testop op v =
+    match op with
+    | _ -> assert false
+  let relop op v =
+    match op with
+    | _ -> assert false
+  let cvtop op v =
+    match op with
+    | _ -> assert false
+end
 
 (* Dispatch *)
 
-let op i32 i64 f32 f64 = function
+let op i32 i64 f32 f64 obj = function
   | I32 x -> i32 x
   | I64 x -> i64 x
   | F32 x -> f32 x
   | F64 x -> f64 x
+  | Obj x -> obj x
 
-let eval_unop = op I32Op.unop I64Op.unop F32Op.unop F64Op.unop
-let eval_binop = op I32Op.binop I64Op.binop F32Op.binop F64Op.binop
-let eval_testop = op I32Op.testop I64Op.testop F32Op.testop F64Op.testop
-let eval_relop = op I32Op.relop I64Op.relop F32Op.relop F64Op.relop
-let eval_cvtop = op I32CvtOp.cvtop I64CvtOp.cvtop F32CvtOp.cvtop F64CvtOp.cvtop
+let eval_unop = op I32Op.unop I64Op.unop F32Op.unop F64Op.unop ObjOp.unop
+let eval_binop = op I32Op.binop I64Op.binop F32Op.binop F64Op.binop ObjOp.binop
+let eval_testop = op I32Op.testop I64Op.testop F32Op.testop F64Op.testop ObjOp.testop
+let eval_relop = op I32Op.relop I64Op.relop F32Op.relop F64Op.relop ObjOp.relop
+let eval_cvtop = op I32CvtOp.cvtop I64CvtOp.cvtop F32CvtOp.cvtop F64CvtOp.cvtop ObjOp.cvtop

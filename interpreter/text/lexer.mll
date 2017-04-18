@@ -166,6 +166,8 @@ rule token = parse
   | "get_global" { GET_GLOBAL }
   | "set_global" { SET_GLOBAL }
 
+  | "new_object" { NEW_OBJECT }
+
   | (nxx as t)".load"
     { LOAD (fun a o ->
         numop t (i32_load (opt a 2)) (i64_load (opt a 3))
@@ -285,6 +287,8 @@ rule token = parse
   | "grow_memory" { GROW_MEMORY }
 
   | "type" { TYPE }
+  | "types" { TYPES }
+  | "type_descr" { TYPE_DESCR }
   | "func" { FUNC }
   | "start" { START }
   | "param" { PARAM }
