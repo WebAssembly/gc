@@ -287,8 +287,9 @@ rule token = parse
   | "grow_memory" { GROW_MEMORY }
 
   | "type" { TYPE }
-  | "types" { TYPES }
-  | "type_descr" { TYPE_DESCR }
+  | "ref" { REF }
+  | "struct" { STRUCT }
+  | "field" { FIELD }
   | "func" { FUNC }
   | "start" { START }
   | "param" { PARAM }
