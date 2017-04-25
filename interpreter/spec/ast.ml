@@ -60,7 +60,7 @@ module F64Op = FloatOp
 
 type unop = (I32Op.unop, I64Op.unop, F32Op.unop, F64Op.unop, ObjOp.unop) Values.op
 type binop = (I32Op.binop, I64Op.binop, F32Op.binop, F64Op.binop, ObjOp.binop) Values.op
-type testop = (I32Op.testop, I64Op.testop, F32Op.testop, F64Op.testop, ObjOp.binop) Values.op
+type testop = (I32Op.testop, I64Op.testop, F32Op.testop, F64Op.testop, ObjOp.testop) Values.op
 type relop = (I32Op.relop, I64Op.relop, F32Op.relop, F64Op.relop, ObjOp.relop) Values.op
 type cvtop = (I32Op.cvtop, I64Op.cvtop, F32Op.cvtop, F64Op.cvtop, ObjOp.cvtop) Values.op
 
@@ -74,6 +74,9 @@ type storeop = Memory.mem_size memop
 
 type var = int32 Source.phrase
 type literal = Values.value Source.phrase
+
+type loadfieldop = {struct_ : var; field : int32}
+type storefieldop = {struct_ : var; field : int32}
 
 type instr = instr' Source.phrase
 and instr' =
@@ -96,6 +99,8 @@ and instr' =
   | GetGlobal of var                  (* read global variable *)
   | SetGlobal of var                  (* write global variable *)
   | NewObject of var                  (* zero-initialise a GC object *)
+  | LoadField of loadfieldop          (* load from field of a GC object *)
+  | StoreField of storefieldop        (* store to field of a GC object *)
   | Load of loadop                    (* read memory at address *)
   | Store of storeop                  (* write memory at address *)
   | CurrentMemory                     (* size of linear memory *)

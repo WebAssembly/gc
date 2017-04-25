@@ -32,6 +32,8 @@ let get_global x = GetGlobal x
 let set_global x = SetGlobal x
 
 let new_object x = NewObject x
+let load_field struct_ field = LoadField { struct_; field }
+let store_field struct_ field = StoreField { struct_; field }
 
 let i32_load align offset = Load {ty = I32Type; align; offset; sz = None}
 let i64_load align offset = Load {ty = I64Type; align; offset; sz = None}

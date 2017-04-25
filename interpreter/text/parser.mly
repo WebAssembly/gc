@@ -157,7 +157,7 @@ let inline_type (c : context) ty at =
 %token NOP DROP BLOCK END IF THEN ELSE SELECT LOOP BR BR_IF BR_TABLE
 %token CALL CALL_INDIRECT RETURN
 %token GET_LOCAL SET_LOCAL TEE_LOCAL GET_GLOBAL SET_GLOBAL
-%token NEW_OBJECT STRUCT REF FIELD
+%token NEW_OBJECT STRUCT REF FIELD STORE_FIELD LOAD_FIELD
 %token LOAD STORE OFFSET_EQ_NAT ALIGN_EQ_NAT
 %token CONST UNARY BINARY COMPARE CONVERT
 %token UNREACHABLE CURRENT_MEMORY GROW_MEMORY
@@ -213,7 +213,7 @@ value_type_list :
     { fun c -> ObjType ($3 c type_).it }
 */
   | LPAR REF VAR RPAR value_type_list
-    { fun c -> ObjType (Object.Obj.init (type_ c ($3 @@ at ()))) :: ($5 c) }
+    { fun c -> ObjType (type_ c ($3 @@ at ())) :: ($5 c) }
 
 elem_type :
   | ANYFUNC { AnyFuncType }
@@ -329,6 +329,10 @@ plain_instr :
   | SET_GLOBAL var { fun c -> set_global ($2 c global) }
   | LOAD offset_opt align_opt { fun c -> $1 $3 $2 }
   | STORE offset_opt align_opt { fun c -> $1 $3 $2 }
+  | LOAD_FIELD var NAT
+    { fun c -> load_field ($2 c type_) (Int32.of_string $3) }
+  | STORE_FIELD var NAT
+    { fun c -> store_field ($2 c type_) (Int32.of_string $3) }
   | CURRENT_MEMORY { fun c -> current_memory }
   | GROW_MEMORY { fun c -> grow_memory }
   | CONST literal { fun c -> fst (literal $1 $2) }

@@ -1,7 +1,7 @@
 (* Types *)
 
 type value_type = I32Type | I64Type | F32Type | F64Type
-    | ObjType of Object.Obj.t
+    | ObjType of int32
 type elem_type = AnyFuncType
 type stack_type = value_type list
 type func_type = FuncType of stack_type * stack_type
@@ -38,7 +38,7 @@ let string_of_value_type = function
   | I64Type -> "i64"
   | F32Type -> "f32"
   | F64Type -> "f64"
-  | ObjType o -> Object.Obj.to_string o
+  | ObjType o -> "t" ^ Int32.to_string o
 
 let string_of_value_types = function
   | [t] -> string_of_value_type t

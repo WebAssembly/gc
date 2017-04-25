@@ -167,6 +167,8 @@ rule token = parse
   | "set_global" { SET_GLOBAL }
 
   | "new_object" { NEW_OBJECT }
+  | "store_field" { STORE_FIELD }
+  | "load_field" { LOAD_FIELD }
 
   | (nxx as t)".load"
     { LOAD (fun a o ->

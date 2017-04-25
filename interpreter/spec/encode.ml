@@ -94,7 +94,7 @@ let encode m =
       | I64Type -> vs7 (-0x02)
       | F32Type -> vs7 (-0x03)
       | F64Type -> vs7 (-0x04)
-      | ObjType o -> vs7 (-0x05) ; vs32 (Object.Obj.get_type_index o)
+      | ObjType o -> vs7 (-0x05) ; vs32 o
 
     let elem_type = function
       | AnyFuncType -> vs7 (-0x10)
@@ -172,6 +172,11 @@ let encode m =
       | TeeLocal x -> op 0x22; var x
       | GetGlobal x -> op 0x23; var x
       | SetGlobal x -> op 0x24; var x
+
+      | LoadField ({struct_ = _; field = _} as fo) ->
+        op 0x26; var fo.struct_; u32 fo.field
+      | StoreField ({struct_ = _; field = _} as fo) ->
+        op 0x27; var fo.struct_; u32 fo.field
 
       | Load ({ty = I32Type; sz = None; _} as mo) -> op 0x28; memop mo
       | Load ({ty = I64Type; sz = None; _} as mo) -> op 0x29; memop mo

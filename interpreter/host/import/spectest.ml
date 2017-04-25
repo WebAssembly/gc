@@ -13,7 +13,7 @@ let global (GlobalType (t, _)) =
   | I64Type -> I64 666L
   | F32Type -> F32 (F32.of_float 666.6)
   | F64Type -> F64 (F64.of_float 666.6)
-  | ObjType i -> Obj i
+  | ObjType i -> Obj (Obj.init i)
 
 let table = Table.create AnyFuncType {min = 10l; max = Some 20l}
 let memory = Memory.create {min = 1l; max = Some 2l}

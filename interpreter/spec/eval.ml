@@ -4,8 +4,6 @@ open Instance
 open Ast
 open Source
 
-open Object
-
 
 (* Errors *)
 
@@ -101,6 +99,12 @@ let take n (vs : 'a stack) at =
 
 let drop n (vs : 'a stack) at =
   try Lib.List.drop n vs with Failure _ -> Crash.error at "stack underflow"
+
+let init_fields_with_default_value fields struct_ =
+    let init_field_with_default_value i ty =
+    Array.set fields i (Values.default_value ty)
+    in List.iteri init_field_with_default_value struct_;
+    fields
 
 
 (* Evaluation *)
@@ -199,11 +203,43 @@ let rec step (inst : instance) (c : config) : config =
 
       | NewObject x, vs ->
         Printf.eprintf "NewObject x=%ld v=%s\n" x.it (string_of_values (List.rev vs));
-        let obj = {
-            Obj.type_index = x.it;
+        let struct_ = match type_ inst x with
+        | FuncElemType f -> assert false
+        | TypeDescrElemType TypeDescrType t -> t
+        in let fields = Array.make (List.length struct_) (I32 I32.zero)
+        in let fields = init_fields_with_default_value fields struct_
+        in let obj = {
+            type_index = x.it;
+            fields = Some fields;
         } in
         Printf.eprintf "obj=%s\n" (Obj.to_string obj);
         Obj obj :: vs, []
+
+      | LoadField ({struct_ = _; field = _} as fo), Obj obj :: vs' ->
+        Printf.eprintf "LoadField vs=%s" (string_of_values (List.rev vs));
+        Printf.eprintf " struct=%ld" fo.struct_.it;
+        Printf.eprintf " field=%ld\n" fo.field;
+
+        Printf.eprintf "obj=%s\n" (Obj.to_string obj);
+
+        let v = match obj.fields with
+        | None -> assert false
+        | Some fields -> Array.get fields (Int32.to_int fo.field)
+        in v :: vs', []
+
+      | StoreField ({struct_ = _; field = _} as fo), v :: Obj obj :: vs' ->
+        Printf.eprintf "StoreField vs=%s" (string_of_values (List.rev vs));
+        Printf.eprintf " struct=%ld" fo.struct_.it;
+        Printf.eprintf " field=%ld\n" fo.field;
+
+        match obj.fields with
+        | None -> assert false
+        | Some fields -> Array.set fields (Int32.to_int fo.field) v;
+        ;
+
+        Printf.eprintf "obj=%s\n" (Obj.to_string obj);
+
+        vs', []
 
       | Load {offset; ty; sz; _}, I32 i :: vs' ->
         let mem = memory inst (0l @@ e.at) in

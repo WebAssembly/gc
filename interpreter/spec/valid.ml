@@ -212,7 +212,7 @@ let rec check_instr (c : context) (e : instr) (s : infer_stack_type) : op_type =
 
   | NewObject x ->
     (* TODO verify that 'x' is a valid type descriptor index *)
-    [] --> [ObjType(Object.Obj.init x.it)]
+    [] --> [ObjType x.it]
 
   | Drop ->
     [peek 0 s] -~> []
@@ -238,6 +238,18 @@ let rec check_instr (c : context) (e : instr) (s : infer_stack_type) : op_type =
     let GlobalType (t, mut) = global c x in
     require (mut = Mutable) x.at "global is immutable";
     [t] --> []
+
+  | LoadField ({struct_ = _; field = _} as fo) ->
+    let ty = match type_ c fo.struct_ with
+    | TypeDescrElemType TypeDescrType x -> List.nth x (Int32.to_int fo.field)
+    | FuncElemType f -> assert false
+    in [ObjType fo.struct_.it] --> [ty]
+
+  | StoreField ({struct_ = _; field = _} as fo) ->
+    let ty = match type_ c fo.struct_ with
+    | TypeDescrElemType TypeDescrType x -> List.nth x (Int32.to_int fo.field)
+    | FuncElemType f -> assert false
+    in [ObjType fo.struct_.it; ty] --> []
 
   | Load memop ->
     check_memop c memop (Lib.Option.map fst) e.at;

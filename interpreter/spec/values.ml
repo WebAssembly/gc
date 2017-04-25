@@ -1,14 +1,50 @@
 open Types
 
-open Object
-
 
 (* Values and operators *)
 
 type ('i32, 'i64, 'f32, 'f64, 'obj) op =
-  I32 of 'i32 | I64 of 'i64 | F32 of 'f32 | F64 of 'f64 | Obj of Obj.t
+  I32 of 'i32 | I64 of 'i64 | F32 of 'f32 | F64 of 'f64 | Obj of obj_type
+and value = (I32.t, I64.t, F32.t, F64.t, obj_type) op
+and obj_type = {
+    type_index : int32;
+    fields : value array option;
+}
 
-type value = (I32.t, I64.t, F32.t, F64.t, Obj.t) op
+
+let string_of_field = function
+  | I32 i -> I32.to_string_s i
+  | I64 i -> I64.to_string_s i
+  | F32 z -> F32.to_string z
+  | F64 z -> F64.to_string z
+  | Obj i -> "Obj"
+
+let string_of_fields x = match x with
+    | None -> "None"
+    | Some x ->
+      let fields = Array.to_list (Array.map string_of_field x)
+      in "[" ^ String.concat "," fields ^ "]"
+
+module Obj =
+  struct
+    type t = obj_type
+
+    let init ty = {
+        type_index = ty;
+        fields = None
+    }
+
+    let zero = init Int32.zero
+
+    let to_string o = "{"
+        ^ "type_index:" ^ (Int32.to_string o.type_index) ^ ","
+        ^ "fields:" ^ (string_of_fields o.fields)
+        ^ "}"
+    let of_string s =
+        init (Int32.of_int(int_of_string s))
+
+    let get_type_index o = o.type_index
+  end
 
 
 (* Typing *)
@@ -18,14 +54,14 @@ let type_of = function
   | I64 _ -> I64Type
   | F32 _ -> F32Type
   | F64 _ -> F64Type
-  | Obj o -> ObjType o
+  | Obj o -> ObjType (Obj.get_type_index o)
 
 let default_value = function
   | I32Type -> I32 I32.zero
   | I64Type -> I64 I64.zero
   | F32Type -> F32 F32.zero
   | F64Type -> F64 F64.zero
-  | ObjType i -> Obj Obj.zero
+  | ObjType i -> Obj (Obj.init i)
 
 
 (* Conversion *)

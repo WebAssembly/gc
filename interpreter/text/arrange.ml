@@ -230,6 +230,10 @@ let rec instr e =
     | Call x -> "call " ^ var x, []
     | CallIndirect x -> "call_indirect " ^ var x, []
     | NewObject x -> "new_object " ^ var x, []
+    | LoadField ({struct_ = _; field = _} as fo) ->
+      "load_field " ^ var fo.struct_ ^ " " ^ Int32.to_string fo.field, []
+    | StoreField ({struct_ = _; field = _} as fo) ->
+      "store_field " ^ var fo.struct_ ^ " " ^ Int32.to_string fo.field, []
     | Drop -> "drop", []
     | Select -> "select", []
     | GetLocal x -> "get_local " ^ var x, []
