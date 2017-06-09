@@ -133,15 +133,16 @@ open Types
 
 let value_type s =
   match vs7 s with
-  | -0x01 -> I32Type
-  | -0x02 -> I64Type
-  | -0x03 -> F32Type
-  | -0x04 -> F64Type
+  | -0x01 -> `I32Type
+  | -0x02 -> `I64Type
+  | -0x03 -> `F32Type
+  | -0x04 -> `F64Type
+  | -0x05 -> `RefType (vu32 s)
   | _ -> error s (pos s - 1) "invalid value type"
 
 let elem_type s =
   match vs7 s with
-  | -0x10 -> AnyFuncType
+  | -0x10 -> `AnyFuncType
   | _ -> error s (pos s - 1) "invalid element type"
 
 let stack_type s =
@@ -149,13 +150,16 @@ let stack_type s =
   | Some 0x40 -> skip 1 s; []
   | _ -> [value_type s]
 
-let func_type s =
+let def_type s =
   match vs7 s with
   | -0x20 ->
     let ins = vec value_type s in
     let out = vec value_type s in
-    FuncType (ins, out)
-  | _ -> error s (pos s - 1) "invalid function type"
+    `FuncType (ins, out)
+  | -0x21 ->
+    let ts = vec value_type s in
+    `StructType ts
+  | _ -> error s (pos s - 1) "invalid type definition"
 
 let limits vu s =
   let has_max = bool s in
@@ -166,11 +170,11 @@ let limits vu s =
 let table_type s =
   let t = elem_type s in
   let lim = limits vu32 s in
-  TableType (lim, t)
+  `TableType (lim, t)
 
 let memory_type s =
   let lim = limits vu32 s in
-  MemoryType lim
+  `MemoryType lim
 
 let mutability s =
   match u8 s with
@@ -181,7 +185,7 @@ let mutability s =
 let global_type s =
   let t = value_type s in
   let mut = mutability s in
-  GlobalType (t, mut)
+  `GlobalType (t, mut)
 
 
 (* Decode instructions *)
@@ -259,8 +263,9 @@ let rec instr s =
   | 0x22 -> tee_local (at var s)
   | 0x23 -> get_global (at var s)
   | 0x24 -> set_global (at var s)
-
-  | 0x25 | 0x26 | 0x27 as b -> illegal s pos b
+  | 0x25 -> let x = at var s in let y = at var s in get_field x y
+  | 0x26 -> let x = at var s in let y = at var s in set_field x y
+  | 0x27 -> new_ (at var s)
 
   | 0x28 -> let a, o = memop s in i32_load a o
   | 0x29 -> let a, o = memop s in i64_load a o
@@ -481,7 +486,7 @@ let section tag f default s =
 
 (* Type section *)
 
-let type_ s = at func_type s
+let type_ s = at def_type s
 
 let type_section s =
   section `TypeSection (vec type_) [] s

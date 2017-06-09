@@ -1,7 +1,6 @@
 open Bigarray
 open Lib.Bigarray
 open Types
-open Values
 
 type size = int32  (* number of pages *)
 type address = int64
@@ -10,8 +9,8 @@ type offset = int32
 type mem_size = Mem8 | Mem16 | Mem32
 type extension = SX | ZX
 
-type value = Values.value
-type value_type = Types.value_type
+type num = Values.num
+type num_type = Types.num_type
 type 'a limits = 'a Types.limits
 
 type memory' = (int, int8_unsigned_elt, c_layout) Array1.t
@@ -95,18 +94,18 @@ let storen mem n ea v =
 let load mem a o t =
   let ea = effective_address a o in
   match t with
-  | I32Type -> I32 (Int64.to_int32 (loadn mem 4 ea))
-  | I64Type -> I64 (loadn mem 8 ea)
-  | F32Type -> F32 (F32.of_bits (Int64.to_int32 (loadn mem 4 ea)))
-  | F64Type -> F64 (F64.of_bits (loadn mem 8 ea))
+  | `I32Type -> `I32 (Int64.to_int32 (loadn mem 4 ea))
+  | `I64Type -> `I64 (loadn mem 8 ea)
+  | `F32Type -> `F32 (F32.of_bits (Int64.to_int32 (loadn mem 4 ea)))
+  | `F64Type -> `F64 (F64.of_bits (loadn mem 8 ea))
 
 let store mem a o v =
   let ea = effective_address a o in
   match v with
-  | I32 x -> storen mem 4 ea (Int64.of_int32 x)
-  | I64 x -> storen mem 8 ea x
-  | F32 x -> storen mem 4 ea (Int64.of_int32 (F32.to_bits x))
-  | F64 x -> storen mem 8 ea (F64.to_bits x)
+  | `I32 x -> storen mem 4 ea (Int64.of_int32 x)
+  | `I64 x -> storen mem 8 ea x
+  | `F32 x -> storen mem 4 ea (Int64.of_int32 (F32.to_bits x))
+  | `F64 x -> storen mem 8 ea (F64.to_bits x)
 
 let loadn_sx mem n ea =
   assert (n > 0 && n <= 8);
@@ -117,26 +116,26 @@ let loadn_sx mem n ea =
 let load_packed sz ext mem a o t =
   let ea = effective_address a o in
   match sz, ext, t with
-  | Mem8,  ZX, I32Type -> I32 (Int64.to_int32 (loadn    mem 1 ea))
-  | Mem8,  SX, I32Type -> I32 (Int64.to_int32 (loadn_sx mem 1 ea))
-  | Mem8,  ZX, I64Type -> I64 (loadn mem 1 ea)
-  | Mem8,  SX, I64Type -> I64 (loadn_sx mem 1 ea)
-  | Mem16, ZX, I32Type -> I32 (Int64.to_int32 (loadn    mem 2 ea))
-  | Mem16, SX, I32Type -> I32 (Int64.to_int32 (loadn_sx mem 2 ea))
-  | Mem16, ZX, I64Type -> I64 (loadn    mem 2 ea)
-  | Mem16, SX, I64Type -> I64 (loadn_sx mem 2 ea)
-  | Mem32, ZX, I64Type -> I64 (loadn    mem 4 ea)
-  | Mem32, SX, I64Type -> I64 (loadn_sx mem 4 ea)
+  | Mem8,  ZX, `I32Type -> `I32 (Int64.to_int32 (loadn    mem 1 ea))
+  | Mem8,  SX, `I32Type -> `I32 (Int64.to_int32 (loadn_sx mem 1 ea))
+  | Mem8,  ZX, `I64Type -> `I64 (loadn mem 1 ea)
+  | Mem8,  SX, `I64Type -> `I64 (loadn_sx mem 1 ea)
+  | Mem16, ZX, `I32Type -> `I32 (Int64.to_int32 (loadn    mem 2 ea))
+  | Mem16, SX, `I32Type -> `I32 (Int64.to_int32 (loadn_sx mem 2 ea))
+  | Mem16, ZX, `I64Type -> `I64 (loadn    mem 2 ea)
+  | Mem16, SX, `I64Type -> `I64 (loadn_sx mem 2 ea)
+  | Mem32, ZX, `I64Type -> `I64 (loadn    mem 4 ea)
+  | Mem32, SX, `I64Type -> `I64 (loadn_sx mem 4 ea)
   | _ -> raise Type
 
 let store_packed sz mem a o v =
   let ea = effective_address a o in
   match sz, v with
-  | Mem8,  I32 x -> storen mem 1 ea (Int64.of_int32 x)
-  | Mem8,  I64 x -> storen mem 1 ea x
-  | Mem16, I32 x -> storen mem 2 ea (Int64.of_int32 x)
-  | Mem16, I64 x -> storen mem 2 ea x
-  | Mem32, I64 x -> storen mem 4 ea x
+  | Mem8,  `I32 x -> storen mem 1 ea (Int64.of_int32 x)
+  | Mem8,  `I64 x -> storen mem 1 ea x
+  | Mem16, `I32 x -> storen mem 2 ea (Int64.of_int32 x)
+  | Mem16, `I64 x -> storen mem 2 ea x
+  | Mem32, `I64 x -> storen mem 4 ea x
   | _ -> raise Type
 
 let blit mem addr data =

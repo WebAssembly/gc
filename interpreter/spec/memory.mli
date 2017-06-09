@@ -8,8 +8,8 @@ type offset = int32
 type mem_size = Mem8 | Mem16 | Mem32
 type extension = SX | ZX
 
-type value = Values.value
-type value_type = Types.value_type
+type num = Values.num
+type num_type = Types.num_type
 type 'a limits = 'a Types.limits
 
 exception Type
@@ -28,11 +28,11 @@ val limits : memory -> size limits
 val grow : memory -> size -> unit
   (* raise SizeLimit, SizeOverflow, OutOfMemory *)
 
-val load : memory -> address -> offset -> value_type -> value (* raise Bounds *)
-val store : memory -> address -> offset -> value -> unit (* raise Bounds *)
+val load : memory -> address -> offset -> num_type -> num (* raise Bounds *)
+val store : memory -> address -> offset -> num -> unit (* raise Bounds *)
 val load_packed :
-  mem_size -> extension -> memory -> address -> offset -> value_type -> value
+  mem_size -> extension -> memory -> address -> offset -> num_type -> num
  (* raise Type, Bounds *)
-val store_packed : mem_size -> memory -> address -> offset -> value -> unit
+val store_packed : mem_size -> memory -> address -> offset -> num -> unit
  (* raise Type, Bounds *)
 val blit : memory -> address -> string -> unit (* raise Bouunds *)

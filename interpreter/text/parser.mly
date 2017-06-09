@@ -59,24 +59,20 @@ module VarMap = Map.Make(String)
 type space = {mutable map : int32 VarMap.t; mutable count : int32}
 let empty () = {map = VarMap.empty; count = 0l}
 
-type types = {mutable tmap : int32 VarMap.t; mutable tlist : type_ list}
-let empty_types () = {tmap = VarMap.empty; tlist = []}
+type types = {mutable tmap : int32 VarMap.t; mutable tlist : type_ list; mutable flist : space list}
+let empty_types () = {tmap = VarMap.empty; tlist = []; flist = []}
 
 type context =
   { types : types; tables : space; memories : space;
     funcs : space; locals : space; globals : space; labels : int32 VarMap.t }
 
 let empty_context () =
-  { types = empty_types (); tables = empty (); memories = empty ();
-    funcs = empty (); locals = empty (); globals = empty ();
-    labels = VarMap.empty }
+  { types = empty_types (); funcs = empty (); tables = empty (); memories = empty ();
+    globals = empty (); locals = empty (); labels = VarMap.empty }
 
 let enter_func (c : context) =
   {c with labels = VarMap.empty; locals = empty ()}
 
-let type_ (c : context) x =
-  try VarMap.find x.it c.types.tmap
-  with Not_found -> error x.at ("unknown type " ^ x.it)
 
 let lookup category space x =
   try VarMap.find x.it space.map
@@ -91,15 +87,19 @@ let label (c : context) x =
   try VarMap.find x.it c.labels
   with Not_found -> error x.at ("unknown label " ^ x.it)
 
-let bind_type (c : context) x ty =
-  if VarMap.mem x.it c.types.tmap then
-    error x.at ("duplicate type " ^ x.it);
-  c.types.tmap <-
-    VarMap.add x.it (Lib.List32.length c.types.tlist) c.types.tmap;
-  c.types.tlist <- c.types.tlist @ [ty]
+let type_ (c : context) x =
+  try VarMap.find x.it c.types.tmap
+  with Not_found -> error x.at ("unknown type " ^ x.it)
 
-let anon_type (c : context) ty =
-  c.types.tlist <- c.types.tlist @ [ty]
+let def_type (c : context) x =
+  try (Lib.List32.nth c.types.tlist x.it).it
+  with Failure _ -> error x.at ("unknown type " ^ Int32.to_string x.it)
+
+let struct_ (c : context) x = Lib.List32.nth c.types.flist x.it
+let current_struct (c : context) = Lib.List.last c.types.flist
+
+let field y (c : context) x = lookup "field" (struct_ c y) x
+
 
 let bind category space x =
   if VarMap.mem x.it space.map then
@@ -119,6 +119,18 @@ let bind_memory (c : context) x = bind "memory" c.memories x
 let bind_label (c : context) x =
   {c with labels = VarMap.add x.it 0l (VarMap.map (Int32.add 1l) c.labels)}
 
+let bind_type (c : context) x ty =
+  if VarMap.mem x.it c.types.tmap then
+    error x.at ("duplicate type " ^ x.it);
+  c.types.tmap <-
+    VarMap.add x.it (Lib.List32.length c.types.tlist) c.types.tmap;
+  c.types.tlist <- c.types.tlist @ [ty]
+
+let bind_struct (c : context) =
+  c.types.flist <- c.types.flist @ [empty ()]
+
+let bind_field (c : context) x = bind "field" (current_struct c) x
+
 let anon category space n =
   let i = space.count in
   space.count <- Int32.add space.count n;
@@ -127,27 +139,34 @@ let anon category space n =
   i
 
 let anon_func (c : context) = anon "function" c.funcs 1l
-let anon_locals (c : context) ts =
-  ignore (anon "local" c.locals (Lib.List32.length ts))
+let anon_locals (c : context) n = ignore (anon "local" c.locals (Int32.of_int n))
 let anon_global (c : context) = anon "global" c.globals 1l
 let anon_table (c : context) = anon "table" c.tables 1l
 let anon_memory (c : context) = anon "memory" c.memories 1l
 let anon_label (c : context) =
   {c with labels = VarMap.map (Int32.add 1l) c.labels}
 
-let empty_type = FuncType ([], [])
+let anon_type (c : context) ty =
+  c.types.tlist <- c.types.tlist @ [ty]
 
-let inline_type (c : context) ty at =
-  match Lib.List.index_where (fun ty' -> ty'.it = ty) c.types.tlist with
+let anon_fields (c : context) n =
+  ignore (anon "field" (current_struct c) (Int32.of_int n))
+
+
+let empty_func_type = `FuncType ([], [])
+
+(* TODO: use proper type equality to find/check func types *)
+let inline_func_type (c : context) ft at =
+  let dt = (ft :> def_type) in
+  match Lib.List.index_where (fun ty -> eq_def_type ty.it dt) c.types.tlist with
   | Some i -> Int32.of_int i @@ at
   | None ->
-    let i = Lib.List32.length c.types.tlist in ignore (anon_type c (ty @@ at)); i @@ at
+    let i = Lib.List32.length c.types.tlist in
+    ignore (anon_type c (dt @@ at)); i @@ at
 
-let inline_type_explicit (c : context) x ty at =
+let inline_func_type_explicit (c : context) x ft at =
   if
-    ty <> empty_type &&
-    (x.it >= Lib.List32.length c.types.tlist ||
-     ty <> (Lib.List32.nth c.types.tlist x.it).it)
+    ft <> empty_func_type && not (eq_def_type (ft :> def_type) (def_type c x))
   then
     error at "inline function type does not match explicit type"
   else
@@ -155,11 +174,12 @@ let inline_type_explicit (c : context) x ty at =
 
 %}
 
-%token NAT INT FLOAT STRING VAR VALUE_TYPE ANYFUNC MUT LPAR RPAR
+%token NAT INT FLOAT STRING VAR NUM_TYPE REF STRUCT FIELD ANYFUNC MUT LPAR RPAR
 %token NOP DROP BLOCK END IF THEN ELSE SELECT LOOP BR BR_IF BR_TABLE
 %token CALL CALL_INDIRECT RETURN
 %token GET_LOCAL SET_LOCAL TEE_LOCAL GET_GLOBAL SET_GLOBAL
 %token LOAD STORE OFFSET_EQ_NAT ALIGN_EQ_NAT
+%token NEW GET_FIELD SET_FIELD
 %token CONST UNARY BINARY TEST COMPARE CONVERT
 %token UNREACHABLE CURRENT_MEMORY GROW_MEMORY
 %token FUNC START TYPE PARAM RESULT LOCAL GLOBAL
@@ -176,8 +196,8 @@ let inline_type_explicit (c : context) x ty at =
 %token<string> FLOAT
 %token<string> STRING
 %token<string> VAR
-%token<Types.value_type> VALUE_TYPE
-%token<string Source.phrase -> Ast.instr' * Values.value> CONST
+%token<Types.num_type> NUM_TYPE
+%token<string Source.phrase -> Ast.instr' * Values.num> CONST
 %token<Ast.instr'> UNARY
 %token<Ast.instr'> BINARY
 %token<Ast.instr'> TEST
@@ -210,41 +230,62 @@ string_list :
 
 /* Types */
 
+value_type :
+  | NUM_TYPE { fun c -> ($1 :> value_type) }
+  | LPAR REF var RPAR { fun c -> `RefType ($3 c type_).it }
+
 value_type_list :
-  | /* empty */ { [] }
-  | VALUE_TYPE value_type_list { $1 :: $2 }
+  | /* empty */ { 0, fun c -> [] }
+  | value_type value_type_list { fst $2 + 1, fun c -> $1 c :: snd $2 c }
 
 elem_type :
-  | ANYFUNC { AnyFuncType }
+  | ANYFUNC { fun c -> `AnyFuncType }
 
 global_type :
-  | VALUE_TYPE { GlobalType ($1, Immutable) }
-  | LPAR MUT VALUE_TYPE RPAR { GlobalType ($3, Mutable) }
+  | value_type { fun c -> `GlobalType ($1 c, Immutable) }
+  | LPAR MUT value_type RPAR { fun c -> `GlobalType ($3 c, Mutable) }
 
 func_type :
   | LPAR FUNC func_sig RPAR { $3 }
 
 func_sig :
   | /* empty */
-    { FuncType ([], []) }
+    { fun c -> `FuncType ([], []) }
   | LPAR RESULT value_type_list RPAR func_sig
-    { let FuncType (ins, out) = $5 in
+    { fun c ->
+      let `FuncType (ins, out) = $5 c in
       if ins <> [] then error (at ()) "result before parameter";
-      FuncType (ins, $3 @ out) }
+      `FuncType (ins, snd $3 c @ out) }
   | LPAR PARAM value_type_list RPAR func_sig
-    { let FuncType (ins, out) = $5 in FuncType ($3 @ ins, out) }
-  | LPAR PARAM bind_var VALUE_TYPE RPAR func_sig  /* Sugar */
-    { let FuncType (ins, out) = $6 in FuncType ($4 :: ins, out) }
+    { fun c ->
+      let `FuncType (ins, out) = $5 c in `FuncType (snd $3 c @ ins, out) }
+  | LPAR PARAM bind_var value_type RPAR func_sig  /* Sugar */
+    { fun c ->
+      let `FuncType (ins, out) = $6 c in `FuncType ($4 c :: ins, out) }
 
 table_sig :
-  | limits elem_type { TableType ($1, $2) }
+  | limits elem_type { fun c -> `TableType ($1, $2 c) }
 
 memory_sig :
-  | limits { MemoryType $1 }
+  | limits { fun c -> `MemoryType $1 }
 
 limits :
   | NAT { {min = nat32 $1 (ati 1); max = None} }
   | NAT NAT { {min = nat32 $1 (ati 1); max = Some (nat32 $2 (ati 2))} }
+
+struct_type :
+  | LPAR STRUCT struct_sig RPAR { fun c -> `StructType ($3 c) }
+
+struct_sig :
+  | /* empty */ { fun c -> [] }
+  | LPAR FIELD value_type_list RPAR struct_sig
+    { fun c -> anon_fields c (fst $3); snd $3 c @ $5 c }
+  | LPAR FIELD bind_var value_type RPAR struct_sig  /* Sugar */
+    { fun c -> ignore (bind_field c $3); $4 c :: $6 c }
+
+def_type :
+  | func_type { fun c -> ($1 c :> def_type) }
+  | struct_type { fun c -> ($1 c :> def_type) }
 
 type_use :
   | LPAR TYPE var RPAR { $3 }
@@ -325,6 +366,9 @@ plain_instr :
   | TEE_LOCAL var { fun c -> tee_local ($2 c local) }
   | GET_GLOBAL var { fun c -> get_global ($2 c global) }
   | SET_GLOBAL var { fun c -> set_global ($2 c global) }
+  | GET_FIELD var var { fun c -> let x = $2 c type_ in get_field x ($3 c (field x)) }
+  | SET_FIELD var var { fun c -> let x = $2 c type_ in set_field x ($3 c (field x)) }
+  | NEW var { fun c -> new_ ($2 c type_) }
   | LOAD offset_opt align_opt { fun c -> $1 $3 $2 }
   | STORE offset_opt align_opt { fun c -> $1 $3 $2 }
   | CURRENT_MEMORY { fun c -> current_memory }
@@ -348,11 +392,11 @@ block_instr :
       let ts, es1 = $3 c' in if_ ts es1 ($6 c') }
 
 block_sig :
-  | LPAR RESULT VALUE_TYPE RPAR { [$3] }
+  | LPAR RESULT value_type RPAR { fun c -> [$3 c] }
 
 block :
   | block_sig instr_list
-    { fun c -> $1, $2 c }
+    { fun c -> $1 c, $2 c }
   | instr_list { fun c -> [], $1 c }
 
 expr :  /* Sugar */
@@ -370,7 +414,7 @@ expr1 :  /* Sugar */
       let ts, (es, es1, es2) = $3 c c' in es, if_ ts es1 es2 }
 
 if_block :
-  | block_sig if_block { fun c c' -> let ts, ess = $2 c c' in $1 @ ts, ess }
+  | block_sig if_block { fun c c' -> let ts, ess = $2 c c' in $1 c @ ts, ess }
   | if_ { fun c c' -> [], $1 c c' }
 
 if_ :
@@ -404,21 +448,21 @@ func :
 func_fields :
   | type_use func_fields_body
     { fun c x at ->
-      let t = inline_type_explicit c ($1 c type_) (fst $2) at in
+      let t = inline_func_type_explicit c ($1 c type_) (fst $2 c) at in
       (fun () -> [{(snd $2 (enter_func c)) with ftype = t} @@ at]), [], [] }
   | func_fields_body  /* Sugar */
     { fun c x at ->
-      let t = inline_type c (fst $1) at in
+      let t = inline_func_type c (fst $1 c) at in
       (fun () -> [{(snd $1 (enter_func c)) with ftype = t} @@ at]), [], [] }
   | inline_import type_use func_fields_import  /* Sugar */
     { fun c x at ->
-      let t = inline_type_explicit c ($2 c type_) $3 at in
+      let t = inline_func_type_explicit c ($2 c type_) ($3 c) at in
       (fun () -> []),
       [{ module_name = fst $1; item_name = snd $1;
          idesc = FuncImport t @@ at } @@ at ], [] }
   | inline_import func_fields_import  /* Sugar */
     { fun c x at ->
-      let t = inline_type c $2 at in
+      let t = inline_func_type c ($2 c) at in
       (fun () -> []),
       [{ module_name = fst $1; item_name = snd $1;
          idesc = FuncImport t @@ at } @@ at ], [] }
@@ -429,42 +473,43 @@ func_fields :
 func_fields_import :  /* Sugar */
   | func_fields_import_result { $1 }
   | LPAR PARAM value_type_list RPAR func_fields_import
-    { let FuncType (ins, out) = $5 in FuncType ($3 @ ins, out) }
-  | LPAR PARAM bind_var VALUE_TYPE RPAR func_fields_import  /* Sugar */
-    { let FuncType (ins, out) = $6 in FuncType ($4 :: ins, out) }
+    { fun c -> let `FuncType (ins, out) = $5 c in `FuncType (snd $3 c @ ins, out) }
+  | LPAR PARAM bind_var value_type RPAR func_fields_import  /* Sugar */
+    { fun c -> let `FuncType (ins, out) = $6 c in `FuncType ($4 c :: ins, out) }
 
 func_fields_import_result :  /* Sugar */
-  | /* empty */ { empty_type }
+  | /* empty */ { fun c -> empty_func_type }
   | LPAR RESULT value_type_list RPAR func_fields_import_result
-    { let FuncType (ins, out) = $5 in FuncType (ins, $3 @ out) }
+    { fun c -> let `FuncType (ins, out) = $5 c in `FuncType (ins, snd $3 c @ out) }
 
 func_fields_body :
   | func_result_body { $1 }
   | LPAR PARAM value_type_list RPAR func_fields_body
-    { let FuncType (ins, out) = fst $5 in
-      FuncType ($3 @ ins, out),
-      fun c -> ignore (anon_locals c $3); snd $5 c }
-  | LPAR PARAM bind_var VALUE_TYPE RPAR func_fields_body  /* Sugar */
-    { let FuncType (ins, out) = fst $6 in
-      FuncType ($4 :: ins, out),
+    { (fun c -> let `FuncType (ins, out) = fst $5 c in
+        `FuncType (snd $3 c @ ins, out)),
+      fun c -> ignore (anon_locals c (fst $3)); snd $5 c }
+  | LPAR PARAM bind_var value_type RPAR func_fields_body  /* Sugar */
+    { (fun c -> let `FuncType (ins, out) = fst $6 c in
+        `FuncType ($4 c :: ins, out)),
       fun c -> ignore (bind_local c $3); snd $6 c }
 
 func_result_body :
-  | func_body { empty_type, $1 }
+  | func_body { (fun c -> empty_func_type), $1 }
   | LPAR RESULT value_type_list RPAR func_result_body
-    { let FuncType (ins, out) = fst $5 in
-      FuncType (ins, $3 @ out), snd $5 }
+    { (fun c -> let `FuncType (ins, out) = fst $5 c in
+        `FuncType (ins, snd $3 c @ out)),
+        snd $5 }
 
 func_body :
   | instr_list
     { fun c -> let c' = anon_label c in
       {ftype = -1l @@ at(); locals = []; body = $1 c'} }
   | LPAR LOCAL value_type_list RPAR func_body
-    { fun c -> ignore (anon_locals c $3); let f = $5 c in
-      {f with locals = $3 @ f.locals} }
-  | LPAR LOCAL bind_var VALUE_TYPE RPAR func_body  /* Sugar */
+    { fun c -> ignore (anon_locals c (fst $3)); let f = $5 c in
+      {f with locals = snd $3 c @ f.locals} }
+  | LPAR LOCAL bind_var value_type RPAR func_body  /* Sugar */
     { fun c -> ignore (bind_local c $3); let f = $6 c in
-      {f with locals = $4 :: f.locals} }
+      {f with locals = $4 c :: f.locals} }
 
 
 /* Tables, Memories & Globals */
@@ -489,19 +534,19 @@ table :
 
 table_fields :
   | table_sig
-    { fun c x at -> [{ttype = $1} @@ at], [], [], [] }
+    { fun c x at -> [{ttype = $1 c} @@ at], [], [], [] }
   | inline_import table_sig
     { fun c x at ->
       [], [],
       [{ module_name = fst $1; item_name = snd $1;
-        idesc = TableImport $2 @@ at } @@ at], [] }
+        idesc = TableImport ($2 c) @@ at } @@ at], [] }
   | inline_export table_fields  /* Sugar */
     { fun c x at -> let tabs, elems, ims, exs = $2 c x at in
       tabs, elems, ims, $1 (TableExport x) c :: exs }
   | elem_type LPAR ELEM var_list RPAR  /* Sugar */
     { fun c x at ->
       let init = $4 c func in let size = Int32.of_int (List.length init) in
-      [{ttype = TableType ({min = size; max = Some size}, $1)} @@ at],
+      [{ttype = `TableType ({min = size; max = Some size}, $1 c)} @@ at],
       [{index = x; offset = [i32_const (0l @@ at) @@ at] @@ at; init} @@ at],
       [], [] }
 
@@ -521,19 +566,19 @@ memory :
 
 memory_fields :
   | memory_sig
-    { fun c x at -> [{mtype = $1} @@ at], [], [], [] }
+    { fun c x at -> [{mtype = $1 c} @@ at], [], [], [] }
   | inline_import memory_sig
     { fun c x at ->
       [], [],
       [{ module_name = fst $1; item_name = snd $1;
-         idesc = MemoryImport $2 @@ at } @@ at], [] }
+         idesc = MemoryImport ($2 c) @@ at } @@ at], [] }
   | inline_export memory_fields  /* Sugar */
     { fun c x at -> let mems, data, ims, exs = $2 c x at in
       mems, data, ims, $1 (MemoryExport x) c :: exs }
   | LPAR DATA string_list RPAR  /* Sugar */
     { fun c x at ->
       let size = Int32.(div (add (of_int (String.length $3)) 65535l) 65536l) in
-      [{mtype = MemoryType {min = size; max = Some size}} @@ at],
+      [{mtype = `MemoryType {min = size; max = Some size}} @@ at],
       [{index = x;
         offset = [i32_const (0l @@ at) @@ at] @@ at; init = $3} @@ at],
       [], [] }
@@ -546,12 +591,12 @@ global :
 
 global_fields :
   | global_type const_expr
-    { fun c x at -> [{gtype = $1; value = $2 c} @@ at], [], [] }
+    { fun c x at -> [{gtype = $1 c; value = $2 c} @@ at], [], [] }
   | inline_import global_type
     { fun c x at ->
       [],
       [{ module_name = fst $1; item_name = snd $1;
-         idesc = GlobalImport $2 @@ at } @@ at], [] }
+         idesc = GlobalImport ($2 c) @@ at } @@ at], [] }
   | inline_export global_fields  /* Sugar */
     { fun c x at -> let globs, ims, exs = $2 c x at in
       globs, ims, $1 (GlobalExport x) c :: exs }
@@ -566,13 +611,13 @@ import_desc :
   | LPAR FUNC bind_var_opt func_sig RPAR  /* Sugar */
     { let at4 = ati 4 in
       fun c -> ignore ($3 c anon_func bind_func);
-      FuncImport (inline_type c $4 at4) }
+      FuncImport (inline_func_type c ($4 c) at4) }
   | LPAR TABLE bind_var_opt table_sig RPAR
-    { fun c -> ignore ($3 c anon_table bind_table); TableImport $4 }
+    { fun c -> ignore ($3 c anon_table bind_table); TableImport ($4 c) }
   | LPAR MEMORY bind_var_opt memory_sig RPAR
-    { fun c -> ignore ($3 c anon_memory bind_memory); MemoryImport $4 }
+    { fun c -> ignore ($3 c anon_memory bind_memory); MemoryImport ($4 c) }
   | LPAR GLOBAL bind_var_opt global_type RPAR
-    { fun c -> ignore ($3 c anon_global bind_global); GlobalImport $4 }
+    { fun c -> ignore ($3 c anon_global bind_global); GlobalImport ($4 c) }
 
 import :
   | LPAR IMPORT name name import_desc RPAR
@@ -601,13 +646,13 @@ inline_export :
 /* Modules */
 
 type_ :
-  | func_type { $1 @@ at () }
+  | def_type { fun c -> bind_struct c; $1 c @@ at () }
 
 type_def :
   | LPAR TYPE type_ RPAR
-    { fun c -> anon_type c $3 }
+    { fun c -> anon_type c ($3 c) }
   | LPAR TYPE bind_var type_ RPAR  /* Sugar */
-    { fun c -> bind_type c $3 $4 }
+    { fun c -> bind_type c $3 ($4 c) }
 
 start :
   | LPAR START var RPAR

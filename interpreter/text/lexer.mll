@@ -45,11 +45,11 @@ let string s =
   done;
   Buffer.contents b
 
-let value_type = function
-  | "i32" -> Types.I32Type
-  | "i64" -> Types.I64Type
-  | "f32" -> Types.F32Type
-  | "f64" -> Types.F64Type
+let num_type = function
+  | "i32" -> `I32Type
+  | "i64" -> `I64Type
+  | "f32" -> `F32Type
+  | "f64" -> `F64Type
   | _ -> assert false
 
 let intop t i32 i64 =
@@ -158,19 +158,18 @@ rule token = parse
   | '"'character*'\\'_
     { error_nest (Lexing.lexeme_end_p lexbuf) lexbuf "illegal escape" }
 
-  | (nxx as t) { VALUE_TYPE (value_type t) }
+  | (nxx as t) { NUM_TYPE (num_type t) }
   | (nxx as t)".const"
     { let open Source in
       CONST (numop t
-        (fun s -> let n = I32.of_string s.it in
-          i32_const (n @@ s.at), Values.I32 n)
-        (fun s -> let n = I64.of_string s.it in
-          i64_const (n @@ s.at), Values.I64 n)
-        (fun s -> let n = F32.of_string s.it in
-          f32_const (n @@ s.at), Values.F32 n)
-        (fun s -> let n = F64.of_string s.it in
-          f64_const (n @@ s.at), Values.F64 n))
+        (fun s -> let n = I32.of_string s.it in i32_const (n @@ s.at), `I32 n)
+        (fun s -> let n = I64.of_string s.it in i64_const (n @@ s.at), `I64 n)
+        (fun s -> let n = F32.of_string s.it in f32_const (n @@ s.at), `F32 n)
+        (fun s -> let n = F64.of_string s.it in f64_const (n @@ s.at), `F64 n))
     }
+  | "ref" { REF }
+  | "struct" { STRUCT }
+  | "field" { FIELD }
   | "anyfunc" { ANYFUNC }
   | "mut" { MUT }
 
@@ -190,12 +189,15 @@ rule token = parse
   | "select" { SELECT }
   | "call" { CALL }
   | "call_indirect" { CALL_INDIRECT }
+  | "new" { NEW }
 
   | "get_local" { GET_LOCAL }
   | "set_local" { SET_LOCAL }
   | "tee_local" { TEE_LOCAL }
   | "get_global" { GET_GLOBAL }
   | "set_global" { SET_GLOBAL }
+  | "get_field" { GET_FIELD }
+  | "set_field" { SET_FIELD }
 
   | (nxx as t)".load"
     { LOAD (fun a o ->

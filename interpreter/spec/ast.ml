@@ -49,14 +49,13 @@ module I64Op = IntOp
 module F32Op = FloatOp
 module F64Op = FloatOp
 
-type unop = (I32Op.unop, I64Op.unop, F32Op.unop, F64Op.unop) Values.op
-type binop = (I32Op.binop, I64Op.binop, F32Op.binop, F64Op.binop) Values.op
-type testop = (I32Op.testop, I64Op.testop, F32Op.testop, F64Op.testop) Values.op
-type relop = (I32Op.relop, I64Op.relop, F32Op.relop, F64Op.relop) Values.op
-type cvtop = (I32Op.cvtop, I64Op.cvtop, F32Op.cvtop, F64Op.cvtop) Values.op
+type unop = (I32Op.unop, I64Op.unop, F32Op.unop, F64Op.unop) Values.numeric
+type binop = (I32Op.binop, I64Op.binop, F32Op.binop, F64Op.binop) Values.numeric
+type testop = (I32Op.testop, I64Op.testop, F32Op.testop, F64Op.testop) Values.numeric
+type relop = (I32Op.relop, I64Op.relop, F32Op.relop, F64Op.relop) Values.numeric
+type cvtop = (I32Op.cvtop, I64Op.cvtop, F32Op.cvtop, F64Op.cvtop) Values.numeric
 
-type 'a memop =
-  {ty : value_type; align : int; offset : Memory.offset; sz : 'a option}
+type 'a memop = {ty : num_type; align : int; offset : Memory.offset; sz : 'a option}
 type loadop = (Memory.mem_size * Memory.extension) memop
 type storeop = Memory.mem_size memop
 
@@ -64,7 +63,7 @@ type storeop = Memory.mem_size memop
 (* Expressions *)
 
 type var = int32 Source.phrase
-type literal = Values.value Source.phrase
+type literal = Values.num Source.phrase
 type name = int list
 
 type instr = instr' Source.phrase
@@ -87,6 +86,9 @@ and instr' =
   | TeeLocal of var                   (* write local variable and keep value *)
   | GetGlobal of var                  (* read global variable *)
   | SetGlobal of var                  (* write global variable *)
+  | GetField of var * var             (* read structure field *)
+  | SetField of var * var             (* write structure field *)
+  | New of var                        (* allocate structure *)
   | Load of loadop                    (* read memory at address *)
   | Store of storeop                  (* write memory at address *)
   | CurrentMemory                     (* size of linear memory *)
@@ -147,7 +149,7 @@ type memory_segment = string segment
 
 (* Modules *)
 
-type type_ = func_type Source.phrase
+type type_ = def_type Source.phrase
 
 type export_desc = export_desc' Source.phrase
 and export_desc' =
@@ -212,13 +214,23 @@ let empty_module =
 
 open Source
 
+let func_type (m : module_) (x : var) =
+  match (Lib.List32.nth m.it.types x.it).it with
+  | `FuncType _ as t -> t
+  | _ -> assert false
+
+let struct_type (m : module_) (x : var) =
+  match (Lib.List32.nth m.it.types x.it).it with
+  | `StructType _ as t -> t
+  | _ -> assert false
+
 let import_type (m : module_) (im : import) : external_type =
   let {idesc; _} = im.it in
   match idesc.it with
-  | FuncImport x -> ExternalFuncType (Lib.List32.nth m.it.types x.it).it
-  | TableImport t -> ExternalTableType t
-  | MemoryImport t -> ExternalMemoryType t
-  | GlobalImport t -> ExternalGlobalType t
+  | FuncImport x -> func_type m x
+  | TableImport t -> (t :> external_type)
+  | MemoryImport t -> (t :> external_type)
+  | GlobalImport t -> (t :> external_type)
 
 let export_type (m : module_) (ex : export) : external_type =
   let {edesc; _} = ex.it in
@@ -226,18 +238,17 @@ let export_type (m : module_) (ex : export) : external_type =
   let open Lib.List32 in
   match edesc.it with
   | FuncExport x ->
-    let fts =
-      funcs its @ List.map (fun f -> (nth m.it.types f.it.ftype.it).it) m.it.funcs
-    in ExternalFuncType (nth fts x.it)
+    let fts = funcs its @ List.map (fun f -> func_type m f.it.ftype) m.it.funcs in
+    (nth fts x.it :> external_type)
   | TableExport x ->
     let tts = tables its @ List.map (fun t -> t.it.ttype) m.it.tables in
-    ExternalTableType (nth tts x.it)
+    (nth tts x.it :> external_type)
   | MemoryExport x ->
     let mts = memories its @ List.map (fun m -> m.it.mtype) m.it.memories in
-    ExternalMemoryType (nth mts x.it)
+    (nth mts x.it :> external_type)
   | GlobalExport x ->
     let gts = globals its @ List.map (fun g -> g.it.gtype) m.it.globals in
-    ExternalGlobalType (nth gts x.it)
+    (nth gts x.it :> external_type)
 
 let string_of_name n =
   let b = Buffer.create 16 in

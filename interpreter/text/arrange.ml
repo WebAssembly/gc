@@ -63,17 +63,18 @@ let decls kind ts = tab kind (atom value_type) ts
 
 let stack_type ts = decls "result" ts
 
-let func_type (FuncType (ins, out)) =
-  Node ("func", decls "param" ins @ decls "result" out)
-
-let struct_type = func_type
+let def_type = function
+  | `FuncType (ins, out) ->
+    Node ("func", decls "param" ins @ decls "result" out)
+  | `StructType ts ->
+    Node ("struct", decls "field" ts)
 
 let limits nat {min; max} =
   String.concat " " (nat min :: opt nat max)
 
 let global_type = function
-  | GlobalType (t, Immutable) -> atom string_of_value_type t
-  | GlobalType (t, Mutable) -> Node ("mut", [atom string_of_value_type t])
+  | `GlobalType (t, Immutable) -> atom string_of_value_type t
+  | `GlobalType (t, Mutable) -> Node ("mut", [atom string_of_value_type t])
 
 
 (* Operators *)
@@ -173,12 +174,12 @@ struct
 end
 
 let oper (intop, floatop) op =
-  value_type (type_of op) ^ "." ^
+  value_type (type_of_num op) ^ "." ^
   (match op with
-  | I32 o -> intop "32" o
-  | I64 o -> intop "64" o
-  | F32 o -> floatop "32" o
-  | F64 o -> floatop "64" o
+  | `I32 o -> intop "32" o
+  | `I64 o -> intop "64" o
+  | `F32 o -> floatop "32" o
+  | `F64 o -> floatop "64" o
   )
 
 let unop = oper (IntOp.unop, FloatOp.unop)
@@ -215,8 +216,8 @@ let storeop op =
 (* Expressions *)
 
 let var x = nat32 x.it
-let value v = string_of_value v.it
-let constop v = value_type (type_of v.it) ^ ".const"
+let num c = string_of_num c.it
+let constop c = value_type (type_of c.it) ^ ".const"
 
 let rec instr e =
   let head, inner =
@@ -242,11 +243,14 @@ let rec instr e =
     | TeeLocal x -> "tee_local " ^ var x, []
     | GetGlobal x -> "get_global " ^ var x, []
     | SetGlobal x -> "set_global " ^ var x, []
+    | GetField (x, y) -> "get_field " ^ var x ^ " " ^ var y, []
+    | SetField (x, y) -> "set_field " ^ var x ^ " " ^ var y, []
+    | New x -> "new " ^ var x, []
     | Load op -> loadop op, []
     | Store op -> storeop op, []
     | CurrentMemory -> "current_memory", []
     | GrowMemory -> "grow_memory", []
-    | Const lit -> constop lit ^ " " ^ value lit, []
+    | Const lit -> constop lit ^ " " ^ num lit, []
     | Test op -> testop op, []
     | Compare op -> relop op, []
     | Unary op -> unop op, []
@@ -280,13 +284,13 @@ let start x = Node ("start " ^ var x, [])
 (* Tables & memories *)
 
 let table off i tab =
-  let {ttype = TableType (lim, t)} = tab.it in
+  let {ttype = `TableType (lim, t)} = tab.it in
   Node ("table $" ^ nat (off + i) ^ " " ^ limits nat32 lim,
     [atom elem_type t]
   )
 
 let memory off i mem =
-  let {mtype = MemoryType lim} = mem.it in
+  let {mtype = `MemoryType lim} = mem.it in
   Node ("memory $" ^ nat (off + i) ^ " " ^ limits nat32 lim, [])
 
 let segment head dat seg =
@@ -302,8 +306,8 @@ let data seg =
 
 (* Modules *)
 
-let typedef i ty =
-  Node ("type $" ^ nat i, [struct_type ty.it])
+let type_ i ty =
+  Node ("type $" ^ nat i, [def_type ty.it])
 
 let import_desc i d =
   match d.it with
@@ -356,7 +360,7 @@ let module_with_var_opt x_opt m =
   let memory_imports = List.filter is_memory_import m.it.imports in
   let global_imports = List.filter is_global_import m.it.imports in
   Node ("module" ^ var_opt x_opt,
-    listi typedef m.it.types @
+    listi type_ m.it.types @
     listi import table_imports @
     listi import memory_imports @
     listi import global_imports @
@@ -384,10 +388,10 @@ let module_ = module_with_var_opt None
 
 let literal lit =
   match lit.it with
-  | Values.I32 i -> Node ("i32.const " ^ I32.to_string_s i, [])
-  | Values.I64 i -> Node ("i64.const " ^ I64.to_string_s i, [])
-  | Values.F32 z -> Node ("f32.const " ^ F32.to_string z, [])
-  | Values.F64 z -> Node ("f64.const " ^ F64.to_string z, [])
+  | `I32 i -> Node ("i32.const " ^ I32.to_string_s i, [])
+  | `I64 i -> Node ("i64.const " ^ I64.to_string_s i, [])
+  | `F32 z -> Node ("f32.const " ^ F32.to_string z, [])
+  | `F64 z -> Node ("f64.const " ^ F64.to_string z, [])
 
 let definition mode x_opt def =
   try

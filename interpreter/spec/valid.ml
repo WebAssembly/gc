@@ -17,7 +17,7 @@ let require b at s = if not b then error at s
 type context =
 {
   module_ : module_;
-  types : func_type list;
+  types : def_type list;
   funcs : func_type list;
   tables : table_type list;
   memories : memory_type list;
@@ -42,6 +42,17 @@ let global (c : context) x = lookup "global" c.globals x
 let label (c : context) x = lookup "label" c.labels x
 let table (c : context) x = lookup "table" c.tables x
 let memory (c : context) x = lookup "memory" c.memories x
+let field ts x = lookup "field" ts x
+
+let func_type (c : context) x =
+  match type_ c x with
+  | `FuncType _ as t -> t
+  | _ -> error x.at ("non-function type " ^ Int32.to_string x.it)
+
+let struct_type (c : context) x =
+  match type_ c x with
+  | `StructType _ as t -> t
+  | _ -> error x.at ("non-structure type " ^ Int32.to_string x.it)
 
 
 (* Stack typing *)
@@ -95,45 +106,45 @@ let peek i (ell, ts) =
 
 (* Type Synthesis *)
 
-let type_value = Values.type_of
-let type_unop = Values.type_of
-let type_binop = Values.type_of
-let type_testop = Values.type_of
-let type_relop = Values.type_of
+let type_value = Values.type_of_num
+let type_unop = Values.type_of_num
+let type_binop = Values.type_of_num
+let type_testop = Values.type_of_num
+let type_relop = Values.type_of_num
 
 let type_cvtop at = function
-  | Values.I32 cvtop ->
+  | `I32 cvtop ->
     let open I32Op in
     (match cvtop with
     | ExtendSI32 | ExtendUI32 -> error at "invalid conversion"
-    | WrapI64 -> I64Type
-    | TruncSF32 | TruncUF32 | ReinterpretFloat -> F32Type
-    | TruncSF64 | TruncUF64 -> F64Type
-    ), I32Type
-  | Values.I64 cvtop ->
+    | WrapI64 -> `I64Type
+    | TruncSF32 | TruncUF32 | ReinterpretFloat -> `F32Type
+    | TruncSF64 | TruncUF64 -> `F64Type
+    ), `I32Type
+  | `I64 cvtop ->
     let open I64Op in
     (match cvtop with
-    | ExtendSI32 | ExtendUI32 -> I32Type
+    | ExtendSI32 | ExtendUI32 -> `I32Type
     | WrapI64 -> error at "invalid conversion"
-    | TruncSF32 | TruncUF32 -> F32Type
-    | TruncSF64 | TruncUF64 | ReinterpretFloat -> F64Type
-    ), I64Type
-  | Values.F32 cvtop ->
+    | TruncSF32 | TruncUF32 -> `F32Type
+    | TruncSF64 | TruncUF64 | ReinterpretFloat -> `F64Type
+    ), `I64Type
+  | `F32 cvtop ->
     let open F32Op in
     (match cvtop with
-    | ConvertSI32 | ConvertUI32 | ReinterpretInt -> I32Type
-    | ConvertSI64 | ConvertUI64 -> I64Type
+    | ConvertSI32 | ConvertUI32 | ReinterpretInt -> `I32Type
+    | ConvertSI64 | ConvertUI64 -> `I64Type
     | PromoteF32 -> error at "invalid conversion"
-    | DemoteF64 -> F64Type
-    ), F32Type
-  | Values.F64 cvtop ->
+    | DemoteF64 -> `F64Type
+    ), `F32Type
+  | `F64 cvtop ->
     let open F64Op in
     (match cvtop with
-    | ConvertSI32 | ConvertUI32 -> I32Type
-    | ConvertSI64 | ConvertUI64 | ReinterpretInt -> I64Type
-    | PromoteF32 -> F32Type
+    | ConvertSI32 | ConvertUI32 -> `I32Type
+    | ConvertSI64 | ConvertUI64 | ReinterpretInt -> `I64Type
+    | PromoteF32 -> `F32Type
     | DemoteF64 -> error at "invalid conversion"
-    ), F64Type
+    ), `F64Type
 
 
 (* Expressions *)
@@ -144,12 +155,13 @@ let check_memop (c : context) (memop : 'a memop) get_sz at =
     match get_sz memop.sz with
     | None -> size memop.ty
     | Some sz ->
-      require (memop.ty = I64Type || sz <> Memory.Mem32) at
+      require (memop.ty = `I64Type || sz <> Memory.Mem32) at
         "memory size too big";
       Memory.mem_size sz
   in
   require (1 lsl memop.align <= size) at
-    "alignment must not be larger than natural"
+    "alignment must not be larger than natural";
+  (memop.ty :> value_type)
 
 let check_arity n at =
   require (n <= 1) at "invalid result arity, larger than 1 is not (yet) allowed"
@@ -197,37 +209,37 @@ let rec check_instr (c : context) (e : instr) (s : infer_stack_type) : op_type =
     check_arity (List.length ts) e.at;
     check_block {c with labels = ts :: c.labels} es1 ts e.at;
     check_block {c with labels = ts :: c.labels} es2 ts e.at;
-    [I32Type] --> ts
+    [`I32Type] --> ts
 
   | Br x ->
     label c x -->... []
 
   | BrIf x ->
-    (label c x @ [I32Type]) --> label c x
+    (label c x @ [`I32Type]) --> label c x
 
   | BrTable (xs, x) ->
     let ts = label c x in
     List.iter (fun x' -> check_stack (known ts) (known (label c x')) x'.at) xs;
-    (label c x @ [I32Type]) -->... []
+    (label c x @ [`I32Type]) -->... []
 
   | Return ->
     c.results -->... []
 
   | Call x ->
-    let FuncType (ins, out) = func c x in
+    let `FuncType (ins, out) = func c x in
     ins --> out
 
   | CallIndirect x ->
     ignore (table c (0l @@ e.at));
-    let FuncType (ins, out) = type_ c x in
-    (ins @ [I32Type]) --> out
+    let `FuncType (ins, out) = func_type c x in
+    (ins @ [`I32Type]) --> out
 
   | Drop ->
     [peek 0 s] -~> []
 
   | Select ->
     let t = peek 1 s in
-    [t; t; Some I32Type] -~> [t]
+    [t; t; Some `I32Type] -~> [t]
 
   | GetLocal x ->
     [] --> [local c x]
@@ -239,29 +251,41 @@ let rec check_instr (c : context) (e : instr) (s : infer_stack_type) : op_type =
     [local c x] --> [local c x]
 
   | GetGlobal x ->
-    let GlobalType (t, mut) = global c x in
+    let `GlobalType (t, mut) = global c x in
     [] --> [t]
 
   | SetGlobal x ->
-    let GlobalType (t, mut) = global c x in
+    let `GlobalType (t, mut) = global c x in
     require (mut = Mutable) x.at "global is immutable";
     [t] --> []
 
+  | GetField (x, y) ->
+    let `StructType s = struct_type c x in
+    [`RefType x.it] --> [field s y]
+
+  | SetField (x, y) ->
+    let `StructType s = struct_type c x in
+    [`RefType x.it; field s y] --> []
+
+  | New x ->
+    ignore (struct_type c x);
+    [] --> [`RefType x.it]
+
   | Load memop ->
-    check_memop c memop (Lib.Option.map fst) e.at;
-    [I32Type] --> [memop.ty]
+    let t = check_memop c memop (Lib.Option.map fst) e.at in
+    [`I32Type] --> [t]
 
   | Store memop ->
-    check_memop c memop (fun sz -> sz) e.at;
-    [I32Type; memop.ty] --> []
+    let t = check_memop c memop (fun sz -> sz) e.at in
+    [`I32Type; t] --> []
 
   | CurrentMemory ->
     ignore (memory c (0l @@ e.at));
-    [] --> [I32Type]
+    [] --> [`I32Type]
 
   | GrowMemory ->
     ignore (memory c (0l @@ e.at));
-    [I32Type] --> [I32Type]
+    [`I32Type] --> [`I32Type]
 
   | Const v ->
     let t = type_value v.it in
@@ -269,11 +293,11 @@ let rec check_instr (c : context) (e : instr) (s : infer_stack_type) : op_type =
 
   | Test testop ->
     let t = type_testop testop in
-    [t] --> [I32Type]
+    [t] --> [`I32Type]
 
   | Compare relop ->
     let t = type_relop relop in
-    [t; t] --> [I32Type]
+    [t; t] --> [`I32Type]
 
   | Unary unop ->
     let t = type_unop unop in
@@ -321,12 +345,13 @@ and check_block (c : context) (es : instr list) (ts : stack_type) at =
  *)
 
 let check_type (t : type_) =
-  let FuncType (ins, out) = t.it in
-  check_arity (List.length out) t.at
+  match t.it with
+  | `FuncType (ins, out) -> check_arity (List.length out) t.at
+  | `StructType ts -> ()
 
 let check_func (c : context) (f : func) =
   let {ftype; locals; body} = f.it in
-  let FuncType (ins, out) = type_ c ftype in
+  let `FuncType (ins, out) = func_type c ftype in
   let c' = {c with locals = ins @ locals; results = out; labels = [out]} in
   check_block c' body out f.at
 
@@ -334,7 +359,7 @@ let check_func (c : context) (f : func) =
 let is_const (c : context) (e : instr) =
   match e.it with
   | Const _ -> true
-  | GetGlobal x -> let GlobalType (_, mut) = global c x in mut = Immutable
+  | GetGlobal x -> let `GlobalType (_, mut) = global c x in mut = Immutable
   | _ -> false
 
 let check_const (c : context) (const : const) (t : value_type) =
@@ -346,7 +371,7 @@ let check_const (c : context) (const : const) (t : value_type) =
 (* Tables, Memories, & Globals *)
 
 let check_table_type (t : table_type) at =
-  let TableType ({min; max}, _) = t in
+  let `TableType ({min; max}, _) = t in
   match max with
   | None -> ()
   | Some max ->
@@ -358,7 +383,7 @@ let check_table (c : context) (tab : table) =
   check_table_type ttype tab.at
 
 let check_memory_type (t : memory_type) at =
-  let MemoryType {min; max} = t in
+  let `MemoryType {min; max} = t in
   require (I32.le_u min 65536l) at
     "memory size must be at most 65536 pages (4GiB)";
   match max with
@@ -375,18 +400,18 @@ let check_memory (c : context) (mem : memory) =
 
 let check_elem (c : context) (seg : table_segment) =
   let {index; offset; init} = seg.it in
-  check_const c offset I32Type;
+  check_const c offset `I32Type;
   ignore (table c index);
   ignore (List.map (func c) init)
 
 let check_data (c : context) (seg : memory_segment) =
   let {index; offset; init} = seg.it in
-  check_const c offset I32Type;
+  check_const c offset `I32Type;
   ignore (memory c index)
 
 let check_global (c : context) (glob : global) =
   let {gtype; value} = glob.it in
-  let GlobalType (t, mut) = gtype in
+  let `GlobalType (t, mut) = gtype in
   check_const c value t
 
 
@@ -394,7 +419,7 @@ let check_global (c : context) (glob : global) =
 
 let check_start (c : context) (start : var option) =
   Lib.Option.app (fun x ->
-    require (func c x = FuncType ([], [])) x.at
+    require (func c x = `FuncType ([], [])) x.at
       "start function must not have parameters or results"
   ) start
 
@@ -402,13 +427,13 @@ let check_import (im : import) (c : context) : context =
   let {module_name = _; item_name = _; idesc} = im.it in
   match idesc.it with
   | FuncImport x ->
-    {c with funcs = type_ c x :: c.funcs}
+    {c with funcs = func_type c x :: c.funcs}
   | TableImport t ->
     check_table_type t idesc.at; {c with tables = t :: c.tables}
   | MemoryImport t ->
     check_memory_type t idesc.at; {c with memories = t :: c.memories}
   | GlobalImport t ->
-    let GlobalType (_, mut) = t in
+    let `GlobalType (_, mut) = t in
     require (mut = Immutable) idesc.at
       "mutable globals cannot be imported (yet)";
     {c with globals = t :: c.globals}
@@ -422,7 +447,7 @@ let check_export (c : context) (set : NameSet.t) (ex : export) : NameSet.t =
   | TableExport x -> ignore (table c x)
   | MemoryExport x -> ignore (memory c x)
   | GlobalExport x ->
-    let GlobalType (_, mut) = global c x in
+    let `GlobalType (_, mut) = global c x in
     require (mut = Immutable) edesc.at
       "mutable globals cannot be exported (yet)"
   );
@@ -440,7 +465,7 @@ let check_module (m : module_) =
   in
   let c1 =
     { c0 with
-      funcs = c0.funcs @ List.map (fun f -> type_ c0 f.it.ftype) funcs;
+      funcs = c0.funcs @ List.map (fun f -> func_type c0 f.it.ftype) funcs;
       tables = c0.tables @ List.map (fun tab -> tab.it.ttype) tables;
       memories = c0.memories @ List.map (fun mem -> mem.it.mtype) memories;
     }

@@ -67,6 +67,15 @@ let lookup category list x =
     Crash.error x.at ("undefined " ^ category ^ " " ^ Int32.to_string x.it)
 
 let type_ (inst : instance) x = lookup "type" inst.module_.it.types x
+let func_type (inst : instance) x =
+  match (type_ inst x).it with
+  | `FuncType _ as t -> t
+  | _ -> Crash.error x.at ("non-function type " ^ Int32.to_string x.it)
+let struct_type (inst : instance) x =
+  match (type_ inst x).it with
+  | `StructType _ as t -> t
+  | _ -> Crash.error x.at ("non-structure type " ^ Int32.to_string x.it)
+
 let func (inst : instance) x = lookup "function" inst.funcs x
 let table (inst : instance) x = lookup "table" inst.tables x
 let memory (inst : instance) x = lookup "memory" inst.memories x
@@ -87,7 +96,7 @@ let func_elem inst x i at =
   | _ -> Crash.error at ("type mismatch for element " ^ Int32.to_string i)
 
 let func_type_of = function
-  | AstFunc (inst, f) -> (lookup "type" (!inst).module_.it.types f.it.ftype).it
+  | AstFunc (inst, f) -> func_type !inst f.it.ftype
   | HostFunc (t, _) -> t
 
 let take n (vs : 'a stack) at =
@@ -126,25 +135,25 @@ let rec step (inst : instance) (c : config) : config =
       | Loop (ts, es'), vs ->
         vs, [Label ([], [e' @@ e.at], [], List.map plain es') @@ e.at]
 
-      | If (ts, es1, es2), I32 0l :: vs' ->
+      | If (ts, es1, es2), `I32 0l :: vs' ->
         vs', [Plain (Block (ts, es2)) @@ e.at]
 
-      | If (ts, es1, es2), I32 i :: vs' ->
+      | If (ts, es1, es2), `I32 i :: vs' ->
         vs', [Plain (Block (ts, es1)) @@ e.at]
 
       | Br x, vs ->
         [], [Break (x.it, vs) @@ e.at]
 
-      | BrIf x, I32 0l :: vs' ->
+      | BrIf x, `I32 0l :: vs' ->
         vs', []
 
-      | BrIf x, I32 i :: vs' ->
+      | BrIf x, `I32 i :: vs' ->
         vs', [Plain (Br x) @@ e.at]
 
-      | BrTable (xs, x), I32 i :: vs' when I32.ge_u i (Lib.List32.length xs) ->
+      | BrTable (xs, x), `I32 i :: vs' when I32.ge_u i (Lib.List32.length xs) ->
         vs', [Plain (Br x) @@ e.at]
 
-      | BrTable (xs, x), I32 i :: vs' ->
+      | BrTable (xs, x), `I32 i :: vs' ->
         vs', [Plain (Br (Lib.List32.nth xs i)) @@ e.at]
 
       | Return, vs ->
@@ -153,19 +162,19 @@ let rec step (inst : instance) (c : config) : config =
       | Call x, vs ->
         vs, [Invoke (func inst x) @@ e.at]
 
-      | CallIndirect x, I32 i :: vs ->
+      | CallIndirect x, `I32 i :: vs ->
         let clos = func_elem inst (0l @@ e.at) i e.at in
-        if (type_ inst x).it <> func_type_of clos then
+        if func_type inst x <> func_type_of clos then
           Trap.error e.at "indirect call signature mismatch";
         vs, [Invoke clos @@ e.at]
 
       | Drop, v :: vs' ->
         vs', []
 
-      | Select, I32 0l :: v2 :: v1 :: vs' ->
+      | Select, `I32 0l :: v2 :: v1 :: vs' ->
         v2 :: vs', []
 
-      | Select, I32 i :: v2 :: v1 :: vs' ->
+      | Select, `I32 i :: v2 :: v1 :: vs' ->
         v1 :: vs', []
 
       | GetLocal x, vs ->
@@ -186,49 +195,65 @@ let rec step (inst : instance) (c : config) : config =
         global inst x := v;
         vs', []
 
-      | Load {offset; ty; sz; _}, I32 i :: vs' ->
+      | GetField (x, y), `Ref (Struct s) :: vs' ->
+        (try
+          s.fields.(Int32.to_int y.it) :: vs', []
+        with Failure _ -> Crash.error e.at "invalid field")
+
+      | SetField (x, y), v :: `Ref (Struct s) :: vs' ->
+        (try
+          s.fields.(Int32.to_int y.it) <- v;
+          vs', []
+        with Failure _ -> Crash.error e.at "invalid field")
+
+      | New x, vs ->
+        let `StructType ts as stype = struct_type inst x in
+        let s = {stype; fields = Array.of_list (List.map default_value ts)} in
+        `Ref (Struct s) :: vs, []
+
+      | Load {offset; ty; sz; _}, `I32 i :: vs' ->
         let mem = memory inst (0l @@ e.at) in
         let addr = I64_convert.extend_u_i32 i in
         (try
-          let v =
+          let n =
             match sz with
             | None -> Memory.load mem addr offset ty
             | Some (sz, ext) -> Memory.load_packed sz ext mem addr offset ty
-          in v :: vs', []
+          in (n :> value) :: vs', []
         with exn -> vs', [Trapped (memory_error e.at exn) @@ e.at])
 
-      | Store {offset; sz; _}, v :: I32 i :: vs' ->
+      | Store {offset; sz; _}, (#num as n) :: `I32 i :: vs' ->
         let mem = memory inst (0l @@ e.at) in
         let addr = I64_convert.extend_u_i32 i in
         (try
           (match sz with
-          | None -> Memory.store mem addr offset v
-          | Some sz -> Memory.store_packed sz mem addr offset v
+          | None -> Memory.store mem addr offset n
+          | Some sz -> Memory.store_packed sz mem addr offset n
           );
           vs', []
         with exn -> vs', [Trapped (memory_error e.at exn) @@ e.at]);
 
       | CurrentMemory, vs ->
         let mem = memory inst (0l @@ e.at) in
-        I32 (Memory.size mem) :: vs, []
+        `I32 (Memory.size mem) :: vs, []
 
-      | GrowMemory, I32 delta :: vs' ->
+      | GrowMemory, `I32 delta :: vs' ->
         let mem = memory inst (0l @@ e.at) in
         let old_size = Memory.size mem in
         let result =
           try Memory.grow mem delta; old_size
           with Memory.SizeOverflow | Memory.SizeLimit | Memory.OutOfMemory -> -1l
-        in I32 result :: vs', []
+        in `I32 result :: vs', []
 
       | Const v, vs ->
-        v.it :: vs, []
+        (v.it :> value) :: vs, []
 
       | Test testop, v :: vs' ->
-        (try value_of_bool (Eval_numeric.eval_testop testop v) :: vs', []
+        (try num_of_bool (Eval_numeric.eval_testop testop v) :: vs', []
         with exn -> vs', [Trapped (numeric_error e.at exn) @@ e.at])
 
       | Compare relop, v2 :: v1 :: vs' ->
-        (try value_of_bool (Eval_numeric.eval_relop relop v1 v2) :: vs', []
+        (try num_of_bool (Eval_numeric.eval_relop relop v1 v2) :: vs', []
         with exn -> vs', [Trapped (numeric_error e.at exn) @@ e.at])
 
       | Unary unop, v :: vs' ->
@@ -286,7 +311,7 @@ let rec step (inst : instance) (c : config) : config =
       Exhaustion.error e.at "call stack exhausted"
 
     | Invoke clos, vs ->
-      let FuncType (ins, out) = func_type_of clos in
+      let `FuncType (ins, out) = func_type_of clos in
       let n = List.length ins in
       let args, vs' = take n vs e.at, drop n vs e.at in
       (match clos with
@@ -318,7 +343,7 @@ let rec eval (inst : instance) (c : config) : value stack =
 
 let invoke (clos : closure) (vs : value list) : value list =
   let at = match clos with AstFunc (_, f) -> f.at | HostFunc _ -> no_region in
-  let FuncType (ins, out) = func_type_of clos in
+  let `FuncType (ins, out) = func_type_of clos in
   if List.length vs <> List.length ins then
     Crash.error at "wrong number of arguments";
   let inst = instance (empty_module @@ at) in
@@ -334,7 +359,7 @@ let eval_const (inst : instance) (const : const) : value =
 
 let i32 (v : value) at =
   match v with
-  | I32 i -> i
+  | `I32 i -> i
   | _ -> Crash.error at "type error: i32 value expected"
 
 
@@ -344,15 +369,15 @@ let create_closure (m : module_) (f : func) =
   AstFunc (ref (instance m), f)
 
 let create_table (tab : table) =
-  let {ttype = TableType (lim, t)} = tab.it in
+  let {ttype = `TableType (lim, t)} = tab.it in
   Table.create t lim
 
 let create_memory (mem : memory) =
-  let {mtype = MemoryType lim} = mem.it in
+  let {mtype = `MemoryType lim} = mem.it in
   Memory.create lim
 
 let create_global (glob : global) =
-  let {gtype = GlobalType (t, _); _} = glob.it in
+  let {gtype = `GlobalType (t, _); _} = glob.it in
   ref (default_value t)
 
 let init_closure (inst : instance) (clos : closure) =
@@ -398,16 +423,16 @@ let check_limits actual expected at =
 let add_import (ext : extern) (im : import) (inst : instance) : instance =
   let {idesc; _} = im.it in
   match ext, idesc.it with
-  | ExternalFunc clos, FuncImport x when func_type_of clos = (type_ inst x).it ->
+  | ExternalFunc clos, FuncImport x when func_type_of clos = func_type inst x ->
     {inst with funcs = clos :: inst.funcs}
-  | ExternalTable tab, TableImport (TableType (lim, t))
+  | ExternalTable tab, TableImport (`TableType (lim, t))
     when Table.elem_type tab = t ->
     check_limits (Table.limits tab) lim idesc.at;
     {inst with tables = tab :: inst.tables}
-  | ExternalMemory mem, MemoryImport (MemoryType lim) ->
+  | ExternalMemory mem, MemoryImport (`MemoryType lim) ->
     check_limits (Memory.limits mem) lim idesc.at;
     {inst with memories = mem :: inst.memories}
-  | ExternalGlobal v, GlobalImport (GlobalType (t, _)) when type_of v = t ->
+  | ExternalGlobal v, GlobalImport (`GlobalType (t, _)) when type_of v = t ->
     {inst with globals = ref v :: inst.globals}
   | _ ->
     Link.error idesc.at "type mismatch"
