@@ -66,13 +66,14 @@ let lookup category list x =
   try Lib.List32.nth list x.it with Failure _ ->
     Crash.error x.at ("undefined " ^ category ^ " " ^ Int32.to_string x.it)
 
-let type_ (inst : instance) x = lookup "type" inst.module_.it.types x
+let type_ (inst : instance) x =
+  close_def_type inst.types (lookup "type" inst.types x)
 let func_type (inst : instance) x =
-  match (type_ inst x).it with
+  match type_ inst x with
   | `FuncType _ as t -> t
   | _ -> Crash.error x.at ("non-function type " ^ Int32.to_string x.it)
 let struct_type (inst : instance) x =
-  match (type_ inst x).it with
+  match type_ inst x with
   | `StructType _ as t -> t
   | _ -> Crash.error x.at ("non-structure type " ^ Int32.to_string x.it)
 
@@ -450,8 +451,8 @@ let add_export (inst : instance) (ex : export) (map : extern ExportMap.t)
 
 let init (m : module_) (exts : extern list) : instance =
   let
-    { imports; tables; memories; globals; funcs;
-      exports; elems; data; start; _
+    { imports; types; tables; memories; globals; funcs;
+      exports; elems; data; start
     } = m.it
   in
   if List.length exts <> List.length imports then
@@ -461,6 +462,7 @@ let init (m : module_) (exts : extern list) : instance =
   let inst =
     List.fold_right2 add_import exts imports
       { (instance m) with
+        types = List.map (fun ty -> ty.it) types;
         funcs = fs;
         tables = List.map create_table tables;
         memories = List.map create_memory memories;

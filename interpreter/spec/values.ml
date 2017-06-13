@@ -25,7 +25,7 @@ let type_of_num = function
 
 let type_of = function
   | #num as n -> type_of_num n
-  | #ref_ -> `RefType unknown_type_id
+  | #ref_ -> `RefType (VarType unknown_type_var)
 
 
 let default_value = function
@@ -103,5 +103,5 @@ struct
   type t = data
   let to_value d = `Ref d
   let of_value = function
-    | `Ref d -> d | _ -> raise (Value (`RefType unknown_type_id))
+    | `Ref d -> d | _ -> raise (Value (`RefType (VarType unknown_type_var)))
 end

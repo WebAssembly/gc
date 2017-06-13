@@ -35,8 +35,8 @@ let lookup category list x =
   try Lib.List32.nth list x.it with Failure _ ->
     error x.at ("unknown " ^ category ^ " " ^ Int32.to_string x.it)
 
-let type_ (c : context) x = lookup "type" c.types x
-let func (c : context) x = lookup "function" c.funcs x
+let type_ (c : context) x = close_def_type c.types (lookup "type" c.types x)
+let func (c : context) x = close_func_type c.types (lookup "function" c.funcs x)
 let local (c : context) x = lookup "local" c.locals x
 let global (c : context) x = lookup "global" c.globals x
 let label (c : context) x = lookup "label" c.labels x
@@ -53,6 +53,9 @@ let struct_type (c : context) x =
   match type_ c x with
   | `StructType _ as t -> t
   | _ -> error x.at ("non-structure type " ^ Int32.to_string x.it)
+
+let type_ref (c : context) x =
+  close_type_ref c.types (VarType x.it)
 
 
 (* Stack typing *)
@@ -261,15 +264,15 @@ let rec check_instr (c : context) (e : instr) (s : infer_stack_type) : op_type =
 
   | GetField (x, y) ->
     let `StructType s = struct_type c x in
-    [`RefType x.it] --> [field s y]
+    [`RefType (type_ref c x)] --> [field s y]
 
   | SetField (x, y) ->
     let `StructType s = struct_type c x in
-    [`RefType x.it; field s y] --> []
+    [`RefType (type_ref c x); field s y] --> []
 
   | New x ->
     ignore (struct_type c x);
-    [] --> [`RefType x.it]
+    [] --> [`RefType (type_ref c x)]
 
   | Load memop ->
     let t = check_memop c memop (Lib.Option.map fst) e.at in

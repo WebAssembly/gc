@@ -1,4 +1,5 @@
 open Values
+open Types
 
 module ExportMap = Map.Make(struct type t = Ast.name let compare = compare end)
 
@@ -17,6 +18,7 @@ and extern =
 and instance =
 {
   module_ : Ast.module_;
+  types : def_type list;
   funcs : closure list;
   tables : Table.t list;
   memories : Memory.t list;
@@ -27,8 +29,8 @@ and instance =
 type Table.elem += Func of closure
 
 let instance m =
-  { module_ = m; funcs = []; tables = []; memories = []; globals = [];
-    exports = ExportMap.empty }
+  { module_ = m; types = []; funcs = []; tables = []; memories = [];
+    globals = []; exports = ExportMap.empty }
 
 let export inst name =
   try Some (ExportMap.find name inst.exports) with Not_found -> None

@@ -158,7 +158,7 @@ let empty_func_type = `FuncType ([], [])
 (* TODO: use proper type equality to find/check func types *)
 let inline_func_type (c : context) ft at =
   let dt = (ft :> def_type) in
-  match Lib.List.index_where (fun ty -> eq_def_type ty.it dt) c.types.tlist with
+  match Lib.List.index_where (fun ty -> eq_def_type [] ty.it dt) c.types.tlist with
   | Some i -> Int32.of_int i @@ at
   | None ->
     let i = Lib.List32.length c.types.tlist in
@@ -166,7 +166,7 @@ let inline_func_type (c : context) ft at =
 
 let inline_func_type_explicit (c : context) x ft at =
   if
-    ft <> empty_func_type && not (eq_def_type (ft :> def_type) (def_type c x))
+    ft <> empty_func_type && not (eq_def_type [] (ft :> def_type) (def_type c x))
   then
     error at "inline function type does not match explicit type"
   else
@@ -232,7 +232,7 @@ string_list :
 
 value_type :
   | NUM_TYPE { fun c -> ($1 :> value_type) }
-  | LPAR REF var RPAR { fun c -> `RefType ($3 c type_).it }
+  | LPAR REF var RPAR { fun c -> `RefType (VarType ($3 c type_).it) }
 
 value_type_list :
   | /* empty */ { 0, fun c -> [] }

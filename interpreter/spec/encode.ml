@@ -97,7 +97,8 @@ let encode m =
       | `F64Type -> vs7 (-0x04)
 
     let ref_type = function
-      | `RefType a -> vs7 (-0x05); vu32 a
+      | `RefType (VarType a) -> vs7 (-0x05); vu32 a
+      | _ -> assert false
 
     let value_type = function
       | #num_type as t -> num_type t
