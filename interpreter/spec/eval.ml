@@ -165,7 +165,7 @@ let rec step (inst : instance) (c : config) : config =
 
       | CallIndirect x, `I32 i :: vs ->
         let clos = func_elem inst (0l @@ e.at) i e.at in
-        if func_type inst x <> func_type_of clos then
+        if not (eq_func_type [] (func_type inst x) (func_type_of clos)) then
           Trap.error e.at "indirect call signature mismatch";
         vs, [Invoke clos @@ e.at]
 

@@ -84,7 +84,12 @@ let string_of_infer_type t =
 let string_of_infer_types ts =
   "[" ^ String.concat " " (List.map string_of_infer_type ts) ^ "]"
 
-let eq_ty t1 t2 = (t1 = t2 || t1 = None || t2 = None)
+let eq_ty t1 t2 =
+  Printf.printf "[eq_ty %s %s]\n" (string_of_infer_type t1) (string_of_infer_type t2);
+  match t1, t2 with
+  | _, None | None, _ -> true
+  | Some t1', Some t2' -> eq_value_type [] t1' t2'
+
 let check_stack ts1 ts2 at =
   require (List.length ts1 = List.length ts2 && List.for_all2 eq_ty ts1 ts2) at
     ("type mismatch: operator requires " ^ string_of_infer_types ts1 ^
@@ -333,6 +338,42 @@ and check_block (c : context) (es : instr list) (ts : stack_type) at =
      " but stack has " ^ string_of_infer_types (snd s'))
 
 
+(* Types *)
+
+let check_num_type at (c : context) (t : num_type) = ()
+
+let check_type_ref at (c : context) = function
+  | VarType x ->
+    (match type_ c (x @@ at) with
+    | `StructType _ -> ()
+    | `FuncType _ -> error at "reference to non-structure type"
+    )
+  | _ -> assert false
+
+let check_ref_type at (c : context) = function
+  | `RefType d -> check_type_ref at c d
+
+let check_value_type at (c : context) = function
+  | #num_type as t -> check_num_type at c t
+  | #ref_type as t -> check_ref_type at c t
+
+let check_func_type at (c : context) = function
+  | `FuncType (ins, out) ->
+    List.iter (check_value_type at c) ins;
+    List.iter (check_value_type at c) out;
+    check_arity (List.length out) at
+
+let check_struct_type at (c : context) = function
+  | `StructType ts -> List.iter (check_value_type at c) ts
+
+let check_def_type at (c : context) = function
+  | #func_type as t -> check_func_type at c t
+  | #struct_type as t -> check_struct_type at c t
+
+let check_type (c : context) (t : type_) =
+  check_def_type t.at c t.it
+
+
 (* Functions & Constants *)
 
 (*
@@ -346,11 +387,6 @@ and check_block (c : context) (es : instr list) (ts : stack_type) at =
  *   s : func_type
  *   x : variable
  *)
-
-let check_type (t : type_) =
-  match t.it with
-  | `FuncType (ins, out) -> check_arity (List.length out) t.at
-  | `StructType ts -> ()
 
 let check_func (c : context) (f : func) =
   let {ftype; locals; body} = f.it in
@@ -476,7 +512,7 @@ let check_module (m : module_) =
   let c =
     { c1 with globals = c1.globals @ List.map (fun g -> g.it.gtype) globals }
   in
-  List.iter check_type types;
+  List.iter (check_type c0) types;
   List.iter (check_global c1) globals;
   List.iter (check_table c1) tables;
   List.iter (check_memory c1) memories;

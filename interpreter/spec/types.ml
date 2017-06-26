@@ -37,46 +37,6 @@ let size = function
   | `I64Type | `F64Type -> 8
 
 
-(* Equality *)
-
-let eq_num_type ass t1 t2 = t1 = t2
-
-let rec eq_type_ref ass d1 d2 =
-  match d1, d2 with
-  | VarType a1, VarType a2 -> a1 = a2
-  | RollType (ds1, i1), RollType (ds2, i2) ->
-    eq_def_type ass (Lib.List32.nth ds1 i1) (Lib.List32.nth ds2 i2)
-  | _, _ -> d1 == d2
-
-and eq_ref_type ass t1 t2 =
-  match t1, t2 with
-  | `RefType d1, `RefType d2 -> eq_type_ref ass d1 d2
-
-and eq_value_type ass t1 t2 =
-  match t1, t2 with
-  | (#num_type as t1), (#num_type as t2) -> eq_num_type ass t1 t2
-  | (#ref_type as t1), (#ref_type as t2) -> eq_ref_type ass t1 t2
-  | _, _ -> false
-
-and eq_value_types ass ts1 ts2 =
-  List.length ts1 = List.length ts2 && List.for_all2 (eq_value_type ass) ts1 ts2
-
-and eq_stack_type ass = eq_value_types ass
-
-and eq_func_type ass (`FuncType (ins1, out1)) (`FuncType (ins2, out2)) =
-  eq_stack_type ass ins1 ins2 && eq_stack_type ass out1 out2
-
-and eq_struct_type ass (`StructType ts1 as t1) (`StructType ts2 as t2) =
-  try List.assq t1 ass == t2
-  with Not_found -> eq_value_types ((t1,t2)::ass) ts1 ts2
-
-and eq_def_type ass t1 t2 =
-  match t1, t2 with
-  | (#func_type as t1), (#func_type as t2) -> eq_func_type ass t1 t2
-  | (#struct_type as t1), (#struct_type as t2) -> eq_struct_type ass t1 t2
-  | _, _ -> false
-
-
 (* Closing *)
 
 let close_num_type ds t = t
@@ -107,6 +67,55 @@ and close_struct_type ds = function
 and close_def_type ds = function
   | #func_type as t -> (close_func_type ds t :> def_type)
   | #struct_type as t -> (close_struct_type ds t :> def_type)
+
+
+(* Equality *)
+
+let svt = ref (fun _ -> failwith "bla")
+let sdt = ref (fun _ -> failwith "bla")
+
+let eq_num_type ass t1 t2 = t1 = t2
+
+let rec eq_type_ref ass d1 d2 =
+  match d1, d2 with
+  | VarType a1, VarType a2 -> a1 = a2
+  | RollType (ds1, i1), RollType (ds2, i2) ->
+    eq_def_type ass
+      (close_def_type ds1 (Lib.List32.nth ds1 i1))
+      (close_def_type ds2 (Lib.List32.nth ds2 i2))
+  | _, _ -> d1 == d2
+
+and eq_ref_type ass t1 t2 =
+  match t1, t2 with
+  | `RefType d1, `RefType d2 -> eq_type_ref ass d1 d2
+
+and eq_value_type ass t1 t2 =
+Printf.printf "[eq_value_type %s %s] %s\n" (!svt t1) (!svt t2) (String.concat " " (List.map (fun (t,ts) -> !sdt t ^"->"^String.concat "," (List.map !sdt ts)) ass));flush_all ();
+  match t1, t2 with
+  | (#num_type as t1), (#num_type as t2) -> eq_num_type ass t1 t2
+  | (#ref_type as t1), (#ref_type as t2) -> eq_ref_type ass t1 t2
+  | _, _ -> false
+
+and eq_value_types ass ts1 ts2 =
+  List.length ts1 = List.length ts2 && List.for_all2 (eq_value_type ass) ts1 ts2
+
+and eq_stack_type ass = eq_value_types ass
+
+and eq_func_type ass (`FuncType (ins1, out1)) (`FuncType (ins2, out2)) =
+  eq_stack_type ass ins1 ins2 && eq_stack_type ass out1 out2
+
+and eq_struct_type ass (`StructType ts1 as t1) (`StructType ts2 as t2) =
+Printf.printf "[eq_struct_type %s %s] %s\n" (!sdt t1) (!sdt t2) (String.concat " " (List.map (fun (t,ts) -> !sdt t ^"->"^String.concat "," (List.map !sdt ts)) ass));flush_all ();
+  let ts = try List.assoc t1 ass with Not_found -> [] in
+  List.mem t2 ts ||
+  eq_value_types ((t1, t2::ts) :: List.remove_assoc t1 ass) ts1 ts2
+
+and eq_def_type ass t1 t2 =
+Printf.printf "[eq_def_type %s %s] %s\n" (!sdt t1) (!sdt t2) (String.concat " " (List.map (fun (t,ts) -> !sdt t ^"->"^String.concat "," (List.map !sdt ts)) ass));flush_all ();
+  match t1, t2 with
+  | (#func_type as t1), (#func_type as t2) -> eq_func_type ass t1 t2
+  | (#struct_type as t1), (#struct_type as t2) -> eq_struct_type ass t1 t2
+  | _, _ -> false
 
 
 (* Filters *)
@@ -170,7 +179,8 @@ let string_of_struct_type = function
 let string_of_def_type = function
   | #func_type as t -> string_of_func_type t
   | #struct_type as t -> string_of_struct_type t
-
+let _ = svt := string_of_value_type
+let _ = sdt := string_of_def_type
 
 let string_of_elem_type = function
   | `AnyFuncType -> "anyfunc"
