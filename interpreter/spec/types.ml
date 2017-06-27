@@ -90,7 +90,7 @@ and eq_ref_type ass t1 t2 =
   | `RefType d1, `RefType d2 -> eq_type_ref ass d1 d2
 
 and eq_value_type ass t1 t2 =
-Printf.printf "[eq_value_type %s %s] %s\n" (!svt t1) (!svt t2) (String.concat " " (List.map (fun (t,ts) -> !sdt t ^"->"^String.concat "," (List.map !sdt ts)) ass));flush_all ();
+Printf.printf "[eq_value_type %s %s] %s\n" (!svt t1) (!svt t2) (String.concat " " (List.map (fun (t1,t2) -> !sdt t1 ^"="^ !sdt t2) ass));flush_all ();
   match t1, t2 with
   | (#num_type as t1), (#num_type as t2) -> eq_num_type ass t1 t2
   | (#ref_type as t1), (#ref_type as t2) -> eq_ref_type ass t1 t2
@@ -105,13 +105,11 @@ and eq_func_type ass (`FuncType (ins1, out1)) (`FuncType (ins2, out2)) =
   eq_stack_type ass ins1 ins2 && eq_stack_type ass out1 out2
 
 and eq_struct_type ass (`StructType ts1 as t1) (`StructType ts2 as t2) =
-Printf.printf "[eq_struct_type %s %s] %s\n" (!sdt t1) (!sdt t2) (String.concat " " (List.map (fun (t,ts) -> !sdt t ^"->"^String.concat "," (List.map !sdt ts)) ass));flush_all ();
-  let ts = try List.assoc t1 ass with Not_found -> [] in
-  List.mem t2 ts ||
-  eq_value_types ((t1, t2::ts) :: List.remove_assoc t1 ass) ts1 ts2
+Printf.printf "[eq_struct_type %s %s] %s\n" (!sdt t1) (!sdt t2) (String.concat " " (List.map (fun (t1,t2) -> !sdt t1 ^"="^ !sdt t2) ass));flush_all ();
+  List.exists ((=) (t1,t2)) ass || eq_value_types ((t1,t2)::ass) ts1 ts2
 
 and eq_def_type ass t1 t2 =
-Printf.printf "[eq_def_type %s %s] %s\n" (!sdt t1) (!sdt t2) (String.concat " " (List.map (fun (t,ts) -> !sdt t ^"->"^String.concat "," (List.map !sdt ts)) ass));flush_all ();
+Printf.printf "[eq_def_type %s %s] %s\n" (!sdt t1) (!sdt t2) (String.concat " " (List.map (fun (t1,t2) -> !sdt t1 ^"="^ !sdt t2) ass));flush_all ();
   match t1, t2 with
   | (#func_type as t1), (#func_type as t2) -> eq_func_type ass t1 t2
   | (#struct_type as t1), (#struct_type as t2) -> eq_struct_type ass t1 t2
@@ -151,11 +149,11 @@ let string_of_num_type = function
 
 let string_of_type_ref = function
   | VarType a -> Int32.to_string a
-  | RollType (ts, i) -> "[...]." ^ Int32.to_string i
+  | RollType (ts, i) -> "[...] " ^ Int32.to_string i
   | _ -> "?"
 
 let string_of_ref_type = function
-  | `RefType d -> "ref(" ^ string_of_type_ref d ^ ")"
+  | `RefType d -> "(ref " ^ string_of_type_ref d ^ ")"
 
 let string_of_value_type = function
   | #num_type as t -> string_of_num_type t

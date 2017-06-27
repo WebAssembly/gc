@@ -117,11 +117,31 @@
 
 
 ;; Test static and dynamic equivalence of recursive struct types.
-;; TODO: use recursive symbolic names
 
 (module
-  (type $list1 (struct (field i32 (ref 0))))
-  (type $list2 (struct (field i32 (ref 1))))
+  (type $list1 (struct (field i32 (ref $list1))))
+  (type $list2 (struct (field i32 (ref $list2))))
+  (type $func (func (param (ref $list1)) (result i32)))
+
+  (table anyfunc (elem $callee))
+
+  (func $callee (param $v (ref $list2)) (result i32)
+    (get_field $list2 0 (get_local $v))
+  )
+  (func (export "call_indirect") (result i32)
+    (call_indirect $func (new $list2) (i32.const 0))
+  )
+)
+
+(assert_return (invoke "call_indirect") (i32.const 0))
+
+
+;; Test static and dynamic equivalence of isomorphic recursive struct types.
+
+(module
+  (type $list1 (struct (field i32 (ref $list1))))
+  (type $list2 (struct (field i32 (ref $list3))))
+  (type $list3 (struct (field i32 (ref $list2))))
   (type $func (func (param (ref $list1)) (result i32)))
 
   (table anyfunc (elem $callee))
@@ -138,9 +158,9 @@
 
 
 (module
-  (type $list1 (struct (field i32 (ref 0))))
-  (type $list2 (struct (field i32 (ref 2))))
-  (type $list3 (struct (field i32 (ref 1))))
+  (type $list1 (struct (field i32 (ref $list3))))
+  (type $list2 (struct (field i32 (ref $list2))))
+  (type $list3 (struct (field i32 (ref $list1))))
   (type $func (func (param (ref $list1)) (result i32)))
 
   (table anyfunc (elem $callee))
@@ -157,18 +177,21 @@
 
 
 (module
-  (type $list1 (struct (field i32 (ref 2))))
-  (type $list2 (struct (field i32 (ref 1))))
-  (type $list3 (struct (field i32 (ref 0))))
-  (type $func (func (param (ref $list1)) (result i32)))
+  (type $t1 (struct (field i32 (ref $u1))))
+  (type $u1 (struct (field f32 (ref $t1))))
+  (type $t2 (struct (field i32 (ref $u3))))
+  (type $u2 (struct (field f32 (ref $t3))))
+  (type $t3 (struct (field i32 (ref $u2))))
+  (type $u3 (struct (field f32 (ref $t2))))
+  (type $func (func (param (ref $t1)) (result i32)))
 
   (table anyfunc (elem $callee))
 
-  (func $callee (param $v (ref $list2)) (result i32)
-    (get_field $list2 0 (get_local $v))
+  (func $callee (param $v (ref $t2)) (result i32)
+    (get_field $t2 0 (get_local $v))
   )
   (func (export "call_indirect") (result i32)
-    (call_indirect $func (new $list2) (i32.const 0))
+    (call_indirect $func (new $t2) (i32.const 0))
   )
 )
 

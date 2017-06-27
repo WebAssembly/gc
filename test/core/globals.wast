@@ -121,6 +121,16 @@
   "unknown global"
 )
 
+(assert_invalid
+  (module (global $x i32 (i32.const 0)) (global $y i32 (get_global $x)))
+  "unknown global"
+)
+
+(assert_invalid
+  (module (global $x i32 (get_global $y)) (global $y i32 (i32.const 0)))
+  "unknown global"
+)
+
 (module
   (import "spectest" "global" (global i32))
 )

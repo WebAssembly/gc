@@ -153,10 +153,10 @@
 
   ;; Desugaring of implicit type signature
   (func $empty-sig-1)  ;; should be assigned type $sig
-  (func $complex-sig-1 (param f64 i64 f64 i64 f64 i64 f32 i32))
+  (func $complex-sig-1 (param i64 i64 f64 i64 f64 i64 f32 i32))
   (func $empty-sig-2)  ;; should be assigned type $sig
-  (func $complex-sig-2 (param f64 i64 f64 i64 f64 i64 f32 i32))
-  (func $complex-sig-3 (param f64 i64 f64 i64 f64 i64 f32 i32))
+  (func $complex-sig-2 (param i64 i64 f64 i64 f64 i64 f32 i32))
+  (func $complex-sig-3 (param i64 i64 f64 i64 f64 i64 f32 i32))
 
   (type $empty-sig-duplicate (func))
   (type $complex-sig-duplicate (func (param f64 i64 f64 i64 f64 i64 f32 i32)))
@@ -172,20 +172,20 @@
   )
 
   (func (export "signature-implicit-reused")
-    ;; The implicit index 16 in this test depends on the function and
+    ;; The implicit index 18 in this test depends on the function and
     ;; type definitions, and may need adapting if they change.
-    (call_indirect 16
-      (f64.const 0) (i64.const 0) (f64.const 0) (i64.const 0)
+    (call_indirect 18
+      (i64.const 0) (i64.const 0) (f64.const 0) (i64.const 0)
       (f64.const 0) (i64.const 0) (f32.const 0) (i32.const 0)
       (i32.const 0)
     )
-    (call_indirect 16
-      (f64.const 0) (i64.const 0) (f64.const 0) (i64.const 0)
+    (call_indirect 18
+      (i64.const 0) (i64.const 0) (f64.const 0) (i64.const 0)
       (f64.const 0) (i64.const 0) (f32.const 0) (i32.const 0)
       (i32.const 2)
     )
-    (call_indirect 16
-      (f64.const 0) (i64.const 0) (f64.const 0) (i64.const 0)
+    (call_indirect 18
+      (i64.const 0) (i64.const 0) (f64.const 0) (i64.const 0)
       (f64.const 0) (i64.const 0) (f32.const 0) (i32.const 0)
       (i32.const 3)
     )
@@ -193,14 +193,6 @@
 
   (func (export "signature-explicit-duplicate")
     (call_indirect $empty-sig-duplicate (i32.const 1))
-  )
-
-  (func (export "signature-implicit-duplicate")
-    (call_indirect $complex-sig-duplicate
-      (f64.const 0) (i64.const 0) (f64.const 0) (i64.const 0)
-      (f64.const 0) (i64.const 0) (f32.const 0) (i32.const 0)
-      (i32.const 0)
-    )
   )
 )
 
@@ -308,7 +300,6 @@
 (assert_return (invoke "signature-explicit-reused"))
 (assert_return (invoke "signature-implicit-reused"))
 (assert_return (invoke "signature-explicit-duplicate"))
-(assert_return (invoke "signature-implicit-duplicate"))
 
 
 ;; Invalid typing of locals
