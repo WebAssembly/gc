@@ -426,7 +426,8 @@ let check_limits actual expected at =
 let add_import (ext : extern) (im : import) (inst : instance) : instance =
   let {idesc; _} = im.it in
   match ext, idesc.it with
-  | ExternalFunc clos, FuncImport x when func_type_of clos = func_type inst x ->
+  | ExternalFunc clos, FuncImport x
+    when eq_func_type [] (func_type_of clos) (func_type inst x) ->
     {inst with funcs = clos :: inst.funcs}
   | ExternalTable tab, TableImport (TableType (lim, t))
     when Table.elem_type tab = t ->
@@ -435,7 +436,8 @@ let add_import (ext : extern) (im : import) (inst : instance) : instance =
   | ExternalMemory mem, MemoryImport (MemoryType lim) ->
     check_limits (Memory.limits mem) lim idesc.at;
     {inst with memories = mem :: inst.memories}
-  | ExternalGlobal v, GlobalImport (GlobalType (t, _)) when type_of v = t ->
+  | ExternalGlobal v, GlobalImport (GlobalType (t, _))
+    when eq_value_type [] (type_of v) t ->
     {inst with globals = ref v :: inst.globals}
   | _ ->
     Link.error idesc.at "type mismatch"

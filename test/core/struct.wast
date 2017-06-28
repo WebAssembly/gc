@@ -2,7 +2,6 @@
 
 (module
   (type (struct))
-  (type (struct))
   (type (struct (field i32)))
   (type (struct (field i32) (field i32)))
   (type (struct (field $x i32) (field $y i32)))
@@ -13,10 +12,14 @@
 
 ;; Test binding structure of struct types.
 
-(;TODO module
+(module
   (type $s0 (struct (field (ref 0) (ref 1) (ref $s0) (ref $s1))))
   (type $s1 (struct (field (ref 0) (ref 1) (ref $s0) (ref $s1))))
-;)
+
+  (func (param (ref $forward)))
+
+  (type $forward (struct))
+)
 
 (assert_invalid
   (module (type (struct (field (ref 1)))))
@@ -196,3 +199,38 @@
 )
 
 (assert_return (invoke "call_indirect") (i32.const 0))
+
+
+;; Test link-time type equivalence
+
+(module
+  (type $vec (struct (field f32 f32 f32)))
+  (func (export "f") (param (ref $vec)))
+)
+(register "M1")
+(module
+  (func (import "M1" "f") (param (ref $vec)))
+  (type $vec (struct (field f32 f32 f32)))
+)
+
+(module
+  (type $list (struct (field i32 (ref $list))))
+  (func (export "f") (param (ref $list)))
+)
+(register "M2")
+(module
+  (type $list1 (struct (field i32 (ref $list2))))
+  (type $list2 (struct (field i32 (ref $list1))))
+  (func (import "M2" "f") (param (ref $list2)))
+)
+
+(module
+  (type $list1 (struct (field i32 (ref $list2))))
+  (type $list2 (struct (field i32 (ref $list1))))
+  (func (export "f") (param (ref $list2)))
+)
+(register "M3")
+(module
+  (type $list (struct (field i32 (ref $list))))
+  (func (import "M3" "f") (param (ref $list)))
+)
