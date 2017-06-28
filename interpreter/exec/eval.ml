@@ -203,11 +203,17 @@ let rec step (inst : instance) (c : config) : config =
           s.fields.(Int32.to_int y.it) :: vs', []
         with Failure _ -> Crash.error e.at "invalid field")
 
+      | GetField (x, y), Ref Null :: vs' ->
+        vs', [Trapped "null dereference" @@ e.at]
+
       | SetField (x, y), v :: Ref (Data (Struct s)) :: vs' ->
         (try
           s.fields.(Int32.to_int y.it) <- v;
           vs', []
         with Failure _ -> Crash.error e.at "invalid field")
+
+      | SetField (x, y), v :: Ref Null :: vs' ->
+        vs', [Trapped "null dereference" @@ e.at]
 
       | New x, vs ->
         let StructType ts as stype = struct_type inst x in

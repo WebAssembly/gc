@@ -398,7 +398,8 @@ let check_type (c : context) (t : type_) =
 let check_func (c : context) (f : func) =
   let {ftype; locals; body} = f.it in
   let FuncType (ins, out) = func_type c ftype in
-  let c' = {c with locals = ins @ locals; results = out; labels = [out]} in
+  let ts = List.map (close_value_type c.types) (ins @ locals) in
+  let c' = {c with locals = ts; results = out; labels = [out]} in
   check_block c' body out f.at
 
 
@@ -517,7 +518,10 @@ let check_module (m : module_) =
     }
   in
   let c =
-    { c1 with globals = c1.globals @ List.map (fun g -> g.it.gtype) globals }
+    { c1 with
+      globals = c1.globals @
+        List.map (fun g -> close_global_type c0.types g.it.gtype) globals
+    }
   in
   List.iter (check_type c0) types;
   List.iter (check_global c1) globals;

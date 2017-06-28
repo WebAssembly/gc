@@ -76,6 +76,22 @@
 (assert_return (invoke "set_get_1" (f32.const 7)) (f32.const 7))
 
 
+;; Test null dereference.
+
+(module
+  (type $t (struct (field i32 i32)))
+  (func (export "get_field-null")
+    (local (ref $t)) (drop (get_field $t 1 (get_local 0)))
+  )
+  (func (export "set_field-null")
+    (local (ref $t)) (set_field $t 1 (get_local 0) (i32.const 0))
+  )
+)
+
+(assert_trap (invoke "get_field-null") "null dereference")
+(assert_trap (invoke "set_field-null") "null dereference")
+
+
 ;; Test static and dynamic equivalence of simple struct types.
 
 (module

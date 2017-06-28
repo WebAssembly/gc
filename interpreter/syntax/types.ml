@@ -70,6 +70,9 @@ and close_def_type ds = function
   | FuncDefType t -> FuncDefType (close_func_type ds t)
   | StructDefType t -> StructDefType (close_struct_type ds t)
 
+let close_global_type ds = function
+  | GlobalType (t, m) -> GlobalType (close_value_type ds t, m)
+
 
 (* Equality *)
 
