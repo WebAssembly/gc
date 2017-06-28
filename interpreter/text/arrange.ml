@@ -55,26 +55,31 @@ let break_string s =
 
 (* Types *)
 
+let num_type t = string_of_num_type t
 let value_type t = string_of_value_type t
-
 let elem_type t = string_of_elem_type t
 
 let decls kind ts = tab kind (atom value_type) ts
 
 let stack_type ts = decls "result" ts
 
-let def_type = function
-  | `FuncType (ins, out) ->
+let func_type = function
+  | FuncType (ins, out) ->
     Node ("func", decls "param" ins @ decls "result" out)
-  | `StructType ts ->
-    Node ("struct", decls "field" ts)
+
+let struct_type = function
+  | StructType ts -> Node ("struct", decls "field" ts)
+
+let def_type = function
+  | FuncDefType ft -> func_type ft
+  | StructDefType st -> struct_type st
 
 let limits nat {min; max} =
   String.concat " " (nat min :: opt nat max)
 
 let global_type = function
-  | `GlobalType (t, Immutable) -> atom string_of_value_type t
-  | `GlobalType (t, Mutable) -> Node ("mut", [atom string_of_value_type t])
+  | GlobalType (t, Immutable) -> atom string_of_value_type t
+  | GlobalType (t, Mutable) -> Node ("mut", [atom string_of_value_type t])
 
 
 (* Operators *)
@@ -174,12 +179,12 @@ struct
 end
 
 let oper (intop, floatop) op =
-  value_type (type_of_num op) ^ "." ^
+  num_type (type_of_num op) ^ "." ^
   (match op with
-  | `I32 o -> intop "32" o
-  | `I64 o -> intop "64" o
-  | `F32 o -> floatop "32" o
-  | `F64 o -> floatop "64" o
+  | I32 o -> intop "32" o
+  | I64 o -> intop "64" o
+  | F32 o -> floatop "32" o
+  | F64 o -> floatop "64" o
   )
 
 let unop = oper (IntOp.unop, FloatOp.unop)
@@ -198,7 +203,7 @@ let extension = function
   | Memory.ZX -> "_u"
 
 let memop name {ty; align; offset; _} =
-  value_type ty ^ "." ^ name ^
+  num_type ty ^ "." ^ name ^
   (if offset = 0l then "" else " offset=" ^ nat32 offset) ^
   (if 1 lsl align = size ty then "" else " align=" ^ nat (1 lsl align))
 
@@ -217,7 +222,7 @@ let storeop op =
 
 let var x = nat32 x.it
 let num c = string_of_num c.it
-let constop c = value_type (type_of c.it) ^ ".const"
+let constop c = num_type (type_of_num c.it) ^ ".const"
 
 let rec instr e =
   let head, inner =
@@ -284,13 +289,13 @@ let start x = Node ("start " ^ var x, [])
 (* Tables & memories *)
 
 let table off i tab =
-  let {ttype = `TableType (lim, t)} = tab.it in
+  let {ttype = TableType (lim, t)} = tab.it in
   Node ("table $" ^ nat (off + i) ^ " " ^ limits nat32 lim,
     [atom elem_type t]
   )
 
 let memory off i mem =
-  let {mtype = `MemoryType lim} = mem.it in
+  let {mtype = MemoryType lim} = mem.it in
   Node ("memory $" ^ nat (off + i) ^ " " ^ limits nat32 lim, [])
 
 let segment head dat seg =
@@ -388,10 +393,10 @@ let module_ = module_with_var_opt None
 
 let literal lit =
   match lit.it with
-  | `I32 i -> Node ("i32.const " ^ I32.to_string_s i, [])
-  | `I64 i -> Node ("i64.const " ^ I64.to_string_s i, [])
-  | `F32 z -> Node ("f32.const " ^ F32.to_string z, [])
-  | `F64 z -> Node ("f64.const " ^ F64.to_string z, [])
+  | I32 i -> Node ("i32.const " ^ I32.to_string_s i, [])
+  | I64 i -> Node ("i64.const " ^ I64.to_string_s i, [])
+  | F32 z -> Node ("f32.const " ^ F32.to_string z, [])
+  | F64 z -> Node ("f64.const " ^ F64.to_string z, [])
 
 let definition mode x_opt def =
   try

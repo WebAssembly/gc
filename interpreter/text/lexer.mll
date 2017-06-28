@@ -1,5 +1,7 @@
 {
 open Parser
+open Types
+open Values
 open Operators
 
 let convert_pos pos =
@@ -46,10 +48,10 @@ let string s =
   Buffer.contents b
 
 let num_type = function
-  | "i32" -> `I32Type
-  | "i64" -> `I64Type
-  | "f32" -> `F32Type
-  | "f64" -> `F64Type
+  | "i32" -> I32Type
+  | "i64" -> I64Type
+  | "f32" -> F32Type
+  | "f64" -> F64Type
   | _ -> assert false
 
 let intop t i32 i64 =
@@ -162,10 +164,10 @@ rule token = parse
   | (nxx as t)".const"
     { let open Source in
       CONST (numop t
-        (fun s -> let n = I32.of_string s.it in i32_const (n @@ s.at), `I32 n)
-        (fun s -> let n = I64.of_string s.it in i64_const (n @@ s.at), `I64 n)
-        (fun s -> let n = F32.of_string s.it in f32_const (n @@ s.at), `F32 n)
-        (fun s -> let n = F64.of_string s.it in f64_const (n @@ s.at), `F64 n))
+        (fun s -> let n = I32.of_string s.it in i32_const (n @@ s.at), I32 n)
+        (fun s -> let n = I64.of_string s.it in i64_const (n @@ s.at), I64 n)
+        (fun s -> let n = F32.of_string s.it in f32_const (n @@ s.at), F32 n)
+        (fun s -> let n = F64.of_string s.it in f64_const (n @@ s.at), F64 n))
     }
   | "ref" { REF }
   | "struct" { STRUCT }

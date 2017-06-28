@@ -133,16 +133,16 @@ open Types
 
 let value_type s =
   match vs7 s with
-  | -0x01 -> `I32Type
-  | -0x02 -> `I64Type
-  | -0x03 -> `F32Type
-  | -0x04 -> `F64Type
-  | -0x05 -> `RefType (VarType (vu32 s))
+  | -0x01 -> NumType I32Type
+  | -0x02 -> NumType I64Type
+  | -0x03 -> NumType F32Type
+  | -0x04 -> NumType F64Type
+  | -0x05 -> RefType (DataRefType (VarType (vu32 s)))
   | _ -> error s (pos s - 1) "invalid value type"
 
 let elem_type s =
   match vs7 s with
-  | -0x10 -> `AnyFuncType
+  | -0x10 -> AnyFuncType
   | _ -> error s (pos s - 1) "invalid element type"
 
 let stack_type s =
@@ -155,10 +155,10 @@ let def_type s =
   | -0x20 ->
     let ins = vec value_type s in
     let out = vec value_type s in
-    `FuncType (ins, out)
+    FuncDefType (FuncType (ins, out))
   | -0x21 ->
     let ts = vec value_type s in
-    `StructType ts
+    StructDefType (StructType ts)
   | _ -> error s (pos s - 1) "invalid type definition"
 
 let limits vu s =
@@ -170,11 +170,11 @@ let limits vu s =
 let table_type s =
   let t = elem_type s in
   let lim = limits vu32 s in
-  `TableType (lim, t)
+  TableType (lim, t)
 
 let memory_type s =
   let lim = limits vu32 s in
-  `MemoryType lim
+  MemoryType lim
 
 let mutability s =
   match u8 s with
@@ -185,7 +185,7 @@ let mutability s =
 let global_type s =
   let t = value_type s in
   let mut = mutability s in
-  `GlobalType (t, mut)
+  GlobalType (t, mut)
 
 
 (* Decode instructions *)

@@ -1,5 +1,6 @@
 open Script
 open Source
+open Values
 
 
 (* Errors & Tracing *)
@@ -210,10 +211,10 @@ let print_import m im =
   let open Types in
   let category, annotation =
     match Ast.import_type m im with
-    | `FuncType _ as t -> "func", string_of_func_type t
-    | `TableType _ as t -> "table", string_of_table_type t
-    | `MemoryType _ as t -> "memory", string_of_memory_type t
-    | `GlobalType _ as t -> "global", string_of_global_type t
+    | ExternalFuncType t -> "func", string_of_func_type t
+    | ExternalTableType t -> "table", string_of_table_type t
+    | ExternalMemoryType t -> "memory", string_of_memory_type t
+    | ExternalGlobalType t -> "global", string_of_global_type t
   in
   Printf.printf "  import %s \"%s\" \"%s\" : %s\n"
     category (Ast.string_of_name im.it.Ast.module_name)
@@ -223,10 +224,10 @@ let print_export m ex =
   let open Types in
   let category, annotation =
     match Ast.export_type m ex with
-    | `FuncType _ as t -> "func", string_of_func_type t
-    | `TableType _ as t -> "table", string_of_table_type t
-    | `MemoryType _ as t -> "memory", string_of_memory_type t
-    | `GlobalType _ as t -> "global", string_of_global_type t
+    | ExternalFuncType t -> "func", string_of_func_type t
+    | ExternalTableType t -> "table", string_of_table_type t
+    | ExternalMemoryType t -> "memory", string_of_memory_type t
+    | ExternalGlobalType t -> "global", string_of_global_type t
   in
   Printf.printf "  export %s \"%s\" : %s\n"
     category (Ast.string_of_name ex.it.Ast.name) annotation
@@ -299,7 +300,7 @@ let run_action act =
     let inst = lookup_instance x_opt act.at in
     (match Instance.export inst name with
     | Some (Instance.ExternalFunc f) ->
-      Eval.invoke f (List.map (fun v -> (v.it :> Values.value)) vs)
+      Eval.invoke f (List.map (fun v -> Num v.it) vs)
     | Some _ -> Assert.error act.at "export is not a function"
     | None -> Assert.error act.at "undefined export"
     )
@@ -380,7 +381,7 @@ let run_assertion ass =
   | AssertReturn (act, vs) ->
     trace ("Asserting return...");
     let got_vs = run_action act in
-    let expect_vs = List.map (fun v -> (v.it :> Values.value)) vs in
+    let expect_vs = List.map (fun v -> Num v.it) vs in
     assert_result ass.at (got_vs = expect_vs) got_vs print_result expect_vs
 
   | AssertReturnCanonicalNaN act ->
@@ -388,8 +389,8 @@ let run_assertion ass =
     let got_vs = run_action act in
     let is_canonical_nan =
       match got_vs with
-      | [`F32 got_f32] -> got_f32 = F32.pos_nan || got_f32 = F32.neg_nan
-      | [`F64 got_f64] -> got_f64 = F64.pos_nan || got_f64 = F64.neg_nan
+      | [Num (F32 got_f32)] -> got_f32 = F32.pos_nan || got_f32 = F32.neg_nan
+      | [Num (F64 got_f64)] -> got_f64 = F64.pos_nan || got_f64 = F64.neg_nan
       | _ -> false
     in assert_result ass.at is_canonical_nan got_vs print_endline "nan"
 
@@ -398,10 +399,10 @@ let run_assertion ass =
     let got_vs = run_action act in
     let is_arithmetic_nan =
       match got_vs with
-      | [`F32 got_f32] ->
+      | [Num (F32 got_f32)] ->
         let pos_nan = F32.to_bits F32.pos_nan in
         Int32.logand (F32.to_bits got_f32) pos_nan = pos_nan
-      | [`F64 got_f64] ->
+      | [Num (F64 got_f64)] ->
         let pos_nan = F64.to_bits F64.pos_nan in
         Int64.logand (F64.to_bits got_f64) pos_nan = pos_nan
       | _ -> false

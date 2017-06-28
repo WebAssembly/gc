@@ -1,6 +1,6 @@
 open Values
 
-exception TypeError of int * value * Types.value_type
+exception TypeError of int * value * Types.num_type
 
 val eval_unop : Ast.unop -> value -> value
 val eval_binop : Ast.binop -> value -> value -> value

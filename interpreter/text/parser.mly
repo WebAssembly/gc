@@ -143,7 +143,7 @@ let anon_fields (s : space) n = ignore (anon "field" s (Int32.of_int n))
 
 (* TODO: use proper type equality to find/check func types *)
 let inline_func_type (c : context) ft at =
-  let dt = (ft :> def_type) in
+  let dt = FuncDefType ft in
   match Lib.List.index_where (fun ty -> eq_def_type [] (fst ty).it dt) c.types.list with
   | Some i -> Int32.of_int i @@ at
   | None ->
@@ -155,7 +155,7 @@ Printf.printf "i=%ld\n" i;
 
 let inline_func_type_explicit (c : context) x ft at =
   if
-    ft <> `FuncType ([], []) && not (eq_def_type [] (ft :> def_type) (def_type c x))
+    ft <> FuncType ([], []) && not (eq_def_type [] (FuncDefType ft) (def_type c x))
   then
     error at "inline function type does not match explicit type"
   else
@@ -220,50 +220,50 @@ string_list :
 /* Types */
 
 value_type :
-  | NUM_TYPE { fun c -> ($1 :> value_type) }
-  | LPAR REF var RPAR { fun c -> `RefType (VarType ($3 c type_).it) }
+  | NUM_TYPE { fun c -> NumType $1 }
+  | LPAR REF var RPAR { fun c -> RefType (DataRefType (VarType ($3 c type_).it)) }
 
 value_type_list :
   | /* empty */ { 0, fun c -> [] }
   | value_type value_type_list { fst $2 + 1, fun c -> $1 c :: snd $2 c }
 
 elem_type :
-  | ANYFUNC { fun c -> `AnyFuncType }
+  | ANYFUNC { fun c -> AnyFuncType }
 
 global_type :
-  | value_type { fun c -> `GlobalType ($1 c, Immutable) }
-  | LPAR MUT value_type RPAR { fun c -> `GlobalType ($3 c, Mutable) }
+  | value_type { fun c -> GlobalType ($1 c, Immutable) }
+  | LPAR MUT value_type RPAR { fun c -> GlobalType ($3 c, Mutable) }
 
 func_type :
   | LPAR FUNC func_sig RPAR { $3 }
 
 func_sig :
   | /* empty */
-    { fun c -> `FuncType ([], []) }
+    { fun c -> FuncType ([], []) }
   | LPAR RESULT value_type_list RPAR func_sig
     { fun c ->
-      let `FuncType (ins, out) = $5 c in
+      let FuncType (ins, out) = $5 c in
       if ins <> [] then error (at ()) "result before parameter";
-      `FuncType (ins, snd $3 c @ out) }
+      FuncType (ins, snd $3 c @ out) }
   | LPAR PARAM value_type_list RPAR func_sig
     { fun c ->
-      let `FuncType (ins, out) = $5 c in `FuncType (snd $3 c @ ins, out) }
+      let FuncType (ins, out) = $5 c in FuncType (snd $3 c @ ins, out) }
   | LPAR PARAM bind_var value_type RPAR func_sig  /* Sugar */
     { fun c ->
-      let `FuncType (ins, out) = $6 c in `FuncType ($4 c :: ins, out) }
+      let FuncType (ins, out) = $6 c in FuncType ($4 c :: ins, out) }
 
 table_sig :
-  | limits elem_type { fun c -> `TableType ($1, $2 c) }
+  | limits elem_type { fun c -> TableType ($1, $2 c) }
 
 memory_sig :
-  | limits { fun c -> `MemoryType $1 }
+  | limits { fun c -> MemoryType $1 }
 
 limits :
   | NAT { {min = nat32 $1 (ati 1); max = None} }
   | NAT NAT { {min = nat32 $1 (ati 1); max = Some (nat32 $2 (ati 2))} }
 
 struct_type :
-  | LPAR STRUCT struct_sig RPAR { fun c s -> `StructType ($3 c s) }
+  | LPAR STRUCT struct_sig RPAR { fun c s -> StructType ($3 c s) }
 
 struct_sig :
   | /* empty */ { fun c s -> [] }
@@ -273,8 +273,8 @@ struct_sig :
     { fun c s -> ignore (bind_field s $3); $4 c :: $6 c s }
 
 def_type :
-  | func_type { fun c s -> ($1 c :> def_type) }
-  | struct_type { fun c s -> ($1 c s :> def_type) }
+  | func_type { fun c s -> FuncDefType ($1 c) }
+  | struct_type { fun c s -> StructDefType ($1 c s) }
 
 type_use :
   | LPAR TYPE var RPAR { $3 }
@@ -462,31 +462,31 @@ func_fields :
 func_fields_import :  /* Sugar */
   | func_fields_import_result { $1 }
   | LPAR PARAM value_type_list RPAR func_fields_import
-    { fun c -> let `FuncType (ins, out) = $5 c in `FuncType (snd $3 c @ ins, out) }
+    { fun c -> let FuncType (ins, out) = $5 c in FuncType (snd $3 c @ ins, out) }
   | LPAR PARAM bind_var value_type RPAR func_fields_import  /* Sugar */
-    { fun c -> let `FuncType (ins, out) = $6 c in `FuncType ($4 c :: ins, out) }
+    { fun c -> let FuncType (ins, out) = $6 c in FuncType ($4 c :: ins, out) }
 
 func_fields_import_result :  /* Sugar */
-  | /* empty */ { fun c -> `FuncType ([], []) }
+  | /* empty */ { fun c -> FuncType ([], []) }
   | LPAR RESULT value_type_list RPAR func_fields_import_result
-    { fun c -> let `FuncType (ins, out) = $5 c in `FuncType (ins, snd $3 c @ out) }
+    { fun c -> let FuncType (ins, out) = $5 c in FuncType (ins, snd $3 c @ out) }
 
 func_fields_body :
   | func_result_body { $1 }
   | LPAR PARAM value_type_list RPAR func_fields_body
-    { (fun c -> let `FuncType (ins, out) = fst $5 c in
-        `FuncType (snd $3 c @ ins, out)),
+    { (fun c -> let FuncType (ins, out) = fst $5 c in
+        FuncType (snd $3 c @ ins, out)),
       fun c -> ignore (anon_locals c (fst $3)); snd $5 c }
   | LPAR PARAM bind_var value_type RPAR func_fields_body  /* Sugar */
-    { (fun c -> let `FuncType (ins, out) = fst $6 c in
-        `FuncType ($4 c :: ins, out)),
+    { (fun c -> let FuncType (ins, out) = fst $6 c in
+        FuncType ($4 c :: ins, out)),
       fun c -> ignore (bind_local c $3); snd $6 c }
 
 func_result_body :
-  | func_body { (fun c -> `FuncType ([], [])), $1 }
+  | func_body { (fun c -> FuncType ([], [])), $1 }
   | LPAR RESULT value_type_list RPAR func_result_body
-    { (fun c -> let `FuncType (ins, out) = fst $5 c in
-        `FuncType (ins, snd $3 c @ out)),
+    { (fun c -> let FuncType (ins, out) = fst $5 c in
+        FuncType (ins, snd $3 c @ out)),
         snd $5 }
 
 func_body :
@@ -535,7 +535,7 @@ table_fields :
   | elem_type LPAR ELEM var_list RPAR  /* Sugar */
     { fun c x at ->
       let init = $4 c func in let size = Int32.of_int (List.length init) in
-      [{ttype = `TableType ({min = size; max = Some size}, $1 c)} @@ at],
+      [{ttype = TableType ({min = size; max = Some size}, $1 c)} @@ at],
       [{index = x; offset = [i32_const (0l @@ at) @@ at] @@ at; init} @@ at],
       [], [] }
 
@@ -567,7 +567,7 @@ memory_fields :
   | LPAR DATA string_list RPAR  /* Sugar */
     { fun c x at ->
       let size = Int32.(div (add (of_int (String.length $3)) 65535l) 65536l) in
-      [{mtype = `MemoryType {min = size; max = Some size}} @@ at],
+      [{mtype = MemoryType {min = size; max = Some size}} @@ at],
       [{index = x;
         offset = [i32_const (0l @@ at) @@ at] @@ at; init = $3} @@ at],
       [], [] }

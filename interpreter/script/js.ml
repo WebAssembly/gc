@@ -1,4 +1,5 @@
 open Types
+open Values
 open Ast
 open Script
 open Source
@@ -176,32 +177,31 @@ let lookup (mods : modules) x_opt name at =
 (* Wrappers *)
 
 let eq_of = function
-  | `I32Type -> `I32 I32Op.Eq
-  | `I64Type -> `I64 I64Op.Eq
-  | `F32Type -> `F32 F32Op.Eq
-  | `F64Type -> `F64 F64Op.Eq
+  | I32Type -> I32 I32Op.Eq
+  | I64Type -> I64 I64Op.Eq
+  | F32Type -> F32 F32Op.Eq
+  | F64Type -> F64 F64Op.Eq
 
 let and_of = function
-  | `I32Type | `F32Type -> `I32 I32Op.And
-  | `I64Type | `F64Type -> `I64 I64Op.And
+  | I32Type | F32Type -> I32 I32Op.And
+  | I64Type | F64Type -> I64 I64Op.And
 
 let reinterpret_of = function
-  | `I32Type -> `I32Type, Nop
-  | `I64Type -> `I64Type, Nop
-  | `F32Type -> `I32Type, Convert (`I32 I32Op.ReinterpretFloat)
-  | `F64Type -> `I64Type, Convert (`I64 I64Op.ReinterpretFloat)
-  | _ -> `I32Type, Nop  (* dummy *)
+  | I32Type -> I32Type, Nop
+  | I64Type -> I64Type, Nop
+  | F32Type -> I32Type, Convert (I32 I32Op.ReinterpretFloat)
+  | F64Type -> I64Type, Convert (I64 I64Op.ReinterpretFloat)
 
 let canonical_nan_of = function
-  | `I32Type | `F32Type -> `I32 (F32.to_bits F32.pos_nan)
-  | `I64Type | `F64Type -> `I64 (F64.to_bits F64.pos_nan)
+  | I32Type | F32Type -> I32 (F32.to_bits F32.pos_nan)
+  | I64Type | F64Type -> I64 (F64.to_bits F64.pos_nan)
 
 let abs_mask_of = function
-  | `I32Type | `F32Type -> `I32 Int32.max_int
-  | `I64Type | `F64Type -> `I64 Int64.max_int
+  | I32Type | F32Type -> I32 Int32.max_int
+  | I64Type | F64Type -> I64 Int64.max_int
 
 let invoke ft lits at =
-  [ft @@ at], FuncImport (1l @@ at) @@ at,
+  [FuncDefType ft @@ at], FuncImport (1l @@ at) @@ at,
   List.map (fun lit -> Const lit @@ at) lits @ [Call (0l @@ at) @@ at]
 
 let get t at =
@@ -217,20 +217,22 @@ let assert_return lits ts at =
       Const lit @@ at;
       reinterpret @@ at;
       Compare (eq_of t') @@ at;
-      Test (`I32 I32Op.Eqz) @@ at;
+      Test (I32 I32Op.Eqz) @@ at;
       BrIf (0l @@ at) @@ at ]
   in [], List.flatten (List.rev_map test lits)
 
 let assert_return_nan_bitpattern nan_bitmask_of ts at =
-  let test t =
-    let t', reinterpret = reinterpret_of t in
-    [ reinterpret @@ at;
-      Const (nan_bitmask_of t' @@ at) @@ at;
-      Binary (and_of t') @@ at;
-      Const (canonical_nan_of t' @@ at) @@ at;
-      Compare (eq_of t') @@ at;
-      Test (`I32 I32Op.Eqz) @@ at;
-      BrIf (0l @@ at) @@ at ]
+  let test = function
+    | NumType t ->
+      let t', reinterpret = reinterpret_of t in
+      [ reinterpret @@ at;
+        Const (nan_bitmask_of t' @@ at) @@ at;
+        Binary (and_of t') @@ at;
+        Const (canonical_nan_of t' @@ at) @@ at;
+        Compare (eq_of t') @@ at;
+        Test (I32 I32Op.Eqz) @@ at;
+        BrIf (0l @@ at) @@ at ]
+    | _ -> [ Br (0l @@ at) @@ at ]
   in [], List.flatten (List.rev_map test ts)
 
 let assert_return_canonical_nan =
@@ -245,7 +247,7 @@ let wrap module_name item_name wrap_action wrap_assertion at =
   let itypes, idesc, action = wrap_action at in
   let locals, assertion = wrap_assertion at in
   let item = Lib.List32.length itypes @@ at in
-  let types = (`FuncType ([], []) @@ at) :: itypes in
+  let types = (FuncDefType (FuncType ([], [])) @@ at) :: itypes in
   let imports = [{module_name; item_name; idesc} @@ at] in
   let edesc = FuncExport item @@ at in
   let exports = [{name = Utf8.decode "run"; edesc} @@ at] in
@@ -259,14 +261,14 @@ let wrap module_name item_name wrap_action wrap_assertion at =
 
 
 let is_js_value_type = function
-  | `I32Type -> true
-  | `I64Type | `F32Type | `F64Type | `RefType _ -> false
+  | NumType I32Type -> true
+  | NumType _ | RefType _ -> false
 
 let is_js_global_type = function
-  | `GlobalType (t, mut) -> is_js_value_type t && mut = Immutable
+  | GlobalType (t, mut) -> is_js_value_type t && mut = Immutable
 
 let is_js_func_type = function
-  | `FuncType (ins, out) -> List.for_all is_js_value_type (ins @ out)
+  | FuncType (ins, out) -> List.for_all is_js_value_type (ins @ out)
 
 
 (* Script conversion *)
@@ -306,10 +308,10 @@ let of_float z =
 
 let of_literal lit =
   match lit.it with
-  | `I32 i -> I32.to_string_s i
-  | `I64 i -> "int64(\"" ^ I64.to_string_s i ^ "\")"
-  | `F32 z -> of_float (F32.to_float z)
-  | `F64 z -> of_float (F64.to_float z)
+  | I32 i -> I32.to_string_s i
+  | I64 i -> "int64(\"" ^ I64.to_string_s i ^ "\")"
+  | F32 z -> of_float (F32.to_float z)
+  | F64 z -> of_float (F64.to_float z)
 
 let rec of_definition def =
   match def.it with
@@ -331,16 +333,16 @@ let of_action mods act =
     "call(" ^ of_var_opt mods x_opt ^ ", " ^ of_name name ^ ", " ^
       "[" ^ String.concat ", " (List.map of_literal lits) ^ "])",
     (match lookup mods x_opt name act.at with
-    | `FuncType _ as ft when not (is_js_func_type ft) ->
-      let `FuncType (_, out) = ft in
+    | ExternalFuncType ft when not (is_js_func_type ft) ->
+      let FuncType (_, out) = ft in
       Some (of_wrapper mods x_opt name (invoke ft lits), out)
     | _ -> None
     )
   | Get (x_opt, name) ->
     "get(" ^ of_var_opt mods x_opt ^ ", " ^ of_name name ^ ")",
     (match lookup mods x_opt name act.at with
-    | `GlobalType _ as gt when not (is_js_global_type gt) ->
-      let `GlobalType (t, _) = gt in
+    | ExternalGlobalType gt when not (is_js_global_type gt) ->
+      let GlobalType (t, _) = gt in
       Some (of_wrapper mods x_opt name (get gt), [t])
     | _ -> None
     )
@@ -371,9 +373,11 @@ let of_assertion mods ass =
     of_assertion' mods act "assert_return" (List.map of_literal lits)
       (Some (assert_return lits))
   | AssertReturnCanonicalNaN act ->
-    of_assertion' mods act "assert_return_canonical_nan" [] (Some assert_return_canonical_nan)
+    of_assertion' mods act "assert_return_canonical_nan" []
+      (Some assert_return_canonical_nan)
   | AssertReturnArithmeticNaN act ->
-    of_assertion' mods act "assert_return_arithmetic_nan" [] (Some assert_return_arithmetic_nan)
+    of_assertion' mods act "assert_return_arithmetic_nan" []
+      (Some assert_return_arithmetic_nan)
   | AssertTrap (act, _) ->
     of_assertion' mods act "assert_trap" [] None
   | AssertExhaustion (act, _) ->

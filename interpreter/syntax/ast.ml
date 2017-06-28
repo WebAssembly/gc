@@ -216,21 +216,21 @@ open Source
 
 let func_type (m : module_) (x : var) =
   match (Lib.List32.nth m.it.types x.it).it with
-  | `FuncType _ as t -> t
+  | FuncDefType ft -> ft
   | _ -> assert false
 
 let struct_type (m : module_) (x : var) =
   match (Lib.List32.nth m.it.types x.it).it with
-  | `StructType _ as t -> t
+  | StructDefType st -> st
   | _ -> assert false
 
 let import_type (m : module_) (im : import) : external_type =
   let {idesc; _} = im.it in
   match idesc.it with
-  | FuncImport x -> func_type m x
-  | TableImport t -> (t :> external_type)
-  | MemoryImport t -> (t :> external_type)
-  | GlobalImport t -> (t :> external_type)
+  | FuncImport x -> ExternalFuncType (func_type m x)
+  | TableImport t -> ExternalTableType t
+  | MemoryImport t -> ExternalMemoryType t
+  | GlobalImport t -> ExternalGlobalType t
 
 let export_type (m : module_) (ex : export) : external_type =
   let {edesc; _} = ex.it in
@@ -239,16 +239,16 @@ let export_type (m : module_) (ex : export) : external_type =
   match edesc.it with
   | FuncExport x ->
     let fts = funcs its @ List.map (fun f -> func_type m f.it.ftype) m.it.funcs in
-    (nth fts x.it :> external_type)
+    ExternalFuncType (nth fts x.it)
   | TableExport x ->
     let tts = tables its @ List.map (fun t -> t.it.ttype) m.it.tables in
-    (nth tts x.it :> external_type)
+    ExternalTableType (nth tts x.it)
   | MemoryExport x ->
     let mts = memories its @ List.map (fun m -> m.it.mtype) m.it.memories in
-    (nth mts x.it :> external_type)
+    ExternalMemoryType (nth mts x.it)
   | GlobalExport x ->
     let gts = globals its @ List.map (fun g -> g.it.gtype) m.it.globals in
-    (nth gts x.it :> external_type)
+    ExternalGlobalType (nth gts x.it)
 
 let string_of_name n =
   let b = Buffer.create 16 in

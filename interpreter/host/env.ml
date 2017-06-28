@@ -26,8 +26,8 @@ let single = function
   | vs -> error "type error, too many arguments"
 
 let int = function
-  | `I32 i -> Int32.to_int i
-  | v -> type_error v `I32Type
+  | Num (I32 i) -> Int32.to_int i
+  | v -> type_error v (NumType I32Type)
 
 
 let abort vs =
@@ -41,6 +41,6 @@ let exit vs =
 
 let lookup name t =
   match Utf8.encode name, t with
-  | "abort", (`FuncType _ as  t) -> ExternalFunc (HostFunc (t, abort))
-  | "exit", (`FuncType _ as t) -> ExternalFunc (HostFunc (t, exit))
+  | "abort", ExternalFuncType t -> ExternalFunc (HostFunc (t, abort))
+  | "exit", ExternalFuncType t -> ExternalFunc (HostFunc (t, exit))
   | _ -> raise Not_found

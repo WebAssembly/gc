@@ -1,12 +1,13 @@
+open Types
 open Values
 
 
 (* Runtime type errors *)
 
-exception TypeError of int * value * Types.value_type
+exception TypeError of int * value * num_type
 
 let of_arg f n v =
-  try f v with Value t -> raise (TypeError (n, v, t))
+  try f v with Value (NumType t) -> raise (TypeError (n, v, t))
 
 
 (* Int operators *)
@@ -123,15 +124,17 @@ struct
   open Ast.IntOp
 
   let cvtop op v =
-    match op with
-    | WrapI64 -> `I32 (I32_convert.wrap_i64 (I64Op.of_value 1 v))
-    | TruncSF32 -> `I32 (I32_convert.trunc_s_f32 (F32Op.of_value 1 v))
-    | TruncUF32 -> `I32 (I32_convert.trunc_u_f32 (F32Op.of_value 1 v))
-    | TruncSF64 -> `I32 (I32_convert.trunc_s_f64 (F64Op.of_value 1 v))
-    | TruncUF64 -> `I32 (I32_convert.trunc_u_f64 (F64Op.of_value 1 v))
-    | ReinterpretFloat -> `I32 (I32_convert.reinterpret_f32 (F32Op.of_value 1 v))
-    | ExtendSI32 -> raise (TypeError (1, v, `I32Type))
-    | ExtendUI32 -> raise (TypeError (1, v, `I32Type))
+    let c =
+      match op with
+      | WrapI64 -> I32_convert.wrap_i64 (I64Op.of_value 1 v)
+      | TruncSF32 -> I32_convert.trunc_s_f32 (F32Op.of_value 1 v)
+      | TruncUF32 -> I32_convert.trunc_u_f32 (F32Op.of_value 1 v)
+      | TruncSF64 -> I32_convert.trunc_s_f64 (F64Op.of_value 1 v)
+      | TruncUF64 -> I32_convert.trunc_u_f64 (F64Op.of_value 1 v)
+      | ReinterpretFloat -> I32_convert.reinterpret_f32 (F32Op.of_value 1 v)
+      | ExtendSI32 -> raise (TypeError (1, v, I32Type))
+      | ExtendUI32 -> raise (TypeError (1, v, I32Type))
+    in Num (I32 c)
 end
 
 module I64CvtOp =
@@ -139,15 +142,17 @@ struct
   open Ast.IntOp
 
   let cvtop op v =
-    match op with
-    | ExtendSI32 -> `I64 (I64_convert.extend_s_i32 (I32Op.of_value 1 v))
-    | ExtendUI32 -> `I64 (I64_convert.extend_u_i32 (I32Op.of_value 1 v))
-    | TruncSF32 -> `I64 (I64_convert.trunc_s_f32 (F32Op.of_value 1 v))
-    | TruncUF32 -> `I64 (I64_convert.trunc_u_f32 (F32Op.of_value 1 v))
-    | TruncSF64 -> `I64 (I64_convert.trunc_s_f64 (F64Op.of_value 1 v))
-    | TruncUF64 -> `I64 (I64_convert.trunc_u_f64 (F64Op.of_value 1 v))
-    | ReinterpretFloat -> `I64 (I64_convert.reinterpret_f64 (F64Op.of_value 1 v))
-    | WrapI64 -> raise (TypeError (1, v, `I64Type))
+    let c =
+      match op with
+      | ExtendSI32 -> I64_convert.extend_s_i32 (I32Op.of_value 1 v)
+      | ExtendUI32 -> I64_convert.extend_u_i32 (I32Op.of_value 1 v)
+      | TruncSF32 -> I64_convert.trunc_s_f32 (F32Op.of_value 1 v)
+      | TruncUF32 -> I64_convert.trunc_u_f32 (F32Op.of_value 1 v)
+      | TruncSF64 -> I64_convert.trunc_s_f64 (F64Op.of_value 1 v)
+      | TruncUF64 -> I64_convert.trunc_u_f64 (F64Op.of_value 1 v)
+      | ReinterpretFloat -> I64_convert.reinterpret_f64 (F64Op.of_value 1 v)
+      | WrapI64 -> raise (TypeError (1, v, I64Type))
+    in Num (I64 c)
 end
 
 module F32CvtOp =
@@ -155,14 +160,16 @@ struct
   open Ast.FloatOp
 
   let cvtop op v =
-    match op with
-    | DemoteF64 -> `F32 (F32_convert.demote_f64 (F64Op.of_value 1 v))
-    | ConvertSI32 -> `F32 (F32_convert.convert_s_i32 (I32Op.of_value 1 v))
-    | ConvertUI32 -> `F32 (F32_convert.convert_u_i32 (I32Op.of_value 1 v))
-    | ConvertSI64 -> `F32 (F32_convert.convert_s_i64 (I64Op.of_value 1 v))
-    | ConvertUI64 -> `F32 (F32_convert.convert_u_i64 (I64Op.of_value 1 v))
-    | ReinterpretInt -> `F32 (F32_convert.reinterpret_i32 (I32Op.of_value 1 v))
-    | PromoteF32 -> raise (TypeError (1, v, `F32Type))
+    let c =
+      match op with
+      | DemoteF64 -> F32_convert.demote_f64 (F64Op.of_value 1 v)
+      | ConvertSI32 -> F32_convert.convert_s_i32 (I32Op.of_value 1 v)
+      | ConvertUI32 -> F32_convert.convert_u_i32 (I32Op.of_value 1 v)
+      | ConvertSI64 -> F32_convert.convert_s_i64 (I64Op.of_value 1 v)
+      | ConvertUI64 -> F32_convert.convert_u_i64 (I64Op.of_value 1 v)
+      | ReinterpretInt -> F32_convert.reinterpret_i32 (I32Op.of_value 1 v)
+      | PromoteF32 -> raise (TypeError (1, v, F32Type))
+    in Num (F32 c)
 end
 
 module F64CvtOp =
@@ -170,24 +177,26 @@ struct
   open Ast.FloatOp
 
   let cvtop op v =
-    match op with
-    | PromoteF32 -> `F64 (F64_convert.promote_f32 (F32Op.of_value 1 v))
-    | ConvertSI32 -> `F64 (F64_convert.convert_s_i32 (I32Op.of_value 1 v))
-    | ConvertUI32 -> `F64 (F64_convert.convert_u_i32 (I32Op.of_value 1 v))
-    | ConvertSI64 -> `F64 (F64_convert.convert_s_i64 (I64Op.of_value 1 v))
-    | ConvertUI64 -> `F64 (F64_convert.convert_u_i64 (I64Op.of_value 1 v))
-    | ReinterpretInt -> `F64 (F64_convert.reinterpret_i64 (I64Op.of_value 1 v))
-    | DemoteF64 -> raise (TypeError (1, v, `F64Type))
+    let c =
+      match op with
+      | PromoteF32 -> F64_convert.promote_f32 (F32Op.of_value 1 v)
+      | ConvertSI32 -> F64_convert.convert_s_i32 (I32Op.of_value 1 v)
+      | ConvertUI32 -> F64_convert.convert_u_i32 (I32Op.of_value 1 v)
+      | ConvertSI64 -> F64_convert.convert_s_i64 (I64Op.of_value 1 v)
+      | ConvertUI64 -> F64_convert.convert_u_i64 (I64Op.of_value 1 v)
+      | ReinterpretInt -> F64_convert.reinterpret_i64 (I64Op.of_value 1 v)
+      | DemoteF64 -> raise (TypeError (1, v, F64Type))
+    in Num (F64 c)
 end
 
 
 (* Dispatch *)
 
 let op i32 i64 f32 f64 = function
-  | `I32 x -> i32 x
-  | `I64 x -> i64 x
-  | `F32 x -> f32 x
-  | `F64 x -> f64 x
+  | I32 x -> i32 x
+  | I64 x -> i64 x
+  | F32 x -> f32 x
+  | F64 x -> f64 x
 
 let eval_unop = op I32Op.unop I64Op.unop F32Op.unop F64Op.unop
 let eval_binop = op I32Op.binop I64Op.binop F32Op.binop F64Op.binop
