@@ -293,56 +293,7 @@ TODO.
 
 ## JS API
 
-Based on the JS type reflection proposal.
-
-### Type Representation
-
-* A `ValueType` can be described by an object of the form `{ref: DefType}` and `{optref: DefType}`
-  - `type ValueType = ... | {ref: DefType} | {optref: DefType}`
-
-* A `ValueType` can be described by the string `eqref`
-  - `type ValueType = ... | "eqref"`
-
-* A `DefType` is described by a kind and a definition
-  - `type DefKind = "func" | "struct" | "array"`
-  - `type DefType = {kind: DefKind, definition: FuncType | StructType | ArrayType}`
-
-* TODO: ...`StructType` and `ArrayType`...
-
-
-### Value Conversions
-
-#### Reference Types
-
-In addition to the rules for basic reference types:
-
-* Any function that is an instance of `WebAssembly.Function` with type `<functype>` is allowed as `ref <functype>`.
-
-* The `null` value is allowed as `eqref` and `optref $t`.
-
-* TODO: ...rules for structure and array types.
-
-
-#### Equality Types
-
-* Any JS object (non-primitive value) or symbol or `null` can be passed as `eqref` to a Wasm function, stored in a global, or in a table.
-
-
-### Constructors
-
-#### `Global`
-
-* `TypeError` is produced if the `Global` constructor is invoked without a value argument but a type that is not defaultable.
-
-#### `Table`
-
-* The `Table` constructor gets an additional optional argument `init` that is used to initialise the table slots. It defaults to `null`. A `TypeError` is produced if the argument is omitted and the table's element type is not defaultable.
-
-#### `Type`
-
-* The `Type` constructor constructs an RTT value.
-
-TODO.
+See [GC JS API](MVP-JS.md).
 
 
 ## Questions
