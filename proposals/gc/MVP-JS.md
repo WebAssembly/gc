@@ -2,7 +2,7 @@
 
 This document describes the proposed changes to the
 [WebAssembly JS API spec](http://webassembly.github.io/spec/js-api/) that are
-associated with the [changes to the core WebAssembly spec](MVP.md).
+associated with the [changes to the WebAssembly core spec](MVP.md).
 
 
 ## Problem
@@ -14,7 +14,7 @@ the only reference type values flowing from WebAssembly to JS are:
 
 With the [GC proposal](Overview.md), which extends the Reference Types proposal,
 the fundamental questions for the JS API are:
-* How are struct/array references created by [`struct.new`](https://github.com/WebAssembly/gc/blob/master/proposals/gc/MVP.md#structures)
+* How do struct/array references created by [`struct.new`](https://github.com/WebAssembly/gc/blob/master/proposals/gc/MVP.md#structures)
   and [`array.new`](https://github.com/WebAssembly/gc/blob/master/proposals/gc/MVP.md#arrays)
   get [converted to JS values](https://webassembly.github.io/spec/js-api/index.html#tojsvalue)?
 * Which JS values can be [converted into WebAssembly values](https://webassembly.github.io/spec/js-api/index.html#towebassemblyvalue)
@@ -23,35 +23,37 @@ the fundamental questions for the JS API are:
 
 ## Opportunity
 
-Normal JavaScript objects have a dynamic shape and are incompatible with the
-GC proposal's structs and arrays and so it may be tempting to simply
-treat WebAssembly GC as separate from JavaScript GC and, e.g., only allow opaque
-references to go back and forth (i.e., `anyref` in both directions).
+Since normal JavaScript objects have a dynamic shape, making them incompatible
+with the GC proposal's structs and arrays, it may be tempting to simply
+treat WebAssembly GC things as separate from JavaScript GC things and, e.g.,
+only allow opaque references to go back and forth (i.e., `anyref` in both
+directions).
 
-However, such designs would miss an opportunity to improve the performance and
-interoperability of both JavaScript and WebAssembly. Thus, the current proposal
-defines WebAssembly structs/arrays to simply **be** ([Exotic](https://tc39.github.io/ecma262/#sec-exotic-object))
-JavaScript objects in specification *and* presumed implementation. This design
-both avoids costly wrapper-based JS/WebAssembly interoperability schemes and
-also gives JavaScript a new kind of high-performance object that should be
-independently valuable for optimizing pure JavaScript applications.
+Instead, we propose a design that improves the performance of JavaScript both in
+isolation and when interoperating with WebAssembly. Specifically, this proposal
+defines WebAssembly structs/arrays to simply **be** certain special JavaScript
+objects in specification *and* presumed implementation. This design both avoids
+costly wrapper-based JS/WebAssembly interoperability schemes and also gives
+JavaScript a new kind of high-performance object that should be independently
+valuable for optimizing pure JavaScript applications.
 
 The challenge of course is to do this in a way that doesn't inject JS
-peculiarities into the core design of GC in WebAssembly or significantly
-impact the efficiency of WebAssembly GC in JavaScript Host Embeddings.
+peculiarities into the core design of GC in WebAssembly or impact the efficiency
+of WebAssembly GC (even in JavaScript Host Embeddings).
 
 
 ## Basic Approach
 
-The JavaScript spec allows Exotic Objects to diverge from Ordinary
-Object behavior by overriding [spec-internal methods and slots](https://tc39.github.io/ecma262/#sec-built-in-exotic-object-internal-methods-and-slots).
+The JavaScript spec allows [Exotic Objects](https://tc39.github.io/ecma262/#sec-exotic-object)
+to diverge from Ordinary Object behavior by overriding
+[spec-internal methods and slots](https://tc39.github.io/ecma262/#sec-built-in-exotic-object-internal-methods-and-slots).
 An example of this is Typed Arrays, which override various
 [internal property-access methods](https://tc39.github.io/ecma262/#sec-integer-indexed-exotic-objects)
-to turn normal JS property accesses into byte-level accesses of a pure array of
-bytes. This presently allows JavaScript and WebAssembly to both have
-high-performance access to WebAssembly's [linear memory](TODO), without
-injecting JS peculiarities into the design of linear memory. We propose to do
-likewise for WebAssembly structs and arrays.
+to turn normal JS property accesses into pure byte-array operations.
+This presently allows JavaScript and WebAssembly to both have high-performance
+access to WebAssembly's [linear memory](TODO), without injecting JS
+peculiarities into the design of linear memory. We propose to do likewise for
+WebAssembly structs and arrays.
 
 To do this, we propose to revive, refurbish and repurpose the
 [old Typed Objects proposal](http://smallcultfollowing.com/babysteps/pubs/2014.04.01-TypedObjects.pdf).
@@ -62,30 +64,31 @@ is designed with WebAssembly in mind and is motivated as follows:
 ### Value Type objects
 
 Corresponding to the set of [field types](https://github.com/WebAssembly/gc/blob/master/proposals/gc/MVP.md#type-definitions)
-in the core GC proposal, the Typed Objects API includes an open-ended set of
-[Value Type](TODO)
+in the WebAssembly GC proposal, the JS Typed Objects proposal includes an
+open-ended set of [Value Type](TODO)
 objects which contain `[[Read]]` and `[[Write]]` [internal methods](https://tc39.github.io/ecma262/#sec-object-internal-methods-and-internal-slots)
 that convert to and from arbitrary JavaScript values and the pure typed values
 that WebAssembly is defined to interact with.
 
-The Typed Objects API includes a generally-applicable set of Value Type objects.
+The JS Typed Object proposal includes a [generally-applicable set of Value Type objects](TODO).
 This general set is extended by Value Type objects in the [`WebAssembly` namespace](TODO)
-below, so that all core GC field types have a corresponding Value Type. The Value
-Type objects defined by the Typed Object spec are broken into two categories:
+below, so that all WebAssembly field types have a corresponding JS Value Type.
+The Value Type objects defined by the JS Typed Object proposal are broken into two
+categories:
 
 * *Primitive* Value Types, exposed as singleton objects: `uint8`,
   `uint16`, `uint32`, `uint64`, `int8`, `int16`, `int32`, `int64`, `float32`,
   `float64`, `any`, `string`.
 
-* *Compound* Value Type Objects, which are extracted via the `ref` property
+* *Compound* Value Types, which are extracted via the `ref` property
    on another kind of object...
 
 
 ### Type Definition objects
 
 Corresponding to the [Type Definitions](https://github.com/WebAssembly/gc/blob/master/proposals/gc/MVP.md#type-definitions)
-in the core GC proposal, the Typed Objects API allows the construction of
-[Type Definition](https://github.com/tschneidereit/proposal-typed-objects/blob/master/explainer.md#type-definitions)
+in the WebAssembly GC proposal, the JS Typed Objects proposal allows the
+construction of [Type Definition](https://github.com/tschneidereit/proposal-typed-objects/blob/master/explainer.md#type-definitions)
 objects which describe the fields/elements of a struct/array via
 [Value Type](#value-type-objects) objects supplied as arguments to the
 [`StructType`](https://github.com/tschneidereit/proposal-typed-objects/blob/master/explainer.md#struct-type-definitions)
@@ -94,7 +97,7 @@ and [`ArrayType`](TODO) constructors.
 Type Definition objects serve three purposes:
 
 * When a Type Definition is [exported](https://github.com/WebAssembly/gc/blob/master/proposals/gc/MVP.md#exports),
-  a Type Definition object is produced in [exportsObject](https://webassembly.github.io/spec/js-api/index.html#instantiate-a-webassembly-module).
+  a Type Definition object is produced in the [exportsObject](https://webassembly.github.io/spec/js-api/index.html#instantiate-a-webassembly-module).
 
 * When a Type Definition is [imported](https://github.com/WebAssembly/gc/blob/master/proposals/gc/MVP.md#imports),
   a Type Definition object is expected in the [importsObject](https://webassembly.github.io/spec/js-api/index.html#instantiate-a-webassembly-module).
@@ -109,7 +112,7 @@ Type Definition objects serve three purposes:
 
 Corresponding to the [structs](https://github.com/WebAssembly/gc/blob/master/proposals/gc/MVP.md#structures)
 and [arrays](https://github.com/WebAssembly/gc/blob/master/proposals/gc/MVP.md#arrays)
-of the core GC proposal, the Typed Objects API defines a new kind of Exotic Objects
+of the WebAssembly GC proposal, the JS Typed Object proposal defines a new kind of Exotic Objects
 called [Typed Objects](https://github.com/tschneidereit/proposal-typed-objects/blob/master/explainer.md#instantiation).
 Whereas structs/arrays are created in WebAssembly by the `struct.new` and
 `array.new` instructions, Typed Objects are created in JS by calling a
@@ -131,9 +134,9 @@ that is already stored as the first word of every engine GC allocation.
 
 One important question about Typed Objects is how the identity of their
 prototype is determined at the point of `struct.new`. While it is tempting to
-have a per-Realm table of prototypes, looked up by the stucture of the typed
-object, this prevents use cases which need to put methods/helpers on the prototype
-since this would collisions between unrelated modules in unrelated packages.
+have a per-Realm table of prototypes, looked up by the stucture of the Typed
+Object, this would likely lead to unintentional and unavoidable collisions as
+unrelated packages put helpers and other methods on these prototypes.
 
 Instead, there are two cases for determining the prototype of a Typed Object when
 it is constructed via `struct.new`/`array.new`:
@@ -147,18 +150,19 @@ it is constructed via `struct.new`/`array.new`:
   `.prototype` fields are defined to be immutable, so this allows
   instantiation-time determination of the metadata to use at allocation sites.)
 
-An important detail of the Typed Objects API proposal is that the
+An important detail of the JS Typed Objects proposal is that the
 [own properties](https://tc39.github.io/ecma262/#sec-own-property)
-of a Typed Object all have generated dense-index property names. If user-defined
-non-indexed property names are supplied, they exist as accessor properties
-on the prototype that simply forward to the associated indexed own property.
+of a Typed Object all have dense-index property names. If user-defined
+non-indexed property names are supplied to the Type Definition object, they get
+defined as accessor properties *on the prototype* that forward to the associated
+indexed own property of the receiver.
 
 Combining this fact and the prototype-selection behavior above, this means that
 to give a WebAssembly-constructed Typed Object property names, JavaScript must
 create a Type Definition object with the appropriate names, import it from
 WebAssembly, and use that type import to construct structs/arrays. Otherwise,
-Typed Objects created from a local Type Definition will appear as an
-integer-indexed tuple.
+Typed Objects created from a local Type Definition will appear as
+integer-indexed tuples.
 
 
 ## Examples
@@ -228,4 +232,4 @@ TODO
 
 
 ## TODO
-* RTT values (which may get removed anyway...)
+* What about RTT values?
