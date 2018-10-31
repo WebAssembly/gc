@@ -186,27 +186,28 @@ Next, a WebAssembly module is defined with a `Point`-compatible struct type
 definition, used in the signature of an export:
 
 ```wat
-;; example.wat --> example.wasm
+;; example1.wat --> example1.wasm
 (module
    (type $Point (struct (field $x i32) (field $y i32)))
    (func (export "addXY") (param (ref $Point)) (result i32)
        (i32.add
            (struct.get $Point $x (get_local 0))
-           (struct.get $Point $y (get_local 0))))
+           (struct.get $Point $y (get_local 0)))
+   )
 )
 ```
 
 which allows `pt` to be passed to `addXY`:
 
 ```js
-WebAssembly.instantiateStreaming(fetch('example.wasm'))
+WebAssembly.instantiateStreaming(fetch('example1.wasm'))
 .then(({instance}) => {
     assert(instance.exports.addXY(pt) == 3);
 });
 ```
 
 Additionally, the internal type definition `$Point` can be exported by adding
-the following to `example.wat` above:
+the following to `example1.wat` above:
 
 ```wat
    (export "wasmPoint" (type $Point))
@@ -216,7 +217,7 @@ Which produces a distinct Type Definition object that has no prototype
 and thus no property names:
 
 ```js
-WebAssembly.instantiateStreaming(fetch('example.wasm'))
+WebAssembly.instantiateStreaming(fetch('example1.wasm'))
 .then(({instance}) => {
     const wasmPoint = instance.exports.wasmPoint;
     assert(Point !== wasmPoint);
@@ -230,7 +231,7 @@ WebAssembly.instantiateStreaming(fetch('example.wasm'))
 });
 ```
 
-Moreover repeated instantations of `example.wasm` will produce distinct Type
+Moreover repeated instantations of `example1.wasm` will produce distinct Type
 Definition objects for `wasmPoint`.
 
 To see the distinction between internal type defintions and type imports in
@@ -241,11 +242,13 @@ action, consider the following WebAssembly module that calls `struct.new`.
 (module
     (type $PointImport (import "" "Point") (eq (struct (field $x i32) (field $y i32))))
     (func (export "newImport") (result (ref $PointImport))
-        (struct.new $PointImport (i32.const 10) (i32.const 10)))
+        (struct.new $PointImport (i32.const 10) (i32.const 10))
+    )
 
     (type $PointInternal (struct (field $x i32) (field $y i32)))
     (func (export "newInternal") (result (ref $PointInternal))
-        (struct.new $PointInternal (i32.const 20) (i32.const 20)))
+        (struct.new $PointInternal (i32.const 20) (i32.const 20))
+    )
 )
 ```
 
@@ -259,7 +262,7 @@ Viewing these objects from JS shows the difference:
 ```js
 const Point = new StructType([{name: "x", type: int32}, {name: "y", type: int32}]);
 
-WebAssembly.instantiateStreaming(fetch('example.wasm'), {'':{Point}})
+WebAssembly.instantiateStreaming(fetch('example2.wasm'), {'':{Point}})
 .then(({instance}) => {
     let p1 = instance.exports.newImport();
     assert(p1.__proto__ === Point.prototype);
@@ -283,43 +286,152 @@ issue must be explained.
 
 ## The Nominal vs. Structural Problem and Solution:
 
-This whole strategy is based on the assumption that the dynamic checks
-enforced by the [Value Type Objects](#value-type-objects) correspond
-to the invariants ensured by static WebAssembly type system.
+The soundness of the basic approach outlined above is predicated on two
+conditions:
+* that the dynamic checks performed by [Value Type objects](#value-type-objects)'
+  internal `[[Read]]` and `[[Write]]` methods preserve the invariants assumed by
+  WebAssembly's static type system; and
+* that WebAssembly's static type system ensures that the runtime
+  WebAssembly `struct.set`/`array.set` instructions do not violate
+  the JS invariants otherwise dynamically ensured by the Value Type objects.
 
-One seeming problem is the discrepancy between the 
-[dynamic `[[Write]]` checks performed `ref` Value Types](TODO),
-which check the *nominal* type of the source value, and the
+One place where WebAssembly and JavaScript invariants don't naturally
+line up is *reference types*.
+
+In particular, the JS Typed Object proposal `ref` Value Type objects are
+[defined](TODO)
+to preserve the usual "nominal typing" of JavaScript, where a field
+type implies a specific prototype *identity*. In contrast, the wasm GC proposal's
 [static subtyping relation](https://github.com/WebAssembly/gc/blob/master/proposals/gc/MVP.md#subtyping)
-which checks the *structural* type of source value.
+is *structural*, ensuring only field types and layouts.
 
-To see this problem in action, consider the following examples:
+To see this problem, consider the following JS code which hands a mutable `Rect`
+object to WebAssembly and then inspects it afterwards.
 
-TODO: show JS and wasm separately
+```js
+const Point = new StructType([{name: "x", type: int32}, {name: "y", type: int32}]);
+const Rect = new StructType([{name: "p1", type: Point.ref}, {name: "p2", type: Point.ref}]);
+var r = new Rect(new Point(1,1), new Point(2,2));
 
-* The dynamic coercions applied by the `T.ref` value type object basically
-  do a recursive brand check. This check ensures prototype and thus instanceof,
-  property names.  This is what you'd expect if you saw (... code) written in
-  TypeScript/Flow/etc.  It's a *nominal* type check.
-* Meanwhile, when wasm writes `ref`, the checks (LINK) in the GC type system
-  only ensure that ... which means this is a *structural* type check.
-  So if you see ... in wasm, you cannot assume anything about prototype and thus
-  property names.  This is what you'd expect if you saw (... code) in Flow.
-* Both make sense for JS/wasm use cases:
-  * structural typing is good for low-level composability/ABIs: noone has to
-    "own" the type. (E.g., consider how one can simply use `i32` in a sig.)
-  * nominal tyyping is simply what JS expects by default (above examples),
-    is a useful invariant for JS JIT optimization and reasoning about JS
-    programs.
-* What gives?  Fortunately, we can express both nominal and structural typing
-  in both wasm and JS:
-  * JS:
-    * Nominal: `T.ref`
-    * Structural: a new value type object: `WebAssembly.structRef(T)`
-  * WebAssembly:
-    * Structural: `ref`
-    * Nominal: a suitable type import
-* The big question is how the last one works: ...
+wasmInstance.exports.goNuts(r);
+
+assert(r.p1 instanceof Point);
+assert(r.p2 instanceof Point);
+```
+
+Without knowing anything about `wasmInstance`, can JS assumed, based solely on
+the field types of `Rect`, that the asserts hold?
+
+If the JS `ref` Value Types were unified with the WebAssembly
+`ref` type constructor, the answer would be "no": `wasmInstance`
+could assign any Typed Object with two `i32` fields, including 
+those with a `null` `__proto__`, as shown above.
+
+This would be surprising from a JS perspective and also give up potential
+WebAssembly Host Binding optimizations that are mentioned later. Thus, as
+a starting point, the following WebAssembly module:
+
+```wat
+;; example3.wat --> example3.wasm
+(module
+    (type $P (struct (field i32) (field i32)))
+    (type $R (struct (field $x1 (ref $P)) (field $x2 (ref $P))))
+    (func (export "goNuts") (param (ref $R))
+        (struct.set $R $x1
+            (get_local 0)
+            (struct.new $P (i32.const 10) (i32.const 20)))
+    )
+)
+```
+
+will throw when passed a `Point` Typed object because of the attempt to
+reinterpret the *nominal* field types of `Rect` with the *structural*
+field types of `$R`.
+
+```js
+WebAssembly.instantiateStreaming(fetch('example3.wasm'))
+.then(({instance}) => {
+    instance.exports.goNuts(new Rect(new Point(1,2), new Point(3,4));  // throws
+});
+```
+
+For the call to succeed, the WebAssembly module must intead *import* the
+exact Type Definition object and use that type import in all relevant
+function signatures:
+
+```wat
+;; example4.wat --> example4.wasm
+(module
+    (type $Point (import "" "Point") (eq (struct (field $x i32) (field $y i32))))
+    (type $Rect (struct (field (ref $Point)) (field (ref $Point))))
+    (func (export "goNuts") (param (ref $Rect))
+        (struct.set $R $x1
+            (get_local 0)
+            (struct.new $Point (i32.const 10) (i32.const 20)))
+    )
+)
+```
+
+With this module, the following JS code can instantiate the module with a Type
+Definition object and then later pass it instances of the same Type Definition
+object (but no other:
+
+```js
+const Point = new StructType([{name: "x", type: int32}, {name: "y", type: int32}]);
+
+WebAssembly.instantiateStreaming(fetch('example4.wasm'), {'':{Point}})
+.then(({instance}) => {
+    var rect = new Rect(new Point(1,2), new Point(3,4));
+    instance.exports.goNuts(rect);  // succeeds
+    assert(rect.x1 instanceof Point);
+    assert(rect.x1.x === 10);
+    assert(rect.x1.y === 20);
+
+    const Point2 = new StructType([{type: int32}, {type: int32}]);
+    instance.exports.goNuts(new Point2(1,2));  // throws
+});
+```
+
+With this, the nominal invariants natural to JS can be preserved by a
+combination of instantiation-time and run-time checks.
+
+But what about the other direction: what if WebAssembly exports a `struct`
+type definition that uses a (structural) WebAssembly `ref` type?  What is needed
+is a new Value Type object that enforces the weaker structural subtyping rules
+of the wasm static type system.
+
+Since the set of Value Type objects is open-ended, the WebAssembly JS API adds
+a new Value Type object constructor: `WebAssembly.ref`. Using this, JS can
+create a suitable Type Definition object whose instances can be passed to the
+above `example3.wasm` because its fields are structurally typed:
+
+```js
+const Point2 = new StructType([{name: "x", type: int32}, {name: "y", type: int32}]);
+const Point2Ref = WebAssembly.ref(Point2);
+const Rect2 = new StructType([{name: "p1", type: PointRef}, {name: "p2", type: PointRef}]);
+
+WebAssembly.instantiateStreaming(fetch('example3.wasm'))
+.then(({instance}) => {
+    var rect = new Rect2(new Point2(1,2), new Point2(3,4));
+    assert("x" in rect.x1);
+    instance.exports.goNuts(rect);
+    assert(!("x" in rect.x1));
+    assert(rect.x1[0] === 10);
+    assert(rect.x1[1] === 20);
+
+    // sure, why not:
+    rect.x1 = new Point(100,100);
+    assert(rect.x1.x === 100);
+});
+```
+
+The distinction between the two kinds different reference subtype semantics is
+unfortunate, but the expectation is that practical uses will generate all these
+Type Definition objects as part of the usual JS boilerplate glue code and
+end users would simply interact objects that were either tuple-y or had property
+names as expected from the source language. (For example, a WebAssembly-friendly
+Flow variant might use structural typing for [Tuple Types](https://flow.org/en/docs/types/tuples/)
+and nominal typing for [Class Types](https://flow.org/en/docs/types/classes/).
 
 
 ## Other WebAssembly Value Types Objects
