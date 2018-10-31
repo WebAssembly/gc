@@ -51,7 +51,7 @@ An example of this is Typed Arrays, which override various
 [internal property-access methods](https://tc39.github.io/ecma262/#sec-integer-indexed-exotic-objects)
 to turn normal JS property accesses into pure byte-array operations.
 This presently allows JavaScript and WebAssembly to both have high-performance
-access to WebAssembly's [linear memory](TODO), without injecting JS
+access to WebAssembly's [linear memory](https://webassembly.github.io/spec/core/intro/overview.html#memory), without injecting JS
 peculiarities into the design of linear memory. We propose to do likewise for
 WebAssembly structs and arrays.
 
@@ -167,10 +167,118 @@ integer-indexed tuples.
 
 ## Examples
 
-TODO: show examples that don't use `ref`.
+Here, a Typed Definition object is created in JS and used to create a Typed
+Object:
 
-These examples don't use `ref`; to do that, another fundamental issue must be
-explained.
+```js
+const Point = new StructType([{name: "x", type: int32}, {name: "y", type: int32}]);
+var pt = new Point(1, 2);
+assert(pt[0] === 1);
+assert(pt[1] === 2);
+assert(pt.x === pt[0]);
+assert(pt.y === pt[1]);
+```
+
+Because names are supplied, `x` and `y` accessors are created on the prototype
+allowing named access in addition to indexed tuple access.
+
+Next, a WebAssembly module is defined with a `Point`-compatible struct type
+definition, used in the signature of an export:
+
+```wat
+;; example.wat --> example.wasm
+(module
+   (type $Point (struct (field $x i32) (field $y i32)))
+   (func (export "addXY") (param (ref $Point)) (result i32)
+       (i32.add
+           (struct.get $Point $x (get_local 0))
+           (struct.get $Point $y (get_local 0))))
+)
+```
+
+which allows `pt` to be passed to `addXY`:
+
+```js
+WebAssembly.instantiateStreaming(fetch('example.wasm'))
+.then(({instance}) => {
+    assert(instance.exports.addXY(pt) == 3);
+});
+```
+
+Additionally, the internal type definition `$Point` can be exported by adding
+the following to `example.wat` above:
+
+```wat
+   (export "wasmPoint" (type $Point))
+```
+
+Which produces a distinct Type Definition object that has no prototype
+and thus no property names:
+
+```js
+WebAssembly.instantiateStreaming(fetch('example.wasm'))
+.then(({instance}) => {
+    const wasmPoint = instance.exports.wasmPoint;
+    assert(Point !== wasmPoint);
+    var pt2 = new wasmPoint(3, 4);
+    assert(pt2[0], 3);
+    assert(pt2[1], 4);
+    assert(pt2.__proto__ === null);
+    assert(!('x' in pt2));
+    assert(instance.exports.addXY(pt) == 3);
+    assert(instance.exports.addXY(pt2) == 7);
+});
+```
+
+Moreover repeated instantations of `example.wasm` will produce distinct Type
+Definition objects for `wasmPoint`.
+
+To see the distinction between local type defintions and type imports in
+action, consider the following WebAssembly module that calls `struct.new`.
+
+```wat
+;; example2.wat --> example2.wasm
+(module
+    (type $PointImport (import "" "Point") (eq (struct (field $x i32) (field $y i32))))
+    (func (export "newImport") (result (ref $PointImport))
+        (struct.new $PointImport (i32.const 10) (i32.const 10)))
+
+    (type $PointInternal (struct (field $x i32) (field $y i32)))
+    (func (export "newInternal") (result (ref $PointInternal))
+        (struct.new $PointInternal (i32.const 20) (i32.const 20)))
+)
+```
+
+Note that the [`eq` constraint](https://github.com/WebAssembly/gc/blob/master/proposals/gc/MVP.md#imports)
+requires the imported type definition be structurally equivalent to the given
+type definition, not merely a subtype of it and `struct.new` is only valid for
+type imports with the `eq` constraint.
+
+Viewing these objects from JS shows the difference:
+
+```js
+const Point = new StructType([{name: "x", type: int32}, {name: "y", type: int32}]);
+
+WebAssembly.instantiateStreaming(fetch('example.wasm'), {'':{Point}})
+.then(({instance}) => {
+    let p1 = instance.exports.newImport();
+    assert(p1.__proto__ === Point.prototype);
+    assert(p1.x === 10);
+    assert(p1.y === 10);
+    let p2 = instance.exports.newInternal();
+    assert(p2.__proto__ === null);
+    assert(p2[0] === 20);
+    assert(p2[1] === 20);
+});
+```
+
+Note that the declared `(result)` type of `newImport` could have been
+`(ref $PointInternal)` or even `anyref`, both of which are supertypes of
+`(ref $PointImport)` and neither would change the JS-observable `__proto__`;
+all that matters is the type definition specified at `struct.new`.
+
+These examples don't show `ref`. Before we can use `ref`, another fundamental
+issue must be explained.
 
 
 ## The Nominal vs. Structural Problem and Solution:
