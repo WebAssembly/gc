@@ -5,26 +5,27 @@ This document describes the proposed changes to the
 associated with the [changes to the WebAssembly core spec](MVP.md).
 
 
-## Problem
+## Problem Statement
 
 With the [Reference Types proposal](https://github.com/WebAssembly/reference-types/blob/master/proposals/reference-types/Overview.md),
-the only reference type values flowing from WebAssembly to JS are:
-* `anyref` values containing JS values, which can be returned unmodified
-* `ref.null`, which maps to JS `null` ([or `undefined`](https://github.com/WebAssembly/reference-types/issues/9))
+any JS value can be converted to an `anyref` value and back, preserving the
+exact JS value. The only way to create an `anyref` value in wasm is `ref.null`
+which can be trivially converted to a JS `null` ([or `undefined`](https://github.com/WebAssembly/reference-types/issues/9))
+value at the JS/wasm boundary.
 
 With the [GC proposal](Overview.md), which extends the Reference Types proposal,
-the fundamental questions for the JS API are:
+the WebAssembly JS API must now specify:
 * How do struct/array references created by [`struct.new`](https://github.com/WebAssembly/gc/blob/master/proposals/gc/MVP.md#structures)
   and [`array.new`](https://github.com/WebAssembly/gc/blob/master/proposals/gc/MVP.md#arrays)
   get [converted to JS values](https://webassembly.github.io/spec/js-api/index.html#tojsvalue)?
 * Which JS values can be [converted into WebAssembly values](https://webassembly.github.io/spec/js-api/index.html#towebassemblyvalue)
-  of struct/array reference type.
+  of struct/array reference type?
 
 
 ## Opportunity
 
 Since normal JavaScript objects have a dynamic shape, making them incompatible
-with the GC proposal's structs and arrays, it may be tempting to simply
+with the wasm GC proposal's structs and arrays, it may be tempting to simply
 treat WebAssembly GC things as separate from JavaScript GC things and, e.g.,
 only allow opaque references to go back and forth (i.e., `anyref` in both
 directions).
