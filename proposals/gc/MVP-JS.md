@@ -131,7 +131,7 @@ From an implementation perspective, this should not incur overhead: all of a
 Typed Object's internal slots/methods (e.g., `[[Prototype]]`) are determined by
 the Type Definition object and thus can be stored in the existing engine-internal
 metadata structure (the [Shape, Hidden Class, Map, Type, Structure, ...](https://youtu.be/5nmpokoRaZI?t=725))
-that is already stored as the first word of every engine GC allocation.
+that is typically stored as the first word of any GC allocation.
 
 One important question about Typed Objects is how the identity of their
 prototype is determined at the point of `struct.new`. While it is tempting to
@@ -142,14 +142,13 @@ unrelated packages put helpers and other methods on these prototypes.
 Instead, there are two cases for determining the prototype of a Typed Object when
 it is constructed via `struct.new`/`array.new`:
 
-* If the Type Definition is local (defined by the WebAssembly module, not
+* If the Type Definition is *internal* (defined by the WebAssembly module, not
   imported), the prototype is `null`.
 
-* If the Typed Object is imported, the type import must be fulfilled with a
+* If the Typed Definition is *imported*, the instance must be given a
   Type Definition object at instantiation-time, and this Type Definition
-  constructor then determines the prototype. (Type Definition constructors'
-  `.prototype` fields are defined to be immutable, so this allows
-  instantiation-time determination of the metadata to use at allocation sites.)
+  object (which is a constructor) determines the prototype with its
+  (immutable) `prototype` property.
 
 An important detail of the JS Typed Objects proposal is that the
 [own properties](https://tc39.github.io/ecma262/#sec-own-property)
@@ -162,7 +161,7 @@ Combining this fact and the prototype-selection behavior above, this means that
 to give a WebAssembly-constructed Typed Object property names, JavaScript must
 create a Type Definition object with the appropriate names, import it from
 WebAssembly, and use that type import to construct structs/arrays. Otherwise,
-Typed Objects created from a local Type Definition will appear as
+Typed Objects created from a internal Type Definition will appear as
 integer-indexed tuples.
 
 
@@ -234,7 +233,7 @@ WebAssembly.instantiateStreaming(fetch('example.wasm'))
 Moreover repeated instantations of `example.wasm` will produce distinct Type
 Definition objects for `wasmPoint`.
 
-To see the distinction between local type defintions and type imports in
+To see the distinction between internal type defintions and type imports in
 action, consider the following WebAssembly module that calls `struct.new`.
 
 ```wat
