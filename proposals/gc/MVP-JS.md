@@ -104,7 +104,7 @@ Type Definition Objects serve three purposes:
   by a wasm module, a Type Definition Object is expected in the [importsObject](https://webassembly.github.io/spec/js-api/index.html#instantiate-a-webassembly-module).
 
 * A Type Definition Object is actually a constructor function which can be
-  called to construct another kind of object...
+  called from JS to construct another kind of object...
 
 
 ### Typed Objects
@@ -130,16 +130,16 @@ that is typically stored as the first word of any GC allocation.
 One important question about Typed Objects is how the identity of their
 prototype is determined at the point of `struct.new`/`array.new`. While it is
 tempting to have a per-Realm table of prototypes, indexed by the structure of
-the type definition, this would lead to unintentional and unavoidable collisions
+the Type Definition, this would lead to unintentional and unavoidable collisions
 as unrelated packages put helpers and other methods on these shared prototypes.
 
 Instead, there are two cases for determining the prototype of a Typed Object when
 it is constructed via `struct.new`/`array.new`:
 
-* If the type definition is *internal* (defined by the WebAssembly module, not
+* If the Type Definition is *internal* (defined by the WebAssembly module, not
   imported), the prototype is `null`.
 
-* If the dyped definition is *imported*, the instance must be given a
+* If the Type Definition is *imported*, the instance must be given a
   Type Definition Object at instantiation-time, and this Type Definition
   Object (which is a constructor) determines the prototype with its
   (immutable) `prototype` property.
@@ -152,9 +152,8 @@ constructed, they get defined as accessor properties on the `prototype` property
 of the Type Definition Object. These accessor properties forward to the
 associated indexed own property of the receiver. Combined with the wasm
 prototype-selection behavior described above, that means that to give a
-WebAssembly-constructed Typed Object property names, JavaScript must first
-create a Type Definition Object with the appropriate names, import it from
-WebAssembly, and then use that type import to construct structs/arrays.
+WebAssembly-constructed Typed Object property names, a Type Definition
+Object with the appropriate names must be imported from JS.
 
 
 ## Examples
