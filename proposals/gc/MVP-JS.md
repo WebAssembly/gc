@@ -62,20 +62,20 @@ The [new Typed Objects proposal](https://github.com/tschneidereit/proposal-typed
 is designed with WebAssembly in mind and is motivated as follows:
 
 
-### Value Type objects
+### Value Type Objects
 
 Corresponding to the set of [field types](https://github.com/WebAssembly/gc/blob/master/proposals/gc/MVP.md#type-definitions)
 in the WebAssembly GC proposal, the JS Typed Objects proposal includes an
-open-ended set of [Value Type](TODO)
-objects which contain `[[Read]]` and `[[Write]]` [internal methods](https://tc39.github.io/ecma262/#sec-object-internal-methods-and-internal-slots)
+open-ended set of [Value Type Objects](TODO)
+which contain `[[Read]]` and `[[Write]]` [internal methods](https://tc39.github.io/ecma262/#sec-object-internal-methods-and-internal-slots)
 that convert to and from arbitrary JavaScript values and the pure typed values
 that WebAssembly is defined to interact with.
 
-The JS Typed Object proposal includes a [generally-applicable set of Value Type objects](TODO).
-This general set is extended with additional Value Type objects in the
+The JS Typed Object proposal includes a [generally-applicable set of Value Type Objects](TODO).
+This general set is extended with additional Value Type Objects in the
 `WebAssembly` namespace [described below](#other-webassembly-value-types), so
-that all WebAssembly field types have a corresponding Value Type object. The 
-generally-applicable Value Type objects defined by the JS Typed Object proposal
+that all WebAssembly field types have a corresponding Value Type Object. The 
+generally-applicable Value Type Objects defined by the JS Typed Object proposal
 are broken into two categories:
 
 * *Primitive* Value Types, exposed as singleton objects: `uint8`,
@@ -86,24 +86,24 @@ are broken into two categories:
    on another kind of object...
 
 
-### Type Definition objects
+### Type Definition Objects
 
 Corresponding to the [Type Definitions](https://github.com/WebAssembly/gc/blob/master/proposals/gc/MVP.md#type-definitions)
 in the WebAssembly GC proposal, the JS Typed Objects proposal defines constructors
-for [Type Definition](https://github.com/tschneidereit/proposal-typed-objects/blob/master/explainer.md#type-definitions)
-objects. Type Definition objects are constructed by the [`StructType`](https://github.com/tschneidereit/proposal-typed-objects/blob/master/explainer.md#struct-type-definitions)
-and [`ArrayType`](TODO) constructors which are passed Value Type objects for
+for [Type Definition Objects](https://github.com/tschneidereit/proposal-typed-objects/blob/master/explainer.md#type-definitions).
+Type Definition Objects are constructed by the [`StructType`](https://github.com/tschneidereit/proposal-typed-objects/blob/master/explainer.md#struct-type-definitions)
+and [`ArrayType`](TODO) constructors which are passed Value Type Objects for
 each field/element.
 
-Type Definition objects serve three purposes:
+Type Definition Objects serve three purposes:
 
 * When a Type Definition is [exported](https://github.com/WebAssembly/gc/blob/master/proposals/gc/MVP.md#exports)
-  by a wasm module, a Type Definition object is produced in the [exportsObject](https://webassembly.github.io/spec/js-api/index.html#instantiate-a-webassembly-module).
+  by a wasm module, a Type Definition Object is produced in the [exportsObject](https://webassembly.github.io/spec/js-api/index.html#instantiate-a-webassembly-module).
 
 * When a Type Definition is [imported](https://github.com/WebAssembly/gc/blob/master/proposals/gc/MVP.md#imports)
-  by a wasm module, a Type Definition object is expected in the [importsObject](https://webassembly.github.io/spec/js-api/index.html#instantiate-a-webassembly-module).
+  by a wasm module, a Type Definition Object is expected in the [importsObject](https://webassembly.github.io/spec/js-api/index.html#instantiate-a-webassembly-module).
 
-* A Type Definition object is actually a constructor function which can be
+* A Type Definition Object is actually a constructor function which can be
   called to construct another kind of object...
 
 
@@ -113,17 +113,17 @@ Corresponding to the [structs](https://github.com/WebAssembly/gc/blob/master/pro
 and [arrays](https://github.com/WebAssembly/gc/blob/master/proposals/gc/MVP.md#arrays)
 of the WebAssembly GC proposal, the JS Typed Object proposal defines a new kind of Exotic Object
 called a [Typed Object](https://github.com/tschneidereit/proposal-typed-objects/blob/master/explainer.md#instantiation).
-Typed Objects can be both created from JS by calling a Type Definition object
+Typed Objects can be both created from JS by calling a Type Definition Object
 as a constructor and created wasm from wasm by executing [`struct.new`](https://github.com/WebAssembly/gc/blob/master/proposals/gc/MVP.md#structures)
 and [`array.new`](https://github.com/WebAssembly/gc/blob/master/proposals/gc/MVP.md#arrays)
 instructions. A Typed Object's state is exclusively read and written from JS
 through the `[[Read]]` and `[[Write]]` internal methods of its fields'/elements'
-associated Value Type objects.
+associated Value Type Objects.
 
 From an implementation perspective, this identification of wasm structs/arrays with
 JS Typed Objects should not incur significant overhead: all of a Typed Object's
 internal slots/methods (e.g., `[[Prototype]]`) are determined by the Type
-Definition object and thus can be stored in the existing engine-internal
+Definition Object and thus can be stored in the existing engine-internal
 metadata structure (the [Shape, Hidden Class, Map, Type, Structure, ...](https://youtu.be/5nmpokoRaZI?t=725))
 that is typically stored as the first word of any GC allocation.
 
@@ -140,26 +140,26 @@ it is constructed via `struct.new`/`array.new`:
   imported), the prototype is `null`.
 
 * If the dyped definition is *imported*, the instance must be given a
-  Type Definition object at instantiation-time, and this Type Definition
-  object (which is a constructor) determines the prototype with its
+  Type Definition Object at instantiation-time, and this Type Definition
+  Object (which is a constructor) determines the prototype with its
   (immutable) `prototype` property.
 
 An important detail of the JS Typed Objects proposal is that the
 [own properties](https://tc39.github.io/ecma262/#sec-own-property)
 of a Typed Object all have dense-index property names. If user-defined
-(non-indexed) property names are supplied when the Type Definition object is
+(non-indexed) property names are supplied when the Type Definition Object is
 constructed, they get defined as accessor properties on the `prototype` property
-of the Type Definition object. These accessor properties forward to the
+of the Type Definition Object. These accessor properties forward to the
 associated indexed own property of the receiver. Combined with the wasm
 prototype-selection behavior described above, that means that to give a
 WebAssembly-constructed Typed Object property names, JavaScript must first
-create a Type Definition object with the appropriate names, import it from
+create a Type Definition Object with the appropriate names, import it from
 WebAssembly, and then use that type import to construct structs/arrays.
 
 
 ## Examples
 
-Here, a Typed Definition object is created in JS and used to create a Typed
+Here, a Typed Definition Object is created in JS and used to create a Typed
 Object:
 
 ```js
@@ -205,7 +205,7 @@ the following to `example1.wat` above:
    (export "wasmPoint" (type $Point))
 ```
 
-Which produces a distinct Type Definition object that has no prototype
+Which produces a distinct Type Definition Object that has no prototype
 and thus no property names:
 
 ```js
@@ -224,7 +224,7 @@ WebAssembly.instantiateStreaming(fetch('example1.wasm'))
 ```
 
 Moreover repeated instantations of `example1.wasm` will produce distinct Type
-Definition objects for `wasmPoint`.
+Definition Objects for `wasmPoint`.
 
 To see the distinction between internal type defintions and type imports in
 action, consider the following WebAssembly module that calls `struct.new`.
@@ -280,17 +280,17 @@ issue must be explained.
 
 The soundness of the basic approach outlined above is predicated on two
 conditions:
-* that the dynamic checks performed by [Value Type objects](#value-type-objects)'
+* that the dynamic checks performed by [Value Type Objects](#value-type-objects)'
   internal `[[Read]]` and `[[Write]]` methods preserve the invariants assumed by
   WebAssembly's static type system; and
 * that WebAssembly's static type system ensures that the runtime
   WebAssembly `struct.set`/`array.set` instructions do not violate
-  the JS invariants otherwise dynamically ensured by the Value Type objects.
+  the JS invariants otherwise dynamically ensured by the Value Type Objects.
 
 One place where WebAssembly and JavaScript invariants don't naturally
 line up is *reference types*.
 
-In particular, the JS Typed Object proposal `ref` Value Type objects are
+In particular, the JS Typed Object proposal `ref` Value Type Objects are
 [defined](TODO)
 to preserve the usual "nominal typing" of JavaScript, where a field
 type implies a specific prototype *identity*. In contrast, the wasm GC proposal's
@@ -298,7 +298,7 @@ type implies a specific prototype *identity*. In contrast, the wasm GC proposal'
 is *structural*, ensuring only field types and layouts.
 
 To see this problem, consider the following JS code which hands a mutable `Rect`
-object to WebAssembly and then inspects it afterwards.
+Typed Object to WebAssembly and then inspects it afterwards.
 
 ```js
 const Point = new StructType([{name: "x", type: int32}, {name: "y", type: int32}]);
@@ -336,7 +336,7 @@ a starting point, the following WebAssembly module:
 )
 ```
 
-will throw when passed a `Point` Typed object because of the attempt to
+will throw when passed a `Point` Typed Object because of the attempt to
 reinterpret the *nominal* field types of `Rect` with the *structural*
 field types of `$R`.
 
@@ -348,7 +348,7 @@ WebAssembly.instantiateStreaming(fetch('example3.wasm'))
 ```
 
 For the call to succeed, the WebAssembly module must intead *import* the
-exact Type Definition object and use that type import in all relevant
+exact Type Definition Object and use that type import in all relevant
 function signatures:
 
 ```wat
@@ -365,8 +365,8 @@ function signatures:
 ```
 
 With this module, the following JS code can instantiate the module with a Type
-Definition object and then later pass it instances of the same Type Definition
-object (but no other:
+Definition Object and then later pass it instances of the same Type Definition
+Object (but no other:
 
 ```js
 const Point = new StructType([{name: "x", type: int32}, {name: "y", type: int32}]);
@@ -389,12 +389,12 @@ combination of instantiation-time and run-time checks.
 
 But what about the other direction: what if WebAssembly exports a `struct`
 type definition that uses a (structural) WebAssembly `ref` type?  What is needed
-is a new Value Type object that enforces the weaker structural subtyping rules
+is a new Value Type Object that enforces the weaker structural subtyping rules
 of the wasm static type system.
 
-Since the set of Value Type objects is open-ended, the WebAssembly JS API adds
+Since the set of Value Type Objects is open-ended, the WebAssembly JS API adds
 a new Value Type constructor function: `WebAssembly.ref(T)`. Using this, JS can
-create a suitable Type Definition object whose instances can be passed to the
+create a suitable Type Definition Object whose instances can be passed to the
 above `example3.wasm` because its fields are structurally typed:
 
 ```js
@@ -419,8 +419,8 @@ WebAssembly.instantiateStreaming(fetch('example3.wasm'))
 
 The distinction between the two kinds different reference subtype semantics is
 unfortunate, but the expectation is that practical uses will generate all these
-Type Definition objects as part of the usual JS boilerplate glue code and
-end users would simply interact objects that were either tuple-y or had property
+Type Definition Objects as part of the usual JS boilerplate glue code and
+end users would simply interact with objects that were either tuple-y or had property
 names as expected from the source language. (For example, a WebAssembly-friendly
 Flow variant might use structural typing for [Tuple Types](https://flow.org/en/docs/types/tuples/)
 and nominal typing for [Class Types](https://flow.org/en/docs/types/classes/).
@@ -475,15 +475,15 @@ benefits.
 
 ## Other WebAssembly Value Types
 
-In addition to `WebAssembly.ref(T)`, these additional Value Type object singletons
+In addition to `WebAssembly.ref(T)`, these additional Value Type Object singletons
 and constructor functions would be added to the `WebAssembly` namespace to
 reflect all the other field types in the GC proposal:
 * `WebAssembly.eqref` : singleton reflecting [`eqref`](https://github.com/WebAssembly/gc/blob/master/proposals/gc/MVP.md#value-types)
 * `WebAssembly.optref(T)` : constructor function reflecting [`optref <typeidx>`](https://github.com/WebAssembly/gc/blob/master/proposals/gc/MVP.md#value-types),
-  given any Type Definition object
+  given any Type Definition Object
 * `WebAssembly.i31ref` : singleton reflecting [`i31ref`](https://github.com/WebAssembly/gc/blob/master/proposals/gc/MVP.md#value-types)
 * `WebAssembly.rtt(T)` : constructor function reflecting [`rtt <typeidx>`](https://github.com/WebAssembly/gc/blob/master/proposals/gc/MVP.md#value-types),
-  given any Type Definition object
+  given any Type Definition Object
 * `WebAssembly.funcref(T)` : constructor function reflecting [`funcref <functype>`](https://github.com/WebAssembly/reference-types/blob/master/proposals/reference-types/Overview.md#typed-function-references),
   assuming the eventual addition of a `FuncType` Type Definition constructor.
 
