@@ -111,39 +111,35 @@ Type Definition objects serve three purposes:
 
 Corresponding to the [structs](https://github.com/WebAssembly/gc/blob/master/proposals/gc/MVP.md#structures)
 and [arrays](https://github.com/WebAssembly/gc/blob/master/proposals/gc/MVP.md#arrays)
-of the WebAssembly GC proposal, the JS Typed Object proposal defines a new kind of Exotic Objects
-called [Typed Objects](https://github.com/tschneidereit/proposal-typed-objects/blob/master/explainer.md#instantiation).
-Whereas structs/arrays are created in WebAssembly by the `struct.new` and
-`array.new` instructions, Typed Objects are created in JS by calling a
-[Type Definition](#type-definition-objects) constructor.
+of the WebAssembly GC proposal, the JS Typed Object proposal defines a new kind of Exotic Object
+called a [Typed Object](https://github.com/tschneidereit/proposal-typed-objects/blob/master/explainer.md#instantiation).
+Typed Objects can be both created from JS by calling a Type Definition object
+as a constructor and created wasm from wasm by executing [`struct.new`](https://github.com/WebAssembly/gc/blob/master/proposals/gc/MVP.md#structures)
+and [`array.new`](https://github.com/WebAssembly/gc/blob/master/proposals/gc/MVP.md#arrays)
+instructions. A Typed Object's state is exclusively read and written from JS
+through the `[[Read]]` and `[[Write]]` internal methods of its fields'/elements'
+associated Value Type objects.
 
-A Typed Object's state is exclusively read and written through the `[[Read]]`
-and `[[Write]]` methods of its fields' Value Type objects. To avoid treating
-WebAssembly structs/arrays and Typed Objects as separate entities, with Typed
-Objects being created as "wrappers" at the boundary, WebAssembly's
-`struct.new`/`array.new` instructions are redefined to actually allocate a whole
-Typed Object so that every struct/array reference in a JS embedding of
-WebAssembly actually refers to a Typed Object.
-
-From an implementation perspective, this should not incur overhead: all of a
-Typed Object's internal slots/methods (e.g., `[[Prototype]]`) are determined by
-the Type Definition object and thus can be stored in the existing engine-internal
+From an implementation perspective, this identification of wasm structs/arrays with
+JS Typed Objects should not incur significant overhead: all of a Typed Object's
+internal slots/methods (e.g., `[[Prototype]]`) are determined by the Type
+Definition object and thus can be stored in the existing engine-internal
 metadata structure (the [Shape, Hidden Class, Map, Type, Structure, ...](https://youtu.be/5nmpokoRaZI?t=725))
 that is typically stored as the first word of any GC allocation.
 
 One important question about Typed Objects is how the identity of their
-prototype is determined at the point of `struct.new`. While it is tempting to
-have a per-Realm table of prototypes, looked up by the stucture of the Typed
-Object, this would likely lead to unintentional and unavoidable collisions as
-unrelated packages put helpers and other methods on these prototypes.
+prototype is determined at the point of `struct.new`/`array.new`. While it is
+tempting to have a per-Realm table of prototypes, indexed by the structure of
+the type definition, this would lead to unintentional and unavoidable collisions
+as unrelated packages put helpers and other methods on these shared prototypes.
 
 Instead, there are two cases for determining the prototype of a Typed Object when
 it is constructed via `struct.new`/`array.new`:
 
-* If the Type Definition is *internal* (defined by the WebAssembly module, not
+* If the type definition is *internal* (defined by the WebAssembly module, not
   imported), the prototype is `null`.
 
-* If the Typed Definition is *imported*, the instance must be given a
+* If the dyped definition is *imported*, the instance must be given a
   Type Definition object at instantiation-time, and this Type Definition
   object (which is a constructor) determines the prototype with its
   (immutable) `prototype` property.
@@ -151,16 +147,14 @@ it is constructed via `struct.new`/`array.new`:
 An important detail of the JS Typed Objects proposal is that the
 [own properties](https://tc39.github.io/ecma262/#sec-own-property)
 of a Typed Object all have dense-index property names. If user-defined
-non-indexed property names are supplied to the Type Definition object, they get
-defined as accessor properties *on the prototype* that forward to the associated
-indexed own property of the receiver.
-
-Combining this fact and the prototype-selection behavior above, this means that
-to give a WebAssembly-constructed Typed Object property names, JavaScript must
+(non-indexed) property names are supplied when the Type Definition object is
+constructed, they get defined as accessor properties on the `prototype` property
+of the Type Definition object. These accessor properties forward to the
+associated indexed own property of the receiver. Combined with the wasm
+prototype-selection behavior described above, that means that to give a
+WebAssembly-constructed Typed Object property names, JavaScript must first
 create a Type Definition object with the appropriate names, import it from
-WebAssembly, and use that type import to construct structs/arrays. Otherwise,
-Typed Objects created from a internal Type Definition will appear as
-integer-indexed tuples.
+WebAssembly, and then use that type import to construct structs/arrays.
 
 
 ## Examples
