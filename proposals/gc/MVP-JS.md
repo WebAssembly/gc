@@ -72,9 +72,10 @@ that convert to and from arbitrary JavaScript values and the pure typed values
 that WebAssembly is defined to interact with.
 
 The JS Typed Object proposal includes a [generally-applicable set of Value Type objects](TODO).
-This general set is extended by Value Type objects in the [`WebAssembly` namespace](TODO)
-below, so that all WebAssembly field types have a corresponding JS Value Type.
-The Value Type objects defined by the JS Typed Object proposal are broken into two
+This general set is extended with additional Value Type objects in the
+`WebAssembly` namespace [described below](#other-webassembly-value-types), so
+that all WebAssembly field types have a corresponding JS Value Type. The Value
+Type objects defined by the JS Typed Object proposal are broken into two
 categories:
 
 * *Primitive* Value Types, exposed as singleton objects: `uint8`,
