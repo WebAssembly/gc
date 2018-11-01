@@ -315,17 +315,18 @@ assert(r.p1 instanceof Point);
 assert(r.p2 instanceof Point);
 ```
 
-Without knowing anything about `wasmInstance`, can JS assumed, based solely on
-the field types of `Rect`, that the asserts hold?
+Without knowing anything about `wasmInstance`, can JS assume *based solely on
+the field types of `Rect`* that the asserts hold?
 
 If the JS `ref` Value Types were unified with the WebAssembly
-`ref` type constructor, the answer would be "no": `wasmInstance`
-could assign any Typed Object with two `i32` fields, including 
-those with a `null` `__proto__`, as shown above.
+[`ref` type constructor](https://github.com/WebAssembly/gc/blob/master/proposals/gc/MVP.md#value-types),
+the answer would be "no": `wasmInstance` could assign any Typed Object with two
+`i32` fields, including those with a `null` `__proto__` and thus no `x` and `y`
+property names. This would be surprising from a JS perspective and would also
+give up future WebAssembly Host Binding optimizations that are mentioned
+at the end of this section.
 
-This would be surprising from a JS perspective and also give up potential
-WebAssembly Host Binding optimizations that are mentioned later. Thus, as
-a starting point, the following WebAssembly module:
+To avoid problem, as a starting point, the following WebAssembly module:
 
 ```wat
 ;; example3.wat --> example3.wasm
@@ -347,7 +348,7 @@ field types of `$R`.
 ```js
 WebAssembly.instantiateStreaming(fetch('example3.wasm'))
 .then(({instance}) => {
-    instance.exports.goWild(new Rect(new Point(1,2), new Point(3,4));  // throws
+    instance.exports.goWild(new Rect(new Point(1,2), new Point(3,4)));  // throws
 });
 ```
 
@@ -369,11 +370,17 @@ function signatures:
 ```
 
 With this module, the following JS code can instantiate the module with a Type
-Definition Object and then later pass it instances of the same Type Definition
-Object (but no other:
+Definition Object and then later pass it Typed Object instances of the same Type
+Definition Object (but no other):
 
 ```js
-const Point = new StructType([{name: "x", type: int32}, {name: "y", type: int32}]);
+function makeTypes() {
+    const Point = new StructType([{name: "x", type: int32}, {name: "y", type: int32}]);
+    const Rect = new StructType([{name: "p1", type: Point.ref}, {name: "p2", type: Point.ref}]);
+    return {Point, Rect};
+}
+
+const {Point, Rect} = makeTypes();
 
 WebAssembly.instantiateStreaming(fetch('example4.wasm'), {'':{Point}})
 .then(({instance}) => {
@@ -383,58 +390,59 @@ WebAssembly.instantiateStreaming(fetch('example4.wasm'), {'':{Point}})
     assert(rect.x1.x === 10);
     assert(rect.x1.y === 20);
 
-    const Point2 = new StructType([{type: int32}, {type: int32}]);
-    instance.exports.goWild(new Point2(1,2));  // throws
+    const {Point2:Point, Rect2:Rect} = makeTypes();
+    instance.exports.goWild(new Rect2(new Point2(1,2), new Point2(3,4)));  // throws
 });
 ```
 
-With this, the nominal invariants natural to JS can be preserved by a
-combination of instantiation-time and run-time checks.
+Thus, the expected nominal invariants of JS can be preserved by a combination of
+instantiation-time and run-time checks.
 
-But what about the other direction: what if WebAssembly exports a `struct`
-type definition that uses a (structural) WebAssembly `ref` type?  What is needed
-is a new Value Type Object that enforces the weaker structural subtyping rules
-of the wasm static type system.
-
-Since the set of Value Type Objects is open-ended, the WebAssembly JS API adds
-a new Value Type constructor function: `WebAssembly.ref(T)`. Using this, JS can
-create a suitable Type Definition Object whose instances can be passed to the
-above `example3.wasm` because its fields are structurally typed:
+But what about the other direction: what if WebAssembly exports a struct
+type definition that uses a `ref` field type? To reflect WebAssembly structural
+subtyping, we need new Value Type Objects. Since the set of Value Type Objects
+is open-ended, the WebAssembly JS API adds a new Value Type constructor
+function: `WebAssembly.ref(T)`. Using this, JS can create a suitable Type
+Definition Object whose instances can be passed to the above `example3.wasm`
+because its fields are structurally typed:
 
 ```js
-const Point2 = new StructType([{name: "x", type: int32}, {name: "y", type: int32}]);
-const Point2Ref = WebAssembly.ref(Point2);
-const Rect2 = new StructType([{name: "p1", type: PointRef}, {name: "p2", type: PointRef}]);
+function makeTypes() {
+    const Point = new StructType([{name: "x", type: int32}, {name: "y", type: int32}]);
+    const PointRef = WebAssembly.ref(Point);
+    const Rect = new StructType([{name: "p1", type: PointRef}, {name: "p2", type: PointRef}]);
+    return {Point, Rect};
+}
 
 WebAssembly.instantiateStreaming(fetch('example3.wasm'))
 .then(({instance}) => {
-    var rect = new Rect2(new Point2(1,2), new Point2(3,4));
+    const {Point, Rect} = makeTypes();
+    var rect = new Rect(new Point(1,2), new Point(3,4));
     assert("x" in rect.x1);
     instance.exports.goWild(rect);
     assert(!("x" in rect.x1));
     assert(rect.x1[0] === 10);
     assert(rect.x1[1] === 20);
 
-    // sure, why not:
-    rect.x1 = new Point(100,100);
-    assert(rect.x1.x === 100);
+    const {Point2:Point, Rect2:Rect} = makeTypes();
+    var rect2 = new Rect2(new Point2(1,2), new Point2(3,4));
+    instance.exports.goWild(rect2);  // ok: structurally equivalent
 });
 ```
 
-The distinction between the two kinds different reference subtype semantics is
-unfortunate, but the expectation is that practical uses will generate all these
-Type Definition Objects as part of the usual JS boilerplate glue code and
-end users would simply interact with objects that were either tuple-y or had property
-names as expected from the source language. (For example, a WebAssembly-friendly
-Flow variant might use structural typing for [Tuple Types](https://flow.org/en/docs/types/tuples/)
-and nominal typing for [Class Types](https://flow.org/en/docs/types/classes/).
+Having a distinction between these two kinds of subtyping is unfortunate, but
+the expectation is that practical uses will generate all these Type Definition
+Objects as part of the usual JS boilerplate glue code and end users would simply
+interact with objects that were either tuple-y or had property names as expected
+from the source language. (For example, a WebAssembly-friendly [Flow](https://flow.org)
+variant might use structural typing for fields with [Tuple Type](https://flow.org/en/docs/types/tuples/)
+and nominal typing for fields with [Class Type](https://flow.org/en/docs/types/classes/).)
 
-Note that, in addition to dynamic checks when JS passes a value to WebAssembly
-(either as an argument to a wasm exported function or a return value from a
-wasm imported function), the instantiation algorithm must ensure that imported
-type definitions' fields' types are compatible.
-
-For example, given the following module with two dependent type imports:
+In addition to the dynamic checks necessary when JS passes a value to
+WebAssembly (either as an argument to a wasm exported function or a return value
+from a wasm imported function), the instantiation algorithm must ensure that
+imported type definitions' fields' types are compatible. For example, given the
+following module:
 
 ```wat
 ;; example5.wat --> example5.wasm
@@ -472,9 +480,9 @@ performed by [instantiate_module](https://webassembly.github.io/spec/core/append
 Additionally, using type imports of [Web IDL interface objects](https://heycam.github.io/webidl/#interface-object),
 the signatures of [Web IDL methods](https://heycam.github.io/webidl/#idl-operations) could
 be checked at instantiation-time, eliminating the normal dynamic type checks
-performed by JavaScript at call-time. In this way, the preservation of nominal
+performed by JavaScript at call-time. **In this way, the preservation of nominal
 typing via type imports can yield performance benefits, not just error-catching
-benefits.
+benefits.**
 
 
 ## Other WebAssembly Value Types
@@ -492,25 +500,20 @@ reflect all the other field types in the GC proposal:
   assuming the eventual addition of a `FuncType` Type Definition constructor.
 
 Additional Value Type singletons and constructor functions could be added in the
-future as WebAssembly's GC types evolve.
+future as WebAssembly's set of reference types evolve.
 
 ## Summary of JS API Additions
 
-Assuming the [Typed Objects proposal](https://github.com/tschneidereit/proposal-typed-objects/blob/master/explainer.md)
+Assuming that the [Typed Objects proposal](https://github.com/tschneidereit/proposal-typed-objects/blob/master/explainer.md)
 can be standardized in TC39 for inclusion in ES262 as a builtin part of the
 JavaScript language, the WebAssembly JS API can build on Typed Objects the way
 it currently builds on Number and ([soon](https://github.com/WebAssembly/JS-BigInt-integration))
 BigInt.
 
-With that, the remaining additions to the [WebAssembly JS API](https://webassembly.github.io/spec/js-api/index.html) are:
-* New [Value Type singletons and constructor functions](#other-webassembly-value-types).
-* New checks in the [instantiation algorithm](https://webassembly.github.io/spec/js-api/index.html#instantiate-a-webassembly-module)
-  to ensure type imports are used consistently, preserving
-  [JS nominal typing](#the-nominal-vs-structural-problem-and-solution).
+The remaining additions to the [WebAssembly JS API](https://webassembly.github.io/spec/js-api/index.html) are:
+* The new Value Type singletons and constructor functions [described above](#other-webassembly-value-types).
+* The new checks in the instantiation algorithm [described above](https://webassembly.github.io/spec/js-api/index.html#instantiate-a-webassembly-module)
+  to ensure type imports are used consistently.
 * New cases in [ToWebAssemblyValue](https://webassembly.github.io/spec/js-api/index.html#towebassemblyvalue)
   to allow Type Objects to be supplied for struct/array reference types when the
-  Type Object's type is a subtype of the target WebAssembly type
-  (respecting [JS nominal typing](#the-nominal-vs-structural-problem-and-solution))
-  subtype of the destination WebAssembly type.
-* New cases in [ToJSValue](https://webassembly.github.io/spec/js-api/index.html#tojsvalue)
-  that trivially return GC reference types as the Typed Object they already are.
+  Type Object's type is a subtype of the target WebAssembly type.
