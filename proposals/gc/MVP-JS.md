@@ -485,7 +485,7 @@ typing via type imports can yield performance benefits, not just error-catching
 benefits.**
 
 
-## Other WebAssembly Value Types
+## WebAssembly-specific Value Type Objects
 
 In addition to `WebAssembly.ref(T)`, these additional Value Type Object singletons
 and constructor functions would be added to the `WebAssembly` namespace to
@@ -499,5 +499,5 @@ reflect all the other field types in the GC proposal:
 * `WebAssembly.funcref(T)` : constructor function reflecting [`funcref <functype>`](https://github.com/WebAssembly/reference-types/blob/master/proposals/reference-types/Overview.md#typed-function-references),
   assuming the eventual addition of a `FuncType` Type Definition constructor.
 
-Additional Value Type singletons and constructor functions could be added in the
-future as WebAssembly's set of reference types evolve.
+Additional Value Type Objects could be added in the future as WebAssembly's set
+of reference types evolve.
