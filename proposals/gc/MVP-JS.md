@@ -501,19 +501,3 @@ reflect all the other field types in the GC proposal:
 
 Additional Value Type singletons and constructor functions could be added in the
 future as WebAssembly's set of reference types evolve.
-
-## Summary of JS API Additions
-
-Assuming that the [Typed Objects proposal](https://github.com/tschneidereit/proposal-typed-objects/blob/master/explainer.md)
-can be standardized in TC39 for inclusion in ES262 as a builtin part of the
-JavaScript language, the WebAssembly JS API can build on Typed Objects the way
-it currently builds on Number and ([soon](https://github.com/WebAssembly/JS-BigInt-integration))
-BigInt.
-
-The remaining additions to the [WebAssembly JS API](https://webassembly.github.io/spec/js-api/index.html) are:
-* The new Value Type singletons and constructor functions [described above](#other-webassembly-value-types).
-* The new checks in the instantiation algorithm [described above](https://webassembly.github.io/spec/js-api/index.html#instantiate-a-webassembly-module)
-  to ensure type imports are used consistently.
-* New cases in [ToWebAssemblyValue](https://webassembly.github.io/spec/js-api/index.html#towebassemblyvalue)
-  to allow Type Objects to be supplied for struct/array reference types when the
-  Type Object's type is a subtype of the target WebAssembly type.
