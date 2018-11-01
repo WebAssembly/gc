@@ -217,7 +217,6 @@ WebAssembly.instantiateStreaming(fetch('example1.wasm'))
     assert(pt2[1], 4);
     assert(pt2.__proto__ === null);
     assert(!('x' in pt2));
-    assert(instance.exports.addXY(pt) == 3);
     assert(instance.exports.addXY(pt2) == 7);
 });
 ```
@@ -262,6 +261,7 @@ WebAssembly.instantiateStreaming(fetch('example2.wasm'), {'':{Point}})
     assert(p1.__proto__ === Point.prototype);
     assert(p1.x === 10);
     assert(p1.y === 10);
+
     let p2 = instance.exports.newInternal();
     assert(p2.__proto__ === null);
     assert(!('x' in p2));
@@ -287,8 +287,9 @@ conditions:
   internal `[[Read]]` and `[[Write]]` methods preserve the invariants assumed by
   WebAssembly's static type system; and
 * that WebAssembly's static type system ensures that the runtime
-  WebAssembly `struct.set`/`array.set` instructions do not violate
-  the JS invariants otherwise dynamically ensured by the Value Type Objects.
+  WebAssembly `struct.new`, `struct.set`, `array.new` and `array.set`
+  instructions do not violate the JS invariants otherwise dynamically ensured by
+  the Value Type Objects.
 
 One place where WebAssembly and JavaScript invariants don't naturally
 line up is *reference types*.
@@ -308,7 +309,7 @@ const Point = new StructType([{name: "x", type: int32}, {name: "y", type: int32}
 const Rect = new StructType([{name: "p1", type: Point.ref}, {name: "p2", type: Point.ref}]);
 var r = new Rect(new Point(1,1), new Point(2,2));
 
-wasmInstance.exports.goNuts(r);
+wasmInstance.exports.goWild(r);
 
 assert(r.p1 instanceof Point);
 assert(r.p2 instanceof Point);
@@ -331,7 +332,7 @@ a starting point, the following WebAssembly module:
 (module
     (type $P (struct (field i32) (field i32)))
     (type $R (struct (field $x1 (ref $P)) (field $x2 (ref $P))))
-    (func (export "goNuts") (param (ref $R))
+    (func (export "goWild") (param (ref $R))
         (struct.set $R $x1
             (get_local 0)
             (struct.new $P (i32.const 10) (i32.const 20)))
@@ -346,7 +347,7 @@ field types of `$R`.
 ```js
 WebAssembly.instantiateStreaming(fetch('example3.wasm'))
 .then(({instance}) => {
-    instance.exports.goNuts(new Rect(new Point(1,2), new Point(3,4));  // throws
+    instance.exports.goWild(new Rect(new Point(1,2), new Point(3,4));  // throws
 });
 ```
 
@@ -359,7 +360,7 @@ function signatures:
 (module
     (type $Point (import "" "Point") (eq (struct (field $x i32) (field $y i32))))
     (type $Rect (struct (field (ref $Point)) (field (ref $Point))))
-    (func (export "goNuts") (param (ref $Rect))
+    (func (export "goWild") (param (ref $Rect))
         (struct.set $R $x1
             (get_local 0)
             (struct.new $Point (i32.const 10) (i32.const 20)))
@@ -377,13 +378,13 @@ const Point = new StructType([{name: "x", type: int32}, {name: "y", type: int32}
 WebAssembly.instantiateStreaming(fetch('example4.wasm'), {'':{Point}})
 .then(({instance}) => {
     var rect = new Rect(new Point(1,2), new Point(3,4));
-    instance.exports.goNuts(rect);  // succeeds
+    instance.exports.goWild(rect);  // succeeds
     assert(rect.x1 instanceof Point);
     assert(rect.x1.x === 10);
     assert(rect.x1.y === 20);
 
     const Point2 = new StructType([{type: int32}, {type: int32}]);
-    instance.exports.goNuts(new Point2(1,2));  // throws
+    instance.exports.goWild(new Point2(1,2));  // throws
 });
 ```
 
@@ -409,7 +410,7 @@ WebAssembly.instantiateStreaming(fetch('example3.wasm'))
 .then(({instance}) => {
     var rect = new Rect2(new Point2(1,2), new Point2(3,4));
     assert("x" in rect.x1);
-    instance.exports.goNuts(rect);
+    instance.exports.goWild(rect);
     assert(!("x" in rect.x1));
     assert(rect.x1[0] === 10);
     assert(rect.x1[1] === 20);
