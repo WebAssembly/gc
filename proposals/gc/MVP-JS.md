@@ -22,7 +22,7 @@ the WebAssembly JS API must now specify:
   of struct/array reference type?
 
 
-## Opportunity
+## Summary
 
 Since normal JavaScript objects have a dynamic shape, making them incompatible
 with the wasm GC proposal's structs and arrays, it may be tempting to simply
@@ -43,7 +43,7 @@ peculiarities into the core design of GC in WebAssembly or impact the efficiency
 of WebAssembly GC (even in JavaScript Host Embeddings).
 
 
-## Basic Approach
+## Walkthrough
 
 The JavaScript spec allows [Exotic Objects](https://tc39.github.io/ecma262/#sec-exotic-object)
 to diverge from Ordinary Object behavior by overriding
@@ -498,7 +498,7 @@ reflect all the other field types in the GC proposal:
 Additional Value Type singletons and constructor functions could be added in the
 future as WebAssembly's GC types evolve.
 
-## Summary of JS API additions
+## Summary of JS API Additions
 
 Assuming the [Typed Objects proposal](https://github.com/tschneidereit/proposal-typed-objects/blob/master/explainer.md)
 can be standardized in TC39 for inclusion in ES262 as a builtin part of the
