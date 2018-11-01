@@ -97,10 +97,10 @@ each field/element.
 
 Type Definition Objects serve three purposes:
 
-* When a Type Definition is [exported](https://github.com/WebAssembly/gc/blob/master/proposals/gc/MVP.md#exports)
+* When a type definition is [exported](https://github.com/WebAssembly/gc/blob/master/proposals/gc/MVP.md#exports)
   by a wasm module, a Type Definition Object is produced in the [exportsObject](https://webassembly.github.io/spec/js-api/index.html#instantiate-a-webassembly-module).
 
-* When a Type Definition is [imported](https://github.com/WebAssembly/gc/blob/master/proposals/gc/MVP.md#imports)
+* When a type definition is [imported](https://github.com/WebAssembly/gc/blob/master/proposals/gc/MVP.md#imports)
   by a wasm module, a Type Definition Object is expected in the [importsObject](https://webassembly.github.io/spec/js-api/index.html#instantiate-a-webassembly-module).
 
 * A Type Definition Object is actually a constructor function which can be
@@ -130,16 +130,16 @@ that is typically stored as the first word of any GC allocation.
 One important question about Typed Objects is how the identity of their
 prototype is determined at the point of `struct.new`/`array.new`. While it is
 tempting to have a per-Realm table of prototypes, indexed by the structure of
-the Type Definition, this would lead to unintentional and unavoidable collisions
+the type definition, this would lead to unintentional and unavoidable collisions
 as unrelated packages put helpers and other methods on these shared prototypes.
 
 Instead, there are two cases for determining the prototype of a Typed Object when
 it is constructed via `struct.new`/`array.new`:
 
-* If the Type Definition is *internal* (defined by the WebAssembly module, not
+* If the type definition is *internal* (defined by the WebAssembly module, not
   imported), the prototype is `null`.
 
-* If the Type Definition is *imported*, the instance must be given a
+* If the type definition is *imported*, the instance must be given a
   Type Definition Object at instantiation-time, and this Type Definition
   Object (which is a constructor) determines the prototype with its
   (immutable) `prototype` property.
@@ -158,7 +158,7 @@ Object with the appropriate names must be imported from JS.
 
 ## Examples
 
-Here, a Typed Definition Object is created in JS and used to create a Typed
+Here, a Type Definition Object is created in JS and used to create a Typed
 Object:
 
 ```js
@@ -170,7 +170,7 @@ assert(pt.x === pt[0]);
 assert(pt.y === pt[1]);
 ```
 
-Because names are supplied, `x` and `y` accessors are created on the prototype
+Because names are supplied, `x` and `y` accessors are created on the prototype,
 allowing named access in addition to indexed tuple access.
 
 Next, a WebAssembly module is defined with a `Point`-compatible struct type
@@ -193,7 +193,7 @@ which allows `pt` to be passed to `addXY`:
 ```js
 WebAssembly.instantiateStreaming(fetch('example1.wasm'))
 .then(({instance}) => {
-    assert(instance.exports.addXY(pt) == 3);
+    assert(instance.exports.addXY(pt) === 3);
 });
 ```
 
@@ -201,18 +201,18 @@ Additionally, the internal type definition `$Point` can be exported by adding
 the following to `example1.wat` above:
 
 ```wat
-   (export "wasmPoint" (type $Point))
+   (export "WasmPoint" (type $Point))
 ```
 
-Which produces a distinct Type Definition Object that has no prototype
+which produces a distinct Type Definition Object that has no prototype
 and thus no property names:
 
 ```js
 WebAssembly.instantiateStreaming(fetch('example1.wasm'))
 .then(({instance}) => {
-    const wasmPoint = instance.exports.wasmPoint;
-    assert(Point !== wasmPoint);
-    var pt2 = new wasmPoint(3, 4);
+    const WasmPoint = instance.exports.WasmPoint;
+    assert(Point !== WasmPoint);
+    var pt2 = new WasmPoint(3, 4);
     assert(pt2[0], 3);
     assert(pt2[1], 4);
     assert(pt2.__proto__ === null);
@@ -222,8 +222,10 @@ WebAssembly.instantiateStreaming(fetch('example1.wasm'))
 });
 ```
 
-Moreover repeated instantations of `example1.wasm` will produce distinct Type
-Definition Objects for `wasmPoint`.
+Moreover, repeated instantations of `example1.wasm` will produce distinct Type
+Definition Objects for `WasmPoint` (just like repeated calls to the `StructType`
+constructor will produce distinct Type Definition Objects, even if passed the
+same components).
 
 To see the distinction between internal type defintions and type imports in
 action, consider the following WebAssembly module that calls `struct.new`.
@@ -245,10 +247,11 @@ action, consider the following WebAssembly module that calls `struct.new`.
 
 Note that the [`eq` constraint](https://github.com/WebAssembly/gc/blob/master/proposals/gc/MVP.md#imports)
 requires the imported type definition be structurally equivalent to the given
-type definition, not merely a subtype of it and `struct.new` is only valid for
+type definition, not just a subtype of it, and `struct.new` is only valid for
 type imports with the `eq` constraint.
 
-Viewing these objects from JS shows the difference:
+Viewing the return values of calling `newImport` and `newInternal` from JS shows
+the difference:
 
 ```js
 const Point = new StructType([{name: "x", type: int32}, {name: "y", type: int32}]);
@@ -261,14 +264,15 @@ WebAssembly.instantiateStreaming(fetch('example2.wasm'), {'':{Point}})
     assert(p1.y === 10);
     let p2 = instance.exports.newInternal();
     assert(p2.__proto__ === null);
+    assert(!('x' in p2));
     assert(p2[0] === 20);
     assert(p2[1] === 20);
 });
 ```
 
 Note that the declared `(result)` type of `newImport` could have been
-`(ref $PointInternal)` or even `anyref`, both of which are supertypes of
-`(ref $PointImport)` and neither would change the JS-observable `__proto__`;
+`(ref $PointInternal)` or even `anyref`&mdash;both of which are supertypes of
+`(ref $PointImport)`&mdash;and neither would change the JS-observable `__proto__`;
 all that matters is the type definition specified at `struct.new`.
 
 These examples don't show `ref`. Before we can use `ref`, another fundamental
