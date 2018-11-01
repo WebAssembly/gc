@@ -74,7 +74,7 @@ that WebAssembly is defined to interact with.
 The JS Typed Object proposal includes a [generally-applicable set of Value Type objects](TODO).
 This general set is extended with additional Value Type objects in the
 `WebAssembly` namespace [described below](#other-webassembly-value-types), so
-that all WebAssembly field types have a corresponding JS Value Type. The 
+that all WebAssembly field types have a corresponding Value Type object. The 
 generally-applicable Value Type objects defined by the JS Typed Object proposal
 are broken into two categories:
 
@@ -92,18 +92,16 @@ Corresponding to the [Type Definitions](https://github.com/WebAssembly/gc/blob/m
 in the WebAssembly GC proposal, the JS Typed Objects proposal defines constructors
 for [Type Definition](https://github.com/tschneidereit/proposal-typed-objects/blob/master/explainer.md#type-definitions)
 objects. Type Definition objects are constructed by the [`StructType`](https://github.com/tschneidereit/proposal-typed-objects/blob/master/explainer.md#struct-type-definitions)
-and [`ArrayType`](TODO) constructors by passing [Value Type](#value-type-objects)
-objects for each field/element.
+and [`ArrayType`](TODO) constructors which are passed Value Type objects for
+each field/element.
 
 Type Definition objects serve three purposes:
 
-* When a Type Definition is [exported](https://github.com/WebAssembly/gc/blob/master/proposals/gc/MVP.md#exports),
-  a Type Definition object is produced in the [exportsObject](https://webassembly.github.io/spec/js-api/index.html#instantiate-a-webassembly-module).
+* When a Type Definition is [exported](https://github.com/WebAssembly/gc/blob/master/proposals/gc/MVP.md#exports)
+  by a wasm module, a Type Definition object is produced in the [exportsObject](https://webassembly.github.io/spec/js-api/index.html#instantiate-a-webassembly-module).
 
-* When a Type Definition is [imported](https://github.com/WebAssembly/gc/blob/master/proposals/gc/MVP.md#imports),
-  a Type Definition object is expected in the [importsObject](https://webassembly.github.io/spec/js-api/index.html#instantiate-a-webassembly-module).
-  This Type Definition object can have either been exported by an
-  existing `WebAssembly.Instance` or constructed in JavaScript.
+* When a Type Definition is [imported](https://github.com/WebAssembly/gc/blob/master/proposals/gc/MVP.md#imports)
+  by a wasm module, a Type Definition object is expected in the [importsObject](https://webassembly.github.io/spec/js-api/index.html#instantiate-a-webassembly-module).
 
 * A Type Definition object is actually a constructor function which can be
   called to construct another kind of object...
