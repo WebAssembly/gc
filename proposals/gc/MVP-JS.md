@@ -74,27 +74,26 @@ that WebAssembly is defined to interact with.
 The JS Typed Object proposal includes a [generally-applicable set of Value Type objects](TODO).
 This general set is extended with additional Value Type objects in the
 `WebAssembly` namespace [described below](#other-webassembly-value-types), so
-that all WebAssembly field types have a corresponding JS Value Type. The Value
-Type objects defined by the JS Typed Object proposal are broken into two
-categories:
+that all WebAssembly field types have a corresponding JS Value Type. The 
+generally-applicable Value Type objects defined by the JS Typed Object proposal
+are broken into two categories:
 
 * *Primitive* Value Types, exposed as singleton objects: `uint8`,
   `uint16`, `uint32`, `uint64`, `int8`, `int16`, `int32`, `int64`, `float32`,
   `float64`, `any`, `string`.
 
-* *Compound* Value Types, which are extracted via the `ref` property
+* *Compound* Value Types, which are produced via the `ref` property
    on another kind of object...
 
 
 ### Type Definition objects
 
 Corresponding to the [Type Definitions](https://github.com/WebAssembly/gc/blob/master/proposals/gc/MVP.md#type-definitions)
-in the WebAssembly GC proposal, the JS Typed Objects proposal allows the
-construction of [Type Definition](https://github.com/tschneidereit/proposal-typed-objects/blob/master/explainer.md#type-definitions)
-objects which describe the fields/elements of a struct/array via
-[Value Type](#value-type-objects) objects supplied as arguments to the
-[`StructType`](https://github.com/tschneidereit/proposal-typed-objects/blob/master/explainer.md#struct-type-definitions)
-and [`ArrayType`](TODO) constructors.
+in the WebAssembly GC proposal, the JS Typed Objects proposal defines constructors
+for [Type Definition](https://github.com/tschneidereit/proposal-typed-objects/blob/master/explainer.md#type-definitions)
+objects. Type Definition objects are constructed by the [`StructType`](https://github.com/tschneidereit/proposal-typed-objects/blob/master/explainer.md#struct-type-definitions)
+and [`ArrayType`](TODO) constructors by passing [Value Type](#value-type-objects)
+objects for each field/element.
 
 Type Definition objects serve three purposes:
 
