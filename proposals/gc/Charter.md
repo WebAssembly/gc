@@ -41,7 +41,7 @@ The Subgroup may produce several kinds of specification-related work output:
 ### Non-normative reports
 
 The Subgroup may produce non-normative material such as requirements
-documents, recommendations, and use cases.
+documents, recommendations, and case studies.
 
 ### Software
 
