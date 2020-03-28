@@ -148,9 +148,9 @@ In addition to the rules for [basic](https://github.com/WebAssembly/reference-ty
 
 * There is a runtime subtyping hierarchy on RTTs; creating an RTT requires providing a *parent type* in the form of an existing RTT; the RTT for `anyref` is the root of this hierarchy.
 
-* An RTT t1 is a *sub-RTT* of another RTT t2 iff either of the following holds:
-  - t1 and t2 represent the same static type, or
-  - t1 has a parent that is a sub-RTT of t2.
+* An RTT rtt1 is a *sub-RTT* of another RTT rtt2 iff either of the following holds:
+  - rtt1 and rtt2 are the same value, or
+  - rtt1 has a parent that is a sub-RTT of rtt2.
 
 * Validation requires that each parent type is a representative of a static supertype of its child; runtime subtyping hence is a sub-relation of static subtyping (a graph with fewer nodes and edges).
 
@@ -193,19 +193,15 @@ Perhaps add the following short-hands:
 
 #### Structures
 
-* `struct.new <typeidx>` allocates a structure of type `$t` and initialises its fields with given values
-  - `struct.new $t : [t*] -> [(ref $t)]`
-    - iff `$t = struct (mut t)*`
-  - equivalent to `struct.new_sub $t (rtt.get anyref)`
-
-* `struct.new_sub <typeidx>` allocates a structure of type `$t` with RTT information determining its [runtime type](#values) and initialises its fields with given values
-  - `struct.new_sub $t : [(rtt t') t*] -> [(ref $t)]`
+* `struct.new <typeidx>` allocates a structure of type `$t` with RTT information determining its [runtime type](#values) and initialises its fields with given values
+  - `struct.new $t : [(rtt t') t*] -> [(ref $t)]`
     - iff `$t = struct (mut t)*`
     - and `ref $t <: t'`
 
 * `struct.new_default <typeidx>` allocates a structure of type `$t` and initialises its fields with default values
-  - `struct.new_default $t : [] -> [(ref $t)]`
+  - `struct.new_default $t : [(rtt t')] -> [(ref $t)]`
     - iff `$t = struct (mut t)*`
+    - and `ref $t <: t'`
     - and all `t*` are defaultable
 
 * `struct.get_<sx>? <typeidx> <fieldidx>` reads field `$x` from a structure
@@ -224,19 +220,15 @@ Perhaps add the following short-hands:
 
 #### Arrays
 
-* `array.new <typeidx>` allocates an array of type `$t` and initialises its fields with a given value
-  - `array.new $t : [t i32] -> [(ref $t)]`
-    - iff `$t = array (mut t)`
-  - equivalent to `array.new_sub $t (rtt.get anyref)`
-
-* `array.new_sub <typeidx> <typeuse>` allocates a array of type `$t` with RTT information determining its [runtime type](#values)
-  - `array.new_sub $t t' : [(rtt t') t i32] -> [(ref $t)]`
+* `array.new <typeidx>` allocates an array of type `$t` with RTT information determining its [runtime type](#values)
+  - `array.new $t : [(rtt t') t i32] -> [(ref $t)]`
     - iff `$t = array (mut t)`
     - and `ref $t <: t'`
 
 * `array.new_default <typeidx>` allocates an array of type `$t` and initialises its fields with the default value
-  - `array.new_default $t : [i32] -> [(ref $t)]`
+  - `array.new_default $t : [(rtt t') i32] -> [(ref $t)]`
     - iff `$t = array (mut t)`
+    - and `ref $t <: t'`
     - and `t` is defaultable
 
 * `array.get_<sx>? <typeidx>` reads an element from an array
@@ -285,16 +277,20 @@ Perhaps also the following short-hands:
 
 #### Runtime Types
 
-* `rtt.get <typeuse>` returns the RTT of the specified type
-  - `rtt.get t : [] -> [(rtt t)]`
+* `rtt.none` returns the RTT that cannot be used to cast to anything
+  - `rtt.none : [] -> [(rtt anyref)]`
   - multiple invocations of this instruction yield the same observable RTTs
+
+* `rtt.new <typeuse>` returns the RTT of the specified type
+  - `rtt.new t : [] -> [(rtt t)]`
+  - each invocation of this instruction yields a distinct RTT
+  - equivalent to `(rtt.sub t (rtt.none))`
   - this is a *constant instruction*
-  - equivalent to `(rtt.sub t (rtt.get anyref))`, except when `t` itself is `anyref`
 
 * `rtt.sub <typeuse>` returns the RTT of the specified type as a sub-RTT of a given parent RTT operand
   - `rtt.sub t : [(rtt t')] -> [(rtt t)]`
     - iff `t <: t'`
-  - multiple invocations of this instruction with the same operand yield the same observable RTTs
+  - each invocation of this instruction yields a distinct RTT
   - this is a *constant instruction*
 
 
