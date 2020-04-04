@@ -136,7 +136,7 @@ The above could map to
 (type $buf (struct (field $pos (mut i64)) (field $chars (ref $char-array))))
 
 (func $f
-  (struct.new $tup (i64.const 1) (i64.const 2) (i64.const 1))
+  (struct.new $tup (rtt.none) (i64.const 1) (i64.const 2) (i64.const 1))
   (let (local $t (ref $tup))
     (struct.get $tup 1 (local.get $t))
     (drop)
@@ -144,7 +144,7 @@ The above could map to
 )
 
 (func $g
-  (array.new $vec3d (i64.const 1) (i32.const 3))
+  (array.new $vec3d (rtt.none) (i64.const 1) (i32.const 3))
   (let (local $v (ref $vec3d))
     (array.set $vec3d (local.get $v) (i32.const 2) (i32.const 5))
     (array.get $vec3d (local.get $v) (i32.const 1))
@@ -155,7 +155,7 @@ The above could map to
 (func $h
   (local $b (optref $buf))
   (local.set $b
-    (struct.new $buf
+    (struct.new $buf (rtt.none)
       (i64.const 0)
       (array.new $char-array (i32.const 4) (i32.const 0x41))
     )
@@ -201,15 +201,17 @@ class D extends C {
 (type $C-vt (struct (ref $f-sig) (ref $g-sig)))    ;; all immutable
 (type $D (struct (ref $D-vt) (mut i32) (mut f64))) ;; subtype of $C
 (type $D-vt (struct (extend $C-vt) (ref $h-sig)))  ;; immutable, subtype of $C-vt
+
+(global $C-rtt (rtt $C) (rtt.new $C))
+(global $D-rtt (rtt $D) (rtt.sub $D (global.get $C-rtt)))
 ```
 
 (Note: the use of `extend` in this example and others is assumed to be simple syntactic sugar for expanding the referenced structure type in place; there may be no `extend` construct in the abstract syntax or binary format; subtyping is meant to defined [structurally](#subtyping).)
 
 Needs:
 
-* (structural) subtyping
+* elementwise subtyping of structs and prefix subtyping of structs
 * immutable fields (for sound subtyping)
-* universal type of references
 * down casts
 * dynamic linking might add a whole new dimension
 
@@ -217,7 +219,7 @@ To emulate the covariance of the `this` parameter, one down cast on `this` is ne
 For example, `D.g`:
 ```
 (func $D.g (param $Cthis (ref $C))
-  (ref.cast (local.get $Cthis) (rtt.get (ref $D)))
+  (ref.cast (local.get $Cthis) (global.get $D-rtt))
   (let (local $this (ref $D))
     ...
   )
@@ -251,8 +253,10 @@ function caller() {
 (type $clos-f64-f64 (struct (field $code (ref $code-f64-f64)))
 (type $inner-clos (struct (extend $clos-f64-f64) (field $x f64) (field $a f64))
 
+(global $inner-clos-rtt (rtt $inner-clos) (rtt.new $inner-clos))
+
 (func $outer (param $x f64) (result (ref $clos-f64-f64))
-  (struct.new $inner-clos
+  (struct.new $inner-clos (global.get $inner-clos-rtt)
     (ref.func $inner)                       ;; code
     (local.get $x)                          ;; x
     (f64.add (local.get $x) (f64.const 1))  ;; a
@@ -260,7 +264,7 @@ function caller() {
 )
 
 (func $inner (param $clos (ref $clos-f64-f64)) (param $y f64) (result f64)
-  (ref.cast (local.get $clos) (rtt.get (ref $inner-clos)))
+  (ref.cast (local.get $clos) (global.get $inner-clos-rtt))
   (let (result f64) (local $env (ref $inner-clos))
     (local.get $y)
     (struct.get $inner-clos $a (local.get $env))
@@ -299,8 +303,8 @@ An alternative is to provide [primitive support](#closures) for closures, e.g. a
 ### Parametric Polymorphism
 
 * Dynamic languages or static languages with sufficiently expressive parametric polymorphism (generics) often require a *uniform representation*, where all its data types are represented in a single word.
+* Since values might leave the module through `anyref` or exported types, for correctness and security it is important that these values be tagged/sealed so that they can be distinguished from values of other modules and cannot be downcast by other modules without access to the relevant `rtt`.
 * Typically, pointer tagging is used to unbox small scalars.
-* Want to be able to represent this with type `anyref`.
 
 Contrived example (fictional language):
 ```
@@ -317,8 +321,8 @@ function f() {
   ...
 }
 
-function fst<A>(p : (A, A)) : A { let (a, _) = p; return a }
-function snd<A>(p : (A, A)) : A { let (_, a) = p; return a }
+function fst<A, B>(p : (A, B)) : A { let (a, _) = p; return a }
+function snd<A, B>(p : (A, B)) : B { let (_, b) = p; return b }
 
 function g(p1 : (Bool, Bool), p2 : (C, C), pick : <A> ((A, A)) -> A) : C {
   if (pick<Bool>(p1))
@@ -340,12 +344,16 @@ However, compilation with a uniform representation can still be achieved in this
 ```
 (type $pair (struct anyref anyref))
 
+(global $universal-rtt (rtt.new anyref))
+(global $pair-rtt (rtt.sub $pair (global.get $universal-rtt)))
+
 (func $make_pair (param $a anyref) (param $b anyref) (result (ref $pair))
-  (struct.new $pair (local.get $a) (local.get $b))
+  (struct.new $pair (global.get $pair-rtt) (local.get $a) (local.get $b))
 )
 
 
 (type $C (struct ...))
+(global $C-rtt (rtt.sub $C (global.get $universal-rtt)))
 
 (func $new_C (result (ref $C)) ...)
 (func $f
@@ -367,8 +375,8 @@ However, compilation with a uniform representation can still be achieved in this
 (func $g
   (param $p1 (ref $pair)) (param $p2 (ref $pair)) (param $pick (ref $pick))
   (result (ref $C))
-  (if (i31.get_u (ref.cast (call_ref $pick (local.get $p1))) (rtt.get i31ref))
-    (then (ref.cast (call_ref $pick (local.get $p2)) (rtt.get (ref $C))))
+  (if (ref.as_i31 (call_ref $pick (local.get $p1)))
+    (then (ref.cast (call_ref $pick (local.get $p2)) (global.get $C-rtt)))
     (else (call $new_C))
   )
 )
@@ -448,7 +456,7 @@ A trap occurs if the index is out of bounds.
 Arrays are *allocated* with the `array.new` instruction that takes a length and an initialization value as operands, yielding a reference:
 ```
 (func $g
-  (call $f (array.new $vector (i32.const 0) (f64.const 3.14)))
+  (call $f (array.new $vector (rtt.none) (i32.const 0) (f64.const 3.14)))
 )
 ```
 
@@ -491,7 +499,7 @@ Immutability needs to be distinguished in order to enable safe and efficient [su
 
 ### Reference Equality
 
-References can be compared for identity:
+Many references can be compared for identity:
 ```
 (ref.eq (struct.new $point ...) (struct.new $point ...))  ;; false
 ```
@@ -517,8 +525,8 @@ Objects whose members all have _mutable_ and _defaultable_ type may be allocated
 (type $s (struct (field $a (mut i32)) (field (mut (ref $s)))))
 (type $a (array (mut f32)))
 
-(struct.new_default $s)
-(array.new_default $a (i32.const 100))
+(struct.new_default $s (rtt.none))
+(array.new_default $a (rtt.none) (i32.const 100))
 ```
 
 TODO (post-MVP): How to create interesting immutable arrays?
@@ -707,20 +715,20 @@ For safety, down casts have to be checked at runtime by the engine. Down casts h
 ```
 This instruction checks whether the runtime type stored in `<operand>` is a runtime subtype of the runtime type represented by the second operand.
 
-In order to cast down the type of a struct or array, the aggregate itself must be equipped with a suitable RTT. Attaching runtime type information to aggregates happens at allocation time but is optional. If no RTT is attached then their runtime type is treated as if it was `anyref` and a down cast to a more specific type will fail. Such aggregates can prevent client code from rediscovering their real type, enforcing a form of parametricity. They can also be optimised more aggressively (e.g., via flattening optimisations), since the VM knows that any possible additional fields forgotten via subtyping can never be rediscovered.
+In order to cast down the type of a struct or array, the aggregate itself must be equipped with a suitable RTT. Attaching runtime type information to aggregates happens at allocation time but is conceptually optional (technically one attaches `rtt.none`). One needs access to the target RTT to cast a reference. Such aggregates can prevent client code from rediscovering a reference's real type, enforcing a form of parametricity.
 
 A runtime type is an expression of type `rtt <type>`, which is another form of opaque reference type. It represents the static type `<type>` at runtime.
-In its plain form, a runtime type is obtained using the instruction `rtt.get`
+In the simple case, a runtime type is created using the instruction `rtt.new`
 ```
-(rtt.get <type>)
+(rtt.new <type>)
 ```
-For example, this can be used to cast down from `anyref` to a concrete type:
+After storing the created runtime type in a variable `$rtt`, it can be used to cast down from `anyref` to its concrete type:
 ```
-(ref.cast (<operand>) (rtt.get <type>))
+(ref.cast (<operand>) $rtt)
 ```
 
 More generally, runtime type checks can verify a subtype relation between runtime types.
-In order to make these checks cheap, runtime subtyping follows a *nominal* semantics. To that end, every RTT value may not only represents a given type, it can also record a subtype relation to another (runtime) type (possibly `anyref`) defined when constructing the RTT value:
+In order to make these checks cheap, runtime subtyping follows a *nominal* semantics. To that end, every RTT value may not only represent a given type, it can also record a subtype relation to another (runtime) type (possibly `rtt.none`) defined when constructing the RTT value:
 ```
 (rtt.sub <type> (<rtt>))
 ```
@@ -739,9 +747,9 @@ This branches to `$label` if the check is successful, with the operand as an arg
   (block $l2 (result (ref $t2))
     (block $l3 (result (ref $t3))
       (local.get $operand)  ;; has type (ref $t)
-      (br_on_cast $l1 (ref $t) (ref $t1) (rtt.get (ref $t1)))
-      (br_on_cast $l2 (ref $t) (ref $t2) (rtt.get (ref $t2)))
-      (br_on_cast $l3 (ref $t) (ref $t3) (rtt.get (ref $t3)))
+      (br_on_cast $l1 ($rtt1)) ;; $rtt1 has type (rtt $t1)
+      (br_on_cast $l2 ($rtt2)) ;; $rtt2 has type (rtt $t2)
+      (br_on_cast $l3 ($rtt3)) ;; $rtt3 has type (rtt $t3)
       ... ;; (ref $t) still on stack here
     )
     ... ;; (ref $t3) on stack here
