@@ -33,7 +33,7 @@ All three proposals are prerequisites.
   - the common supertype of all referenceable types on which comparison (`ref.eq`) is allowed
 
 * `i31` is a new heap type
-  - `heaptype ::= ... | 31`
+  - `heaptype ::= ... | i31`
   - the type of unboxed scalars
 
 * `rtt <n> <heaptype>` is a new heap type that is a runtime representation of the static type `<heaptype>` and has `n` dynamic supertypes (see [Runtime types](#runtime-types))
@@ -244,7 +244,7 @@ Perhaps add the following short-hands:
 * `array.new_with_rtt <typeidx>` allocates a array of type `$t` with RTT information determining its [runtime type](#values)
   - `array.new_with_rtt $t : [(rtt n t') t i32] -> [(ref $t)]`
     - iff `$t = array (var t)`
-    - and `(type $t) <: t'`
+    - and `(type $t) == t'`
 
 * `array.new_default <typeidx>` allocates an array of type `$t` and initialises its fields with the default value
   - `array.new_default $t : [i32] -> [(ref $t)]`
@@ -254,7 +254,7 @@ Perhaps add the following short-hands:
 * `array.new_default_with_rtt <typeidx>` allocates an array of type `$t` and initialises its fields with the default value
   - `array.new_default_with_rtt $t : [(rtt n t') i32] -> [(ref $t)]`
     - iff `$t = array (var t)`
-    - and `(type $t) <: t'`
+    - and `(type $t) == t'`
     - and `t` is defaultable
   - equivalent to `array.new_default_with_rtt $t (rtt.canon any)`
 
