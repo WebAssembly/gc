@@ -142,7 +142,7 @@ In addition to the [existing rules](https://github.com/WebAssembly/function-refe
 
 * At the same time, runtime subtyping forms a linear hierarchy such that the relation can be checked efficiently using standard implementation techniques (the runtime subtype hierarchy is a tree-shaped graph).
 
-Note: RTT values correspond to type descriptors or "shape" objects as they exist in various engines. Moreover, runtime casts along the hierachy encoded in these values can be implemented in an engine efficiently by including a vector of its (direct and indirect) super-RTTs in each RTT value (with itself as the last entry). The value `<n>` then denotes the length of this vector (minus 1). A subtype check between two RTT values can be implemented as follows using such a representation. Assume RTT value v1 has static type `(rtt n1 t1)` and v2 has type `(rtt n2 t2)`. To check whether v1 denotes a sub-RTT of v2, first verify that `n1 >= n2`. Then compare v2 to the n2-th entry in v1's supertype vector. If they are equal, v1 is a sub-RTT. For casts, the static type of v1 (taken from the object to cast) is not known at compile time, so `n1 >= n2` becomes a dynamic check as well.
+Note: RTT values correspond to type descriptors or "shape" objects as they exist in various engines. Moreover, runtime casts along the hierachy encoded in these values can be implemented in an engine efficiently by including a vector of its (direct and indirect) super-RTTs in each RTT value (with itself as the last entry). The value `<n>` then denotes the length of this vector. A subtype check between two RTT values can be implemented as follows using such a representation. Assume RTT value v1 has static type `(rtt n1 t1)` and v2 has type `(rtt n2 t2)`. To check whether v1 denotes a sub-RTT of v2, first verify that `n1 >= n2`. Then compare v2 to the n2-th entry in v1's supertype vector. If they are equal, v1 is a sub-RTT. For casts, the static type of v1 (taken from the object to cast) is not known at compile time, so `n1 >= n2` becomes a dynamic check as well.
 
 Example: Consider three types and corresponding RTTs:
 ```
@@ -150,9 +150,9 @@ Example: Consider three types and corresponding RTTs:
 (type $B (struct (field i32)))
 (type $C (struct (field i32 i64)))
 
-(global $rttA (rtt 0 $A) (rtt.sub $A (rtt.canon any)))
-(global $rttB (rtt 1 $B) (rtt.sub $B (global.get $rttA)))
-(global $rttC (rtt 2 $C) (rtt.sub $C (global.get $rttB)))
+(global $rttA (rtt 1 $A) (rtt.sub $A (rtt.canon any)))
+(global $rttB (rtt 2 $B) (rtt.sub $B (global.get $rttA)))
+(global $rttC (rtt 3 $C) (rtt.sub $C (global.get $rttB)))
 ```
 Here, `$rttA` would carry supertype vector `[$rttA]`, `$rttB` has `[$rttA, $rttB]`, and `$rttC` has `[$rttA, $rttB, $rttC]`.
 
@@ -305,7 +305,8 @@ Perhaps also the following short-hands:
 #### Runtime Types
 
 * `rtt.canon <heaptype>` returns the RTT of the specified type
-  - `rtt.canon t : [] -> [(rtt 0 t)]`
+  - `rtt.canon t : [] -> [(rtt n t)]`
+  - `n = 0` iff `t = any`, and `n = 1` otherwise
   - multiple invocations of this instruction yield the same observable RTTs
   - this is a *constant instruction*
   - equivalent to `(rtt.sub t (rtt.canon any))`, except when `t` itself is `any`
