@@ -200,25 +200,16 @@ Perhaps add the following short-hands:
 
 #### Structures
 
-* `struct.new <typeidx>` allocates a structure of type `$t` and initialises its fields with given values
-  - `struct.new $t : [t*] -> [(ref $t)]`
-    - iff `$t = struct (mut t)*`
+* `struct.new_with_rtt` allocates a structure of type `$t` with RTT information determining its [runtime type](#values) and initialises its fields with given values
+  - `struct.new_with_rtt : [(rtt n t) t'*] -> [(ref t)]`
+    - iff `t = (type $t)`
+    - and`$t = struct (mut t')*`
 
-* `struct.new_with_rtt <typeidx>` allocates a structure of type `$t` with RTT information determining its [runtime type](#values) and initialises its fields with given values
-  - `struct.new_with_rtt $t : [(rtt n t') t*] -> [(ref $t)]`
-    - iff `$t = struct (mut t)*`
-    - and `(type $t) == t'`
-
-* `struct.new_default <typeidx>` allocates a structure of type `$t` and initialises its fields with default values
-  - `struct.new_default $t : [] -> [(ref $t)]`
-    - iff `$t = struct (mut t)*`
-    - and all `t*` are defaultable
-
-* `struct.new_default_with_rtt <typeidx>` allocates a structure of type `$t` and initialises its fields with default values
-  - `struct.new_default_with_rtt $t : [(rtt n t')] -> [(ref $t)]`
-    - iff `$t = struct (mut t)*`
-    - and `(type $t) == t'`
-    - and all `t*` are defaultable
+* `struct.new_default_with_rtt` allocates a structure of type `$t` and initialises its fields with default values
+  - `struct.new_default_with_rtt : [(rtt n t)] -> [(ref t)]`
+    - iff `t = (type $t)`
+    - and `$t = struct (mut t')*`
+    - and all `t'*` are defaultable
 
 * `struct.get_<sx>? <typeidx> <fieldidx>` reads field `$x` from a structure
   - `struct.get_<sx>? $t i : [(ref null $t)] -> [t]`
@@ -236,27 +227,17 @@ Perhaps add the following short-hands:
 
 #### Arrays
 
-* `array.new <typeidx>` allocates an array of type `$t` and initialises its fields with a given value
-  - `array.new $t : [t i32] -> [(ref $t)]`
-    - iff `$t = array (var t)`
-  - equivalent to `array.new_with_rtt $t (rtt.canon any)`
-
-* `array.new_with_rtt <typeidx>` allocates a array of type `$t` with RTT information determining its [runtime type](#values)
-  - `array.new_with_rtt $t : [(rtt n t') t i32] -> [(ref $t)]`
-    - iff `$t = array (var t)`
+* `array.new_with_rtt` allocates a array with RTT information determining its [runtime type](#values)
+  - `array.new_with_rtt : [(rtt n t) t' i32] -> [(ref t)]`
+    - iff `t = (type $t)`
+    - and `$t = array (var t')`
     - and `(type $t) == t'`
 
-* `array.new_default <typeidx>` allocates an array of type `$t` and initialises its fields with the default value
-  - `array.new_default $t : [i32] -> [(ref $t)]`
-    - iff `$t = array (var t)`
-    - and `t` is defaultable
-
-* `array.new_default_with_rtt <typeidx>` allocates an array of type `$t` and initialises its fields with the default value
-  - `array.new_default_with_rtt $t : [(rtt n t') i32] -> [(ref $t)]`
-    - iff `$t = array (var t)`
-    - and `(type $t) == t'`
-    - and `t` is defaultable
-  - equivalent to `array.new_default_with_rtt $t (rtt.canon any)`
+* `array.new_default_with_rtt` allocates an array and initialises its fields with the default value
+  - `array.new_default_with_rtt : [(rtt n t) i32] -> [(ref t)]`
+    - iff `t = (type $t)`
+    - and `$t = array (var t')`
+    - and `t'` is defaultable
 
 * `array.get_<sx>? <typeidx>` reads an element from an array
   - `array.get_<sx>? $t : [(ref null $t) i32] -> [t]`
@@ -309,7 +290,7 @@ Perhaps also the following short-hands:
   - `n = 0` iff `t = any`, and `n = 1` otherwise
   - multiple invocations of this instruction yield the same observable RTTs
   - this is a *constant instruction*
-  - equivalent to `(rtt.sub t (rtt.canon any))`, except when `t` itself is `any`
+  - equivalent to `(rtt.sub 1 any t (rtt.canon any))`, except when `t` itself is `any`
 
 * `rtt.sub <n> <heaptype1> <heaptype2>` returns an RTT for `heaptype2` as a sub-RTT of a the parent RTT operand for `heaptype1`
   - `rtt.sub n t1 t2 : [(rtt n t1)] -> [(rtt (n+1) t2)]`
