@@ -200,14 +200,14 @@ Perhaps add the following short-hands:
 
 #### Structures
 
-* `struct.new_with_rtt` allocates a structure of type `$t` with RTT information determining its [runtime type](#values) and initialises its fields with given values
-  - `struct.new_with_rtt : [(rtt n t) t'*] -> [(ref t)]`
-    - iff `t = (type $t)`
+* `struct.new_with_rtt <typeidx>` allocates a structure with RTT information determining its [runtime type](#values) and initialises its fields with given values
+  - `struct.new_with_rtt $t : [(rtt n t) t'*] -> [(ref t)]`
+    - iff `t == (type $t)`
     - and`$t = struct (mut t')*`
 
-* `struct.new_default_with_rtt` allocates a structure of type `$t` and initialises its fields with default values
-  - `struct.new_default_with_rtt : [(rtt n t)] -> [(ref t)]`
-    - iff `t = (type $t)`
+* `struct.new_default_with_rtt <typeidx>` allocates a structure of type `$t` and initialises its fields with default values
+  - `struct.new_default_with_rtt $t : [(rtt n t)] -> [(ref t)]`
+    - iff `t == (type $t)`
     - and `$t = struct (mut t')*`
     - and all `t'*` are defaultable
 
@@ -227,15 +227,14 @@ Perhaps add the following short-hands:
 
 #### Arrays
 
-* `array.new_with_rtt` allocates a array with RTT information determining its [runtime type](#values)
-  - `array.new_with_rtt : [(rtt n t) t' i32] -> [(ref t)]`
-    - iff `t = (type $t)`
+* `array.new_with_rtt <typeidx>` allocates a array with RTT information determining its [runtime type](#values)
+  - `array.new_with_rtt $t : [(rtt n t) t' i32] -> [(ref t)]`
+    - iff `t == (type $t)`
     - and `$t = array (var t')`
-    - and `(type $t) == t'`
 
-* `array.new_default_with_rtt` allocates an array and initialises its fields with the default value
-  - `array.new_default_with_rtt : [(rtt n t) i32] -> [(ref t)]`
-    - iff `t = (type $t)`
+* `array.new_default_with_rtt <typeidx>` allocates an array and initialises its fields with the default value
+  - `array.new_default_with_rtt $t : [(rtt n t) i32] -> [(ref t)]`
+    - iff `t == (type $t)`
     - and `$t = array (var t')`
     - and `t'` is defaultable
 
