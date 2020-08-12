@@ -50,8 +50,8 @@ To that end, _bulk copying_ instructions could be added, similar to the [bulk in
 
 One common suggestion is to merge structs and arrays into a single construct with both struct-like fields and a array-like elements.
 
-However, this is merely a special case of [nested data structures](#nested-data-structures), which are desirable in a more general form.
-So instead of adding an ad-hoc constructs for it (which would actually complicate nesting), the idea is to defer to the general mechanism.
+However, this is merely a special case of [nested data structures](#nested-data-structures), which some languages will need in a more general form.
+So instead of adding an ad-hoc construct for it (which would actually complicate nesting), the idea is to defer to the general mechanism.
 
 **Why Post-MVP:** For the MVP, all that the lack of butterfly object entails is the need to represent objects with both fields and elements (e.g., Java arrays) with one extra indirection to the array. That cost seems acceptable for the MVP.
 
@@ -180,8 +180,8 @@ More generally, nested data structures also enables representing "arrays of stru
 Examples naturally mapping to nested structs are e.g. the value types in C#, where structures can be unboxed members of arrays, or a language like Go.
 The sketched data model also has a close correspondance to the [Typed Objects](http://smallcultfollowing.com/babysteps/pubs/2014.04.01-TypedObjects.pdf) that are [proposed](https://github.com/tschneidereit/proposal-typed-objects/blob/master/explainer.md#) for JavaScript.
 
-Under the sketched extension, such that inner structures can be stored in contiguous heap ranges. That avoids the need to _transpose_ representations, i.e., turning an array of structs into a struct of arrays, which would be necessary otherwise.
-Such transposition destroys composability and memory locality. Access can become much more expensive; for example, copying a struct into or out of an array in this representation is not a single memcpy but requires an arbitrary number of individual reads/writes at distant memory locations.
+Under the sketched extension, such that inner structures can be stored in contiguous heap ranges. That avoids the need to split and _transpose_ representations, i.e., turning an array of structs into a struct of arrays, which would be necessary otherwise.
+Such a transformation of the data format destroys composability and memory locality. Access can become much more expensive; for example, copying a struct into or out of an array in this representation is not a single memcpy but requires an arbitrary number of individual reads/writes at distant memory locations.
 
 For example, consider this source-level pseudo code (C-ish syntax with GC):
 ```
@@ -196,15 +196,15 @@ A aa[20];
 // Copying inner structs
 A aa2[10];
 for (int i = 0..9) {
-  aa2[i] = aa[i];  // should expect a memcpy
+  aa2[i] = aa[i];  // should expect a single bulk copy
 }
 
 // Iterating over an (inner) array
 for (int i = 0..19) {
-  A* a = aa[i];
+  A* a = aa[i];  // should point to a contiguous struct representation
   print(a->x);
   for (int j = 0..29) {
-    print(a->y[j]);  // should expect a contiguous memory access
+    print(a->y[j]);  // should expect contiguous memory access
   }
 }
 ```
@@ -522,7 +522,7 @@ In conjunction with [threads](https://github.com/WebAssembly/threads/blob/master
 For example, this would be necessary to fully implement a JVM with threading using GC types.
 In order to support this, the type system must track which references can be *shared* across threads.
 
-The basic idea for enriching Wasm with shared references have already been laid out in our [OOPSLA'19 paper](https://github.com/WebAssembly/spec/blob/master/papers/oopsla2019.pdf).
+The basic idea for enriching Wasm with shared references has already been laid out in our [OOPSLA'19 paper](https://github.com/WebAssembly/spec/blob/master/papers/oopsla2019.pdf).
 
 **Why Post-MVP:** Shared references have not been included in the GC MVP, because they will require engines to implement *concurrent garbage collection*.
 That requires major changes to most existing Web implementation, that will probably take a long time to implement, let alone optimise.
