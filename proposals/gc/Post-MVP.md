@@ -513,7 +513,7 @@ Since a Wasm engine already has to store its own meta information in heap values
 The basic idea would be introducing a notion of _static fields_ in a form of immutable meta object that is shared between multiple instances of the same type.
 There are various ways in which this could be modelled, details are TBD.
 
-**Why Post-MVP:** Such a feature only saves space, so isn't critical for the MVP. Furthermore, there isn't much precedence for exposing such a mechanism to user code in low-level form, so no obvious design philosophy to follow.
+**Why Post-MVP:** Such a feature only saves space, so isn't critical for the MVP. Furthermore, there isn't much precedent for exposing such a mechanism to user code in low-level form, so no obvious design philosophy to follow.
 
 
 ## Threads and Shared References
