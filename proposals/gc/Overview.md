@@ -597,7 +597,7 @@ Values of function reference type are formed with the `ref.func` operator:
 Efficient implementations of untyped languages or languages with [polymorphism](#parametric-polymorphism) often rely on a _uniform representation_, meaning that all values are represented in a single machine word -- usually a pointer.
 At the same time, they want to avoid the cost of boxing as much as possible, by passing around small scalar values (such as bools, enums, characters, small integer types) unboxed and using a tagging scheme to distinguish them from pointers in the GC.
 
-To implement any such language efficiently, Wasm needs to provide such a mechanism. This proposal therefor introduces a built-in reference type `i31ref` that can be implemented in an engine via tagged integers. Producers may use this type to request unboxing for scalars.
+To implement any such language efficiently, Wasm needs to provide such a mechanism. This proposal therefor introduces a built-in reference type `i31ref` that can be implemented in an engine via tagged integers. Producers may use this type to request unboxing for scalars. With this type a producer can convey to an engine that the value range is sufficiently limited that it _only_ needs to handle unboxed values, and no hidden branches or allocations need to be generated to handle overflow into a boxed representation, as would potentially be necessary for larger value ranges.
 
 There are only three instructions for converting from and to this reference type:
 ```

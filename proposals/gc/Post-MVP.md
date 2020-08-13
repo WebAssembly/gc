@@ -393,7 +393,7 @@ However, there are a number of challenges:
   In other words, reification is implemented in user space, by inserting explicit RTT parameters where desired.
   The design of RTTs in the MVP has been chosen to make such an approach possible.
 
-2. Type parameters have to remain compatible with Wasm's existing model for separate compilation and linking. Hence it should avoid a dependency on code specialisation. That implies that, like with [type imports](https://github.com/WebAssembly/proposal-type-imports/blob/master/proposals/type-imports/Overview.md), instantiation has to be restricted (for now) to a set of types that has the same representation in an engine, such as reference types.
+2. Type parameters have to remain compatible with Wasm's existing model for separate, ahead-of-time compilation and linking. Hence it should avoid a dependency on code specialisation. That implies that, like with [type imports](https://github.com/WebAssembly/proposal-type-imports/blob/master/proposals/type-imports/Overview.md), instantiation has to be restricted (for now) to a set of types that has the same representation in an engine, such as reference types.
 
    A generalisation to other types would be possible in the future, but would depend on other features like compile-time imports, which are not available yet.
 
