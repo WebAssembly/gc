@@ -472,7 +472,7 @@ Dedicated instructions allow allocating and inspecting references of variant typ
 It is left to the engine to pick an efficient representation for the required tags, and depending on the hardware's word size, the number of tags in a defined type, the presence of parameters to a given tag, and other design decisions in the engine, these tags could either be stored as bits in the pointer, in a shared per-type data structure (a.k. hidden class or shape), or in an explicit per-value slot within the heap object.
 These decisions can be made by the engine on a per-type basis; validation ensures that all uses are coherent.
 
-**Why Post-MVP:** Variants allow for more compact representations and potentially more precise types, thereby possibly saving a cetain number of runtime checks and downcasts over the use of a common supertype, as necessary in the MVP. However, they are not strictly necessary in the presence of the latter. Nor can they replace it, since they necessarily define a _closed_ set of values, whereas the ability to import an arbitrary number of abstract types requires a way to include an _open_ set of types. To handle that, yet another form of _extensible union types_ (with generative tags) would be required in addition.
+**Why Post-MVP:** Variants allow for more compact representations and potentially more precise types, thereby possibly saving a certain number of runtime checks and downcasts over the use of a common supertype, as necessary in the MVP. However, they are not strictly necessary in the presence of the latter. Nor can they replace it, since they necessarily define a _closed_ set of values, whereas the ability to import an arbitrary number of abstract types requires a way to include an _open_ set of types. To handle that, yet another form of _extensible union types_ (with generative tags) would be required in addition.
 
 
 ### Sketch
@@ -513,7 +513,7 @@ Since a Wasm engine already has to store its own meta information in heap values
 The basic idea would be introducing a notion of _static fields_ in a form of immutable meta object that is shared between multiple instances of the same type.
 There are various ways in which this could be modelled, details are TBD.
 
-**Why Post-MVP:** Such a feature only saves space, so isn't critical for the MVP. Furthermore, there isn't much precendence for exposing such a mechanism too user code in low-level form, so no obvious design philosophy to follow.
+**Why Post-MVP:** Such a feature only saves space, so isn't critical for the MVP. Furthermore, there isn't much precedence for exposing such a mechanism to user code in low-level form, so no obvious design philosophy to follow.
 
 
 ## Threads and Shared References
