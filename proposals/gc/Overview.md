@@ -546,8 +546,14 @@ Types can be exported from and imported into a module:
 ```
 
 Imported types are essentially parameters to the module.
-As such, they are entirely abstract, as far as compile-time validation is concerned.
+If no further constraints are given, they are entirely abstract, as far as compile-time validation is concerned.
 The only operations possible with them are those that do not require knowledge of their actual definition or size: primarily, passing and storing references to such types.
+
+Type imports can also specify constraints that (partially) reveal their definition, such that operations are enables, e.g., field accesses to a struct type.
+
+Imported types can participate as the source in casts if associated RTTs are imported that enable revealing a subtype.
+
+Imported types are not per se abstract at runtime. They can participate in casts if associated RTTs are constructed or imported (including implicitly, as in `call_indirect`).
 
 
 ### Host Types

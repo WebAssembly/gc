@@ -1,11 +1,12 @@
 # GC Post-v1 Extensions
 
 This document discusses various extensions which seem desirable for comprehensive support of GC types, but are intentionally left out of the [MVP](MVP.md), in order to keep its scope manageable.
+Over the course of implementing and validating the MVP, it is possible that features in this list may be promoted to the MVP if experience shows that MVP performance would not otherwise be viable.
 
 See [overview](Overview.md) for addition background.
 
 * [Bulk operations](#bulk-operations)
-* ["Butterfly" objects](#butterfly-objects)
+* [Arrays with fields](#arrays-with-fields)
 * [Readonly field](#readonly-fields)
 * [Field references](#field-references) (a.k.a. member pointers)
 * [Fixed-size arrays](#fixed-sized-arrays)
@@ -46,14 +47,14 @@ To that end, _bulk copying_ instructions could be added, similar to the [bulk in
   - the remaining operands are destination offset, initialisation value, and length of the range
 
 
-## "Butterfly Objects"
+## Array with Fields
 
 One common suggestion is to merge structs and arrays into a single construct with both struct-like fields and a array-like elements.
 
 However, this is merely a special case of [nested data structures](#nested-data-structures), which some languages will need in a more general form.
 So instead of adding an ad-hoc construct for it (which would actually complicate nesting), the idea is to defer to the general mechanism.
 
-**Why Post-MVP:** For the MVP, all that the lack of butterfly object entails is the need to represent objects with both fields and elements (e.g., Java arrays) with one extra indirection to the array. That cost seems acceptable for the MVP.
+**Why Post-MVP:** For the MVP, all that the lack of arrays with fields entails is the need to represent objects with both fields and elements (e.g., Java arrays) with one extra indirection to the array. That cost seems acceptable for the MVP.
 
 
 ## Readonly Fields
@@ -168,11 +169,11 @@ Most importantly, fixed-size array types are a prerequisite for allowing [nested
 The MVP only supports "flat" data structures, i.e., structs or arrays whose field types are simple values.
 Ultimately, Wasm should support more of the C data model, where structs and arrays can be nested in an unboxed fashion, i.e., flattened into a single heap object.
 
-With the extension sketched below, it is possible, for example, to represent the equivalent of ["butterfly objects"](#butterfly-objects), by nesting a dynamically-sized array at the end of the struct.
+With the extension sketched below, it is possible, for example, to represent [arrays with fields](#arrays-with-fields), by nesting a dynamically-sized array at the end of the struct.
 For example:
 ```
 (type $Array (array i32))
-(type $Butterfly (struct f32 i64 (type $Array))
+(type $ArrayObject (struct f32 i64 (type $Array))
 ```
 
 More generally, nested data structures also enables representing "arrays of structs" compactly (and deeper nestings).
@@ -245,6 +246,8 @@ Nested Types:
   ```
   This notion of flexibility can be generalized recursively, i.e., the last field of a flexible struct may be a flexible array _or_ a nested flexible struct (this always bottoms out with a flexible array).
 
+  (Note: This notion of "flexible" only considers extension at the end of an object. In principle, it would be possible to introduce a similar notion that allows extension at the beginning of an object, giving rise to a generalised notion of "butterfly object". However, such a generalisation would have substantial repercussions on the implementation strategy of Wasm GC.)
+
 * A data type is _fixed_ if it is a struct or array that is not flexible.
 
 * With nesting and flexible aggregates, the type grammar generalizes as follows:
@@ -271,7 +274,7 @@ Nested Types:
 
 Allocation:
 
-* Allocation instructions like `struct.new` expect initialiser operands for nested aggregates: each individual field for a nested struct, and one initialiser for a nested array (which may itself be a list of initialisers, if the array's element type is a again a struct). Details TBD.
+* Allocation instructions like `struct.new` expect initialiser operands for nested aggregates: each individual field for a nested struct, and one initialiser for a nested array (which may itself be a list of initialisers, if the array's element type is again a struct). Details TBD.
 
 * Like a dynamically-sized array, allocating a flexible struct requires giving a dynamic length operand for its flexible tail array (which is a direct or indirect last field). Details TBD.
 
@@ -324,7 +327,7 @@ Interior references:
 
   An engine should be able to optimise away intermediate interior pointers very easily.
 
-* TBD: As sketched here, interior references can only point ot nested aggregates. Should there also be interior references to plain fields?
+* TBD: As sketched here, interior references can only point to nested aggregates. Should there also be interior references to plain fields?
 
 
 ## Type Parameters
@@ -465,7 +468,7 @@ Other languages provide user-defined tags as an explicit language feature (e.g.,
 Unfortunately, hardware differs widely in how many tagging bits a pointer can conveniently support, and different VMs might have additional constraints on how many of these bits they can make available to user code.
 In order to provide tagging in a way that is portable but maximally efficient on any given hardware and engine, a somewhat higher level of abstraction is useful.
 
-Such a more high-level solution would be to support a form of _variant types_ (a.k.a. disjoint unions or sum types) in the type system.
+Such a higher-level solution would be to support a form of _variant types_ (a.k.a. disjoint unions or sum types) in the type system.
 In addition to structs and arrays, a module could define a variant type that is a closed union of multiple different cases.
 Dedicated instructions allow allocating and inspecting references of variant type.
 
