@@ -13,15 +13,20 @@ This document identifies the key requirements for the managed memory proposal. B
 ### Non-Goals
 1. Support for linear memory GC.
 
-   We do not attempt with this proposal to support alternate memory management strategies that rely on collecting linear memory.
+   The focus of this effort is in host-provided GC support. There may be additional efforts aimed at improving the capabilities of WASM to support so-called linear memory GC; but these are outside the scope of this work. 
    
 ## Criteria
 
 A criterion is intended to act as a metric of a 'soft value', such as 'desireability' or 'implementability'. Criteria are especially important when weighing the relative merits of features and in determining the importance that some scenario is satisfied.
 
 1. Prioriterize popular languages.
-   When deciding which features to provide it is important to place emphasis on features that are more likely to be used. We prioriterize support for the popular programming languages; while it is difficult to be precise about this, one measure is a public index such as the TIOBE index. The TIOBE ranking of the top 12 languages with managed memory (from the top 20 languages) is Java, Python, C#, Visual Basic, PHP, SQL, Swift, Go, Ruby, MATLAB, Perl, Scratch.
+   When deciding which features to provide it is important to place emphasis on features that are more likely to be used. We prioriterize support for the popular programming languages.
    
+   While it is difficult to be precise about this, one measure is a public index such as the [TIOBE index](https://www.tiobe.com/tiobe-index/). The TIOBE ranking of the top 12 languages with managed memory (from the top 20 languages) is Java, Python, C#, Visual Basic, PHP, SQL, Swift, Go, Ruby, MATLAB, Perl, Scratch.
+The 2020 StackOverflow survey reported that the [most popular managed memory languages](https://insights.stackoverflow.com/survey/2020#technology-most-loved-dreaded-and-wanted-languages-loved) -- from the top 20 -- were Typescript, Python, Kotlin, Go, Julia, Dart, C#, Swift, JavaScript, SQL, Shell, HTML/CSS, Scala, Haskell, R, Java, Ruby, PHP. 
+
+   >Interestingly, most of these languages also show up in the most dreaded list!
+
    Within these languages, there are languages which are (largely) statically typed -- such as Java and C# -- and languages that are dynamically typed -- such as Python. We prioriterize statically typed languages over dynamically typed language; because those languages are often more performance sensitive, and because support for statically typed languages can often be used for dynamically typed languages.
    
 1. Security is more important than architectural integrity.
@@ -56,17 +61,27 @@ A critical success factor is an aspect or property of possible solutions that ma
    
    For example, if a type cast is potentially eliminatable, then the engine should not be required to discover that fact; rather the toolchain should be able to eliminate the type cast.
    
+1. Support sharing of entities.
+
+   It is critical that there should be a significant potential for interoperability between WASM-hosted languages and Host-based languages (of which JavaScript is the most important example).
+   
+   Given the inherent problems of supporting arbitary interoperability between languages; it is difficult to give a precise criterion for this. However, being able to share entities between different languages supported on WASM, and between WASM and JavaScript, is critically important to the success of WASM. We can summarize this in terms of capability requirements and performance requirements:
+   
+   1. An entity that originates in JavaScript should be accessible by WASM; in particular, changes to the state of the entity from JavaScript/WASM should be directly visible to each other.
+      1. An important limitation here is that it may not be *all* changes to the state; but certain mutually agreed changes.
+   1. Access to elements of the state of the shared entity (again, mutually agreed elements), should not be unduly disadvantaged.
+   
+   Note that we focus here on sharing of data. Sharing of functions is already accounted for in the design of WASM and in the JavaScript API for WASM.
+ 
 1. Support code migration.
 
-   This refers to a potential code migration strategy; where an application starts as a JavaScript code base (say), and is then progressively migrated to another language (hosted on WASM-GC). During this migration process, individual functions and modules may be ported from JavaScript whilst the remaining codebase remains in JavaScript. 
-   Interoperability between WASM-GC code and JavaScript is critical for the success of this strategy; in particular, structures defined in one language may need to be accessed by another.
-   Code Migration itself is a CSF because it underlies a realistic assumption about porting libraries and applications to WASM-GC.
+   This refers to a potential code migration strategy; where an application starts as a JavaScript code base (say), and is then progressively migrated to another language (hosted on WASM-GC). During this migration process, individual functions and modules may be ported from JavaScript whilst the remaining codebase remains in JavaScript. Interoperability between WASM-GC code and JavaScript is critical for the success of this strategy; in particular, structures defined in one language may need to be accessed by another. Code Migration itself is a CSF because it underlies a realistic assumption about porting libraries and applications to WASM-GC.
 
 ## Requirements
 
 1. Support for typical memory layouts employed by languages like Java/C#/Kotlin.
 
-1. Support for V-tables for object layout.
+1. Support for method-tables for object layout (or, more abstractly, being able to ensure that methods can be associated with objects in a way that reflects the semantics of the languages being supported).
 
 1. Support for embedded arrays.
 
@@ -74,9 +89,15 @@ A critical success factor is an aspect or property of possible solutions that ma
    
    Potentially restricted to a single embedded array.
    
+1. Support for mutual access to structures from WASM and from JavaScript.
+   Note that we restrict ourselves here to accessing WASM GC structures from JavaScript; we do not include here access to normal JavaScript objects from WASM. This is already possible, albeit mediated by suitable function imports.
+   
 1. Support for parametric polymorphic types.
    Specifically, support for languages that support parametric type polymorphism; and subtype polymorphism. 
    The primary task of the WASM type system is to be able to reliably and securely identify the representations of values. As such, it is not clear that WASM's type system needs to be polymorphic. However, many statically typed languages are polymorphic, and there are multiple strategies for realizing them -- from a so-called uniform representation (for representing parametric types) to compile-time monomorphization.
+   
+1. Support for multiple GC 'memories'. 
+   Similar in spirit to the [multiple memory proposal](https://github.com/WebAssembly/multi-memory), support for multiple GC memories will both facilitate certain languages' handling of data (e.g., Java and Erlang), and will facilitate composition of modules.
    
 
 ### Non-Requirements
@@ -85,8 +106,7 @@ A critical success factor is an aspect or property of possible solutions that ma
    The task of WASM-GC is to enable managed languages to represent their structures in such a way as can be managed by the host. This does not imply interoperability between languages or between languages and the host.
 1. Arbitrary interoperability with host.
    Similar to the above issue.
-1. Permit access to host data structures from wasm, and vice versa.
-   While it may be desireable to support access to host structures from wasm, and access to wasm structures from the host, it is not the goal of WASM-GC to support this.
+1. Support for language specific constraints on garbage collection. For example, some reference counted languages attempt to guarantee that garbaged structures are immediately cleaned up.
 
 ## Phased Release
 It is unlikely that WASM-GC will be released as a single version. A more approachable strategy involves releasing subsets of the final proposal over time. 
