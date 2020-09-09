@@ -189,6 +189,11 @@ This can compile to machine code that (1) reads the RTT from `$x`, (2) checks th
 
 * The so-defined runtime type is the only type information that can be discovered about a reference value at runtime; a structure or array with RTT `any` thereby is fully opaque to runtime type checks (and an implementation may choose to optimize away its RTT).
 
+#### Failure
+
+Allocation of memory objects may fail for implementation-specific reasons, such as system resource exhaustion or a host-defined limit, or being unable to fit a large array in available address space.
+
+Handling of an allocation failure may be handled in an implementation-defined way, such as trapping or terminating the host process. Implementors should be aware this may be used as a denial of service vector.
 
 ### Instructions
 
@@ -217,11 +222,13 @@ Perhaps add the following short-hands:
 * `struct.new_with_rtt <typeidx>` allocates a structure with RTT information determining its [runtime type](#values) and initialises its fields with given values
   - `struct.new_with_rtt $t : [t'* (rtt n $t)] -> [(ref $t)]`
     - iff `$t = struct (mut t')*`
+  - allocation failure behavior is [implementation-defined](#failure)
 
 * `struct.new_default_with_rtt <typeidx>` allocates a structure of type `$t` and initialises its fields with default values
   - `struct.new_default_with_rtt $t : [(rtt n $t)] -> [(ref $t)]`
     - iff `$t = struct (mut t')*`
     - and all `t'*` are defaultable
+  - allocation failure behavior is [implementation-defined](#failure)
 
 * `struct.get_<sx>? <typeidx> <fieldidx>` reads field `i` from a structure
   - `struct.get_<sx>? $t i : [(ref null $t)] -> [t]`
@@ -242,11 +249,13 @@ Perhaps add the following short-hands:
 * `array.new_with_rtt <typeidx>` allocates an array with RTT information determining its [runtime type](#values)
   - `array.new_with_rtt $t : [t' i32 (rtt n $t)] -> [(ref $t)]`
     - iff `$t = array (var t')`
+  - allocation failure behavior is [implementation-defined](#failure)
 
 * `array.new_default_with_rtt <typeidx>` allocates an array and initialises its fields with the default value
   - `array.new_default_with_rtt $t : [i32 (rtt n $t)] -> [(ref $t)]`
     - iff `$t = array (var t')`
     - and `t'` is defaultable
+  - allocation failure behavior is [implementation-defined](#failure)
 
 * `array.get_<sx>? <typeidx>` reads an element from an array
   - `array.get_<sx>? $t : [(ref null $t) i32] -> [t]`
