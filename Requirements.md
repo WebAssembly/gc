@@ -19,13 +19,11 @@ This document identifies the key requirements for the managed memory proposal. B
 
 A criterion is intended to act as a metric of a 'soft value', such as 'desireability' or 'implementability'. Criteria are especially important when weighing the relative merits of features and in determining the importance that some scenario is satisfied.
 
-1. Prioriterize popular languages.
-   When deciding which features to provide it is important to place emphasis on features that are more likely to be used. We prioriterize support for the popular programming languages.
+1. Prioriterize features used by popular languages.
    
-   While it is difficult to be precise about this, one measure is a public index such as the [TIOBE index](https://www.tiobe.com/tiobe-index/). The TIOBE ranking of the top 12 languages with managed memory (from the top 20 languages) is Java, Python, C#, Visual Basic, PHP, SQL, Swift, Go, Ruby, MATLAB, Perl, Scratch.
+   When deciding which features to provide it is important to place emphasis on features that are more likely to be used. We prioriterize support for the languages that are most likely to drive adoption of WASM-GC; this is likely to be the result of a combination of usage of the language and its likelyhood to be used in a WASM-GC engine.
+   
 The 2020 StackOverflow survey reported that the [most popular managed memory languages](https://insights.stackoverflow.com/survey/2020#technology-most-loved-dreaded-and-wanted-languages-loved) -- from the top 20 -- were Typescript, Python, Kotlin, Go, Julia, Dart, C#, Swift, JavaScript, SQL, Shell, HTML/CSS, Scala, Haskell, R, Java, Ruby, PHP. 
-
-   >Interestingly, most of these languages also show up in the most dreaded list!
 
    Within these languages, there are languages which are (largely) statically typed -- such as Java and C# -- and languages that are dynamically typed -- such as Python. We prioriterize statically typed languages over dynamically typed language; because those languages are often more performance sensitive, and because support for statically typed languages can often be used for dynamically typed languages.
    
@@ -33,10 +31,8 @@ The 2020 StackOverflow survey reported that the [most popular managed memory lan
 
 1. Architectural integrity is more important than performance.
    'Architectural Integrity' is intended to denote simplicity/coherence of design. Generally speaking, architectural integrity can be measured in terms of the number of concepts and the complexity of their relationships.
-   
-   The more complex an architecture is, the harder it will be to extend or to modify; this, in turn, inhibits our ability to extend WASM-GC with new features.
-   
-   We prioriterize simple, composeable architectures over solution-oriented architectures. This will help to ensure that WASM-GC can evolove and be part of future WASM evolution.
+      
+   We prioriterize simple, composeable architectures over solution-oriented architectures. This will help to ensure that WASM-GC can evolve and be part of future WASM evolution.
    
    Our reasoning here is that performance is often the result of progressive tuning of an implementation. It can typically be improved over time. On the other hand, architectural deficiencies are very difficult to correct.
       
@@ -57,18 +53,17 @@ A critical success factor is an aspect or property of possible solutions that ma
 
 1. Performance implications of WASM-GC code should be straightforward.
 
-   A general principle behind WASM itself is that performance should not require special implementation techniques on the part of the engine. I.e., it should not be required that the engine discover particular opportunities for improving performance. In particular, it is the responsibility of languages implementers to generate WASM-GC code that embodies performant strategies.
-   
+   A general principle behind WASM itself is that performance should not require special implementation techniques on the part of the engine.
    For example, if a type cast is potentially eliminatable, then the engine should not be required to discover that fact; rather the toolchain should be able to eliminate the type cast.
    
 1. Support sharing of entities.
 
-   It is critical that there should be a significant potential for interoperability between WASM-hosted languages and Host-based languages (of which JavaScript is the most important example).
+   There is significant potential for interoperability between WASM-hosted languages and Host-based languages (of which JavaScript is the most important example).
    
-   Given the inherent problems of supporting arbitary interoperability between languages; it is difficult to give a precise criterion for this. However, being able to share entities between different languages supported on WASM, and between WASM and JavaScript, is critically important to the success of WASM. We can summarize this in terms of capability requirements and performance requirements:
+   Given the inherent problems of supporting arbitary interoperability between languages; it is difficult to give a precise criterion for this. However, being able to share entities between different languages supported on WASM, and between WASM and JavaScript, is important to the success of WASM. We can summarize this in terms of capability requirements and performance requirements:
    
    1. An entity that originates in JavaScript should be accessible by WASM; in particular, changes to the state of the entity from JavaScript/WASM should be directly visible to each other.
-      1. An important limitation here is that it may not be *all* changes to the state; but certain mutually agreed changes.
+      1. An important potential limitation here is that it may not be *all* changes to the state; but certain publicly visible changes.
    1. Access to elements of the state of the shared entity (again, mutually agreed elements), should not be unduly disadvantaged.
    
    Note that we focus here on sharing of data. Sharing of functions is already accounted for in the design of WASM and in the JavaScript API for WASM.
