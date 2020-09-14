@@ -8,7 +8,7 @@ This document identifies the key requirements for the managed memory proposal. B
 
    Allow language implementers to use host-provided GC features as their primary means of supporting memory management. 
    
-   On the whole, it would be preferable if language implementers could target WASM-GC as a natural target for their language. While it is difficult to be precise about this, an ideal scenario would be that language implementers could target WASM-GC as though it were just another back-end. In particular, targeting WASM-GC should try to avoid requiring changes to earlier stages of a compiler - such as the type checker or source-level transformations.
+   On the whole, it would be preferable if language implementers could use WASM-GC as a natural target for their language. While it is difficult to be precise about this, an ideal scenario would be that language implementers could target WASM-GC as though it were just another back-end. In particular, targeting WASM-GC should try to avoid requiring changes to earlier stages of a compiler - such as the type checker or source-level transformations.
    
 ### Non-Goals
 1. Support for linear memory GC.
