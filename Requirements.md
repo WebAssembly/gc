@@ -91,8 +91,12 @@ A critical success factor is an aspect or property of possible solutions that ma
    Specifically, support for languages that support parametric type polymorphism; and subtype polymorphism. 
    The primary task of the WASM type system is to be able to reliably and securely identify the representations of values. As such, it is not clear that WASM's type system needs to be polymorphic. However, many statically typed languages are polymorphic, and there are multiple strategies for realizing them -- from a so-called uniform representation (for representing parametric types) to compile-time monomorphization.
    
-1. Support for multiple GC 'memories'. 
-   Similar in spirit to the [multiple memory proposal](https://github.com/WebAssembly/multi-memory), support for multiple GC memories will both facilitate certain languages' handling of data (e.g., Java and Erlang), and will facilitate composition of modules.
+1. Support for multi-threading. 
+   Multi-threaded execution is important for many languages. There are several combinations that need to be supported, two of which are: multiple threads accessing shared objects and multiple threads which are not permitted to share objects. 
+   
+   Furthermore, it must be the case that multiple threading in WASM-GC does not inadvertently introduce shared access to objects from multiple JavaScript threads. 
+   
+   This requirement, however, focuses on the need to ensure compatibility with WASM-GC and any further development of WASM threading.
    
 
 ### Non-Requirements
