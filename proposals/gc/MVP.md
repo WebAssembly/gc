@@ -150,7 +150,7 @@ The possible outcomes of such an operation hence depend on the host environment.
 Note: In the future, this hierarchy could be refined to distinguish compound data types that are not subtypes of `eq`.
 
 
-#### Value Types
+##### Value Types
 
 * `rtt n $t` is a subtype of `rtt $t`
   - `rtt n $t1 <: rtt $t2`
