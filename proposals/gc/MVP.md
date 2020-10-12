@@ -376,19 +376,19 @@ TODO: Add the ability to generate new (non-canonical) RTT values to implement ca
 RTT-based casts can only be performed with respect to concrete types, and require a data or function reference as input, which are known to carry an RTT.
 
 * `ref.test <typeidx>` tests whether a reference value's [runtime type](#values) is a [runtime subtype](#runtime) of a given RTT
-  - `ref.test $t : [(ref null ht) (rtt n $t)] -> [i32]`
+  - `ref.test $t : [(ref null ht) (rtt n? $t)] -> [i32]`
     - iff `ht <: data` or `ht <: func`
     - and `(type $t) <: ht`
   - returns 1 if the first operand is not null and its runtime type is a sub-RTT of the RTT operand, 0 otherwise
 
 * `ref.cast <typeidx>` casts a reference value down to a type given by a RTT representation
-  - `ref.cast $t : [(ref null ht) (rtt n $t)] -> [(ref $t)]`
+  - `ref.cast $t : [(ref null ht) (rtt n? $t)] -> [(ref $t)]`
     - iff `ht <: data` or `ht <: func`
     - and `(type $t) <: ht`
   - traps if the first operand is null or its runtime type is not a sub-RTT of the RTT operand
 
 * `br_on_cast <labelidx> <typeidx>` branches if a value can be cast down to a given reference type
-  - `br_on_cast $l $t : [(ref null ht) (rtt n $t)] -> [(ref null ht)]`
+  - `br_on_cast $l $t : [(ref null ht) (rtt n? $t)] -> [(ref null ht)]`
     - iff `ht <: data` or `ht <: func`
     - and `(type $t) <: ht`
     - and `$l : [(ref $t)]`
@@ -404,7 +404,7 @@ In order to allow RTTs to be initialised as globals, the following extensions ar
 
 * `rtt.canon` is a constant instruction
 * `rtt.sub` is a constant instruction
-* `global.get` is a constant instruction and can access preceding global definitions, not just imports as in the MVP
+* `global.get` is a constant instruction and can access preceding (immutable) global definitions, not just imports as in the MVP
 
 
 ## Binary Format
