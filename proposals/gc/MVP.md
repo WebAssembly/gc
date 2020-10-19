@@ -145,7 +145,7 @@ Its interpretation is defined by the host environment.
 It may contain additional host-defined types that are neither of the above three leaf type categories.
 It may also overlap with some or all of these categories, as would be observable by applying a classification instruction like `ref.is_func` to a value of type `externref`.
 The possible outcomes of such an operation hence depend on the host environment.
-(For example, in a JavaScript embedding, `externref` could be inhabited by all JS values -- which is a natural choice, because JavaScript is untyped; but some of its values are JS-side representations of Wasm values per the JS API, and those can also be observed as `data` or `func` references. Another possible interpretation could be that `data` is disjoint from `extern`, which would be determined by the coercions allowed by the JS API at the JS/Wasm boudary.)
+(For example, in a JavaScript embedding, `externref` could be inhabited by all JS values -- which is a natural choice, because JavaScript is untyped; but some of its values are JS-side representations of Wasm values per the JS API, and those can also be observed as `data` or `func` references. Another possible interpretation could be that `data` is disjoint from `extern`, which would be determined by the coercions allowed by the JS API at the JS/Wasm boudary. While such an interpretation is probably not attractive for JavaScript, it would be natural in other embeddings such as the C/C++ API, where different references are represented with different host types.)
 
 Note: In the future, this hierarchy could be refined to distinguish compound data types that are not subtypes of `eq`.
 
