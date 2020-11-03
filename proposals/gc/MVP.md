@@ -145,7 +145,7 @@ Its interpretation is defined by the host environment.
 It may contain additional host-defined types that are neither of the above three leaf type categories.
 It may also overlap with some or all of these categories, as would be observable by applying a classification instruction like `ref.is_func` to a value of type `externref`.
 The possible outcomes of such an operation hence depend on the host environment.
-(For example, in a JavaScript embedding, `externref` could be inhabited by all JS values -- which is a natural choice, because JavaScript is untyped; but some of its values are JS-side representations of Wasm values per the JS API, and those can also be observed as `data` or `func` references. Another possible interpretation could be that `data` is disjoint from `extern`, which would be determined by the coercions allowed by the JS API at the JS/Wasm boudary. While such an interpretation is probably not attractive for JavaScript, it would be natural in other embeddings such as the C/C++ API, where different references are represented with different host types.)
+(For example, in a JavaScript embedding, `externref` could be inhabited by all JS values -- which is a natural choice, because JavaScript is untyped; but some of its values are JS-side representations of Wasm values per the JS API, and those can also be observed as `data` or `func` references. Another possible interpretation could be that `data` is disjoint from `extern`, which would be determined by the coercions allowed by the JS API at the JS/Wasm boundary. While such an interpretation is probably not attractive for JavaScript, it would be natural in other embeddings such as the C/C++ API, where different references are represented with different host types.)
 
 Note: In the future, this hierarchy could be refined to distinguish compound data types that are not subtypes of `eq`.
 
@@ -196,8 +196,8 @@ Note: In the future, this hierarchy could be refined to distinguish compound dat
 * At the same time, runtime subtyping forms a linear hierarchy such that the relation can be checked efficiently using standard implementation techniques (the runtime subtype hierarchy is a tree-shaped graph).
 
 Note: RTT values correspond to type descriptors or "shape" objects as they exist in various engines. Moreover, runtime casts along the hierachy encoded in these values can be implemented in an engine efficiently by using well-known techniques such as including a vector of its (direct and indirect) super-RTTs in each RTT value (with itself as the last entry). The value `<n>` then denotes the length of this vector. A subtype check between two RTT values can be implemented as follows using such a representation. Assume RTT value v1 has static type `(rtt n1? $t1)` and v2 has type `(rtt n2? $t2)`. To check whether v1 denotes a sub-RTT of v2, first verify that `n1 >= n2` -- if both `n1` and `n2` are known statically, this can be performed at compile time; if either is not statically known, it has to be read from the respective RTT value dynamically, and `n1 >= n2` becomes a dynamic check. Then compare v2 to the n2-th entry in v1's supertype vector. If they are equal, v1 is a sub-RTT.
-In the case of actual casts, the static type of RTT v1 (taken from the  to cast) is not known at compile time, so `n1` is dynamic as well.
-(Note that `$t2` and `$t2` are not relevant for the dynamic semantics, but merely for validation.)
+In the case of actual casts, the static type of RTT v1 (obtained from the value to cast) is not known at compile time, so `n1` is dynamic as well.
+(Note that `$t1` and `$t2` are not relevant for the dynamic semantics, but merely for validation.)
 
 Example: Consider three types and corresponding RTTs:
 ```
@@ -350,9 +350,9 @@ Tentatively, support a type of guaranteed unboxed scalars.
   - traps if reference is not an integer
   - equivalent to `(block $l (param anyref) (result i31ref) (br_on_i31 $l) (unreachable))`
 
-Note: There are no instructions to check for `externref`, since that can consist of a diverse set of different object representations that would be costly to check for exhaustively.
+Note: The [reference types](https://github.com/WebAssembly/reference-types) and [typed function references](https://github.com/WebAssembly/function-references)already introduce similar `ref.is_null` and `br_on_null` instructions.
 
-TODO: Should we add `br_on_null` for completeness?
+Note: There are no instructions to check for `externref`, since that can consist of a diverse set of different object representations that would be costly to check for exhaustively.
 
 
 #### Runtime Types
@@ -362,8 +362,8 @@ TODO: Should we add `br_on_null` for completeness?
   - multiple invocations of this instruction yield the same observable RTTs
   - this is a *constant instruction*
 
-* `rtt.sub <n> <typeidx1> <typeidx2>` returns an RTT for `typeidx2` as a sub-RTT of a the parent RTT operand for `typeidx1`
-  - `rtt.sub n $t1 $t2 : [(rtt n $t1)] -> [(rtt (n+1) $t2)]`
+* `rtt.sub <typeidx>` returns an RTT for `typeidx` as a sub-RTT of a the parent RTT operand
+  - `rtt.sub $t : [(rtt n $t')] -> [(rtt (n+1) $t)]`
     - iff `t2 <: t1`
   - multiple invocations of this instruction with the same operand yield the same observable RTTs
   - this is a *constant instruction*
@@ -482,7 +482,7 @@ The opcode for heap types is encoded as an `s33`.
 | 0xfb21 | `i31.get_s` |  |
 | 0xfb22 | `i31.get_u` |  |
 | 0xfb30 | `rtt.canon $t` | `$t : typeidx` |
-| 0xfb31 | `rtt.sub n $t1 $t2` | `n : u32`, `$t1 : typeidx`, `$t2 : typeidx` |
+| 0xfb31 | `rtt.sub $t` | `$t : typeidx` |
 | 0xfb40 | `ref.test $t` | `$t : typeidx` |
 | 0xfb41 | `ref.cast $t` | `$t : typeidx` |
 | 0xfb42 | `br_on_cast $l $t` | `$l : labelidx`, `$t : typeidx` |
@@ -506,8 +506,6 @@ See [GC JS API document](MVP-JS.md) .
 ## Questions
 
 * Enable `i31` as a type definition.
-
-* Add `br_on_null`?
 
 * Should reference types be generalised to *unions*, e.g., of the form `(ref null? i31? data? func? extern? $t?)`? Perhaps even allowing multiple concrete types?
 
