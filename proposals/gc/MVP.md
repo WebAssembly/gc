@@ -431,8 +431,8 @@ This extends the [encodings](https://github.com/WebAssembly/function-references/
 | -0x14  | `(ref null ht)` | `ht : heaptype (s33)` | from funcref proposal |
 | -0x15  | `(ref ht)`      | `ht : heaptype (s33)` | from funcref proposal |
 | -0x16  | `i31ref`        |            | |
-| -0x17  | `(rtt n ht)`    | `n : u32`, `ht : heaptype (s33)` | |
-| -0x18  | `(rtt ht)`      | `ht : heaptype (s33)` | |
+| -0x17  | `(rtt n $t)`    | `n : u32`, `$t : typeidx` | |
+| -0x18  | `(rtt $t)`      | `$t : typeidx` | |
 
 #### Heap Types
 
