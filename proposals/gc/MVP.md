@@ -445,7 +445,7 @@ The opcode for heap types is encoded as an `s33`.
 | -0x11  | `extern`        |            | from funcref proposal |
 | -0x12  | `any`           |            | |
 | -0x13  | `eq`            |            | |
-| -0x17  | `i31`           |            | |
+| -0x16  | `i31`           |            | |
 
 #### Defined Types
 
