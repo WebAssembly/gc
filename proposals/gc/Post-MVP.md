@@ -403,6 +403,16 @@ However, there are a number of challenges:
 
 In general, the semantics and implementation of type parameters should be analogous to that of type imports. Ideally, in the presence of the [module linking proposal](https://github.com/WebAssembly/module-linking), it should even be possible to explain definitions with type parameters as shorthands for nested modules (well, at least for 2nd-class cases).
 
+### Fundamental Limitations
+
+Unfortunately, languages with generics exhibit one or both of the following features:
+* Expansive-recursive structures, such as `datatype 'a T = EMPTY | NODE of 'a * (('a T) T)` in ML
+* Impredicative bounded polymorphism, such as bounded generic methods in C#, or the bounded existential types used to describe (at the assembly level) Java/C# covariant arrays or Kotlin `in`/`out` type projections.
+
+Each of these features is undecidable on its own, and although the respective surface languages are decidable, their low-level encoding as structural types is not.
+As such, it is unlikely that the MVP will be able to be extended to support languages with generics.
+Nonetheless, we might find other uses for parametric polymorphism, and the following offers an impression of what such an extension might look like.
+
 ### Sketch
 
 * Allow type parameters on function types:
