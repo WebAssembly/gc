@@ -410,7 +410,7 @@ Unfortunately, languages with generics exhibit one or both of the following feat
 * Impredicative bounded polymorphism, such as bounded generic methods in C#, or the bounded existential types used to describe (at the assembly level) Java/C# covariant arrays or Kotlin `in`/`out` type projections.
 
 Each of these features is undecidable on its own, and although the respective surface languages are decidable, their low-level encoding as structural types is not.
-As such, it is unlikely that the MVP will be able to be extended to support languages with generics.
+As such, it is unlikely that the MVP will be able to be extended to support cast-free implementations of languages with generics, though the MVP might be extended with built-in support for common special cases of generics such as covariant arrays.
 Nonetheless, we might find other uses for parametric polymorphism, and the following offers an impression of what such an extension might look like.
 
 ### Sketch
