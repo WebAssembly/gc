@@ -325,21 +325,24 @@ Tentatively, support a type of guaranteed unboxed scalars.
   - `ref.is_i31 : [anyref] -> [i32]`
 
 * `br_on_func <labelidx>` branches if a reference is a function
-  - `br_on_func $l : [(ref null ht)] -> [(ref null ht)]`
-    - iff `$l : [(ref null? ht')]`
-    - and `func <: ht'`
+  - `br_on_func $l : [t] -> [t]`
+    - iff `$l : [t']`
+    - and `t <: anyref`
+    - and `(ref func) <: t'`
   - passes operand along with branch as a function
 
 * `br_on_data <labelidx>` branches if a reference is compound data
-  - `br_on_data $l : [(ref null ht)] -> [(ref null ht)]`
-    - iff `$l : [(ref null? ht')]`
-    - and `data <: ht'`
+  - `br_on_data $l : [t] -> [t]`
+    - iff `$l : [t']`
+    - and `t <: anyref`
+    - and `(ref data) <: t'`
   - passes operand along with branch as data
 
 * `br_on_i31 <labelidx>` branches if a reference is an integer
-  - `br_on_i31 $l : [(ref null ht)] -> [(ref null ht)]`
-    - iff `$l : [(ref null? ht')]`
-    - and `i31 <: ht'`
+  - `br_on_i31 $l : [t] -> [t]`
+    - iff `$l : [t']`
+    - and `t <: anyref`
+    - and `(ref i31) <: t'`
   - passes operand along with branch as a scalar
 
 * `ref.as_func` converts to a function reference
