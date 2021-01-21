@@ -325,38 +325,43 @@ Tentatively, support a type of guaranteed unboxed scalars.
   - `ref.is_i31 : [anyref] -> [i32]`
 
 * `br_on_func <labelidx>` branches if a reference is a function
-  - `br_on_func $l : [anyref] -> [anyref]`
-    - iff `$l : [funcref]`
+  - `br_on_func $l : [(ref null ht)] -> [(ref null ht)]`
+    - iff `$l : [(ref null? ht')]`
+    - and `func <: ht'`
   - passes operand along with branch as a function
 
 * `br_on_data <labelidx>` branches if a reference is compound data
-  - `br_on_data $l : [anyref] -> [anyref]`
-    - iff `$l : [dataref]`
-  - passes operand along with branch as a function
+  - `br_on_data $l : [(ref null ht)] -> [(ref null ht)]`
+    - iff `$l : [(ref null? ht')]`
+    - and `data <: ht'`
+  - passes operand along with branch as data
 
 * `br_on_i31 <labelidx>` branches if a reference is an integer
-  - `br_on_func $l : [anyref] -> [anyref]`
-    - iff `$l : [i31ref]`
-  - passes operand along with branch as a function
+  - `br_on_i31 $l : [(ref null ht)] -> [(ref null ht)]`
+    - iff `$l : [(ref null? ht')]`
+    - and `i31 <: ht'`
+  - passes operand along with branch as a scalar
 
 * `ref.as_func` converts to a function reference
-  - `ref.as_func : [anyref] -> [funcref]`
+  - `ref.as_func : [anyref] -> [(ref func)]`
   - traps if reference is not a function
   - equivalent to `(block $l (param anyref) (result funcref) (br_on_func $l) (unreachable))`
 
 * `ref.as_data` converts to a data reference
-  - `ref.as_data : [anyref] -> [dataref]`
+  - `ref.as_data : [anyref] -> [(ref data)]`
   - traps if reference is not compound data
   - equivalent to `(block $l (param anyref) (result dataref) (br_on_data $l) (unreachable))`
 
 * `ref.as_i31` converts to an integer reference
-  - `ref.as_i31 : [anyref] -> [i31ref]`
+  - `ref.as_i31 : [anyref] -> [(ref i31)]`
   - traps if reference is not an integer
   - equivalent to `(block $l (param anyref) (result i31ref) (br_on_i31 $l) (unreachable))`
 
 Note: The [reference types](https://github.com/WebAssembly/reference-types) and [typed function references](https://github.com/WebAssembly/function-references)already introduce similar `ref.is_null` and `br_on_null` instructions.
 
 Note: There are no instructions to check for `externref`, since that can consist of a diverse set of different object representations that would be costly to check for exhaustively.
+
+Note: The `br_on_*` instructions allow an operand of unrelated reference type, even though this cannot possibly succeed. That's because subtyping allows to forget that information, so by the subtype substitutibility property, it would be accepted in any case. The given typing rules merely allow this type to also propagate to the result, which avoids the need to compute a least upper bound between the operand type and the target type in the typing algorithm.
 
 
 #### Runtime Types
@@ -439,6 +444,7 @@ This extends the [encodings](https://github.com/WebAssembly/function-references/
 | -0x16  | `i31ref`        |            | |
 | -0x17  | `(rtt n $t)`    | `n : u32`, `$t : typeidx` | |
 | -0x18  | `(rtt $t)`      | `$t : typeidx` | |
+| -0x19  | `dataref`       |            | |
 
 #### Heap Types
 
@@ -452,6 +458,7 @@ The opcode for heap types is encoded as an `s33`.
 | -0x12  | `any`           |            | |
 | -0x13  | `eq`            |            | |
 | -0x16  | `i31`           |            | |
+| -0x19  | `data`          |            | |
 
 #### Defined Types
 
