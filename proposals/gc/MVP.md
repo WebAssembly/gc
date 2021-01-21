@@ -387,29 +387,27 @@ TODO: Add the ability to generate new (non-canonical) RTT values to implement ca
 
 RTT-based casts can only be performed with respect to concrete types, and require a data or function reference as input, which are known to carry an RTT.
 
-* `ref.test <typeidx>` tests whether a reference value's [runtime type](#values) is a [runtime subtype](#runtime) of a given RTT
-  - `ref.test $t : [(ref null ht) (rtt n? $t)] -> [i32]`
-    - iff `ht <: data` or `ht <: func`
-    - and `(type $t) <: ht`
+* `ref.test` tests whether a reference value's [runtime type](#values) is a [runtime subtype](#runtime) of a given RTT
+  - `ref.test : [t' (rtt n? $t)] -> [i32]`
+    - iff `t' <: dataref` or `t' <: funcref`
   - returns 1 if the first operand is not null and its runtime type is a sub-RTT of the RTT operand, 0 otherwise
 
-* `ref.cast <typeidx>` casts a reference value down to a type given by a RTT representation
-  - `ref.cast $t : [(ref null1? ht) (rtt n? $t)] -> [(ref null2? $t)]`
+* `ref.cast` casts a reference value down to a type given by a RTT representation
+  - `ref.cast : [(ref null1? ht) (rtt n? $t)] -> [(ref null2? $t)]`
     - iff `ht <: data` or `ht <: func`
-    - and `(type $t) <: ht`
     - and `null1? = null2?`
   - returns null if the first operand is null
   - traps if the first operand is not null and its runtime type is not a sub-RTT of the RTT operand
 
-* `br_on_cast <labelidx> <typeidx>` branches if a value can be cast down to a given reference type
-  - `br_on_cast $l $t : [(ref null ht) (rtt n? $t)] -> [(ref null ht)]`
-    - iff `ht <: data` or `ht <: func`
-    - and `(type $t) <: ht`
-    - and `$l : [(ref $t)]`
+* `br_on_cast <labelidx>` branches if a value can be cast down to a given reference type
+  - `br_on_cast $l : [t (rtt n? $t')] -> [t]`
+    - iff `$l : [t']`
+    - and `t <: dataref` or `t <: funcref`
+    - and `(ref $t) <: t'`
   - branches iff the first operand is not null and its runtime type is a sub-RTT of the RTT operand
   - passes cast operand along with branch
 
-Note: The condition `(type $t) <: ht` isn't needed for soundness of any of the above instructions. If false, the check merely is statically known to fail. Should it be removed?
+Note: These instructions allow an operand of unrelated reference type, even though this cannot possibly succeed. The reasoning is the same as for classification instructions.
 
 
 #### Constant Expressions
