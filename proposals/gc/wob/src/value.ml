@@ -1,7 +1,7 @@
 module Env = Map.Make(String)
 
-type var = Syntax.var
-type typ = Syntax.typ
+type var = string
+type typ = Type.typ
 
 and con = typ list -> typ
 and func = typ list -> value list -> value
@@ -21,30 +21,29 @@ and value =
 
 and env =
   { vals : value ref Env.t;
-    typs : con Env.t;
+    typs : Type.env;
   }
 
 
 (* Environmets *)
 
-let empty_env = {vals = Env.empty; typs = Env.empty}
+let empty_env = {vals = Env.empty; typs = Type.empty_env}
 
-let extend_val env x v = {env with vals = Env.add x.Source.it (ref v) env.vals}
-let extend_typ env x c = {env with typs = Env.add x.Source.it c env.typs}
-let extend_typ_gnd env x t = extend_typ env x (fun _ -> t)
-let extend_typ_abs env x =
-  let open Source in extend_typ_gnd env x (Syntax.VarT (x, []) @@ x.at)
+let extend_val env x v = {env with vals = Env.add x (ref v) env.vals}
+let extend_typ env x c = {env with typs = Type.extend env.typs x c}
+let extend_typ_gnd env x t = {env with typs = Type.extend_gnd env.typs x t}
+let extend_typ_abs env x = {env with typs = Type.extend_abs env.typs x}
 
 let val_env x v = extend_val empty_env x v
 let typ_env x c = extend_typ empty_env x c
 
 let adjoin_env env1 env2 =
   { vals = Env.union (fun _ x1 x2 -> Some x2) env1.vals env2.vals;
-    typs = Env.union (fun _ x1 x2 -> Some x2) env1.typs env2.typs;
+    typs = Type.adjoin_env env1.typs env2.typs;
   }
 
-let lookup_val env x = Env.find_opt x.Source.it env.vals
-let lookup_typ env x = Env.find_opt x.Source.it env.typs
+let lookup_val env x = Env.find_opt x env.vals
+let lookup_typ env x = Type.lookup env.typs x
 
 
 (* Printing *)
