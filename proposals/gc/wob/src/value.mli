@@ -1,5 +1,5 @@
-type var = Syntax.var
-type typ = Syntax.typ
+type var = string
+type typ = Type.typ
 
 and env
 and con = typ list -> typ

@@ -207,14 +207,20 @@ exp :
   | WHILE exp_annot exp_block { WhileE ($2, $3) @@ at () }
   | FUNC gen_opt LPAR param_list RPAR exp {
       BlockE [
-        FuncD ("fn" @@ at (), $2, $4, [], $6) @@ at ();
-        ExpD (VarE ("fn" @@ at ()) @@ at ()) @@ at ();
+        FuncD ("it" @@ at (), $2, $4, [], $6) @@ at ();
+        ExpD (VarE ("it" @@ at ()) @@ at ()) @@ at ();
       ] @@ at ()
     }
   | FUNC gen_opt LPAR param_list RPAR COLON typ_param exp_block {
       BlockE [
-        FuncD ("fn" @@ at (), $2, $4, $7, $8) @@ at ();
-        ExpD (VarE ("fn" @@ at ()) @@ at ()) @@ at ();
+        FuncD ("it" @@ at (), $2, $4, $7, $8) @@ at ();
+        ExpD (VarE ("it" @@ at ()) @@ at ()) @@ at ();
+      ] @@ at ()
+    }
+  | CLASS gen_opt LPAR param_list RPAR sup_opt LCURLY dec_list RCURLY {
+      BlockE [
+        ClassD ("it" @@ at (), $2, $4, $6, $8) @@ at ();
+        ExpD (VarE ("it" @@ at ()) @@ at ()) @@ at ();
       ] @@ at ()
     }
 
