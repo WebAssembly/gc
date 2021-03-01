@@ -52,10 +52,9 @@ let float s at =
 %token COLON EQ LT GT ARROW ASSIGN SUB SUP DOT
 %token EQOP NEOP LEOP LTOP GTOP GEOP
 %token ADDOP SUBOP MULOP DIVOP MODOP ANDOP OROP NOTOP CATOP
-%token NEW IF ELSE WHILE RETURN
+%token NEW IF ELSE WHILE RETURN ASSERT
 %token LET VAR FUNC TYPE CLASS IMPORT FROM
 %token<string> NAT
-%token<string> DOT_NAT
 %token<string> FLOAT
 %token<string> TEXT
 %token<string> ID
@@ -64,10 +63,10 @@ let float s at =
 %nonassoc ELSE WHILE
 
 %right ASSIGN
-%left COLON SUP
 %left OROP
 %left ANDOP
 %nonassoc EQOP NEOP LTOP GTOP LEOP GEOP
+%left COLON SUP
 %left ADDOP SUBOP CATOP
 %left MULOP DIVOP MODOP
 
@@ -94,7 +93,6 @@ var_list :
 typ_simple :
   | var {
       (match $1.it with
-      | "Null" -> NullT
       | "Bool" -> BoolT
       | "Byte" -> ByteT
       | "Int" -> IntT
@@ -191,20 +189,18 @@ exp_bin :
   | exp_bin GTOP exp_bin { RelE ($1, GtOp, $3) @@ at () }
   | exp_bin LEOP exp_bin { RelE ($1, LeOp, $3) @@ at () }
   | exp_bin GEOP exp_bin { RelE ($1, GeOp, $3) @@ at () }
-
-exp_annot :
-  | exp_bin { $1 }
   | exp_bin COLON typ { AnnotE ($1, $3) @@ at () }
   | exp_bin SUP typ { CastE ($1, $3) @@ at () }
-  | exp_bin ASSIGN exp_annot { AssignE ($1, $3) @@ at () }
+  | exp_bin ASSIGN exp_bin { AssignE ($1, $3) @@ at () }
 
 exp :
-  | exp_annot { $1 }
+  | exp_bin { $1 }
   | RETURN %prec RETURN_NO_ARG { RetE [] @@ at () }
-  | RETURN exp_arg { RetE $2 @@ at () }
-  | IF exp_annot exp_block %prec IF_NO_ELSE { IfE ($2, $3, TupE [] @@ at ()) @@ at () }
-  | IF exp_annot exp_block ELSE exp_block { IfE ($2, $3, $5) @@ at () }
-  | WHILE exp_annot exp_block { WhileE ($2, $3) @@ at () }
+  | RETURN exp_bin { RetE (match $2.it with TupE es -> es | _ -> [$2]) @@ at () }
+  | ASSERT exp_bin { AssertE $2 @@ at () }
+  | IF exp_bin exp_block %prec IF_NO_ELSE { IfE ($2, $3, TupE [] @@ at ()) @@ at () }
+  | IF exp_bin exp_block ELSE exp_block { IfE ($2, $3, $5) @@ at () }
+  | WHILE exp_bin exp_block { WhileE ($2, $3) @@ at () }
   | FUNC gen_opt LPAR param_list RPAR exp {
       BlockE [
         FuncD ("it" @@ at (), $2, $4, [], $6) @@ at ();

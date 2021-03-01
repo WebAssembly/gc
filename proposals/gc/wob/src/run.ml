@@ -1,11 +1,5 @@
 (* Errors & Tracing *)
 
-module Abort = Error.Make ()
-module IO = Error.Make ()
-
-exception Abort = Abort.Error
-exception IO = IO.Error
-
 let trace name = if !Flags.trace then print_endline ("-- " ^ name)
 
 
@@ -54,34 +48,49 @@ let input name lexbuf start =
   try
     trace "Parsing...";
     let prog = Parse.parse name lexbuf start in
+    let t_opt =
+      if !Flags.unchecked then None else begin
+        trace "Checking...";
+        let t, _env = Typing.check_prog Env.empty prog in
+        Some t
+      end
+    in
+    let v_opt =
+      if !Flags.dry then None else begin
+        trace "Running...";
+        let v, _env = Eval.eval_prog Env.empty prog in
+        Some v
+      end
+    in
     (* TODO *)
-    let v, _env = Eval.eval_prog Value.empty_env prog in
-    Printf.printf "%s\n" (Value.string_of_value v);
-(*
-    trace "Running...";
-    run script;
-*)
+    (match v_opt, t_opt with
+    | None, None -> ()
+    | Some v, None -> Printf.printf "%s\n" (Value.to_string v)
+    | None, Some t -> Printf.printf "%s\n" (Type.to_string t)
+    | Some v, Some t ->
+      Printf.printf "%s : %s\n" (Value.to_string v) (Type.to_string t)
+    );
     true
   with
   | Parse.Error (at, msg) -> error at "syntax error" msg
+  | Typing.Error (at, msg) -> error at "type error" msg
   | Eval.Trap (at, msg) -> error at "runtime error" msg
   | Eval.Crash (at, msg) -> error at "crash" msg
 (*
-  | Typing.Invalid (at, msg) -> error at "invalid module" msg
   | Import.Unknown (at, msg) -> error at "link failure" msg
 *)
-  | IO (at, msg) -> error at "i/o error" msg
-  | Abort _ -> false
 
 let input_file file =
   trace ("Loading (" ^ file ^ ")...");
-  let ic = open_in file in
-  try
-    let lexbuf = Lexing.from_channel ic in
-    let success = input file lexbuf Parse.Prog in
-    close_in ic;
-    success
-  with exn -> close_in ic; raise exn
+  match open_in file with
+  | exception Sys_error msg -> error Source.no_region "i/o error" msg
+  | ic ->
+    try
+      let lexbuf = Lexing.from_channel ic in
+      let success = input file lexbuf Parse.Prog in
+      close_in ic;
+      success
+    with exn -> close_in ic; raise exn
 
 let input_string string =
   trace ("Running (\"" ^ String.escaped string ^ "\")...");
