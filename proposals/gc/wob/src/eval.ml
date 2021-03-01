@@ -179,13 +179,21 @@ let rec eval_exp env e : V.value =
     | _ -> crash e.at "runtime type error at function call"
     )
 
-  | NewE (e1, ts, es) ->
-    let v1 = eval_exp env e1 in
+  | NewE (x, ts, es) ->
+    let v1 = eval_var env x in
     let vs = List.map (eval_exp env) es in
     (match v1 with
-    | V.Null -> trap e1.at "null reference at class instantiation"
+    | V.Null -> trap x.at "null reference at class instantiation"
     | V.Class f -> f (List.map (eval_typ env) ts) vs
     | _ -> crash e.at "runtime type error at class instantiation"
+    )
+
+  | NewArrayE (_t, e1, e2) ->
+    let v1 = eval_exp env e1 in
+    let v2 = eval_exp env e2 in
+    (match v1 with
+    | V.Int i -> V.Array (List.init (Int32.to_int i) (fun _ -> ref v2))
+    | _ -> crash e.at "runtime type error at array instantiation"
     )
 
   | DotE (e1, x) ->
@@ -330,7 +338,7 @@ and eval_dec env d : V.value * env =
         match sup_opt with
         | None -> E.Map.empty, env''
         | Some (x2, ts2, es2) ->
-          match eval_exp env'' (NewE (VarE x2 @@ x2.at, ts2, es2) @@ x2.at) with
+          match eval_exp env'' (NewE (x2, ts2, es2) @@ x2.at) with
           | V.Obj (_, obj') ->
             obj', E.Map.fold (fun x v env -> Env.extend_val env x v) obj' env''
           | _ -> crash x2.at "runtime type error at super class instantiation"

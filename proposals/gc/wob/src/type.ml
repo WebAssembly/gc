@@ -46,9 +46,9 @@ let rec to_string = function
   | Int -> "Int"
   | Float -> "Float"
   | Text -> "Text"
-  | Obj -> "Obj"
+  | Obj -> "Object"
   | Tup ts -> "(" ^ list to_string ts ^ ")"
-  | Array t -> "[" ^ to_string t ^ "]"
+  | Array t -> to_string t ^ "[]"
   | Func ([], ts1, ts2) -> params ts1 ^ " -> " ^ params ts2
   | Func (ys, ts1, ts2) ->
     "<" ^ list Fun.id ys ^ ">(" ^ params ts1 ^ ") -> " ^ params ts2
