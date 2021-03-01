@@ -201,15 +201,15 @@ and check_exp' env e : T.typ =
     | _ -> error e1.at "function type expected"
     )
 
-  | NewE (e1, ts, es) ->
-    let t1 = check_exp env e1 in
+  | NewE (x, ts, es) ->
+    let t1 = check_var env x in
     let ts' = List.map (check_typ env) ts in
     (match t1 with
     | T.Class cls ->
       if List.length ts' <> List.length cls.T.tparams then
-        error e1.at "wrong number of type arguments at class instantiation";
+        error x.at "wrong number of type arguments at class instantiation";
       if List.length es <> List.length cls.T.vparams then
-        error e1.at "wrong number of arguments at class instantiation";
+        error x.at "wrong number of arguments at class instantiation";
       let s = T.typ_subst cls.T.tparams ts' in
       let ts1' = List.map (T.subst s) cls.T.vparams in
       List.iter2 (fun eI tI ->
@@ -219,8 +219,19 @@ and check_exp' env e : T.typ =
             (T.to_string tI) (T.to_string tI')
       ) es ts1';
       T.Inst (cls, ts')
-    | _ -> error e1.at "class type expected"
+    | _ -> error x.at "class type expected"
     )
+
+  | NewArrayE (t, e1, e2) ->
+    let t' = check_typ env t in
+    let t1 = check_exp env e1 in
+    let t2 = check_exp env e2 in
+    if not (T.sub t1 T.Int) then
+      error e1.at "integer type expected but got %s" (T.to_string t1);
+    if not (T.sub t2 t') then
+      error e2.at "array initialization expects argument type %s but got %s"
+        (T.to_string t') (T.to_string t2);
+    T.Array t'
 
   | DotE (e1, x) ->
     let t1 = check_exp env e1 in
@@ -385,7 +396,7 @@ and check_dec env d : T.typ * env =
       | Some (x2, ts2, es2) ->
         let t' = check_typ env'' (VarT (x2, ts2) @@ x2.at) in
         cls.T.sup <- t';
-        match check_exp env'' (NewE (VarE x2 @@ x2.at, ts2, es2) @@ x2.at) with
+        match check_exp env'' (NewE (x2, ts2, es2) @@ x2.at) with
         | T.Inst (cls, _) -> cls.T.def
         | _ -> assert false
     in

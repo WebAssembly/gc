@@ -103,7 +103,6 @@ typ_simple :
       ) @@ at ()
     }
   | var LT typ_list GT { VarT ($1, $3) @@ at () }
-  | LBRACK typ RBRACK { ArrayT $2 @@ at () }
 
 typ_tup :
   | LPAR typ_list RPAR { match $2 with [t] -> t | ts -> TupT ts @@ at () }
@@ -112,9 +111,13 @@ typ_param :
   | typ_simple { [$1] }
   | typ_tup { match $1.it with TupT ts -> ts | _ -> [$1] }
 
-typ :
+typ_post :
   | typ_simple { $1 }
   | typ_tup { $1 }
+  | typ_post LBRACK RBRACK { ArrayT $1 @@ at () }
+
+typ :
+  | typ_post { $1 }
   | typ_param ARROW typ_param { FuncT ([], $1, $3) @@ at () }
   | LT var_list GT typ_tup ARROW typ_param {
       FuncT ($2, (match $4.it with TupT ts -> ts | _ -> [$4]), $6) @@ at ()
@@ -170,8 +173,11 @@ exp_un :
   | ADDOP exp_un { UnE (PosOp, $2) @@ at () }
   | SUBOP exp_un { UnE (NegOp, $2) @@ at () }
   | NOTOP exp_un { UnE (NotOp, $2) @@ at () }
-  | NEW exp_post exp_arg { NewE ($2, [], $3) @@ at () }
-  | NEW exp_post LT typ_list GT exp_arg { NewE ($2, $4, $6) @@ at () }
+  | NEW var exp_arg { NewE ($2, [], $3) @@ at () }
+  | NEW var LT typ_list GT exp_arg { NewE ($2, $4, $6) @@ at () }
+  | NEW typ_post LBRACK exp RBRACK LPAR exp RPAR {
+      NewArrayE ($2, $4, $7) @@ at ()
+    }
 
 exp_bin :
   | exp_un { $1 }

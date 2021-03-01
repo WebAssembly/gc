@@ -1,0 +1,39 @@
+// Generic classes
+
+class PA<T, U>(x : T, y : U) {
+  let s = [(x, y), (x, y), (x, y)];
+  func getL(i : Int) : T { s[i].0 };
+  func getR(i : Int) : U { s[i].1 };
+};
+
+class PAS<T, U>(x : T, y : U) <: PA<T, U>(x, y) {
+  func setL(i : Int, x : T) { s[i] := (x, s[i].1) };
+  func setR(i : Int, y : U) { s[i] := (s[i].0, y) };
+};
+
+let pas = new PAS<Int, Text>(0, "");
+
+assert pas.getL(1) == 0;
+assert pas.getR(1) == "";
+
+pas.setL(1, 5);
+assert pas.getL(1) == 5;
+assert pas.getR(1) == "";
+
+pas.setR(1, "boo");
+assert pas.getL(1) == 5;
+assert pas.getR(1) == "boo";
+
+assert pas :> PA<Int, Text> == pas;
+assert pas :> PA<Int, Bool> == null;
+assert pas :> PAS<Int, Text> == pas;
+assert pas :> PAS<Int, Bool> == null;
+
+
+class PAB<T>(x : T) <: PAS<Bool, (T, T)>(false, (x, x)) {};
+
+let pab = new PAB<Text>("");
+assert pab :> PA<Bool, (Text, Text)> == pab;
+assert pab :> PA<Bool, (Int, Int)> == null;
+assert pab :> PAB<Text> == pab;
+assert pab :> PAB<Bool> == null;
