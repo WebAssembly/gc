@@ -115,6 +115,7 @@ and check_exp' env e : T.typ =
     (match op, t with
     | (AddOp | SubOp | MulOp | DivOp | ModOp), T.Int -> T.Int
     | (AddOp | SubOp | MulOp | DivOp), T.Float -> T.Float
+    | (AndOp | OrOp), T.Bool -> T.Bool
     | CatOp, T.Text -> T.Text
     | _ ->
       error e.at "binary operator not defined for types %s and %s"
