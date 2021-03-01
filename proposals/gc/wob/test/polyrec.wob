@@ -2,16 +2,17 @@
 
 let n = 20;
 
-class C<X>() {};
+class C<X>(x : X) { let x : X = x };
 var p = new Object[n](null);
 
-func polyr<X>(i : Int) {
+func polyr<X>(i : Int, x : X) {
   if i == n { return };
-  p[i] := new C<X>();
-  polyr<C<X>>(i + 1);
+  let cx = new C<X>(x);
+  p[i] := cx;
+  polyr<C<X>>(i + 1, cx);
 };
 
-polyr<Int>(0);
+polyr<Int>(0, 9);
 assert p[0] :> C<Int> != null;
 assert p[0] :> C<C<Int>> == null;
 assert p[0] :> C<C<C<Int>>> == null;
@@ -45,6 +46,9 @@ assert p[2] :> C<C<C<Bool>>> == null;
   func check<X>(j : Int) {
     if j < n {
       assert (i == j) == (p[i] :> C<X> != null);
+      if i < n - 1 && i == j {
+        assert p[i] == (p[i + 1] :> C<C<X>>).x;
+      };
       check<C<X>>(j + 1);
     }
   };
