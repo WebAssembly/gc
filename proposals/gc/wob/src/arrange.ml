@@ -21,8 +21,7 @@ let var x = Atom x.it
 (* Types *)
 
 let rec typ t = match t.it with
-  | VarT (x, ts) -> "VarT" $$ [var x] @ list typ ts
-  | NullT -> Atom "NullT"
+  | VarT (b, ts) -> "VarT" $$ [var b] @ list typ ts
   | ByteT -> Atom "ByteT"
   | BoolT -> Atom "BoolT"
   | IntT -> Atom "IntT"
@@ -31,8 +30,8 @@ let rec typ t = match t.it with
   | ObjT -> Atom "ObjT"
   | TupT ts -> "TupT" $$ list typ ts
   | ArrayT t -> "ArrayT" $$ [typ t]
-  | FuncT (xs, ts1, ts2) ->
-    "FuncT" $$ list var xs @ ["param" $$ list typ ts1; "result" $$ list typ ts2]
+  | FuncT (ys, ts1, ts2) ->
+    "FuncT" $$ list var ys @ ["param" $$ list typ ts1; "result" $$ list typ ts2]
 
 
 (* Expressions *)
@@ -84,10 +83,11 @@ let rec exp e = match e.it with
   | AssignE (e1, e2) -> "AssignE" $$ [exp e1; exp e2]
   | AnnotE (e1, t) -> "AnnotE"  $$ [exp e1; typ t]
   | CastE (e1, t) -> "CastE"  $$ [exp e1; typ t]
-  | BlockE ds -> "BlockE" $$ list dec ds
+  | AssertE e1 -> "AssertE" $$ [exp e1]
   | IfE (e1, e2, e3) -> "IfE" $$ [exp e1; exp e2; exp e3]
   | WhileE (e1, e2) -> "WhileE" $$ [exp e1; exp e2]
   | RetE es -> "RetE" $$ list exp es
+  | BlockE ds -> "BlockE" $$ list dec ds
 
 
 (* Declarations *)
@@ -96,15 +96,15 @@ and dec d = match d.it with
   | ExpD e -> "ExpD" $$ [exp e]
   | LetD (x, e) -> "LetD" $$ [var x; exp e]
   | VarD (x, e) -> "VarD" $$ [var x; exp e]
-  | TypD (x, xs, t) -> "TypD" $$ [var x] @ list var xs @ [typ t]
-  | FuncD (x, xs, ps, ts, e) ->
-    "FuncD" $$ [var x] @ ["gen" $$ list var xs] @
+  | TypD (y, ys, t) -> "TypD" $$ [var y] @ list var ys @ [typ t]
+  | FuncD (x, ys, ps, ts, e) ->
+    "FuncD" $$ [var x] @ ["gen" $$ list var ys] @
       ["param" $$ flatlist (fun (x, t) -> [var x; typ t]) ps] @
       list typ ts @ [exp e]
-  | ClassD (x, xs, ps, so, ds) ->
-    "ClassD" $$ [var x] @ ["gen" $$ list var xs] @
+  | ClassD (x, ys, ps, so, ds) ->
+    "ClassD" $$ [var x] @ ["gen" $$ list var ys] @
       ["param" $$ flatlist (fun (x, t) -> [var x; typ t]) ps] @
-      opt (fun (x, ts, es) -> "sub" $$ [var x] @ list typ ts @ list exp es) so @
+      opt (fun (y, ts, es) -> "sub" $$ [var y] @ list typ ts @ list exp es) so @
       list dec ds
   | ImportD (xs, url) -> "ImportD" $$ list var xs @ [Atom (string url)]
 

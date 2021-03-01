@@ -1,0 +1,172 @@
+// Base case
+
+class Counter(x : Int) {
+  let a = x;
+  var c = a;
+  func get() : Int { return c };
+  func set(x : Int) { c := x };
+  func inc() { c := c + 1 };
+};
+
+let c = new Counter(5);
+assert c.a == 5;
+assert c.c == 5;
+assert c.get() == 5;
+
+c.inc();
+assert c.a == 5;
+assert c.c == 6;
+assert c.get() == 6;
+
+c.set(10);
+assert c.a == 5;
+assert c.c == 10;
+assert c.get() == 10;
+
+
+// Inheritance
+
+class DCounter(x : Int) <: Counter(x) {
+  func dec() { c := c - 1 };
+};
+
+let d = new DCounter(7);
+assert d.a == 7;
+assert d.c == 7;
+assert d.get() == 7;
+
+d.inc();
+assert d.a == 7;
+assert d.c == 8;
+assert d.get() == 8;
+
+d.set(10);
+assert d.a == 7;
+assert d.c == 10;
+assert d.get() == 10;
+
+d.dec();
+assert d.a == 7;
+assert d.c == 9;
+assert d.get() == 9;
+
+
+// Inheritance with override
+
+class ECounter(x : Int) <: DCounter(x-1) {
+  func inc() { c := c + 2 };
+  func dec() { c := c - 2 };
+};
+
+let e : DCounter = new ECounter(8);
+assert e.a == 7;
+assert e.c == 7;
+assert e.get() == 7;
+
+e.inc();
+assert e.a == 7;
+assert e.c == 9;
+assert e.get() == 9;
+
+e.set(10);
+assert e.a == 7;
+assert e.c == 10;
+assert e.get() == 10;
+
+e.dec();
+assert e.a == 7;
+assert e.c == 8;
+assert e.get() == 8;
+
+
+// Casts
+
+let co : Object = c;
+let do : Object = d;
+let eo : Object = e;
+
+assert (co :> Counter == c);
+assert (do :> Counter == d);
+assert (eo :> Counter == e);
+
+assert (co :> Counter == c);
+assert (co :> DCounter == null);
+assert (co :> ECounter == null);
+
+assert (do :> Counter == d);
+assert (do :> DCounter == d);
+assert (do :> ECounter == null);
+
+assert (eo :> Counter == e);
+assert (eo :> DCounter == e);
+assert (eo :> ECounter == e);
+
+
+// Generics
+
+class PA<T, U>(x : T, y : U) {
+  let s = [(x, y), (x, y), (x, y)];
+  func getL(i : Int) : T { s[i].0 };
+  func getR(i : Int) : U { s[i].1 };
+};
+
+class PAS<T, U>(x : T, y : U) <: PA<T, U>(x, y) {
+  func setL(i : Int, x : T) { s[i] := (x, s[i].1) };
+  func setR(i : Int, y : U) { s[i] := (s[i].0, y) };
+};
+
+let pas = new PAS<Int, Text>(0, "");
+
+assert pas.getL(1) == 0;
+assert pas.getR(1) == "";
+
+pas.setL(1, 5);
+assert pas.getL(1) == 5;
+assert pas.getR(1) == "";
+
+pas.setR(1, "boo");
+assert pas.getL(1) == 5;
+assert pas.getR(1) == "boo";
+
+assert pas :> PA<Int, Text> == pas;
+assert pas :> PA<Int, Bool> == null;
+assert pas :> PAS<Int, Text> == pas;
+assert pas :> PAS<Int, Bool> == null;
+
+
+class PAB<T>(x : T) <: PAS<Bool, (T, T)>(false, (x, x)) {};
+
+let pab = new PAB<Text>("");
+assert pab :> PA<Bool, (Text, Text)> == pab;
+assert pab :> PA<Bool, (Int, Int)> == null;
+assert pab :> PAB<Text> == pab;
+assert pab :> PAB<Bool> == null;
+
+
+// Polymorphic recursion
+
+class C<X>() {};
+var p = [null, null, null : Object];
+
+func polyr<X>(i : Int, n : Int) {
+  if i == n { return };
+  p[i] := new C<X>();
+  polyr<C<X>>(i + 1, n);
+};
+
+polyr<Int>(0, 3);
+assert p[0] :> C<Int> != null;
+assert p[0] :> C<C<Int>> == null;
+assert p[0] :> C<C<C<Int>>> == null;
+assert p[0] :> C<Bool> == null;
+
+assert p[1] :> C<Int> == null;
+assert p[1] :> C<C<Int>> != null;
+assert p[1] :> C<C<C<Int>>> == null;
+assert p[1] :> C<C<Bool>> == null;
+
+assert p[2] :> C<Int> == null;
+assert p[2] :> C<C<Int>> == null;
+assert p[2] :> C<C<C<Int>>> != null;
+assert p[2] :> C<C<C<C<Int>>>> == null;
+assert p[2] :> C<C<C<Bool>>> == null;

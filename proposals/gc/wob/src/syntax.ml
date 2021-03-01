@@ -1,17 +1,18 @@
+module T = Type
+
 exception Error of Source.region * string
 
 
 (* Variables *)
 
-type var = string Source.phrase
+type var = (string, unit) Source.phrase
 
 
 (* Types *)
 
-type typ = typ' Source.phrase
+type typ = (typ', T.typ) Source.phrase
 and typ' =
   | VarT of var * typ list
-  | NullT
   | BoolT
   | ByteT
   | IntT
@@ -36,7 +37,7 @@ type lit =
   | FloatLit of float
   | TextLit of string
 
-type exp = exp' Source.phrase
+type exp = (exp', T.typ) Source.phrase
 and exp' =
   | VarE of var
   | LitE of lit
@@ -57,11 +58,12 @@ and exp' =
   | IfE of exp * exp * exp
   | WhileE of exp * exp
   | RetE of exp list
+  | AssertE of exp
 
 
 (* Declarations *)
 
-and dec = dec' Source.phrase
+and dec = (dec', T.typ) Source.phrase
 and dec' =
   | ExpD of exp
   | LetD of var * exp
