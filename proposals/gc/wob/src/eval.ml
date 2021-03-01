@@ -330,7 +330,7 @@ and eval_dec env d : V.value * env =
     in
     cls.T.sup <- t';
     let rec f ts vs =
-      (* TODO: handle `this` and overrides *)
+      (* TODO: handle `this` *)
       let env'' = E.extend_val env' x.it (V.Class f) in
       let env'' = E.extend_typs_gnd env'' ys' ts in
       let env'' = E.extend_vals env'' xs' vs in
@@ -343,8 +343,12 @@ and eval_dec env d : V.value * env =
             obj', E.Map.fold (fun x v env -> Env.extend_val env x v) obj' env''
           | _ -> crash x2.at "runtime type error at super class instantiation"
       in
+      (* Rebind local vars to shadow parent fields *)
+      let env''' = E.extend_val env''' x.it (V.Class f) in
+      let env''' = E.extend_vals env''' xs' vs in
       let _, oenv = eval_decs env''' ds (V.Tup []) in
-      V.Obj (con ts, E.Map.adjoin obj' oenv.E.vals)
+      let obj = E.Map.union (fun x v' v -> v' := !v; Some v) obj' oenv.E.vals in
+      V.Obj (con ts, obj)
     in
     V.Tup [],
     E.adjoin (E.singleton_typ x.it con) (E.singleton_val x.it (V.Class f))

@@ -11,22 +11,22 @@ class PAS<T, U>(x : T, y : U) <: PA<T, U>(x, y) {
   func setR(i : Int, y : U) { s[i] := (s[i].0, y) };
 };
 
-let pas = new PAS<Int, Text>(0, "");
+let pas = new PAS<Int, Float>(0, 3.14);
 
 assert pas.getL(1) == 0;
-assert pas.getR(1) == "";
+assert pas.getR(1) == 3.14;
 
 pas.setL(1, 5);
 assert pas.getL(1) == 5;
-assert pas.getR(1) == "";
+assert pas.getR(1) == 3.14;
 
-pas.setR(1, "boo");
+pas.setR(1, 2.71);
 assert pas.getL(1) == 5;
-assert pas.getR(1) == "boo";
+assert pas.getR(1) == 2.71;
 
-assert pas :> PA<Int, Text> == pas;
+assert pas :> PA<Int, Float> == pas;
 assert pas :> PA<Int, Bool> == null;
-assert pas :> PAS<Int, Text> == pas;
+assert pas :> PAS<Int, Float> == pas;
 assert pas :> PAS<Int, Bool> == null;
 
 

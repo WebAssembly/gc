@@ -28,12 +28,12 @@ let sum2 = fold<Int, Int>(a, 5, 0, func(i : Int, k : Int, r : Int) : Int { r + k
 assert sum2 == 6;
 
 
-func f<X>(x : X, f : <Y>(Y) -> Y) : (Int, X, Text) {
-  let t = (1, x, "boo");
-  (f<Int>(t.0), f<X>(t.1), f<Text>(t.2));
+func f<X>(x : X, f : <Y>(Y) -> Y) : (Int, X, Float) {
+  let t = (1, x, 1e100);
+  (f<Int>(t.0), f<X>(t.1), f<Float>(t.2));
 };
 
 let t = f<Bool>(false, func<T>(x : T) : T { x });
 assert t.0 == 1;
 assert !t.1;
-assert t.2 == "boo";
+assert t.2 == 1e100;
