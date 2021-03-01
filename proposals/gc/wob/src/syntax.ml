@@ -49,7 +49,8 @@ and exp' =
   | ArrayE of exp list
   | IdxE of exp * exp
   | CallE of exp * typ list * exp list
-  | NewE of exp * typ list * exp list
+  | NewE of var * typ list * exp list
+  | NewArrayE of typ * exp * exp
   | DotE of exp * var
   | AssignE of exp * exp
   | AnnotE of exp * typ

@@ -78,7 +78,8 @@ let rec exp e = match e.it with
   | ArrayE es -> "ArrayE" $$ list exp es
   | IdxE (e1, e2) -> "IdxE" $$ [exp e1; exp e2]
   | CallE (e1, ts, es) -> "CallE" $$ [exp e1] @ list typ ts @ list exp es
-  | NewE (e1, ts, es) -> "NewE" $$ [exp e1] @ list typ ts @ list exp es
+  | NewE (y, ts, es) -> "NewE" $$ [var y] @ list typ ts @ list exp es
+  | NewArrayE (t, e1, e2) -> "NewArrayE" $$ [typ t; exp e1; exp e2]
   | DotE (e1, x) -> "DotE" $$ [exp e1; var x]
   | AssignE (e1, e2) -> "AssignE" $$ [exp e1; exp e2]
   | AnnotE (e1, t) -> "AnnotE"  $$ [exp e1; typ t]

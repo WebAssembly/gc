@@ -1,0 +1,55 @@
+// Polymorphic recursion
+
+let n = 20;
+
+class C<X>() {};
+var p = new Object[n](null);
+
+func polyr<X>(i : Int) {
+  if i == n { return };
+  p[i] := new C<X>();
+  polyr<C<X>>(i + 1);
+};
+
+polyr<Int>(0);
+assert p[0] :> C<Int> != null;
+assert p[0] :> C<C<Int>> == null;
+assert p[0] :> C<C<C<Int>>> == null;
+assert p[0] :> C<Bool> == null;
+
+assert p[1] :> C<Int> == null;
+assert p[1] :> C<C<Int>> != null;
+assert p[1] :> C<C<C<Int>>> == null;
+assert p[1] :> C<C<Bool>> == null;
+
+assert p[2] :> C<Int> == null;
+assert p[2] :> C<C<Int>> == null;
+assert p[2] :> C<C<C<Int>>> != null;
+assert p[2] :> C<C<C<C<Int>>>> == null;
+assert p[2] :> C<C<C<Bool>>> == null;
+
+{
+  var i = 0;
+  while i < n {
+    var j = 0;
+    while j < n {
+      assert (i == j) == (p[i] == p[j]);
+      j := j + 1;
+    };
+    i := i + 1;
+  }
+};
+
+{
+  var i = 0;
+  func check<X>(j : Int) {
+    if j < n {
+      assert (i == j) == (p[i] :> C<X> != null);
+      check<C<X>>(j + 1);
+    }
+  };
+  while i < n {
+    check<Int>(0);
+    i := i + 1;
+  }
+};
