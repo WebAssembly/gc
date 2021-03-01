@@ -84,29 +84,14 @@ TESTS =		$(TESTFILES:%.wob=%)
 .PHONY:		test debugtest partest
 
 test:		$(OPT)
-		$(TESTDIR)/run.py --wasm `pwd`/$(OPT) $(if $(JS),--js '$(JS)',)
+		$(TESTFILES:%=./$(NAME) -r $(TESTDIR)/% &&) true
 debugtest:	$(UNOPT)
-		$(TESTDIR)/run.py --wasm `pwd`/$(UNOPT) $(if $(JS),--js '$(JS)',)
+		$(TESTFILES:%=./$(NAME) -r $(TESTDIR)/% &&) true
 
 test/%:		$(OPT)
-		$(TESTDIR)/run.py --wasm `pwd`/$(OPT) $(if $(JS),--js '$(JS)',) $(TESTDIR)/$(@F).wast
+		./$(NAME) $(TESTDIR)/$(@F).wob
 debugtest/%:	$(UNOPT)
-		$(TESTDIR)/run.py --wasm `pwd`/$(UNOPT) $(if $(JS),--js '$(JS)',) $(TESTDIR)/$(@F).wast
-
-run/%:		$(OPT)
-		./$(OPT) $(TESTDIR)/$(@F).wast
-debug/%:	$(UNOPT)
-		./$(UNOPT) $(TESTDIR)/$(@F).wast
-
-partest: 	$(TESTS:%=quiettest/%)
-		@echo All tests passed.
-
-quiettest/%:	$(OPT)
-		@ ( \
-		  $(TESTDIR)/run.py 2>$(@F).out --wasm `pwd`/$(OPT) $(if $(JS),--js '$(JS)',) $(@F:%=$(TESTDIR)/%.wast) && \
-		  rm $(@F).out \
-		) || \
-		cat $(@F).out || rm $(@F).out || exit 1
+		./$(NAME) $(TESTDIR)/$(@F).wob
 
 
 # Miscellaneous targets

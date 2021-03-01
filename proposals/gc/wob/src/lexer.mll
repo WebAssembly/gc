@@ -69,7 +69,8 @@ let letter = ['a'-'z''A'-'Z']
 let symbol =
   ['+''-''*''/''\\''^''~''=''<''>''!''?''@''#''$''%''&''|'':''`''.''\'']
 
-let space = [' ''\t''\n''\r']
+let space = [' ''\t''\r']
+let space_nl = [' ''\t''\r''\n']
 let ascii = ['\x00'-'\x7f']
 let ascii_no_nl = ['\x00'-'\x09''\x0b'-'\x7f']
 let utf8cont = ['\x80'-'\xbf']
@@ -113,7 +114,7 @@ rule token = parse
   | "{" { LCURLY }
   | "}" { RCURLY }
   | ";" { SEMICOLON }
-  | ";\n" { SEMICOLON_EOL }
+  | ";\n" { Lexing.new_line lexbuf; SEMICOLON_EOL }
   | "," { COMMA }
   | ":" { COLON }
   | "." { DOT }
@@ -132,6 +133,12 @@ rule token = parse
   | ">=" { GEOP }
   | space"<"space { LTOP }
   | space">"space { GTOP }
+  | space"<\n" { Lexing.new_line lexbuf; LTOP }
+  | space">\n" { Lexing.new_line lexbuf; GTOP }
+  | "\n<"space { Lexing.new_line lexbuf; LTOP }
+  | "\n>"space { Lexing.new_line lexbuf; GTOP }
+  | "\n<\n" { Lexing.new_line lexbuf; Lexing.new_line lexbuf; LTOP }
+  | "\n>\n" { Lexing.new_line lexbuf; Lexing.new_line lexbuf; GTOP }
 
   | "+" { ADDOP }
   | "-" { SUBOP }
@@ -143,7 +150,6 @@ rule token = parse
   | "!" { NOTOP }
   | "#" { CATOP }
 
-  | '.' (nat as s) { DOT_NAT s }
   | nat as s { NAT s }
   | float as s { FLOAT s }
   | text as s { TEXT (text lexbuf s) }
@@ -154,6 +160,7 @@ rule token = parse
   | '"'character*'\\'_
     { error_nest (Lexing.lexeme_end_p lexbuf) lexbuf "illegal escape" }
 
+  | "assert" { ASSERT }
   | "class" { CLASS }
   | "else" { ELSE }
   | "from" { FROM }
@@ -173,7 +180,7 @@ rule token = parse
   | "//"utf8_no_nl*'\n' { Lexing.new_line lexbuf; token lexbuf }
   | "//"utf8_no_nl* { token lexbuf (* causes error on following position *) }
   | "/*" { comment (Lexing.lexeme_start_p lexbuf) lexbuf; token lexbuf }
-  | space#'\n' { token lexbuf }
+  | space { token lexbuf }
   | '\n' { Lexing.new_line lexbuf; token lexbuf }
   | eof { EOF }
 

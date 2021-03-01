@@ -1,9 +1,10 @@
+(* Types *)
+
 type var = string
 type typ = Type.typ
 
-and env
-and con = typ list -> typ
 and func = typ list -> value list -> value
+
 and value =
   | Null
   | Bool of bool
@@ -13,23 +14,15 @@ and value =
   | Text of string
   | Tup of value list
   | Array of value ref list
-  | Obj of typ * env
+  | Obj of typ * value ref Env.Map.t
   | Func of func
   | Class of func
 
-val string_of_value : value -> string
 
-val empty_env : env
-val val_env : var -> value -> env
-val typ_env : var -> con -> env
+(* Values *)
 
-val extend_val : env -> var -> value -> env
-val extend_typ : env -> var -> con -> env
-val extend_typ_gnd : env -> var -> typ -> env
-val extend_typ_abs : env -> var -> env
+val is_ref : value -> bool
 
-val adjoin_env : env -> env -> env
+val eq : value -> value -> bool
 
-val lookup_val : env -> var -> value ref option
-val lookup_typ : env -> var -> con option
-
+val to_string : value -> string

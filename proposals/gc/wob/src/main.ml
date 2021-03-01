@@ -13,12 +13,14 @@ let quote s = "\"" ^ String.escaped s ^ "\""
 
 let argspec = Arg.align
 [
-  "-c", Arg.Clear Flags.interactive,
-    " compile (default files given)";
-  "-r", Arg.Set Flags.interactive,
+  "-", Arg.Set Flags.interactive,
     " run interactively (default if no files given)";
+  "-r", Arg.Clear Flags.compiled,
+    " interpret";
+  "-c", Arg.Set Flags.compiled,
+    " compile (default when files given)";
   "-x", Arg.Set Flags.textual,
-    " compile (default files given)";
+    " output textual Wasm";
   "-w", Arg.Int (fun n -> Flags.width := n),
     " configure output width (default is 80)";
   "-d", Arg.Set Flags.dry, " dry, do not run program";
@@ -32,13 +34,16 @@ let () =
   Printexc.record_backtrace true;
   try
     Arg.parse argspec add_arg usage;
-    if !Flags.interactive || !args = [] then
+    if not !Flags.compiled || !Flags.interactive || !args = [] then
     (
       List.iter (fun arg -> if not (Run.run_file arg) then exit 1) !args;
-      Flags.print_sig := true;
-      Flags.textual := true;
-      banner ();
-      Run.run_stdin ()
+      if !Flags.interactive || !args = [] then
+      (
+        Flags.print_sig := true;
+        Flags.textual := true;
+        banner ();
+        Run.run_stdin ();
+      )
     )
     else
       List.iter (fun arg -> if not (Run.compile_file arg) then exit 1) !args;

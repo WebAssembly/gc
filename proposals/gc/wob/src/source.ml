@@ -1,10 +1,12 @@
 type pos = {file : string; line : int; column : int}
 type region = {left : pos; right : pos}
-type 'a phrase = {at : region; it : 'a}
+type ('a, 'b) phrase = {at : region; it : 'a; mutable et : 'b option}
 
-let (@@) x region = {it = x; at = region}
+let (@@) x region = {it = x; at = region; et = None}
+
 let it phrase = phrase.it
 let at phrase = phrase.at
+let et phrase = Option.get phrase.et
 
 
 (* Positions and regions *)

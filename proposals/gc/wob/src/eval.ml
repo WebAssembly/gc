@@ -14,23 +14,36 @@ exception Return of V.value list
 let trap at fmt = Printf.ksprintf (fun s -> raise (Trap (at, s))) fmt
 let crash at fmt = Printf.ksprintf (fun s -> raise (Crash (at, s))) fmt
 
-let lookup_val env x =
-  match V.lookup_val env x.it with
-  | Some v -> v
-  | None -> crash x.at "unknown value identifier %s" x.it
 
-let lookup_typ env x =
-  match V.lookup_typ env x.it with
-  | Some c -> c
-  | None -> crash x.at "unknown type identifier %s" x.it
+(* Environments *)
+
+type env = (V.value ref, T.con) Env.env
+
+module E =
+struct
+  include Env
+  let singleton_val x v = Env.singleton_val x (ref v)
+  let extend_val env x v = Env.extend_val env x (ref v)
+  let extend_vals env xs vs = Env.extend_vals env xs (List.map ref vs)
+  let extend_typ_gnd env y t = extend_typ env y (fun _ -> t)
+  let extend_typ_abs env y = extend_typ_gnd env y (T.var y)
+  let extend_typs_gnd env ys ts = List.fold_left2 extend_typ_gnd env ys ts
+  let extend_typs_abs env ys = List.fold_left extend_typ_abs env ys
+end
 
 
 (* Types *)
 
-let rec eval_typ env t =
+let eval_typ_var env y : T.con =
+  match E.find_typ y.it env with
+  | Some c -> c
+  | None -> crash y.at "unknown type identifier `%s`" y.it
+
+let rec eval_typ env t : T.typ =
   match t.it with
-  | VarT (x, ts) -> let c = lookup_typ env x in c (List.map (eval_typ env) ts)
-  | NullT -> T.Null
+  | VarT (y, ts) ->
+    let c = eval_typ_var env y in
+    c (List.map (eval_typ env) ts)
   | BoolT -> T.Bool
   | ByteT -> T.Byte
   | IntT -> T.Int
@@ -39,15 +52,23 @@ let rec eval_typ env t =
   | ObjT -> T.Obj
   | TupT ts -> T.Tup (List.map (eval_typ env) ts)
   | ArrayT t -> T.Array (eval_typ env t)
-  | FuncT (xs, ts1, ts2) ->
-    let xs' = List.map Source.it xs in
-    let env' = List.fold_left V.extend_typ_abs env xs' in
-    T.Func (xs', List.map (eval_typ env') ts1, List.map (eval_typ env') ts2)
+  | FuncT (ys, ts1, ts2) ->
+    let ys' = List.map Source.it ys in
+    let env' = E.extend_typs_abs env ys' in
+    T.Func (ys', List.map (eval_typ env') ts1, List.map (eval_typ env') ts2)
 
 
 (* Expressions *)
 
-let eval_lit lit : V.value =
+let eval_var_ref env x : V.value ref =
+  match E.find_val x.it env with
+  | Some v -> v
+  | None -> crash x.at "unknown value identifier `%s`" x.it
+
+let eval_var env x : V.value =
+  !(eval_var_ref env x)
+
+let eval_lit _env lit : V.value =
   match lit with
   | NullLit -> V.Null
   | BoolLit b -> V.Bool b
@@ -59,10 +80,10 @@ let eval_lit lit : V.value =
 let rec eval_exp env e : V.value =
   match e.it with
   | VarE x ->
-    !(lookup_val env x)
+    eval_var env x
 
   | LitE l ->
-    eval_lit l
+    eval_lit env l
 
   | UnE (op, e1) ->
     let v1 = eval_exp env e1 in
@@ -112,8 +133,8 @@ let rec eval_exp env e : V.value =
     let v1 = eval_exp env e1 in
     let v2 = eval_exp env e2 in
     (match op with
-    | EqOp -> V.Bool (v1 = v2)
-    | NeOp -> V.Bool (v1 <> v2)
+    | EqOp -> V.Bool (V.eq v1 v2)
+    | NeOp -> V.Bool (not (V.eq v1 v2))
     | LtOp -> V.Bool (v1 < v2)
     | GtOp -> V.Bool (v1 > v2)
     | LeOp -> V.Bool (v1 <= v2)
@@ -171,7 +192,8 @@ let rec eval_exp env e : V.value =
     let v1 = eval_exp env e1 in
     (match v1 with
     | V.Null -> trap e1.at "null reference at object access"
-    | V.Obj (_, obj) -> !(lookup_val obj x)
+    | V.Obj (_, obj) ->
+      (try !(E.Map.find x.it obj) with _ -> crash e.at "unknown field `%s`" x.it)
     | _ -> crash e.at "runtime type error at object access"
     )
 
@@ -193,8 +215,13 @@ let rec eval_exp env e : V.value =
     | _ -> crash e.at "runtime type error at cast"
     )
 
-  | BlockE ds ->
-    fst (eval_decs env ds (V.Tup []))
+  | AssertE e1 ->
+    let v1 = eval_exp env e1 in
+    (match v1 with
+    | V.Bool true -> V.Tup []
+    | V.Bool false -> trap e.at "assertion failure"
+    | _ -> crash e.at "runtime type error at conditional"
+    )
 
   | IfE (e1, e2, e3) ->
     let v1 = eval_exp env e1 in
@@ -216,11 +243,14 @@ let rec eval_exp env e : V.value =
     let vs = List.map (eval_exp env) es in
     raise (Return vs)
 
+  | BlockE ds ->
+    fst (eval_decs env ds (V.Tup []))
+
 
 and eval_exp_ref env e : V.value ref =
   match e.it with
   | VarE x ->
-    lookup_val env x
+    eval_var_ref env x
 
   | IdxE (e1, e2) ->
     let v1 = eval_exp env e1 in
@@ -237,7 +267,8 @@ and eval_exp_ref env e : V.value ref =
     let v1 = eval_exp env e1 in
     (match v1 with
     | V.Null -> trap e1.at "null reference at object access"
-    | V.Obj (_, obj) -> lookup_val obj x
+    | V.Obj (_, obj) ->
+      (try E.Map.find x.it obj with _ -> crash e.at "unknown field `%s`" x.it)
     | _ -> crash e.at "runtime type error at object access"
     )
 
@@ -246,94 +277,84 @@ and eval_exp_ref env e : V.value ref =
 
 (* Declarations *)
 
-and eval_dec env d : V.value * V.env =
+and eval_dec env d : V.value * env =
   match d.it with
   | ExpD e ->
     let v = eval_exp env e in
-    v, V.empty_env
+    v, E.empty
 
   | LetD (x, e) ->
     let v = eval_exp env e in
-    V.Tup [], V.val_env x.it v
+    V.Tup [], E.singleton_val x.it v
 
   | VarD (x, e) ->
     let v = eval_exp env e in
-    V.Tup [], V.val_env x.it v
+    V.Tup [], E.singleton_val x.it v
 
-  | TypD (x, xs, t) ->
-    let xs' = List.map it xs in
-    let c ts =
-      let env' = List.fold_left2 V.extend_typ_gnd env xs' ts in
-      eval_typ env' t
-    in
-    V.Tup [], V.typ_env x.it c
+  | TypD (y, ys, t) ->
+    let ys' = List.map it ys in
+    let con ts = eval_typ (E.extend_typs_gnd env ys' ts) t in
+    V.Tup [], E.singleton_typ y.it con
 
-  | FuncD (x, xs, xts, _ts, e) ->
-    let txs = List.map it xs in
-    let vxs = List.map it (List.map fst xts) in
+  | FuncD (x, ys, xts, _ts, e) ->
+    let ys' = List.map it ys in
+    let xs' = List.map it (List.map fst xts) in
     let rec f ts vs =
-      let env' = V.extend_val env x.it (V.Func f) in
-      let env' = List.fold_left2 V.extend_typ_gnd env' txs ts in
-      let env' = List.fold_left2 V.extend_val env' vxs vs in
+      let env' = E.extend_val env x.it (V.Func f) in
+      let env' = E.extend_typs_gnd env' ys' ts in
+      let env' = E.extend_vals env' xs' vs in
       try eval_exp env' e with Return [v] -> v | Return vs -> V.Tup vs
     in
-    V.Tup [], V.val_env x.it (V.Func f)
+    V.Tup [], E.singleton_val x.it (V.Func f)
 
-  | ClassD (x, xs, xts, supo, ds) ->
-    let txs = List.map it xs in
-    let vxs = List.map it (List.map fst xts) in
-    let c = T.gen_class x.it txs in
+  | ClassD (x, ys, xts, sup_opt, ds) ->
+    let ys' = List.map it ys in
+    let xs' = List.map it (List.map fst xts) in
+    let cls = T.gen_class x.it ys' in
+    let con ts = T.Inst (cls, ts) in
+    let env' = E.extend_typ env x.it con in
     let t' =
-      match supo with
+      match sup_opt with
       | None -> T.Obj
       | Some (x2, ts2, _) ->
-        let ts = List.map T.var txs in
-        let env' = V.extend_typ env x.it (fun ts -> T.Inst (c, ts)) in
-        let env' = List.fold_left V.extend_typ_abs env' txs in
-        match lookup_typ env' x2 ts with
-        | T.Class c' -> T.Inst (c', List.map (eval_typ env') ts2)
-        | _ -> crash x2.at "runtime type error at super class instantiation"
+        let env'' = E.extend_typs_abs env' ys' in
+        eval_typ env'' (VarT (x2, ts2) @@ x2.at)
     in
-    T.def_class c t';
-    let con ts = T.Inst (c, ts) in
+    cls.T.sup <- t';
     let rec f ts vs =
-      let env' = V.extend_typ env x.it con in
-      let env' = V.extend_val env' x.it (V.Class f) in
-      let env' = List.fold_left2 V.extend_typ_gnd env' txs ts in
-      let env' = List.fold_left2 V.extend_val env' vxs vs in
-      let env1 =
-        match supo with
-        | None -> V.empty_env
+      (* TODO: handle `this` and overrides *)
+      let env'' = E.extend_val env' x.it (V.Class f) in
+      let env'' = E.extend_typs_gnd env'' ys' ts in
+      let env'' = E.extend_vals env'' xs' vs in
+      let obj', env''' =
+        match sup_opt with
+        | None -> E.Map.empty, env''
         | Some (x2, ts2, es2) ->
-          let v2 = !(lookup_val env x2) in
-          let vs2 = List.map (eval_exp env') es2 in
-          match v2 with
-          | V.Class f' ->
-            (match f' (List.map (eval_typ env') ts2) vs2 with
-            | V.Obj (_, env1) -> env1
-            | _ -> crash x2.at "runtime type error at super class instantiation"
-            )
+          match eval_exp env'' (NewE (VarE x2 @@ x2.at, ts2, es2) @@ x2.at) with
+          | V.Obj (_, obj') ->
+            obj', E.Map.fold (fun x v env -> Env.extend_val env x v) obj' env''
           | _ -> crash x2.at "runtime type error at super class instantiation"
       in
-      let _, env2 = eval_decs env' ds (V.Tup []) in
-      V.Obj (con ts, V.adjoin_env env1 env2)
+      let _, oenv = eval_decs env''' ds (V.Tup []) in
+      V.Obj (con ts, E.Map.adjoin obj' oenv.E.vals)
     in
-    V.Tup [], V.adjoin_env (V.typ_env x.it con) (V.val_env x.it (V.Class f))
+    V.Tup [],
+    E.adjoin (E.singleton_typ x.it con) (E.singleton_val x.it (V.Class f))
 
   | ImportD (xs, url) ->
     (* TODO *)
     crash d.at "imports not implemented yet"
 
-and eval_decs env ds v : V.value * V.env =
+and eval_decs env ds v : V.value * env =
   match ds with
-  | [] -> v, V.empty_env
+  | [] -> v, E.empty
   | d::ds' ->
     let v', env' = eval_dec env d in
-    let v'', env'' = eval_decs (V.adjoin_env env env') ds' v' in
-    v'', V.adjoin_env env' env''
+    let v'', env'' = eval_decs (E.adjoin env env') ds' v' in
+    v'', E.adjoin env' env''
 
 
 (* Programs *)
 
-let eval_prog env (Prog ds) : V.value * V.env =
+let eval_prog env (Prog ds) : V.value * env =
   eval_decs env ds (V.Tup [])
