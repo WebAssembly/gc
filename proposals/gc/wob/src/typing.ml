@@ -108,8 +108,7 @@ and check_exp' env e : T.typ =
     let t1 = check_exp env e1 in
     let t2 = check_exp env e2 in
     let t = try T.lub t1 t2 with Failure _ ->
-      error e.at
-        "binary operator applied to incompatible types %s and %s"
+      error e.at "binary operator applied to incompatible types %s and %s"
         (T.to_string t1) (T.to_string t2)
     in
     (match op, t with
@@ -126,26 +125,17 @@ and check_exp' env e : T.typ =
     let t1 = check_exp env e1 in
     let t2 = check_exp env e2 in
     let t = try T.lub t1 t2 with Failure _ ->
-      error e.at
-        "comparison operator applied to incompatible types %s and %s"
+      error e.at "comparison operator applied to incompatible types %s and %s"
         (T.to_string t1) (T.to_string t2)
     in
     (match op, t with
-    | (EqOp | NeOp), T.Null
-    | (EqOp | NeOp), T.Bool 
-    | (EqOp | NeOp), T.Obj
-    | (EqOp | NeOp), T.Array _
-    | (EqOp | NeOp), T.Inst _
-    | (EqOp | NeOp | LtOp | GtOp | LeOp | GeOp), T.Byte
-    | (EqOp | NeOp | LtOp | GtOp | LeOp | GeOp), T.Int
-    | (EqOp | NeOp | LtOp | GtOp | LeOp | GeOp), T.Float
-    | (EqOp | NeOp | LtOp | GtOp | LeOp | GeOp), T.Text -> ()
+    | (EqOp | NeOp), (T.Null | T.Bool | T.Obj | T.Array _ | T.Inst _)
+    | (EqOp | NeOp | LtOp | GtOp | LeOp | GeOp), (T.Byte | T.Int | T.Float) ->
+      T.Bool
     | _ ->
-      error e.at
-        "comparison operator not defined for types %s and %s"
+      error e.at "comparison operator not defined for types %s and %s"
         (T.to_string t1) (T.to_string t2)
-    );
-    T.Bool
+    )
 
   | TupE es ->
     let ts = List.map (check_exp env) es in
@@ -156,7 +146,7 @@ and check_exp' env e : T.typ =
     (match t1 with
     | T.Tup ts when n < List.length ts -> List.nth ts n
     | T.Tup _ -> error e.at "wrong number of tuple components"
-    | _ -> error e.at "tuple type expected"
+    | _ -> error e.at "tuple type expected but got %s" (T.to_string t1)
     )
 
   | ArrayE es ->
@@ -166,7 +156,7 @@ and check_exp' env e : T.typ =
       | [] -> T.Null (*TODO*)
       | t::ts' ->
         try List.fold_left T.lub t ts' with Failure _ ->
-          error e.at "array has inconsistent types"
+          error e.at "array has inconsistent element types"
     in
     T.Array t
 
@@ -176,8 +166,9 @@ and check_exp' env e : T.typ =
     (match t1, t2 with
     | T.Text, T.Int -> T.Byte
     | T.Array t, T.Int -> t
-    | T.Array t, _ ->  error e2.at "integer type expected"
-    | _ -> error e1.at "array type expected"
+    | T.Array t, _ ->
+      error e2.at "integer type expected but got %s" (T.to_string t2)
+    | _ -> error e1.at "array type expected but got %s" (T.to_string t1)
     )
 
   | CallE (e1, ts, es) ->
@@ -199,7 +190,7 @@ and check_exp' env e : T.typ =
             (T.to_string tI) (T.to_string tI')
       ) es ts1';
       (match ts2' with [t2] -> t2 | _ -> T.Tup ts2')
-    | _ -> error e1.at "function type expected"
+    | _ -> error e1.at "function type expected but got %s" (T.to_string t1)
     )
 
   | NewE (x, ts, es) ->
@@ -220,7 +211,7 @@ and check_exp' env e : T.typ =
             (T.to_string tI) (T.to_string tI')
       ) es ts1';
       T.Inst (cls, ts')
-    | _ -> error x.at "class type expected"
+    | _ -> error x.at "class type expected but got %s" (T.to_string t1)
     )
 
   | NewArrayE (t, e1, e2) ->
@@ -242,7 +233,7 @@ and check_exp' env e : T.typ =
       | Some (s, t) -> T.subst (T.typ_subst cls.T.tparams ts) t
       | None -> error e1.at "unknown field `%s`" x.it
       )
-    | _ -> error e1.at "object type expected"
+    | _ -> error e1.at "object type expected but got %s" (T.to_string t1)
     )
 
   | AssignE (e1, e2) ->
@@ -265,15 +256,15 @@ and check_exp' env e : T.typ =
     let t1 = check_exp env e1 in
     let t2 = check_typ env t in
     if not (T.sub t1 T.Obj) then
-      error e1.at "object type expected";
+      error e1.at "object type expected but got %s" (T.to_string t1);
     if not (T.sub t2 T.Obj) then
-      error t.at "object type expected";
+      error t.at "object type expected as cast target";
     t2
 
   | AssertE e1 ->
     let t1 = check_exp env e1 in
     if not (T.sub t1 T.Bool) then
-      error e1.at "boolean type expected";
+      error e1.at "boolean type expected but got %s" (T.to_string t1);
     T.Tup []
 
   | IfE (e1, e2, e3) ->
@@ -281,7 +272,7 @@ and check_exp' env e : T.typ =
     let t2 = check_exp env e2 in
     let t3 = check_exp env e3 in
     if not (T.sub t1 T.Bool) then
-      error e1.at "boolean type expected";
+      error e1.at "boolean type expected but got %s" (T.to_string t1);
     let t = try T.lub t2 t3 with Failure _ ->
       error e.at "coniditional branches have incompatible types %s and %s"
         (T.to_string t2) (T.to_string t3)
@@ -291,7 +282,7 @@ and check_exp' env e : T.typ =
     let t1 = check_exp env e1 in
     let _t2 = check_exp env e2 in
     if not (T.sub t1 T.Bool) then
-      error e1.at "boolean type expected";
+      error e1.at "boolean type expected but got %s" (T.to_string t1);
     T.Tup []
 
   | RetE es ->
@@ -408,8 +399,10 @@ and check_dec env d : T.typ * env =
     let _, oenv = check_decs env''' ds (T.Tup []) in
     cls.T.def <-
       E.Map.union (fun x (s', t') (s, t) ->
-        if s <> s' then
-          error d.at "class overrides parent member `%s` with a different form of declaration" x;
+        if s' <> T.FuncS then
+          error d.at "class overrides parent member `%s` that is not a function" x;
+        if s <> T.FuncS then
+          error d.at "class overrides parent member `%s` with a non-function" x;
         if not (T.sub t t') then
           error d.at "class overrides parent member `%s` of type %s with incompatible type %s"
             x (T.to_string t') (T.to_string t);
