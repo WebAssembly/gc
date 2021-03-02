@@ -14,9 +14,9 @@ and value =
   | Text of string
   | Tup of value list
   | Array of value ref list
-  | Obj of typ * value ref Env.Map.t
+  | Obj of typ * (Type.sort * value ref) Env.Map.t ref
   | Func of func
-  | Class of func
+  | Class of Type.cls * func
 
 
 (* Values *)
@@ -24,5 +24,7 @@ and value =
 val is_ref : value -> bool
 
 val eq : value -> value -> bool
+
+val default : Type.typ -> value
 
 val to_string : value -> string

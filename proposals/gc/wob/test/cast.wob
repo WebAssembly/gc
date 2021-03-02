@@ -1,0 +1,36 @@
+// Casts
+
+class C() {};
+class D() <: C() {};
+class E() <: D() {};
+class F() <: D() {};
+
+let c = new C();
+let d = new D();
+let e = new E();
+let f = new F();
+
+let co : Object = c;
+let do : Object = d;
+let eo : Object = e;
+let fo : Object = f;
+
+assert (co :> C == c);
+assert (co :> D == null);
+assert (co :> E == null);
+assert (co :> F == null);
+
+assert (do :> C == d);
+assert (do :> D == d);
+assert (do :> E == null);
+assert (do :> F == null);
+
+assert (eo :> C == e);
+assert (eo :> D == e);
+assert (eo :> E == e);
+assert (eo :> F == null);
+
+assert (fo :> C == f);
+assert (fo :> D == f);
+assert (fo :> E == null);
+assert (fo :> F == f);

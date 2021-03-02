@@ -1,12 +1,11 @@
-// Base case
+// Base classes
 
 class Counter(x : Int) {
   let a = x;
-  var c = a;
+  var c : Int = a;
   func get() : Int { return c };
   func set(x : Int) { c := x };
   func inc() { c := c + 1 };
-  func inc2() { inc(); inc() };
 };
 
 let c = new Counter(5);
@@ -23,102 +22,3 @@ c.set(10);
 assert c.a == 5;
 assert c.c == 10;
 assert c.get() == 10;
-
-
-// Inheritance
-
-class DCounter(x : Int) <: Counter(x) {
-  func dec() { c := c - 1 };
-};
-
-let d = new DCounter(7);
-assert d.a == 7;
-assert d.c == 7;
-assert d.get() == 7;
-
-d.inc();
-assert d.a == 7;
-assert d.c == 8;
-assert d.get() == 8;
-
-d.inc2();
-assert d.a == 7;
-assert d.c == 10;
-assert d.get() == 10;
-
-d.set(13);
-assert d.a == 7;
-assert d.c == 13;
-assert d.get() == 13;
-
-d.dec();
-assert d.a == 7;
-assert d.c == 12;
-assert d.get() == 12;
-
-
-// Inheritance with override
-
-class ECounter(x : Int) <: DCounter(x-1) {
-  func inc() { c := c + 2 };
-  func dec() { c := c - 2 };
-};
-
-let e : DCounter = new ECounter(8);
-assert e.a == 7;
-assert e.c == 7;
-assert e.get() == 7;
-
-e.inc();
-assert e.a == 7;
-assert e.c == 9;
-assert e.get() == 9;
-
-e.inc2();
-assert e.a == 7;
-assert e.c == 13;
-assert e.get() == 13;
-
-e.set(10);
-assert e.a == 7;
-assert e.c == 10;
-assert e.get() == 10;
-
-e.dec();
-assert e.a == 7;
-assert e.c == 8;
-assert e.get() == 8;
-
-
-// Casts
-
-let co : Object = c;
-let do : Object = d;
-let eo : Object = e;
-
-assert (co :> Counter == c);
-assert (do :> Counter == d);
-assert (eo :> Counter == e);
-
-assert (co :> Counter == c);
-assert (co :> DCounter == null);
-assert (co :> ECounter == null);
-
-assert (do :> Counter == d);
-assert (do :> DCounter == d);
-assert (do :> ECounter == null);
-
-assert (eo :> Counter == e);
-assert (eo :> DCounter == e);
-assert (eo :> ECounter == e);
-
-
-// Shadowing
-
-class A(x : Int) { let x = x; class B(x : Int) { let x = x } };
-class B(x : Int) <: A(x + 1) { let y = x; func b() : B { new B(9) } };
-
-let b = new B(3);
-assert b.x == 4;
-assert b.y == 3;
-assert b.b().x == 10;

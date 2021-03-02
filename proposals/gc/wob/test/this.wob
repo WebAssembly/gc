@@ -1,0 +1,28 @@
+// Basic use of `this`
+
+class Counter(x : Int) {
+  let a = x;
+  var c : Int = this.a;
+  func get1() : Int { return c };
+  func get2() : Int { return this.c };
+  func set(x : Int) { this.c := x };
+  func inc() { this.c := this.c + 1 };
+};
+
+let c = new Counter(5);
+assert c.a == 5;
+assert c.c == 5;
+assert c.get1() == 5;
+assert c.get2() == 5;
+
+c.inc();
+assert c.a == 5;
+assert c.c == 6;
+assert c.get1() == 6;
+assert c.get2() == 6;
+
+c.set(10);
+assert c.a == 5;
+assert c.c == 10;
+assert c.get1() == 10;
+assert c.get2() == 10;

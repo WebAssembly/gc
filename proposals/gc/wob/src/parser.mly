@@ -254,9 +254,8 @@ sup_opt :
 dec :
   | exp { ExpD $1 @@ at () }
   | LET var EQ exp { LetD ($2, $4) @@ at () }
-  | VAR var EQ exp { VarD ($2, $4) @@ at () }
   | LET var COLON typ EQ exp { LetD ($2, AnnotE ($6, $4) @@ at ()) @@ at () }
-  | VAR var COLON typ EQ exp { VarD ($2, AnnotE ($6, $4) @@ at ()) @@ at () }
+  | VAR var COLON typ EQ exp { VarD ($2, $4, $6) @@ at () }
   | TYPE var EQ typ { TypD ($2, [], $4) @@ at () }
   | TYPE var LT var_list GT EQ typ { TypD ($2, $4, $7) @@ at () }
   | FUNC var gen_opt LPAR param_list RPAR exp_block {

@@ -68,7 +68,7 @@ and dec = (dec', T.typ) Source.phrase
 and dec' =
   | ExpD of exp
   | LetD of var * exp
-  | VarD of var * exp
+  | VarD of var * typ * exp
   | TypD of var * var list * typ
   | FuncD of var * var list * (var * typ) list * typ list * exp
   | ClassD of var * var list * (var * typ) list * (var * typ list * exp list) option * dec list

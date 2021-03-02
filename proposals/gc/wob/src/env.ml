@@ -34,6 +34,11 @@ let adjoin env1 env2 =
     typs = Map.adjoin env1.typs env2.typs;
   }
 
+let union f g env1 env2 =
+  { vals = Map.union f env1.vals env2.vals;
+    typs = Map.union g env1.typs env2.typs;
+  }
+
 let disjoint_union env1 env2 =
   { vals = Map.disjoint_union env1.vals env2.vals;
     typs = Map.disjoint_union env1.typs env2.typs;
@@ -50,3 +55,8 @@ let singleton_typ y t = extend_typ empty y t
 
 let find_val x env = Map.find_opt x env.vals
 let find_typ y env = Map.find_opt y env.typs
+
+let map_vals f env = {env with vals = Map.map f env.vals}
+let map_typs f env = {env with typs = Map.map f env.typs}
+let mapi_vals f env = {env with vals = Map.mapi f env.vals}
+let mapi_typs f env = {env with typs = Map.mapi f env.typs}
