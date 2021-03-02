@@ -1,0 +1,9 @@
+// Shadowing
+
+class A(x : Int) { let x = x; class B(x : Int) { let x = x } };
+class B(x : Int) <: A(x + 1) { let y = x; func b() : B { new B(9) } };
+
+let b = new B(3);
+assert b.x == 4;
+assert b.y == 3;
+assert b.b().x == 10;

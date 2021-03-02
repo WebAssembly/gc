@@ -1,0 +1,50 @@
+// Inheritance
+
+class Counter(x : Int) {
+  let a = x;
+  var c : Int = a;
+  func get() : Int { return this.c };
+  func set(x : Int) { this.c := x };
+  func inc() { this.c := this.c + 1 };
+  func inc3() { this.inc2(); inc() };
+  func inc2() { this.inc(); inc() };
+};
+
+class DCounter(x : Int) <: Counter(x) {
+  func dec() { this.c := this.c - 1 };
+};
+
+class ECounter(x : Int) <: DCounter(x - 1) {
+  func inc() { this.c := this.c + 2 };
+  func dec() { this.c := this.c - 2 };
+};
+
+let e : DCounter = new ECounter(8);
+assert e.a == 7;
+assert e.c == 7;
+assert e.get() == 7;
+
+e.inc();
+assert e.a == 7;
+assert e.c == 9;
+assert e.get() == 9;
+
+e.inc2();
+assert e.a == 7;
+assert e.c == 13;
+assert e.get() == 13;
+
+e.inc3();
+assert e.a == 7;
+assert e.c == 19;
+assert e.get() == 19;
+
+e.set(10);
+assert e.a == 7;
+assert e.c == 10;
+assert e.get() == 10;
+
+e.dec();
+assert e.a == 7;
+assert e.c == 8;
+assert e.get() == 8;

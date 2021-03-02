@@ -1,0 +1,29 @@
+// Closures
+
+func foreach(a : Int[], n : Int, f : Int -> ()) {
+  var i : Int = 0;
+  while (i < n) {
+    f(a[i]);
+    i := i + 1;
+  }
+};
+
+let a = [1, 2, 5, 6, -8];
+
+var sum : Int = 0;
+foreach(a, 5, func(k : Int) { sum := sum + k });
+assert sum == 6;
+
+
+func fold(a : Int[], n : Int, x : Int, f : (Int, Int, Int) -> Int) : Int {
+  var i : Int = 0;
+  var r : Int = x;
+  while (i < n) {
+    r := f(i, a[i], r);
+    i := i + 1;
+  };
+  return r;
+};
+
+let sum2 = fold(a, 5, 0, func(i : Int, k : Int, r : Int) : Int { r + k });
+assert sum2 == 6;

@@ -2,7 +2,7 @@
 
 type var = string
 type kind = int
-type sort = LetS | VarS | FuncS | ClassS
+type sort = LetS | VarS | FuncS | ClassS | ProhibitedS
 
 type typ =
   | Var of var * typ list

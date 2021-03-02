@@ -96,7 +96,7 @@ let rec exp e = match e.it with
 and dec d = match d.it with
   | ExpD e -> "ExpD" $$ [exp e]
   | LetD (x, e) -> "LetD" $$ [var x; exp e]
-  | VarD (x, e) -> "VarD" $$ [var x; exp e]
+  | VarD (x, t, e) -> "VarD" $$ [var x; typ t; exp e]
   | TypD (y, ys, t) -> "TypD" $$ [var y] @ list var ys @ [typ t]
   | FuncD (x, ys, ps, ts, e) ->
     "FuncD" $$ [var x] @ ["gen" $$ list var ys] @

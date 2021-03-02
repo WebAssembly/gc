@@ -3,7 +3,7 @@
 let n = 20;
 
 class C<X>(x : X) { let x : X = x };
-var p = new Object[n](null);
+var p : Object[] = new Object[n](null);
 
 func polyr<X>(i : Int, x : X) {
   if i == n { return };
@@ -30,9 +30,9 @@ assert p[2] :> C<C<C<C<Int>>>> == null;
 assert p[2] :> C<C<C<Bool>>> == null;
 
 {
-  var i = 0;
+  var i : Int = 0;
   while i < n {
-    var j = 0;
+    var j : Int = 0;
     while j < n {
       assert (i == j) == (p[i] == p[j]);
       j := j + 1;
@@ -42,7 +42,7 @@ assert p[2] :> C<C<C<Bool>>> == null;
 };
 
 {
-  var i = 0;
+  var i : Int = 0;
   func check<X>(j : Int) {
     if j < n {
       assert (i == j) == (p[i] :> C<X> != null);
