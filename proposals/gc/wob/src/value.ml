@@ -14,9 +14,9 @@ and value =
   | Text of string
   | Tup of value list
   | Array of value ref list
-  | Obj of typ * value ref Env.Map.t
+  | Obj of typ * (Type.sort * value ref) Env.Map.t ref
   | Func of func
-  | Class of func
+  | Class of Type.cls * func
 
 
 (* Comparison *)
@@ -35,6 +35,19 @@ let rec eq v1 v2 =
   | v1, v2 when is_ref v1 && is_ref v2 -> v1 == v2
   | v1, v2 when not (is_ref v1) && not (is_ref v2) -> v1 = v2
   | _, _ -> false
+
+
+(* Default *)
+
+let rec default = function
+  | Type.Var _ -> assert false
+  | Type.(Null | Obj | Array _ | Func _ | Inst _ | Class _) -> Null
+  | Type.Bool -> Bool false
+  | Type.Byte -> Byte '\x00'
+  | Type.Int -> Int 0l
+  | Type.Float -> Float 0.0
+  | Type.Text -> Text ""
+  | Type.Tup ts -> Tup (List.map default ts)
 
 
 (* Printing *)

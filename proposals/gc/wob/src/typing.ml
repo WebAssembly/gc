@@ -25,6 +25,8 @@ struct
   let extend_typs_abs env ys = List.fold_left extend_typ_abs env ys
 end
 
+type pass = Full | Pre | Post
+
 
 (* Types *)
 
@@ -36,6 +38,7 @@ let check_typ_var env y : T.kind * T.con =
 
 let rec check_typ env t : T.typ =
   let t' = check_typ' env t in
+  assert (t.et = None || T.eq (Option.get t.et) t');
   t.et <- Some t';
   t'
 
@@ -64,7 +67,9 @@ and check_typ' (env : env) t : T.typ =
 
 let check_var_sort env x : T.sort * T.typ =
   match E.find_val x.it env with
-  | Some sv -> sv
+  | Some (s, _) when s = T.ProhibitedS ->
+    error x.at "`%s` cannot be used here" x.it
+  | Some st -> st
   | None -> error x.at "unknown value identifier `%s`" x.it
 
 let check_var env x : T.typ =
@@ -81,6 +86,7 @@ let check_lit _env lit : T.typ =
 
 
 let rec check_exp env e : T.typ =
+  assert (e.et = None);
   let t = check_exp' env e in
   e.et <- Some t;
   t
@@ -297,7 +303,7 @@ and check_exp' env e : T.typ =
     (match ts with [t] -> t | _ -> T.Tup ts)
 
   | BlockE ds ->
-    fst (check_decs env ds (T.Tup []))
+    fst (check_decs Full env ds (T.Tup []))
 
 
 and check_exp_ref env e : T.typ =
@@ -330,19 +336,31 @@ and check_exp_ref env e : T.typ =
 
 (* Declarations *)
 
-and check_dec env d : T.typ * env =
+and check_dec pass env d : T.typ * env =
+  assert (d.et = None || d.et = Some (T.Tup []));
+  let t, env' = check_dec' pass env d in
+  d.et <- Some t;
+  t, env'
+
+and check_dec' pass env d : T.typ * env =
   match d.it with
   | ExpD e ->
-    let t = check_exp env e in
+    let t = if pass = Pre then T.Tup [] else check_exp env e in
     t, E.empty
 
   | LetD (x, e) ->
-    let t = check_exp env e in
+    let t = if pass = Post then Option.get e.et else check_exp env e in
     T.Tup [], E.singleton_val x.it (T.LetS, t)
 
-  | VarD (x, e) ->
-    let t = check_exp env e in
-    T.Tup [], E.singleton_val x.it (T.VarS, t)
+  | VarD (x, t, e) ->
+    let t' = check_typ env t in
+    if pass <> Pre then begin
+      let t'' = check_exp env e in
+      if not (T.sub t'' t') then
+        error e.at "variable declaration expects type %s but got %s"
+          (T.to_string t') (T.to_string t'')
+    end;
+    T.Tup [], E.singleton_val x.it (T.VarS, t')
 
   | TypD (y, ys, t) ->
     let ys' = List.map it ys in
@@ -356,16 +374,18 @@ and check_dec env d : T.typ * env =
     let env' = E.extend_typs_abs env ys' in
     let ts1 = List.map (check_typ env') (List.map snd xts) in
     let ts2 = List.map (check_typ env') ts in
-    let xs1 = List.map it (List.map fst xts) in
     let t = T.Func (ys', ts1, ts2) in
-    let env'' = E.extend_val env' x.it (T.FuncS, t) in
-    let env'' = E.extend_vals_let env'' xs1 ts1 in
-    let env'' = E.extend_val_let env'' "return" (T.Tup ts2) in
-    let t' = check_exp env'' e in
-    let t2 = match ts2 with [t2] -> t2 | _ -> T.Tup ts2 in
-    if not (T.sub t' t2) then
-      error e.at "function expects return type %s but got %s"
-        (T.to_string t2) (T.to_string t');
+    if pass <> Pre then begin
+      let xs1 = List.map it (List.map fst xts) in
+      let env'' = E.extend_val env' x.it (T.FuncS, t) in
+      let env'' = E.extend_vals_let env'' xs1 ts1 in
+      let env'' = E.extend_val_let env'' "return" (T.Tup ts2) in
+      let t' = check_exp env'' e in
+      let t2 = match ts2 with [t2] -> t2 | _ -> T.Tup ts2 in
+      if not (T.sub t' t2) then
+        error e.at "function expects return type %s but got %s"
+          (T.to_string t2) (T.to_string t')
+    end;
     T.Tup [], E.singleton_val x.it (T.FuncS, t)
 
   | ClassD (x, ys, xts, sup_opt, ds) ->
@@ -376,56 +396,71 @@ and check_dec env d : T.typ * env =
     let env' = E.extend_typ env x.it (k, con) in
     let env' = E.extend_typs_abs env' ys' in
     let ts1 = List.map (check_typ env') (List.map snd xts) in
-    let xs1 = List.map it (List.map fst xts) in
     cls.T.vparams <- ts1;
+    Option.iter (fun (x2, ts2, _) ->
+      cls.T.sup <- check_typ env' (VarT (x2, ts2) @@ x2.at)) sup_opt;
     let t = T.Class cls in
-    let env'' = E.extend_val env' x.it (T.ClassS, t) in
-    let env'' = E.extend_vals_let env'' xs1 ts1 in
-    (* TODO: handle `this` *)
-    let obj' =
-      match sup_opt with
-      | None -> E.Map.empty
-      | Some (x2, ts2, es2) ->
-        let t' = check_typ env'' (VarT (x2, ts2) @@ x2.at) in
-        cls.T.sup <- t';
-        match check_exp env'' (NewE (x2, ts2, es2) @@ x2.at) with
-        | T.Inst (cls, _) -> cls.T.def
-        | _ -> assert false
-    in
-    let env''' = E.Map.fold (fun x v env -> Env.extend_val env x v) obj' env'' in
-    (* Rebind local vars to shadow parent fields *)
-    let env''' = E.extend_val env''' x.it (T.ClassS, t) in
-    let env''' = E.extend_vals_let env''' xs1 ts1 in
-    let _, oenv = check_decs env''' ds (T.Tup []) in
-    cls.T.def <-
-      E.Map.union (fun x (s', t') (s, t) ->
-        if s' <> T.FuncS then
-          error d.at "class overrides parent member `%s` that is not a function" x;
-        if s <> T.FuncS then
-          error d.at "class overrides parent member `%s` with a non-function" x;
-        if not (T.sub t t') then
-          error d.at "class overrides parent member `%s` of type %s with incompatible type %s"
-            x (T.to_string t') (T.to_string t);
-        Some (s, t)
-      ) obj' oenv.E.vals;
+    if pass <> Pre then begin
+      let t_inst = con (List.map T.var ys') in
+      let xs1 = List.map it (List.map fst xts) in
+      let env'' = E.extend_val env' x.it (T.ClassS, t) in
+      let env'' = E.extend_vals_let env'' xs1 ts1 in
+      let env'' = E.extend_val env'' "this" (T.ProhibitedS, t_inst) in
+      let obj' =
+        match sup_opt with
+        | None -> E.Map.empty
+        | Some (x2, ts2, es2) ->
+          match check_exp env'' (NewE (x2, ts2, es2) @@ x2.at) with
+          | T.Inst (cls, _) -> cls.T.def
+          | _ -> assert false
+      in
+      let env''' = E.Map.fold (fun x (s, t) env ->
+        Env.extend_val env x ((if s = T.LetS then s else T.ProhibitedS), t)) obj' env'' in
+      (* Rebind local vars to shadow parent fields *)
+      let env''' = E.extend_val env''' x.it (T.ClassS, t) in
+      let env''' = E.extend_vals_let env''' xs1 ts1 in
+      let env''' = E.extend_val env''' "this" (T.ProhibitedS, t_inst) in
+      let _, oenv = check_decs Pre env''' ds (T.Tup []) in
+      cls.T.def <-
+        E.Map.union (fun x (s', t') (s, t) ->
+          if s' <> T.FuncS then
+            error d.at "class overrides parent member `%s` that is not a function" x;
+          if s <> T.FuncS then
+            error d.at "class overrides parent member `%s` with a non-function" x;
+          if not (T.sub t t') then
+            error d.at "class overrides parent member `%s` of type %s with incompatible type %s"
+              x (T.to_string t') (T.to_string t);
+          Some (s, t)
+        ) obj' oenv.E.vals;
+      let env'''' = E.Map.fold (fun x v env -> Env.extend_val env x v) obj' env''' in
+      (* Rebind local vars to shadow parent fields *)
+      let env'''' = E.extend_val env'''' x.it (T.ClassS, t) in
+      let env'''' = E.extend_vals_let env'''' xs1 ts1 in
+      let env'''' = E.extend_val env'''' "this" (T.LetS, t_inst) in
+      ignore (check_decs Post env'''' ds (T.Tup []))
+    end;
     T.Tup [],
     E.adjoin (E.singleton_typ x.it (k, con)) (E.singleton_val x.it (T.ClassS, t))
 
-  | ImportD (xs, url) ->
+  | ImportD (_xs, _url) ->
     (* TODO *)
     error d.at "imports not implemented yet"
 
-and check_decs env ds v : T.typ * env =
+and check_decs pass env ds v : T.typ * env =
   match ds with
   | [] -> v, E.empty
   | d::ds' ->
-    let v', env' = check_dec env d in
-    let v'', env'' = check_decs (E.adjoin env env') ds' v' in
-    try v'', E.disjoint_union env' env'' with E.Clash x ->
+    let v', env1 = check_dec pass env d in
+    let env' =
+      if pass <> Pre then env1 else
+      E.map_vals (fun (s, t) -> (if s = T.LetS then s else T.ProhibitedS), t) env1
+    in
+    let v'', env2 = check_decs pass (E.adjoin env env') ds' v' in
+    try v'', E.disjoint_union env1 env2 with E.Clash x ->
       error d.at "duplicate definition for `%s`" x
 
 
 (* Programs *)
 
 let check_prog env (Prog ds) : T.typ * env =
-  check_decs env ds (T.Tup [])
+  check_decs Full env ds (T.Tup [])

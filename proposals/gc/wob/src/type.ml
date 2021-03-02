@@ -2,7 +2,7 @@
 
 type var = string
 type kind = int
-type sort = LetS | VarS | FuncS | ClassS
+type sort = LetS | VarS | FuncS | ClassS | ProhibitedS
 
 type typ =
   | Var of var * typ list
@@ -127,7 +127,8 @@ let rec eq t1 t2 =
   t1 == t2 ||
   match t1, t2 with
   | Var (y1, ts1), Var (y2, ts2) -> y1 = y2 && List.for_all2 eq ts1 ts2
-  | Tup ts1, Tup ts2 -> List.for_all2 eq ts1 ts2
+  | Tup ts1, Tup ts2 ->
+    List.length ts1 = List.length ts2 && List.for_all2 eq ts1 ts2
   | Array t1', Array t2' -> eq t1' t2'
   | Func (ys1, ts11, ts12), Func (ys2, ts21, ts22) ->
     List.length ys1 = List.length ys2 &&
@@ -151,7 +152,8 @@ let rec sub t1 t2 =
   | Null, Inst _ -> true
   | Null, Class _ -> true
   | Inst _, Obj -> true
-  | Tup ts1, Tup ts2 -> List.for_all2 sub ts1 ts2
+  | Tup ts1, Tup ts2 ->
+    List.length ts1 = List.length ts2 && List.for_all2 sub ts1 ts2
   | Inst (c1, ts1), Inst (c2, ts2) ->
     eq_class c1 c2 && List.for_all2 eq ts1 ts2 || sub (super_class c1 ts1) t2
   | t1, t2 -> eq t1 t2
