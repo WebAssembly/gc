@@ -37,21 +37,28 @@ all:		unopt opt test
 
 # Mirroring Wasm
 
-#_build/wasm.%: $(WASMDIR)/_build/wasm.%
-#		mkdir -p _build
-#		cp $(WASMDIR)/_build/wasm.* _build/
+.PHONY: wasm-deps
+wasm-deps: $(WASMDEPS)
 
-$(WASMDIR)/_build/wasm.cmx $(WASMDIR)/_build/wasm.cmxa: $(WASMDEPS)
-		make -C _wasm libopt
-
-$(WASMDIR)/_build/wasm.cmo $(WASMDIR)/_build/wasm.cma: $(WASMDEPS)
-		make -C _wasm libunopt
+$(WASMDIR):
+		mkdir -p $@
 
 $(WASMDIRS:%=$(WASMDIR)/%): $(WASMDIR)/%:
 		mkdir -p $@
 
 $(WASMFILES:%=$(WASMDIR)/%): $(WASMDIR)/%: $(WASMBASE)/% $(WASMDIRS:%=$(WASMDIR)/%)
 		cp $< $@
+
+#_build/wasm.%: $(WASMDIR)/_build/wasm.%
+#		mkdir -p _build
+#		cp $(WASMDIR)/_build/wasm.* _build/
+
+$(WASMDIR)/_build/wasm.cmx $(WASMDIR)/_build/wasm.cmxa: $(WASMDEPS)
+		make -C $(WASMDIR) libopt
+
+$(WASMDIR)/_build/wasm.cmo $(WASMDIR)/_build/wasm.cma: $(WASMDEPS)
+		make -C $(WASMDIR) libunopt
+
 
 
 # Building executable
@@ -68,10 +75,10 @@ $(OPT):		main.native
 		mv $< $@
 
 .PHONY:		main.byte main.native
-main.byte: _tags $(INCLS)/wasm.cma
+main.byte: _tags $(WASMDIR)/_build/wasm.cma
 		$(OCB) -quiet $@
 
-main.native: _tags $(INCLS)/wasm.cmxa
+main.native: _tags $(WASMDIR)/_build/wasm.cmxa
 		$(OCB) -quiet $@
 
 

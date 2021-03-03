@@ -1,0 +1,33 @@
+// Boolean operators
+
+assert true && true;
+assert ! (true && false);
+assert ! (false && true);
+assert ! (false && false);
+
+assert true || true;
+assert true || false;
+assert false || true;
+assert ! (false || false);
+
+assert 4 == 4 && 5 < 6;
+assert ! (4 == 5 && 5 < 6);
+assert ! (4 == 4 && 5 > 6);
+assert ! (4 == 5 && 5 > 6);
+
+assert 4 == 4 || 5 < 6;
+assert 4 == 5 || 5 < 6;
+assert 4 == 4 || 5 > 6;
+assert ! (4 == 5 || 5 > 6);
+
+assert (if 4 == 5 { 3 } else { 4 }) == 4;
+assert (if 4 == 4 { 3 } else { 4 }) == 3;
+
+assert (if 4 == 5 || 5 < 6 { 7 } else { 8 }) == 7;
+assert (if ! (4 == 4 && 5 > 6 || true) { 7 } else { 8 }) == 8;
+
+
+// Loops
+
+while false { 4 };
+while (4 > 3 && 5 > 6 || ! (6 <= 6)) { 4; 5; 6; };
