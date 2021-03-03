@@ -83,15 +83,19 @@ TESTS =		$(TESTFILES:%.wob=%)
 
 .PHONY:		test debugtest partest
 
-test:		$(OPT)
-		$(TESTFILES:%=./$(NAME) -r $(TESTDIR)/% &&) true
-debugtest:	$(UNOPT)
-		$(TESTFILES:%=./$(NAME) -r $(TESTDIR)/% &&) true
+test:		$(TESTFILES:%.wob=test/%)
+wasmtest:		$(TESTFILES:%.wob=wasmtest/%)
+debugtest:	$(TESTFILES:%.wob=debugtest/%)
 
 test/%:		$(OPT)
-		./$(NAME) $(TESTDIR)/$(@F).wob
+		@ ./$(NAME) -r $(TESTDIR)/$(@F).wob
+wasmtest/%:		$(OPT)
+	  @ if ! grep -q "@FAIL-WASM" $(TESTDIR)/$(@F).wob; \
+		  then ./$(NAME) -r -c -v $(TESTDIR)/$(@F).wob; \
+		  else echo Skipping $(@F).wob; \
+		fi
 debugtest/%:	$(UNOPT)
-		./$(NAME) $(TESTDIR)/$(@F).wob
+		@ ./$(NAME) -r $(TESTDIR)/$(@F).wob
 
 
 # Miscellaneous targets

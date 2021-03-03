@@ -112,5 +112,5 @@ and dec d = match d.it with
 
 (* Modules *)
 
-let prog m = match m with
+let prog m = match m.it with
   | Prog ds -> "Prog" $$ list dec ds

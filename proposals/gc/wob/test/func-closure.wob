@@ -1,3 +1,5 @@
+// @FAIL-WASM
+
 // Closures
 
 func foreach(a : Int[], n : Int, f : Int -> ()) {

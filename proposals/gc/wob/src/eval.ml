@@ -395,5 +395,6 @@ and eval_block pass env ds : V.value * env =
 
 (* Programs *)
 
-let eval_prog env (Prog ds) : V.value * env =
+let eval_prog env p : V.value * env =
+  let Prog ds = p.it in
   eval_block Full env ds
