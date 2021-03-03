@@ -36,6 +36,8 @@ val eq : typ -> typ -> bool
 val sub : typ -> typ -> bool
 val lub : typ -> typ -> typ (* raises Failure *)
 
+val free : typ -> Env.Set.t
+
 val to_string : typ -> string
 
 

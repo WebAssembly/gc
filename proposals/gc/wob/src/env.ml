@@ -1,3 +1,6 @@
+open Source
+
+
 exception Clash of string
 
 module Set =
@@ -23,8 +26,8 @@ end
 
 
 type ('v, 't) env =
-  { vals : 'v Map.t;
-    typs : 't Map.t;
+  { vals : ('v, int) phrase Map.t;
+    typs : ('t, int) phrase Map.t;
   }
 
 let empty = {vals = Map.empty; typs = Map.empty}
@@ -44,19 +47,29 @@ let disjoint_union env1 env2 =
     typs = Map.disjoint_union env1.typs env2.typs;
   }
 
-let extend_val env x v = {env with vals = Map.add x v env.vals}
-let extend_typ env y t = {env with typs = Map.add y t env.typs}
+let dom_val env = Map.dom env.vals
+let dom_typ env = Map.dom env.typs
 
+let extend_val env x v = {env with vals = Map.add x.it (v @@ x.at) env.vals}
+let extend_typ env y t = {env with typs = Map.add y.it (t @@ y.at) env.typs}
 let extend_vals env xs vs = List.fold_left2 extend_val env xs vs
 let extend_typs env ys ts = List.fold_left2 extend_typ env ys ts
 
 let singleton_val x v = extend_val empty x v
 let singleton_typ y t = extend_typ empty y t
 
-let find_val x env = Map.find_opt x env.vals
-let find_typ y env = Map.find_opt y env.typs
+let mem_val x env = Map.mem x.it env.vals
+let mem_typ y env = Map.mem y.it env.typs
+let find_val x env = Map.find x.it env.vals
+let find_typ y env = Map.find y.it env.typs
+let find_opt_val x env = Map.find_opt x.it env.vals
+let find_opt_typ y env = Map.find_opt y.it env.typs
 
-let map_vals f env = {env with vals = Map.map f env.vals}
-let map_typs f env = {env with typs = Map.map f env.typs}
+let map_vals f env = {env with vals = Map.map (map_it f) env.vals}
+let map_typs f env = {env with typs = Map.map (map_it f) env.typs}
 let mapi_vals f env = {env with vals = Map.mapi f env.vals}
 let mapi_typs f env = {env with typs = Map.mapi f env.typs}
+let fold_vals f env a = Map.fold f env.vals a
+let fold_typs f env a = Map.fold f env.typs a
+let iter_vals f env = Map.iter f env.vals
+let iter_typs f env = Map.iter f env.typs
