@@ -9,7 +9,7 @@ module V = Value
 
 exception Trap of Source.region * string
 exception Crash of Source.region * string
-exception Return of V.value list
+exception Return of V.value
 
 let trap at fmt = Printf.ksprintf (fun s -> raise (Trap (at, s))) fmt
 let crash at fmt = Printf.ksprintf (fun s -> raise (Crash (at, s))) fmt
@@ -55,10 +55,10 @@ let rec eval_typ env t : T.typ =
   | ObjT -> T.Obj
   | TupT ts -> T.Tup (List.map (eval_typ env) ts)
   | ArrayT t -> T.Array (eval_typ env t)
-  | FuncT (ys, ts1, ts2) ->
+  | FuncT (ys, ts1, t2) ->
     let ys' = List.map Source.it ys in
     let env' = E.extend_typs_abs env ys in
-    T.Func (ys', List.map (eval_typ env') ts1, List.map (eval_typ env') ts2)
+    T.Func (ys', List.map (eval_typ env') ts1, eval_typ env' t2)
 
 
 (* Expressions *)
@@ -251,9 +251,9 @@ let rec eval_exp env e : V.value =
     | _ -> crash e.at "runtime type error at loop"
     )
 
-  | RetE es ->
-    let vs = List.map (eval_exp env) es in
-    raise (Return vs)
+  | RetE e ->
+    let v = eval_exp env e in
+    raise (Return v)
 
   | BlockE ds ->
     fst (eval_block Full env ds)
@@ -310,13 +310,13 @@ and eval_dec pass env d : V.value * env =
     let con ts = eval_typ (E.extend_typs_gnd env ys ts) t in
     V.Tup [], E.singleton_typ y con
 
-  | FuncD (x, ys, xts, _ts, e) ->
+  | FuncD (x, ys, xts, _t, e) ->
     let xs = List.map fst xts in
     let rec f ts vs =
       let env' = E.extend_val env x (T.FuncS, V.Func f) in
       let env' = E.extend_typs_gnd env' ys ts in
       let env' = E.extend_vals_let env' xs vs in
-      try eval_exp env' e with Return [v] -> v | Return vs -> V.Tup vs
+      try eval_exp env' e with Return v -> v
     in
     V.Tup [], E.singleton_val x (T.FuncS, V.Func f)
 

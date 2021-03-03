@@ -21,7 +21,7 @@ and typ' =
   | ObjT
   | TupT of typ list
   | ArrayT of typ
-  | FuncT of var list * typ list * typ list
+  | FuncT of var list * typ list * typ
 
 
 (* Expressions *)
@@ -58,7 +58,7 @@ and exp' =
   | BlockE of dec list
   | IfE of exp * exp * exp
   | WhileE of exp * exp
-  | RetE of exp list
+  | RetE of exp
   | AssertE of exp
 
 
@@ -70,7 +70,7 @@ and dec' =
   | LetD of var * exp
   | VarD of var * typ * exp
   | TypD of var * var list * typ
-  | FuncD of var * var list * (var * typ) list * typ list * exp
+  | FuncD of var * var list * (var * typ) list * typ * exp
   | ClassD of var * var list * (var * typ) list * (var * typ list * exp list) option * dec list
   | ImportD of var list * string
 

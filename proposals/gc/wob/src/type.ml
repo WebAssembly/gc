@@ -15,7 +15,7 @@ type typ =
   | Obj
   | Tup of typ list
   | Array of typ
-  | Func of var list * typ list * typ list
+  | Func of var list * typ list * typ
   | Inst of cls * typ list
   | Class of cls
 
@@ -49,9 +49,9 @@ let rec to_string = function
   | Obj -> "Object"
   | Tup ts -> "(" ^ list to_string ts ^ ")"
   | Array t -> to_string t ^ "[]"
-  | Func ([], ts1, ts2) -> params ts1 ^ " -> " ^ params ts2
-  | Func (ys, ts1, ts2) ->
-    "<" ^ list Fun.id ys ^ ">(" ^ params ts1 ^ ") -> " ^ params ts2
+  | Func ([], ts1, t2) -> params ts1 ^ " -> " ^ to_string t2
+  | Func (ys, ts1, t2) ->
+    "<" ^ list Fun.id ys ^ ">(" ^ params ts1 ^ ") -> " ^ to_string t2
   | Inst (c, ts) -> to_string (Var (c.name, ts))
   | Class c -> "class " ^ c.name
 
@@ -72,8 +72,7 @@ let rec free = function
   | Null | Bool | Byte | Int | Float | Text | Obj -> Set.empty
   | Tup ts -> list free ts
   | Array t -> free t
-  | Func (ys, ts1, ts2) ->
-    Set.diff (list free ts1 ++ list free ts2) (Set.of_list ys)
+  | Func (ys, ts1, t2) -> Set.diff (list free ts1 ++ free t2) (Set.of_list ys)
   | Inst (c, ts) -> Set.singleton c.name ++ list free ts
   | Class c ->
     Set.singleton c.name ++
@@ -117,10 +116,10 @@ let rec subst s t =
   | Var (y, ts) -> Var (y, List.map (subst s) ts)
   | Tup ts -> Tup (List.map (subst s) ts)
   | Array t -> Array (subst s t)
-  | Func (ys, ts1, ts2) ->
+  | Func (ys, ts1, t2) ->
     let ys' = List.map fresh ys in
     let s' = adjoin_subst s (typ_subst ys (List.map var ys')) in
-    Func (ys', List.map (subst s') ts1, List.map (subst s') ts2)
+    Func (ys', List.map (subst s') ts1, subst s' t2)
   | Inst (c, ts) -> Inst (subst_cls s c, List.map (subst s) ts)
   | Class c -> Class (subst_cls s c)
   | t -> t
@@ -150,15 +149,14 @@ let rec eq t1 t2 =
   | Tup ts1, Tup ts2 ->
     List.length ts1 = List.length ts2 && List.for_all2 eq ts1 ts2
   | Array t1', Array t2' -> eq t1' t2'
-  | Func (ys1, ts11, ts12), Func (ys2, ts21, ts22) ->
+  | Func (ys1, ts11, t12), Func (ys2, ts21, t22) ->
     List.length ys1 = List.length ys2 &&
     List.length ts11 = List.length ts21 &&
-    List.length ts12 = List.length ts22 &&
     let ys' = List.map var (List.map fresh ys1) in
     let s1 = typ_subst ys1 ys' in
     let s2 = typ_subst ys2 ys' in
     List.for_all2 eq (List.map (subst s1) ts11) (List.map (subst s2) ts21) &&
-    List.for_all2 eq (List.map (subst s1) ts12) (List.map (subst s2) ts22)
+    eq (subst s1 t12) (subst s2 t22)
   | Inst (c1, ts1), Inst (c2, ts2) -> eq_class c1 c2 && List.for_all2 eq ts1 ts2
   | Class c1, Class c2 -> eq_class c1 c2
   | t1, t2 -> t1 = t2

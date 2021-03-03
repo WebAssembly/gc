@@ -15,7 +15,7 @@ type typ =
   | Obj
   | Tup of typ list
   | Array of typ
-  | Func of var list * typ list * typ list
+  | Func of var list * typ list * typ
   | Inst of cls * typ list
   | Class of cls
 

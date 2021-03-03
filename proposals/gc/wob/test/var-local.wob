@@ -1,0 +1,58 @@
+// Local let bindings
+
+{
+  let x = 45;
+  let y = 25;
+  assert x + y == 70;
+};
+
+
+// Local var bindings
+
+{
+  var v : Int = 50;
+  assert v == 50;
+
+  v := 5;
+  assert v == 5;
+};
+
+
+// Nested
+
+let x = 1;
+var v : Int = 0;
+{
+  let x = 2;
+  var v : Int = 0;
+  {
+    let x = 3;
+    var v : Int = 0;
+    v := 3;
+    assert x == 3;
+    assert v == 3;
+  };
+  assert x == 2;
+  assert v == 0;
+  v := 2;
+  assert v == 2;
+};
+assert x == 1;
+assert v == 0;
+v := 1;
+assert v == 1;
+
+
+// In loops
+
+{
+  let n = 15;
+  var i : Int = 0;
+  var sum : Int = 0;
+  while (i < n) {
+    sum := sum + i;
+    i := i + 1;
+  };
+
+  sum;
+};
