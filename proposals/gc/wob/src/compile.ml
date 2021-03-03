@@ -19,8 +19,8 @@ let (@@) = Wasm.Source.(@@)
 let _f64 = W.F64.of_float
 let i32 = W.I32.of_int_s
 let (+%) = Int32.add
-(*
 let (-%) = Int32.sub
+(*
 let ( *%) = Int32.mul
 *)
 let (/%) = Int32.div
@@ -96,12 +96,17 @@ let emit_type ctxt at type_ : int32 =
       | _ -> assert false
     ) ctxt.types.list
   with
-  | Some idx -> i32 idx
+  | Some idx -> ctxt.types.cnt -% i32 idx -% 1l
   | None -> emit_entity ctxt.types type_
 
 let emit_export ctxt at name idx descf =
   let edesc = descf (idx @@ at) @@ at in
   ignore (emit_entity ctxt.exports W.({name; edesc} @@ at))
+
+let emit_param ctxt at : int32 =
+  let idx = ctxt.locals.cnt in
+  ctxt.locals.cnt <- idx +% 1l;
+  idx
 
 let emit_local ctxt at vtype : int32 =
   emit_entity ctxt.locals (vtype @@ at)
@@ -142,10 +147,10 @@ let emit_func ctxt at ft f : int32 =
 
 (* Mapping types *)
 
-let compile_typ ctxt at t : W.value_type =
+let compile_typ' ctxt at t : W.value_type =
   match t with
   | T.Var _ | T.Null -> W.(RefType (Nullable, AnyHeapType))
-  | T.Bool | T.Byte | T.Int | T.Tup [] -> W.(NumType I32Type)
+  | T.Bool | T.Byte | T.Int | T.Tup [] | T.Bot -> W.(NumType I32Type)
   | T.Float -> W.(NumType F64Type)
   | T.Text -> nyi at "text types"
   | T.Obj | T.Inst _ -> W.(RefType (Nullable, DataHeapType))
@@ -157,17 +162,17 @@ let compile_typ ctxt at t : W.value_type =
 let compile_n_typ ctxt at t : W.value_type option =
   match t with
   | T.Tup [] -> None
-  | t -> Some (compile_typ ctxt at t)
+  | t -> Some (compile_typ' ctxt at t)
 
 let default_const ctxt at t : W.const =
   let instr' =
     match t with
     | T.Var _ | T.Null | T.Obj | T.Inst _ | T.Array _ | T.Func _ | T.Class _ ->
-      (match compile_typ ctxt at t with
+      (match compile_typ' ctxt at t with
       | W.RefType (_, ht) -> W.(ref_null ht)
       | _ -> assert false
       )
-    | T.Bool | T.Byte | T.Int | T.Tup [] -> W.(i32_const (0l @@ at))
+    | T.Bool | T.Byte | T.Int | T.Tup [] | T.Bot -> W.(i32_const (0l @@ at))
     | T.Float -> W.(f64_const (W.F64.of_float 0.0 @@ at))
     | T.Text -> nyi at "text results"
     | T.Tup ts -> nyi at "tuple results"
@@ -178,6 +183,12 @@ let compile_coerce ctxt at t1 t2 =
   match t1, t2 with
   | _, T.Tup [] -> emit_instr ctxt at W.(drop)
   | _ -> nyi at "coercions"
+
+
+(* Compiling types *)
+
+let compile_typ ctxt t : W.value_type =
+  compile_typ' ctxt t.at (Source.et t)
 
 
 (* Expressions *)
@@ -295,6 +306,9 @@ let rec compile_exp ctxt e =
     | _ -> assert false
     )
 
+  | TupE [] ->
+    ()
+
   | TupE es ->
     nyi e.at "tuple construction"
   (*
@@ -337,7 +351,20 @@ let rec compile_exp ctxt e =
   *)
 
   | CallE (e1, ts, es) ->
-    nyi e.at "function calls"
+    if ts <> [] then nyi e.at "generic function calls";
+    List.iter (compile_exp ctxt) es;
+    (match e1.it with
+    | VarE x ->
+      let scope, s, idx = compile_var ctxt x ctxt.envs in
+      (match scope, s with
+      | GlobalScope, T.FuncS ->
+        emit ctxt W.[call (idx @@ x.at)]
+
+      | _, T.FuncS -> nyi x.at "local function calls"
+      | _ -> nyi e.at "indirect function calls"
+      )
+    | _ -> nyi e.at "indirect function calls"
+    )
   (*
     let v1 = eval_exp env e1 in
     let vs = List.map (eval_exp env) es in
@@ -465,12 +492,9 @@ let rec compile_exp ctxt e =
       );
     )
 
-  | RetE es ->
-    nyi e.at "function returns"
-  (*
-    let vs = List.map (eval_exp env) es in
-    raise (Return vs)
-  *)
+  | RetE e ->
+    compile_exp ctxt e;
+    emit ctxt W.[return]
 
   | BlockE ds ->
     compile_block ctxt BlockScope ds
@@ -486,7 +510,7 @@ and compile_dec ctxt d =
 
   | LetD (x, e) | VarD (x, _, e) ->
     let scope, env = List.hd ctxt.envs in
-    let t = compile_typ ctxt x.at (Source.et e) in
+    let t = compile_typ' ctxt x.at (Source.et e) in
     compile_exp ctxt e;
     let idx =
       match scope with
@@ -510,7 +534,20 @@ and compile_dec ctxt d =
     ()
 
   | FuncD (x, ys, xts, t, e) ->
-    nyi d.at "function definitions";
+    if ys <> [] then nyi d.at "generic function definitions";
+    let ts1 = List.map (compile_typ ctxt) (List.map snd xts) in
+    let t2 = compile_typ ctxt t in
+    ignore (emit_func ctxt d.at W.(FuncType (ts1, [t2])) (fun ctxt idx ->
+      let _, env' = List.hd ctxt.envs in
+      env' := E.extend_val !env' x (T.FuncS, idx);
+      let ctxt = enter_scope ctxt FuncScope in
+      let _, env = List.hd ctxt.envs in
+      List.iter (fun (x, _) ->
+        let idx = emit_param ctxt x.at in
+        env := E.extend_val !env x (T.LetS, idx)
+      ) xts;
+      compile_exp ctxt e;
+    ))
   (*
     let xs = List.map fst xts in
     let rec f ts vs =
@@ -594,18 +631,18 @@ and compile_block ctxt scope ds =
 
 let compile_prog p : W.module_ =
   let Prog ds = p.it in
+  let emit ctxt = emit_instr ctxt p.at in
   let ctxt = make_ctxt () in
-  let t = compile_typ ctxt p.at (Source.et p) in
+  let t = compile_typ' ctxt p.at (Source.et p) in
   let const = default_const ctxt p.at (Source.et p) in
   let result_idx = emit_global ctxt p.at W.(GlobalType (t, Mutable)) const in
   let result_name = W.Utf8.decode "return" in
   emit_export ctxt p.at result_name result_idx (fun x -> W.GlobalExport x);
   let start_idx = emit_func ctxt p.at W.(FuncType ([], [])) (fun ctxt _ ->
-    let emit = emit_instr ctxt p.at in
-    emit W.(global_get (result_idx @@ p.at));
+    emit ctxt W.(global_get (result_idx @@ p.at));
     compile_decs ctxt ds;
-    emit W.(global_set (result_idx @@ p.at));
-    emit W.(return)
+    emit ctxt W.(global_set (result_idx @@ p.at));
+    emit ctxt W.(return)
   )
   in
   { W.empty_module with

@@ -6,6 +6,7 @@ type sort = LetS | VarS | FuncS | ClassS | ProhibitedS
 
 type typ =
   | Var of var * typ list
+  | Bot
   | Null
   | Bool
   | Byte
@@ -39,7 +40,8 @@ let list f xs = String.concat ", " (List.map f xs)
 
 let rec to_string = function
   | Var (y, []) -> y
-  | Var (y, ts) -> y ^ "<" ^ list to_string ts ^ ">" 
+  | Var (y, ts) -> y ^ "<" ^ list to_string ts ^ ">"
+  | Bot -> "Bot"
   | Null -> "Null"
   | Bool -> "Bool"
   | Byte -> "Byte"
@@ -69,7 +71,7 @@ let list f ts = List.fold_left (++) Set.empty (List.map f ts)
 
 let rec free = function
   | Var (y, ts) -> Set.singleton y ++ list free ts
-  | Null | Bool | Byte | Int | Float | Text | Obj -> Set.empty
+  | Bot | Null | Bool | Byte | Int | Float | Text | Obj -> Set.empty
   | Tup ts -> list free ts
   | Array t -> free t
   | Func (ys, ts1, t2) -> Set.diff (list free ts1 ++ free t2) (Set.of_list ys)
@@ -114,6 +116,7 @@ let rec subst s t =
   match t with
   | Var (y, ts) when Subst.mem y s -> Subst.find y s (List.map (subst s) ts)
   | Var (y, ts) -> Var (y, List.map (subst s) ts)
+  | Bot | Null | Bool | Byte | Int | Float | Text | Obj -> t
   | Tup ts -> Tup (List.map (subst s) ts)
   | Array t -> Array (subst s t)
   | Func (ys, ts1, t2) ->
@@ -122,7 +125,6 @@ let rec subst s t =
     Func (ys', List.map (subst s') ts1, subst s' t2)
   | Inst (c, ts) -> Inst (subst_cls s c, List.map (subst s) ts)
   | Class c -> Class (subst_cls s c)
-  | t -> t
 
 and subst_cls s c =
   let ys' = List.map fresh c.tparams in
@@ -164,6 +166,7 @@ let rec eq t1 t2 =
 let rec sub t1 t2 =
   t1 == t2 ||
   match t1, t2 with
+  | Bot, _ -> true
   | Null, Obj -> true
   | Null, Array _ -> true
   | Null, Func _ -> true
