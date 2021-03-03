@@ -1,3 +1,5 @@
+// @FAIL-WASM
+
 // Casts
 
 class C() {};

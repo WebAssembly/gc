@@ -1,3 +1,5 @@
+// @FAIL-WASM
+
 // Polymorphic recursion
 
 let n = 20;

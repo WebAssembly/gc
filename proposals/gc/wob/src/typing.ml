@@ -503,5 +503,9 @@ and check_block pass env ds : T.typ * env =
 
 (* Programs *)
 
-let check_prog env (Prog ds) : T.typ * env =
-  check_block Full env ds
+let check_prog env p : T.typ * env =
+  assert (p.et = None);
+  let Prog ds = p.it in
+  let t, env' = check_block Full env ds in
+  p.et <- Some t;
+  t, env'

@@ -1,3 +1,5 @@
+// @FAIL-WASM
+
 // Inheritance
 
 class Counter(x : Int) {
