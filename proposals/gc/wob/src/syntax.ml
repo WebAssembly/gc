@@ -77,5 +77,6 @@ and dec' =
 
 (* Modules *)
 
-type prog =
+type prog = (prog', T.typ) Source.phrase
+and prog' =
   | Prog of dec list

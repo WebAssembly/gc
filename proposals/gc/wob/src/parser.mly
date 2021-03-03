@@ -284,7 +284,7 @@ dec_list_noeol :
 /* Programs */
 
 prog :
-  | dec_list EOF { Prog $1 }
+  | dec_list EOF { Prog $1 @@ at () }
 
 repl :
-  | dec_list_noeol SEMICOLON_EOL { Prog $1 }
+  | dec_list_noeol SEMICOLON_EOL { Prog $1 @@ at () }

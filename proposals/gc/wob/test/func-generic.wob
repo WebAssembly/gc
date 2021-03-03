@@ -1,3 +1,5 @@
+// @FAIL-WASM
+
 // Generic functions
 
 func foreach<T>(a : T[], n : Int, f : T -> ()) {

@@ -1,3 +1,5 @@
+// @FAIL-WASM
+
 // Generic classes
 
 class A<T, U>() {};

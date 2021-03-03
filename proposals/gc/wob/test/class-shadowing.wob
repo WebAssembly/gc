@@ -1,3 +1,5 @@
+// @FAIL-WASM
+
 // Shadowing
 
 class A(x : Int) { let x = x; type B = Int; };

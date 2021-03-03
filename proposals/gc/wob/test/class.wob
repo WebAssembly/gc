@@ -1,3 +1,5 @@
+// @FAIL-WASM
+
 // Base classes
 
 class Counter(x : Int) {
