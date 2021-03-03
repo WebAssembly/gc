@@ -69,10 +69,10 @@ and check_typ' (env : env) t : T.typ =
   | ObjT -> T.Obj
   | TupT ts -> T.Tup (List.map (check_typ env) ts)
   | ArrayT t -> T.Array (check_typ env t)
-  | FuncT (ys, ts1, ts2) ->
+  | FuncT (ys, ts1, t2) ->
     let ys' = List.map Source.it ys in
     let env' = E.extend_typs_abs env ys in
-    T.Func (ys', List.map (check_typ env') ts1, List.map (check_typ env') ts2)
+    T.Func (ys', List.map (check_typ env') ts1, check_typ env' t2)
 
 
 (* Expressions *)
@@ -194,21 +194,21 @@ and check_exp' env e : T.typ =
     let t1 = check_exp env e1 in
     let ts' = List.map (check_typ env) ts in
     (match t1 with
-    | T.Func (ys, ts1, ts2) ->
+    | T.Func (ys, ts1, t2) ->
       if List.length ts' <> List.length ys then
         error e1.at "wrong number of type arguments at function call";
       if List.length es <> List.length ts1 then
         error e1.at "wrong number of arguments at function call";
       let s = T.typ_subst ys ts' in
       let ts1' = List.map (T.subst s) ts1 in
-      let ts2' = List.map (T.subst s) ts2 in
+      let t2' = T.subst s t2 in
       List.iter2 (fun eI tI ->
         let tI' = check_exp env eI in
         if not (T.sub tI' tI) then
           error eI.at "function expects argument type %s but got %s"
             (T.to_string tI) (T.to_string tI')
       ) es ts1';
-      (match ts2' with [t2] -> t2 | _ -> T.Tup ts2')
+      t2'
     | _ -> error e1.at "function type expected but got %s" (T.to_string t1)
     )
 
@@ -304,17 +304,17 @@ and check_exp' env e : T.typ =
       error e1.at "boolean type expected but got %s" (T.to_string t1);
     T.Tup []
 
-  | RetE es ->
-    let ts = List.map (check_exp env) es in
+  | RetE e ->
+    let t = check_exp env e in
     (match E.find_opt_val ("return" @@ no_region) env with
     | None -> error e.at "misplaced return"
     | Some st ->
-      let (_, t) = st.it in
-      if not (T.sub (T.Tup ts) t) then
+      let (_, t') = st.it in
+      if not (T.sub t t') then
         error e.at "return expects type %s but got %s"
-          (T.to_string t) (T.to_string (T.Tup ts));
+          (T.to_string t') (T.to_string t);
     );
-    (match ts with [t] -> t | _ -> T.Tup ts)
+    t
 
   | BlockE ds ->
     let t, env' = check_block Full env ds in
@@ -390,18 +390,17 @@ and check_dec' pass env d : T.typ * env =
     let con ts = T.subst (T.typ_subst ys' ts) t' in
     T.Tup [], E.singleton_typ y (List.length ys, con)
 
-  | FuncD (x, ys, xts, ts, e) ->
+  | FuncD (x, ys, xts, t, e) ->
     let ys' = List.map it ys in
     let env' = E.extend_typs_abs env ys in
     let ts1 = List.map (check_typ env') (List.map snd xts) in
-    let ts2 = List.map (check_typ env') ts in
-    let t = T.Func (ys', ts1, ts2) in
+    let t2 = check_typ env' t in
+    let t = T.Func (ys', ts1, t2) in
     if pass <> Pre then begin
       let env'' = E.extend_val env' x (T.FuncS, t) in
       let env'' = E.extend_vals_let env'' (List.map fst xts) ts1 in
-      let env'' = E.extend_val_let env'' ("return" @@ d.at) (T.Tup ts2) in
+      let env'' = E.extend_val_let env'' ("return" @@ d.at) t2 in
       let t' = check_exp env'' e in
-      let t2 = match ts2 with [t2] -> t2 | _ -> T.Tup ts2 in
       if not (T.sub t' t2) then
         error e.at "function expects return type %s but got %s"
           (T.to_string t2) (T.to_string t')
