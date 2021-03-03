@@ -27,7 +27,7 @@ struct
   let extend_val_let env x v = Env.extend_val env x (T.LetS, ref v)
   let extend_vals_let env xs vs = List.fold_left2 extend_val_let env xs vs
   let extend_typ_gnd env y t = extend_typ env y (fun _ -> t)
-  let extend_typ_abs env y = extend_typ_gnd env y (T.var y)
+  let extend_typ_abs env y = extend_typ_gnd env y (T.var y.it)
   let extend_typs_gnd env ys ts = List.fold_left2 extend_typ_gnd env ys ts
   let extend_typs_abs env ys = List.fold_left extend_typ_abs env ys
 end
@@ -38,8 +38,8 @@ type pass = Full | Pre | Post
 (* Types *)
 
 let eval_typ_var env y : T.con =
-  match E.find_typ y.it env with
-  | Some c -> c
+  match E.find_opt_typ y env with
+  | Some c -> c.it
   | None -> crash y.at "unknown type identifier `%s`" y.it
 
 let rec eval_typ env t : T.typ =
@@ -57,15 +57,15 @@ let rec eval_typ env t : T.typ =
   | ArrayT t -> T.Array (eval_typ env t)
   | FuncT (ys, ts1, ts2) ->
     let ys' = List.map Source.it ys in
-    let env' = E.extend_typs_abs env ys' in
+    let env' = E.extend_typs_abs env ys in
     T.Func (ys', List.map (eval_typ env') ts1, List.map (eval_typ env') ts2)
 
 
 (* Expressions *)
 
 let eval_var_ref env x : V.value ref =
-  match E.find_val x.it env with
-  | Some (_, v) -> v
+  match E.find_opt_val x env with
+  | Some sv -> snd sv.it
   | None -> crash x.at "unknown value identifier `%s`" x.it
 
 let eval_var env x : V.value =
@@ -256,7 +256,7 @@ let rec eval_exp env e : V.value =
     raise (Return vs)
 
   | BlockE ds ->
-    fst (eval_decs Full env ds (V.Tup []))
+    fst (eval_block Full env ds)
 
 
 and eval_exp_ref env e : V.value ref =
@@ -299,32 +299,30 @@ and eval_dec pass env d : V.value * env =
 
   | LetD (x, e) ->
     let v = if pass = Post then eval_exp env (this x) else eval_exp env e in
-    V.Tup [], E.singleton_val x.it (T.LetS, v)
+    V.Tup [], E.singleton_val x (T.LetS, v)
 
   | VarD (x, t, e) ->
     let t' = eval_typ env t in
     let v = if pass = Pre then V.default t' else eval_exp env e in
-    V.Tup [], E.singleton_val x.it (T.VarS, v)
+    V.Tup [], E.singleton_val x (T.VarS, v)
 
   | TypD (y, ys, t) ->
-    let ys' = List.map it ys in
-    let con ts = eval_typ (E.extend_typs_gnd env ys' ts) t in
-    V.Tup [], E.singleton_typ y.it con
+    let con ts = eval_typ (E.extend_typs_gnd env ys ts) t in
+    V.Tup [], E.singleton_typ y con
 
   | FuncD (x, ys, xts, _ts, e) ->
-    let ys' = List.map it ys in
-    let xs' = List.map it (List.map fst xts) in
+    let xs = List.map fst xts in
     let rec f ts vs =
-      let env' = E.extend_val env x.it (T.FuncS, V.Func f) in
-      let env' = E.extend_typs_gnd env' ys' ts in
-      let env' = E.extend_vals_let env' xs' vs in
+      let env' = E.extend_val env x (T.FuncS, V.Func f) in
+      let env' = E.extend_typs_gnd env' ys ts in
+      let env' = E.extend_vals_let env' xs vs in
       try eval_exp env' e with Return [v] -> v | Return vs -> V.Tup vs
     in
-    V.Tup [], E.singleton_val x.it (T.FuncS, V.Func f)
+    V.Tup [], E.singleton_val x (T.FuncS, V.Func f)
 
   | ClassD (x, ys, xts, sup_opt, ds) ->
     let ys' = List.map it ys in
-    let xs' = List.map it (List.map fst xts) in
+    let xs = List.map fst xts in
     let cls =
       if pass <> Post then T.gen_class x.it ys' else
       match eval_exp env (this x) with
@@ -332,39 +330,43 @@ and eval_dec pass env d : V.value * env =
       | _ -> assert false
     in
     let con ts = T.Inst (cls, ts) in
-    let env' = E.extend_typ env x.it con in
+    let env' = E.extend_typ env x con in
     Option.iter (fun (x2, ts2, _) ->
-      let env'' = E.extend_typs_abs env' ys' in
+      let env'' = E.extend_typs_abs env' ys in
       cls.T.sup <- eval_typ env'' (VarT (x2, ts2) @@ x2.at)
     ) sup_opt;
     let rec v_class = V.Class (cls, f)
     and f ts vs =
-      let env'' = E.extend_val env' x.it (T.ClassS, v_class) in
-      let env'' = E.extend_typs_gnd env'' ys' ts in
-      let env'' = E.extend_vals_let env'' xs' vs in
+      let env'' = E.extend_val env' x (T.ClassS, v_class) in
+      let env'' = E.extend_typs_gnd env'' ys ts in
+      let env'' = E.extend_vals_let env'' xs vs in
       let obj, env''' =
         match sup_opt with
         | None -> ref E.Map.empty, env''
         | Some (x2, ts2, es2) ->
           match eval_exp env'' (NewE (x2, ts2, es2) @@ x2.at) with
           | V.Obj (_, obj') ->
-            obj', E.Map.fold (fun x v env -> Env.extend_val env x v) !obj' env''
+            obj', E.Map.fold (fun x v env ->
+              Env.extend_val env (x @@ x2.at) v) !obj' env''
           | v -> crash x2.at "runtime type error at super class instantiation, got %s"
              (V.to_string v)
       in
       let v_inst = V.Obj (con ts, obj) in
       (* Rebind local vars to shadow parent fields *)
-      let env''' = E.extend_val env''' x.it (T.ClassS, v_class) in
-      let env''' = E.extend_vals_let env''' xs' vs in
-      let env''' = E.extend_val_let env''' "this" v_inst in
-      let _, oenv = eval_decs Pre env''' ds (V.Tup []) in
-      obj := E.Map.union (fun x (_, v') (s, v) ->
-        v' := !v; Some (s, v')) !obj oenv.E.vals;
-      ignore (eval_decs Post env''' ds (V.Tup []));
+      let env''' = E.extend_val env''' x (T.ClassS, v_class) in
+      let env''' = E.extend_vals_let env''' xs vs in
+      let env''' = E.extend_val_let env''' ("this" @@ x.at) v_inst in
+      let _, oenv = eval_block Pre env''' ds in
+      obj := E.fold_vals (fun x sv obj ->
+        match E.Map.find_opt x obj with
+        | None -> E.Map.add x sv.it obj
+        | Some (s, v') -> v' := !(snd sv.it); obj
+      ) oenv !obj;
+      ignore (eval_block Post env''' ds);
       v_inst
     in
     V.Tup [],
-    E.adjoin (E.singleton_typ x.it con) (E.singleton_val x.it (T.ClassS, v_class))
+    E.adjoin (E.singleton_typ x con) (E.singleton_val x (T.ClassS, v_class))
 
   | ImportD (_xs, _url) ->
     (* TODO *)
@@ -377,17 +379,21 @@ and eval_decs pass env ds v : V.value * env =
     let v', env1 = eval_dec pass env d in
     let env' =
       if pass <> Post then env1 else
-      match E.find_val "this" env with
-      | Some (_, {contents = V.Obj (_, obj)}) ->
-        E.mapi_vals (fun x (s, v) ->
-          let _, v' = E.Map.find x !obj in v' := !v; (s, v')) env1
+      match !(snd (E.find_val ("this" @@ no_region) env).it) with
+      | V.Obj (_, obj) ->
+        E.mapi_vals (fun x sv ->
+          let s, v' = E.Map.find x !obj in v' := !(snd sv.it); (s, v') @@ sv.at
+        ) env1
       | _ -> assert false
     in
     let v'', env2 = eval_decs pass (E.adjoin env env') ds' v' in
     v'', E.adjoin env1 env2
 
+and eval_block pass env ds : V.value * env =
+  eval_decs pass env ds (V.Tup [])
+
 
 (* Programs *)
 
 let eval_prog env (Prog ds) : V.value * env =
-  eval_decs Full env ds (V.Tup [])
+  eval_block Full env ds

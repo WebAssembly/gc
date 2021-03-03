@@ -21,8 +21,20 @@ struct
   let extend_val_let env x t = extend_val env x (T.LetS, t)
   let extend_vals_let env xs ts =
     extend_vals env xs (List.map (fun t -> (T.LetS, t)) ts)
-  let extend_typ_abs env y = extend_typ env y (0, fun _ -> T.var y)
+
+  let extend_typ env y kc =
+    match find_opt_typ y env with
+    | None -> Env.extend_typ env y kc
+    | Some kc ->
+      error y.at "type binding for `%s` shadows previous binding at %s"
+        y.it (Source.string_of_region kc.at)
+
+  let extend_typ_abs env y = extend_typ env y (0, fun _ -> T.var y.it)
   let extend_typs_abs env ys = List.fold_left extend_typ_abs env ys
+
+  let adjoin env1 env2 =
+    fold_typs (fun y kc env -> extend_typ env (y @@ kc.at) kc.it) env2
+      (fold_vals (fun x st env -> extend_val env (x @@ st.at) st.it) env2 env1)
 end
 
 type pass = Full | Pre | Post
@@ -31,8 +43,8 @@ type pass = Full | Pre | Post
 (* Types *)
 
 let check_typ_var env y : T.kind * T.con =
-  match E.find_typ y.it env with
-  | Some kc -> kc
+  match E.find_opt_typ y env with
+  | Some kc -> kc.it
   | None -> error y.at "unknown type identifier `%s`" y.it
 
 
@@ -59,17 +71,18 @@ and check_typ' (env : env) t : T.typ =
   | ArrayT t -> T.Array (check_typ env t)
   | FuncT (ys, ts1, ts2) ->
     let ys' = List.map Source.it ys in
-    let env' = E.extend_typs_abs env ys' in
+    let env' = E.extend_typs_abs env ys in
     T.Func (ys', List.map (check_typ env') ts1, List.map (check_typ env') ts2)
 
 
 (* Expressions *)
 
 let check_var_sort env x : T.sort * T.typ =
-  match E.find_val x.it env with
-  | Some (s, _) when s = T.ProhibitedS ->
-    error x.at "`%s` cannot be used here" x.it
-  | Some st -> st
+  match E.find_opt_val x env with
+  | Some st ->
+    if fst st.it = T.ProhibitedS then
+      error x.at "`%s` cannot be used here" x.it;
+    st.it
   | None -> error x.at "unknown value identifier `%s`" x.it
 
 let check_var env x : T.typ =
@@ -293,9 +306,10 @@ and check_exp' env e : T.typ =
 
   | RetE es ->
     let ts = List.map (check_exp env) es in
-    (match E.find_val "return" env with
+    (match E.find_opt_val ("return" @@ no_region) env with
     | None -> error e.at "misplaced return"
-    | Some (_, t) ->
+    | Some st ->
+      let (_, t) = st.it in
       if not (T.sub (T.Tup ts) t) then
         error e.at "return expects type %s but got %s"
           (T.to_string t) (T.to_string (T.Tup ts));
@@ -303,7 +317,14 @@ and check_exp' env e : T.typ =
     (match ts with [t] -> t | _ -> T.Tup ts)
 
   | BlockE ds ->
-    fst (check_decs Full env ds (T.Tup []))
+    let t, env' = check_block Full env ds in
+    let escape = E.Set.inter (T.free t) (E.dom_typ env') in
+    Option.iter (fun y ->
+      error (E.find_typ (y @@ no_region) env').at
+        "class type `%s` escapes scope of its definition in block type %s"
+        y (T.to_string t)
+    ) (E.Set.min_elt_opt escape);
+    t
 
 
 and check_exp_ref env e : T.typ =
@@ -350,7 +371,7 @@ and check_dec' pass env d : T.typ * env =
 
   | LetD (x, e) ->
     let t = if pass = Post then Option.get e.et else check_exp env e in
-    T.Tup [], E.singleton_val x.it (T.LetS, t)
+    T.Tup [], E.singleton_val x (T.LetS, t)
 
   | VarD (x, t, e) ->
     let t' = check_typ env t in
@@ -360,41 +381,40 @@ and check_dec' pass env d : T.typ * env =
         error e.at "variable declaration expects type %s but got %s"
           (T.to_string t') (T.to_string t'')
     end;
-    T.Tup [], E.singleton_val x.it (T.VarS, t')
+    T.Tup [], E.singleton_val x (T.VarS, t')
 
   | TypD (y, ys, t) ->
     let ys' = List.map it ys in
-    let env' = E.extend_typs_abs env ys' in
+    let env' = E.extend_typs_abs env ys in
     let t' = check_typ env' t in
     let con ts = T.subst (T.typ_subst ys' ts) t' in
-    T.Tup [], E.singleton_typ y.it (List.length ys, con)
+    T.Tup [], E.singleton_typ y (List.length ys, con)
 
   | FuncD (x, ys, xts, ts, e) ->
     let ys' = List.map it ys in
-    let env' = E.extend_typs_abs env ys' in
+    let env' = E.extend_typs_abs env ys in
     let ts1 = List.map (check_typ env') (List.map snd xts) in
     let ts2 = List.map (check_typ env') ts in
     let t = T.Func (ys', ts1, ts2) in
     if pass <> Pre then begin
-      let xs1 = List.map it (List.map fst xts) in
-      let env'' = E.extend_val env' x.it (T.FuncS, t) in
-      let env'' = E.extend_vals_let env'' xs1 ts1 in
-      let env'' = E.extend_val_let env'' "return" (T.Tup ts2) in
+      let env'' = E.extend_val env' x (T.FuncS, t) in
+      let env'' = E.extend_vals_let env'' (List.map fst xts) ts1 in
+      let env'' = E.extend_val_let env'' ("return" @@ d.at) (T.Tup ts2) in
       let t' = check_exp env'' e in
       let t2 = match ts2 with [t2] -> t2 | _ -> T.Tup ts2 in
       if not (T.sub t' t2) then
         error e.at "function expects return type %s but got %s"
           (T.to_string t2) (T.to_string t')
     end;
-    T.Tup [], E.singleton_val x.it (T.FuncS, t)
+    T.Tup [], E.singleton_val x (T.FuncS, t)
 
   | ClassD (x, ys, xts, sup_opt, ds) ->
     let k = List.length ys in
     let ys' = List.map it ys in
     let cls = T.empty_class x.it ys' in
     let con ts = T.Inst (cls, ts) in
-    let env' = E.extend_typ env x.it (k, con) in
-    let env' = E.extend_typs_abs env' ys' in
+    let env' = E.extend_typ env x (k, con) in
+    let env' = E.extend_typs_abs env' ys in
     let ts1 = List.map (check_typ env') (List.map snd xts) in
     cls.T.vparams <- ts1;
     Option.iter (fun (x2, ts2, _) ->
@@ -402,65 +422,86 @@ and check_dec' pass env d : T.typ * env =
     let t = T.Class cls in
     if pass <> Pre then begin
       let t_inst = con (List.map T.var ys') in
-      let xs1 = List.map it (List.map fst xts) in
-      let env'' = E.extend_val env' x.it (T.ClassS, t) in
+      let xs1 = List.map fst xts in
+      let env'' = E.extend_val env' x (T.ClassS, t) in
       let env'' = E.extend_vals_let env'' xs1 ts1 in
-      let env'' = E.extend_val env'' "this" (T.ProhibitedS, t_inst) in
-      let obj' =
+      let env'' = E.extend_val env'' ("this" @@ x.at) (T.ProhibitedS, t_inst) in
+      let obj', env''' =
         match sup_opt with
-        | None -> E.Map.empty
+        | None -> E.Map.empty, env''
         | Some (x2, ts2, es2) ->
           match check_exp env'' (NewE (x2, ts2, es2) @@ x2.at) with
-          | T.Inst (cls, _) -> cls.T.def
+          | T.Inst (cls, _) ->
+            cls.T.def,
+            E.Map.fold (fun x (s, t) env ->
+              let s' = if s = T.LetS then s else T.ProhibitedS in
+              E.extend_val env (x @@ x2.at) (s', t)
+            ) cls.T.def env''
           | _ -> assert false
       in
-      let env''' = E.Map.fold (fun x (s, t) env ->
-        Env.extend_val env x ((if s = T.LetS then s else T.ProhibitedS), t)) obj' env'' in
       (* Rebind local vars to shadow parent fields *)
-      let env''' = E.extend_val env''' x.it (T.ClassS, t) in
+      let env''' = E.extend_val env''' x (T.ClassS, t) in
       let env''' = E.extend_vals_let env''' xs1 ts1 in
-      let env''' = E.extend_val env''' "this" (T.ProhibitedS, t_inst) in
-      let _, oenv = check_decs Pre env''' ds (T.Tup []) in
+      let env''' = E.extend_val env''' ("this" @@ x.at) (T.ProhibitedS, t_inst) in
+      let _, oenv = check_block Pre env''' ds in
       cls.T.def <-
-        E.Map.union (fun x (s', t') (s, t) ->
-          if s' <> T.FuncS then
-            error d.at "class overrides parent member `%s` that is not a function" x;
-          if s <> T.FuncS then
-            error d.at "class overrides parent member `%s` with a non-function" x;
-          if not (T.sub t t') then
-            error d.at "class overrides parent member `%s` of type %s with incompatible type %s"
-              x (T.to_string t') (T.to_string t);
-          Some (s, t)
-        ) obj' oenv.E.vals;
-      let env'''' = E.Map.fold (fun x v env -> Env.extend_val env x v) obj' env''' in
+        E.fold_vals (fun x {it = (s, t); _} obj ->
+          (match E.Map.find_opt x obj with
+          | None -> ()
+          | Some (s', t') ->
+            if s' <> T.FuncS then
+              error d.at "class overrides parent member `%s` that is not a function" x;
+            if s <> T.FuncS then
+              error d.at "class overrides parent member `%s` with a non-function" x;
+            if not (T.sub t t') then
+              error d.at "class overrides parent member `%s` of type %s with incompatible type %s"
+                x (T.to_string t') (T.to_string t)
+          );
+          E.Map.add x (s, t) obj
+        ) oenv obj';
+      (* Rebind unprohibited *)
+      let env'''' = E.Map.fold (fun x (s, t) env ->
+        E.extend_val env (x @@ (E.Map.find x env'''.E.vals).at) (s, t)) obj' env''' in
       (* Rebind local vars to shadow parent fields *)
-      let env'''' = E.extend_val env'''' x.it (T.ClassS, t) in
+      let env'''' = E.extend_val env'''' x (T.ClassS, t) in
       let env'''' = E.extend_vals_let env'''' xs1 ts1 in
-      let env'''' = E.extend_val env'''' "this" (T.LetS, t_inst) in
-      ignore (check_decs Post env'''' ds (T.Tup []))
+      let env'''' = E.extend_val env'''' ("this" @@ x.at) (T.LetS, t_inst) in
+      ignore (check_block Post env'''' ds);
+      E.iter_vals (fun x {it = (_, t); _} ->
+        let escape = E.Set.inter (T.free t) (E.dom_typ oenv) in
+        Option.iter (fun y ->
+          error (E.find_typ (y @@ no_region) oenv).at
+            "class type `%s` escapes scope of its definition with field %s : %s"
+            y x (T.to_string t)
+        ) (E.Set.min_elt_opt escape)
+      ) oenv
     end;
     T.Tup [],
-    E.adjoin (E.singleton_typ x.it (k, con)) (E.singleton_val x.it (T.ClassS, t))
+    E.adjoin (E.singleton_typ x (k, con)) (E.singleton_val x (T.ClassS, t))
 
   | ImportD (_xs, _url) ->
     (* TODO *)
     error d.at "imports not implemented yet"
 
-and check_decs pass env ds v : T.typ * env =
+and check_decs pass env ds t : T.typ * env =
   match ds with
-  | [] -> v, E.empty
+  | [] -> t, E.empty
   | d::ds' ->
-    let v', env1 = check_dec pass env d in
+    let t', env1 = check_dec pass env d in
     let env' =
       if pass <> Pre then env1 else
       E.map_vals (fun (s, t) -> (if s = T.LetS then s else T.ProhibitedS), t) env1
     in
-    let v'', env2 = check_decs pass (E.adjoin env env') ds' v' in
-    try v'', E.disjoint_union env1 env2 with E.Clash x ->
+    let t'', env2 = check_decs pass (E.adjoin env env') ds' t' in
+    try t'', E.disjoint_union env1 env2 with E.Clash x ->
       error d.at "duplicate definition for `%s`" x
+
+and check_block pass env ds : T.typ * env =
+  (* TODO: enable recursion among functions and among classes *)
+  check_decs pass env ds (T.Tup [])
 
 
 (* Programs *)
 
 let check_prog env (Prog ds) : T.typ * env =
-  check_decs Full env ds (T.Tup [])
+  check_block Full env ds
