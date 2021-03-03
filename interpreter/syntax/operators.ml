@@ -4,6 +4,54 @@ open Value
 open Ast
 
 
+(* Types *)
+
+let nonull = NonNullable
+let null = Nullable
+
+let i32t = NumType I32Type
+let i64t = NumType I64Type
+let f32t = NumType F32Type
+let f64t = NumType F64Type
+
+let reft n ht = RefType (n, ht)
+
+let anyht = AnyHeapType
+let eqht = EqHeapType
+let i31ht = I31HeapType
+let dataht = DataHeapType
+let funcht = FuncHeapType
+let externht = ExternHeapType
+let defht x = DefHeapType x
+let rttht x no = RttHeapType (x, no)
+
+let i8st = PackedStorageType I8Type
+let i16st = PackedStorageType I16Type
+let valst t = ValueStorageType t
+let i32st = valst i32t
+let i64st = valst i64t
+let f32st = valst f32t
+let f64st = valst f64t
+let const st = FieldType (st, Immutable)
+let var st = FieldType (st, Mutable)
+
+let structt fts = StructDefType (StructType fts)
+let arrayt ft = ArrayDefType (ArrayType ft)
+let funct ts1 ts2 = FuncDefType (FuncType (ts1, ts2))
+
+let voidbt = ValBlockType None
+let valbt t = ValBlockType (Some t)
+let idxbt x = VarBlockType x
+
+let lim x y = {min = x; max = y}
+let tablet lim rt = TableType (lim, rt)
+let memoryt lim = MemoryType lim
+let globalt t = GlobalType (t, Immutable)
+let globalt_mut t = GlobalType (t, Mutable)
+
+
+(* Instructions *)
+
 let i32_const n = Const (I32 n.it @@ n.at)
 let i64_const n = Const (I64 n.it @@ n.at)
 let f32_const n = Const (F32 n.it @@ n.at)

@@ -22,6 +22,7 @@ let handle f : bool =
   | Wasm.Eval.Trap (at, msg) -> error at "runtime trap" msg
   | Wasm.Eval.Exhaustion (at, msg) -> error at "resource exhaustion" msg
   | Wasm.Eval.Crash (at, msg) -> error at "runtime crash" msg
+  | Sys_error msg -> error Source.no_region "i/o error" msg
 
 
 (* Input *)
@@ -74,7 +75,7 @@ let input_stdin f =
 (* Output *)
 
 let write_binary_file file m =
-  let file' = Filename.concat file "wasm" in
+  let file' = file ^ ".wasm" in
   trace ("Encoding (" ^ file' ^ ")...");
   let s = Wasm.Encode.encode m in
   let oc = open_out_bin file' in
@@ -85,7 +86,7 @@ let write_binary_file file m =
   with exn -> close_out oc; raise exn
 
 let write_textual_file file m =
-  let file' = Filename.concat file "wat" in
+  let file' = file ^ ".wat" in
   trace ("Writing (" ^ file' ^ ")...");
   let oc = open_out file' in
   try

@@ -15,6 +15,15 @@ end
 
 let (@@) = Wasm.Source.(@@)
 
+let _f64 = W.F64.of_float
+let i32 = W.I32.of_int_s
+let (+%) = Int32.add
+(*
+let (-%) = Int32.sub
+let ( *%) = Int32.mul
+*)
+let (/%) = Int32.div
+
 
 exception NYI of Source.region * string
 
@@ -43,7 +52,7 @@ let get_entities ents = List.rev (List.map (fun r -> Option.get !r) ents.list)
 let alloc_entity ents : int32 * 'a option ref =
   let idx = ents.cnt in
   let r = ref None in
-  ents.cnt <- Int32.add idx 1l;
+  ents.cnt <- idx +% 1l;
   ents.list <- r :: ents.list;
   idx, r
 
@@ -69,6 +78,8 @@ let make_ctxt () =
   }
 
 
+(* Emitter *)
+
 let emit_type ctxt at type_ : int32 =
   match
     Wasm.Lib.List.index_where (function
@@ -76,7 +87,7 @@ let emit_type ctxt at type_ : int32 =
       | _ -> assert false
     ) ctxt.types.list
   with
-  | Some idx -> Int32.of_int idx
+  | Some idx -> i32 idx
   | None -> emit_entity ctxt.types type_
 
 let emit_export ctxt at name idx descf =
@@ -92,17 +103,22 @@ let emit_data ctxt at s : int32 =
   let dmode = W.Active {index = 0l @@ at; offset} @@ at in
   let seg = W.{dinit = s; dmode} @@ at in
   ignore (emit_entity ctxt.datas seg);
-  ctxt.data_offset := Int32.(add addr (of_int (String.length s)));
+  ctxt.data_offset := addr +% i32 (String.length s);
   addr
 
 let emit_instr ctxt at instr =
   ignore (emit_entity ctxt.instrs (instr @@ at))
 
-let emit_func ctxt at f : int32 =
+let emit_block ctxt at head t f =
+  let ctxt' = {ctxt with instrs = make_entities ()} in
+  f ctxt';
+  emit_instr ctxt at (head W.(ValBlockType t) (get_entities ctxt'.instrs))
+
+let emit_func ctxt at ft f : int32 =
+  let typeidx = emit_type ctxt at (W.FuncDefType ft @@ at) in
   let idx, func = alloc_entity ctxt.funcs in
   let ctxt' = {ctxt with locals = make_entities (); instrs = make_entities ()} in
-  let ft = f ctxt' idx in
-  let typeidx = emit_type ctxt at (W.FuncDefType ft @@ at) in
+  f ctxt' idx;
   define_entity func (
     { W.ftype = typeidx @@ at;
       W.locals = get_entities ctxt'.locals;
@@ -110,7 +126,6 @@ let emit_func ctxt at f : int32 =
     } @@ at
   );
   idx
-
 
 
 (* Mapping types *)
@@ -127,6 +142,11 @@ let compile_typ ctxt at t : W.value_type =
   | T.Func _ -> nyi at "function types"
   | T.Class _ -> nyi at "class types"
 
+let compile_n_typ ctxt at t : W.value_type option =
+  match t with
+  | T.Tup [] -> None
+  | t -> Some (compile_typ ctxt at t)
+
 let default_const ctxt at t : W.const =
   let instr' =
     match t with
@@ -141,13 +161,20 @@ let default_const ctxt at t : W.const =
     | T.Tup ts -> nyi at "tuple results"
   in [instr' @@ at] @@ at
 
+let compile_coerce ctxt at t1 t2 =
+  if T.eq t1 t2 then () else
+  match t1, t2 with
+  | _, T.Tup [] -> emit_instr ctxt at W.(drop)
+  | _ -> nyi at "coercions"
+
 
 (* Expressions *)
 
 let compile_lit ctxt l at =
   match l with
   | NullLit -> ()
-  | BoolLit b -> emit_instr ctxt at W.(i32_const ((if b then 1l else 0l) @@ at))
+  | BoolLit b ->
+    emit_instr ctxt at W.(i32_const ((if b then 1l else 0l) @@ at))
   | IntLit i -> emit_instr ctxt at W.(i32_const (i @@ at))
   | FloatLit z -> emit_instr ctxt at W.(f64_const (W.F64.of_float z @@ at))
   | TextLit t ->
@@ -157,46 +184,54 @@ let compile_lit ctxt l at =
 
 
 let rec compile_exp ctxt e =
-  let emit = List.iter (emit_instr ctxt e.at) in
+  let emit ctxt = List.iter (emit_instr ctxt e.at) in
   match e.it with
   | VarE x -> nyi e.at "variables"
   | LitE l -> compile_lit ctxt l e.at
   | UnE (op, e1) ->
     (match op, Source.et e with
-    | NegOp, T.Int -> emit W.[i32_const (0l @@ e.at)]
+    | NegOp, T.Int -> emit ctxt W.[i32_const (0l @@ e.at)]
     | _ -> ()
     );
     compile_exp ctxt e1;
     (match op, Source.et e with
     | PosOp, T.Int -> ()
     | PosOp, T.Float -> ()
-    | NegOp, T.Int -> emit W.[i32_sub]
-    | NegOp, T.Float -> emit W.[f64_neg]
-    | NotOp, T.Bool -> emit W.[i32_eqz]
+    | NegOp, T.Int -> emit ctxt W.[i32_sub]
+    | NegOp, T.Float -> emit ctxt W.[f64_neg]
+    | NotOp, T.Bool -> emit ctxt W.[i32_eqz]
     | _ -> assert false
     )
 
   | BinE (e1, AndOp, e2) ->
-    compile_exp ctxt e1;
-    nyi e.at "conjunction operator"
+    emit_block ctxt e.at W.block W.(Some i32t) (fun ctxt ->
+      emit ctxt W.[i32_const (0l @@ e1.at)];
+      compile_exp ctxt e1;
+      emit ctxt W.[i32_eqz; br_if (0l @@ e.at); drop];
+      compile_exp ctxt e2;
+    )
 
   | BinE (e1, OrOp, e2) ->
-    compile_exp ctxt e1;
-    nyi e.at "disjunction operator"
+    emit_block ctxt e.at W.block W.(Some i32t) (fun ctxt ->
+      emit ctxt W.[i32_const (1l @@ e1.at)];
+      compile_exp ctxt e1;
+      emit ctxt W.[br_if (0l @@ e.at); drop];
+      compile_exp ctxt e2;
+    )
 
   | BinE (e1, op, e2) ->
     compile_exp ctxt e1;
     compile_exp ctxt e2;
     (match op, Source.et e with
-    | AddOp, T.Int -> emit W.[i32_add]
-    | SubOp, T.Int -> emit W.[i32_sub]
-    | MulOp, T.Int -> emit W.[i32_mul]
-    | DivOp, T.Int -> emit W.[i32_div_s]
-    | ModOp, T.Int -> emit W.[i32_rem_s]
-    | AddOp, T.Float -> emit W.[f64_add]
-    | SubOp, T.Float -> emit W.[f64_sub]
-    | MulOp, T.Float -> emit W.[f64_mul]
-    | DivOp, T.Float -> emit W.[f64_div]
+    | AddOp, T.Int -> emit ctxt W.[i32_add]
+    | SubOp, T.Int -> emit ctxt W.[i32_sub]
+    | MulOp, T.Int -> emit ctxt W.[i32_mul]
+    | DivOp, T.Int -> emit ctxt W.[i32_div_s]
+    | ModOp, T.Int -> emit ctxt W.[i32_rem_s]
+    | AddOp, T.Float -> emit ctxt W.[f64_add]
+    | SubOp, T.Float -> emit ctxt W.[f64_sub]
+    | MulOp, T.Float -> emit ctxt W.[f64_mul]
+    | DivOp, T.Float -> emit ctxt W.[f64_div]
     | CatOp, T.Text -> nyi e.at "concatenation operator"
     | _ -> assert false
     )
@@ -205,20 +240,20 @@ let rec compile_exp ctxt e =
     compile_exp ctxt e1;
     compile_exp ctxt e2;
     (match op, Source.et e1 with
-    | EqOp, (T.Int | T.Byte | T.Bool) -> emit W.[i32_eq]
-    | NeOp, (T.Int | T.Byte | T.Bool) -> emit W.[i32_ne]
-    | LtOp, (T.Int | T.Byte | T.Bool) -> emit W.[i32_lt_s]
-    | GtOp, (T.Int | T.Byte | T.Bool) -> emit W.[i32_gt_s]
-    | LeOp, (T.Int | T.Byte | T.Bool) -> emit W.[i32_le_s]
-    | GeOp, (T.Int | T.Byte | T.Bool) -> emit W.[i32_ge_s]
-    | EqOp, T.Float -> emit W.[f64_eq]
-    | NeOp, T.Float -> emit W.[f64_ne]
-    | LtOp, T.Float -> emit W.[f64_lt]
-    | GtOp, T.Float -> emit W.[f64_gt]
-    | LeOp, T.Float -> emit W.[f64_le]
-    | GeOp, T.Float -> emit W.[f64_ge]
-    | EqOp, (T.Null | T.Obj | T.Array _ | T.Inst _) -> emit W.[ref_eq]
-    | NeOp, (T.Null | T.Obj | T.Array _ | T.Inst _) -> emit W.[ref_eq; i32_eqz]
+    | EqOp, (T.Int | T.Byte | T.Bool) -> emit ctxt W.[i32_eq]
+    | NeOp, (T.Int | T.Byte | T.Bool) -> emit ctxt W.[i32_ne]
+    | LtOp, (T.Int | T.Byte | T.Bool) -> emit ctxt W.[i32_lt_s]
+    | GtOp, (T.Int | T.Byte | T.Bool) -> emit ctxt W.[i32_gt_s]
+    | LeOp, (T.Int | T.Byte | T.Bool) -> emit ctxt W.[i32_le_s]
+    | GeOp, (T.Int | T.Byte | T.Bool) -> emit ctxt W.[i32_ge_s]
+    | EqOp, T.Float -> emit ctxt W.[f64_eq]
+    | NeOp, T.Float -> emit ctxt W.[f64_ne]
+    | LtOp, T.Float -> emit ctxt W.[f64_lt]
+    | GtOp, T.Float -> emit ctxt W.[f64_gt]
+    | LeOp, T.Float -> emit ctxt W.[f64_le]
+    | GeOp, T.Float -> emit ctxt W.[f64_ge]
+    | EqOp, (T.Null | T.Obj | T.Array _ | T.Inst _) -> emit ctxt W.[ref_eq]
+    | NeOp, (T.Null | T.Obj | T.Array _ | T.Inst _) -> emit ctxt W.[ref_eq; i32_eqz]
     | EqOp, T.Text -> nyi e.at "text comparison"
     | NeOp, T.Text -> nyi e.at "text comparison"
     | _ -> assert false
@@ -339,29 +374,29 @@ let rec compile_exp ctxt e =
 
   | AssertE e1 ->
     compile_exp ctxt e1;
-    emit W.[i32_eqz; if_ (ValBlockType None) [unreachable @@ e.at] []]
+    emit ctxt W.[i32_eqz; if_ W.voidbt [unreachable @@ e.at] []]
 
   | IfE (e1, e2, e3) ->
-    nyi e.at "conditionals"
-  (*
-    let v1 = eval_exp env e1 in
-    (match v1 with
-    | V.Bool true -> eval_exp env e2
-    | V.Bool false -> eval_exp env e3
-    | _ -> crash e.at "runtime type error at conditional"
+    let bt = compile_n_typ ctxt e.at (Source.et e) in
+    emit_block ctxt e.at W.block bt (fun ctxt ->
+      emit_block ctxt e.at W.block None (fun ctxt ->
+        compile_exp ctxt e1;
+        emit ctxt W.[i32_eqz; br_if (0l @@ e.at)];
+        compile_exp ctxt e2;
+        emit ctxt W.[br (1l @@ e.at)];
+      );
+      compile_exp ctxt e3;
     )
-  *)
 
   | WhileE (e1, e2) ->
-    nyi e.at "loops"
-  (*
-    let v1 = eval_exp env e1 in
-    (match v1 with
-    | V.Bool true -> ignore (eval_exp env e2); eval_exp env e
-    | V.Bool false -> V.Tup []
-    | _ -> crash e.at "runtime type error at loop"
+    emit_block ctxt e.at W.block None (fun ctxt ->
+      emit_block ctxt e.at W.loop None (fun ctxt ->
+        compile_exp ctxt e1;
+        emit ctxt W.[i32_eqz; br_if (1l @@ e.at)];
+        compile_exp ctxt e2;
+        emit ctxt W.[br (0l @@ e.at)];
+      );
     )
-  *)
 
   | RetE es ->
     nyi e.at "function returns"
@@ -473,7 +508,7 @@ and compile_decs ctxt ds =
   | [d] -> compile_dec ctxt d
   | d::ds' ->
     compile_dec ctxt d;
-    if (Source.et d <> T.Tup []) then emit_instr ctxt d.at W.(drop);
+    compile_coerce ctxt d.at (Source.et d) (T.Tup []);
     compile_decs ctxt ds'
 
 
@@ -491,13 +526,12 @@ let compile_prog p : W.module_ =
   let result_idx = emit_global ctxt p.at W.(GlobalType (t, Mutable)) const in
   let result_name = W.Utf8.decode "return" in
   emit_export ctxt p.at result_name result_idx (fun x -> W.GlobalExport x);
-  let start_idx = emit_func ctxt p.at (fun ctxt _ ->
+  let start_idx = emit_func ctxt p.at W.(FuncType ([], [])) (fun ctxt _ ->
     let emit = emit_instr ctxt p.at in
     emit W.(global_get (result_idx @@ p.at));
     compile_exp ctxt Source.(BlockE ds @@ no_region);
     emit W.(global_set (result_idx @@ p.at));
-    emit W.(return);
-    W.FuncType ([], [])
+    emit W.(return)
   )
   in
   { W.empty_module with
@@ -510,6 +544,6 @@ let compile_prog p : W.module_ =
     W.datas = get_entities ctxt.datas;
     W.memories =
       if !(ctxt.data_offset) = 0l then [] else
-      let sz = Int32.(div (add !(ctxt.data_offset) 0xffffl) 0x10000l) in
+      let sz = (!(ctxt.data_offset) +% 0xffffl) /% 0x10000l in
       [{W.mtype = W.(MemoryType {min = sz; max = Some sz})} @@ p.at]
   } @@ p.at
