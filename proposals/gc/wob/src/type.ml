@@ -60,6 +60,26 @@ and params = function
   | ts -> "(" ^ list to_string ts ^ ")"
 
 
+(* Free variables *)
+
+module Set = Env.Set
+let (++) = Set.union
+
+let list f ts = List.fold_left (++) Set.empty (List.map f ts)
+
+let rec free = function
+  | Var (y, ts) -> Set.singleton y ++ list free ts
+  | Null | Bool | Byte | Int | Float | Text | Obj -> Set.empty
+  | Tup ts -> list free ts
+  | Array t -> free t
+  | Func (ys, ts1, ts2) ->
+    Set.diff (list free ts1 ++ list free ts2) (Set.of_list ys)
+  | Inst (c, ts) -> Set.singleton c.name ++ list free ts
+  | Class c ->
+    Set.singleton c.name ++
+    Set.diff (list free c.vparams ++ free c.sup) (Set.of_list c.tparams)
+
+
 (* Substitutions *)
 
 module Subst = Env.Map
