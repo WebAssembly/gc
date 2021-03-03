@@ -314,7 +314,7 @@ and check_exp' env e : T.typ =
         error e.at "return expects type %s but got %s"
           (T.to_string t') (T.to_string t);
     );
-    t
+    T.Bot
 
   | BlockE ds ->
     let t, env' = check_block Full env ds in

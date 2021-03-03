@@ -1,7 +1,86 @@
-// @FAIL-WASM
+// Accessing global scope
+
+let x = 3; 
+var v : Int = 4; 
+func get_x() : Int { x }; 
+func get_v() : Int { v };
+assert get_x() == 3;
+assert get_v() == 4;
+
+/*
+{
+  func get_x() : Int { x };
+  func get_v() : Int { v };
+  assert get_x() == 3;
+  assert get_v() == 4;
+
+  let y = 5;
+  var w : Int = 6;
+  func get_y() : Int { y };
+  func get_w() : Int { return w };
+  assert get_y() == 5;
+  assert get_w() == 6;
+};
+*/
+
+
+// Locals
+
+func f(x : Int, a : Float, b : Float) : Int {
+  let y = 2*x;
+  var v : Int = y + 1;
+  v := v + 1;
+  assert a*b >= a;
+  return v + x + y;
+};
+
+assert f(0, 1.0, 1.4) == 2;
+assert f(1, 0.0, 1.0) == 7;
+assert f(10, 0.5, 2.4) == 52;
+
+
+// Inner blocks
+
+func g(x : Int, a : Float, b : Float) : Int {
+  let y = 2*x;
+  var v : Int = y + 1;
+  {
+    let y = 3;
+    var v : Int = v;
+    v := v + 1;
+    {
+      let y = 4;
+      assert y == 4;
+      assert a*b >= a;
+      assert v == 2*x + 2;
+    };
+    assert y == 3;
+    assert a*b >= a;
+  };
+  assert y == 2*x;
+  return v + x + y;
+};
+
+assert g(0, 1.0, 1.4) == 1;
+assert g(1, 0.0, 1.0) == 6;
+assert g(10, 0.5, 2.4) == 51;
+
 
 // Recursion
 
 func fac(x : Int) : Int { if x == 0 { 1 } else { x * fac(x-1) } };
 
 assert fac(5) == 120;
+
+func fac2(x : Int) : Int {
+  if x == 0 { return 1 };
+  return x * fac2(x-1)
+};
+
+assert fac2(5) == 120;
+
+
+func fib(n : Int) : Int { if n < 2 { n } else { fib(n-2) + fib(n-1) } };
+assert fib(0) == 0;
+assert fib(1) == 1;
+assert fib(10) == 55;
