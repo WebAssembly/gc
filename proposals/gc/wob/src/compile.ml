@@ -2,6 +2,7 @@ open Source
 open Syntax
 
 module T = Type
+module E = Env
 
 module W =
 struct
@@ -32,6 +33,9 @@ let nyi at s = raise (NYI (at, s))
 
 (* Compilation context *)
 
+type scope = GlobalScope | BlockScope | FuncScope | ClassScope
+type env = (T.sort * int32, int32) E.env
+
 type 'a entities = {mutable list : 'a option ref list; mutable cnt : int32}
 
 type ctxt =
@@ -44,6 +48,7 @@ type ctxt =
     locals : W.local entities;
     instrs : W.instr entities;
     data_offset : int32 ref;
+    envs : (scope * env ref) list;
   }
 
 let make_entities () = {list = []; cnt = 0l}
@@ -75,7 +80,11 @@ let make_ctxt () =
     locals = make_entities ();
     instrs = make_entities ();
     data_offset = ref 0l;
+    envs = [(GlobalScope, ref E.empty)];
   }
+
+let enter_scope ctxt scope =
+  {ctxt with envs = (scope, ref E.empty) :: ctxt.envs}
 
 
 (* Emitter *)
@@ -93,6 +102,9 @@ let emit_type ctxt at type_ : int32 =
 let emit_export ctxt at name idx descf =
   let edesc = descf (idx @@ at) @@ at in
   ignore (emit_entity ctxt.exports W.({name; edesc} @@ at))
+
+let emit_local ctxt at vtype : int32 =
+  emit_entity ctxt.locals (vtype @@ at)
 
 let emit_global ctxt at gtype ginit : int32 =
   emit_entity ctxt.globals (W.{gtype; ginit} @@ at)
@@ -183,11 +195,35 @@ let compile_lit ctxt l at =
     nyi at "text literals"
 
 
+let rec compile_var ctxt x envs =
+  match envs with
+  | [] -> assert false
+  | (scope, env)::envs' ->
+    match E.find_opt_val x !env with
+    | None ->
+      let (scope', _, _) as result = compile_var ctxt x envs' in
+      if scope' <> GlobalScope && scope <> BlockScope then
+        nyi x.at "outer scope variable access";
+      result
+    | Some {it = (s, idx); _} -> scope, s, idx
+
+
 let rec compile_exp ctxt e =
   let emit ctxt = List.iter (emit_instr ctxt e.at) in
   match e.it with
-  | VarE x -> nyi e.at "variables"
-  | LitE l -> compile_lit ctxt l e.at
+  | VarE x ->
+    let scope, s, idx = compile_var ctxt x ctxt.envs in
+    (match scope with
+    | BlockScope | FuncScope ->
+      emit_instr ctxt x.at W.(local_get (idx @@ x.at))
+    | GlobalScope ->
+      emit_instr ctxt x.at W.(global_get (idx @@ x.at))
+    | _ -> nyi x.at "local variable access"
+    )
+
+  | LitE l ->
+    compile_lit ctxt l e.at
+
   | UnE (op, e1) ->
     (match op, Source.et e with
     | NegOp, T.Int -> emit ctxt W.[i32_const (0l @@ e.at)]
@@ -349,13 +385,44 @@ let rec compile_exp ctxt e =
   *)
 
   | AssignE (e1, e2) ->
-    nyi e.at "assignment"
-  (*
-    let r1 = eval_exp_ref env e1 in
-    let v2 = eval_exp env e2 in
-    r1 := v2;
-    V.Tup []
-  *)
+    (match e1.it with
+    | VarE x ->
+      compile_exp ctxt e2;
+      let scope, s, idx = compile_var ctxt x ctxt.envs in
+      (match scope with
+      | BlockScope | FuncScope ->
+        emit_instr ctxt x.at W.(local_set (idx @@ x.at))
+      | GlobalScope ->
+        emit_instr ctxt x.at W.(global_set (idx @@ x.at))
+      | _ -> nyi x.at "local variable assignments"
+      )
+    | IdxE (e1, e2) ->
+      nyi e.at "array assignments"
+    (*
+      let v1 = eval_exp env e1 in
+      let v2 = eval_exp env e2 in
+      (match v1, v2 with
+      | V.Null, _ -> trap e1.at "null reference at array access"
+      | V.Array vs, V.Int i when 0l <= i && i < Wasm.Lib.List32.length vs ->
+        Wasm.Lib.List32.nth vs i
+      | V.Array vs, V.Int i -> trap e.at "array index out of bounds"
+      | _ -> crash e.at "runtime type error at array access"
+      )
+    *)
+    | DotE (e1, x) ->
+      nyi e.at "object field assignments"
+    (*
+      let v1 = eval_exp env e1 in
+      (match v1 with
+      | V.Null -> trap e1.at "null reference at object access"
+      | V.Obj (_, obj) ->
+        (try snd (E.Map.find x.it !obj)
+         with _ -> crash e.at "unknown field `%s`" x.it)
+      | _ -> crash e.at "runtime type error at object access"
+      )
+    *)
+    | _ -> assert false
+    )
 
   | AnnotE (e1, _t) ->
     compile_exp ctxt e1
@@ -406,37 +473,44 @@ let rec compile_exp ctxt e =
   *)
 
   | BlockE ds ->
-    compile_block ctxt ds
+    compile_block ctxt BlockScope ds
 
 
 (* Declarations *)
 
 and compile_dec ctxt d =
-  let _emit = List.iter (emit_instr ctxt d.at) in
+  let emit ctxt = List.iter (emit_instr ctxt d.at) in
   match d.it with
   | ExpD e ->
     compile_exp ctxt e
 
-  | LetD (x, e) ->
-    nyi d.at "let definitions"
-  (*
-    let v = if pass = Post then eval_exp env (this x) else eval_exp env e in
-    V.Tup [], E.singleton_val x (T.LetS, v)
-  *)
+  | LetD (x, e) | VarD (x, _, e) ->
+    let scope, env = List.hd ctxt.envs in
+    let t = compile_typ ctxt x.at (Source.et e) in
+    compile_exp ctxt e;
+    let idx =
+      match scope with
+      | BlockScope | FuncScope ->
+        let idx = emit_local ctxt x.at t in
+        emit ctxt W.[local_set (idx @@ d.at)];
+        idx
 
-  | VarD (x, t, e) ->
-    nyi d.at "variable definitions"
-  (*
-    let t' = eval_typ env t in
-    let v = if pass = Pre then V.default t' else eval_exp env e in
-    V.Tup [], E.singleton_val x (T.VarS, v)
-  *)
+      | GlobalScope ->
+        let const = default_const ctxt x.at (Source.et e) in
+        let idx = emit_global ctxt x.at W.(GlobalType (t, Mutable)) const in
+        emit ctxt W.[global_set (idx @@ d.at)];
+        idx
+
+      | ClassScope -> nyi d.at "class field definitions"
+    in
+    let s = match d.it with VarD _ -> T.VarS | _ -> T.LetS in
+    env := E.extend_val !env x (s, idx)
 
   | TypD (_y, _ys, _t) ->
     ()
 
-  | FuncD (x, ys, xts, _ts, e) ->
-    nyi d.at "function definitions"
+  | FuncD (x, ys, xts, t, e) ->
+    nyi d.at "function definitions";
   (*
     let xs = List.map fst xts in
     let rec f ts vs =
@@ -512,8 +586,8 @@ and compile_decs ctxt ds =
     compile_decs ctxt ds'
 
 
-and compile_block ctxt ds =
-  compile_decs ctxt ds
+and compile_block ctxt scope ds =
+  compile_decs (enter_scope ctxt scope) ds
 
 
 (* Programs *)
@@ -529,7 +603,7 @@ let compile_prog p : W.module_ =
   let start_idx = emit_func ctxt p.at W.(FuncType ([], [])) (fun ctxt _ ->
     let emit = emit_instr ctxt p.at in
     emit W.(global_get (result_idx @@ p.at));
-    compile_exp ctxt Source.(BlockE ds @@ no_region);
+    compile_decs ctxt ds;
     emit W.(global_set (result_idx @@ p.at));
     emit W.(return)
   )

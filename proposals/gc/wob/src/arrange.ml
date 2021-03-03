@@ -30,8 +30,8 @@ let rec typ t = match t.it with
   | ObjT -> Atom "ObjT"
   | TupT ts -> "TupT" $$ list typ ts
   | ArrayT t -> "ArrayT" $$ [typ t]
-  | FuncT (ys, ts1, ts2) ->
-    "FuncT" $$ list var ys @ ["param" $$ list typ ts1; "result" $$ list typ ts2]
+  | FuncT (ys, ts1, t2) ->
+    "FuncT" $$ list var ys @ ["param" $$ list typ ts1; typ t2]
 
 
 (* Expressions *)
@@ -87,7 +87,7 @@ let rec exp e = match e.it with
   | AssertE e1 -> "AssertE" $$ [exp e1]
   | IfE (e1, e2, e3) -> "IfE" $$ [exp e1; exp e2; exp e3]
   | WhileE (e1, e2) -> "WhileE" $$ [exp e1; exp e2]
-  | RetE es -> "RetE" $$ list exp es
+  | RetE e -> "RetE" $$ [exp e]
   | BlockE ds -> "BlockE" $$ list dec ds
 
 
@@ -98,13 +98,13 @@ and dec d = match d.it with
   | LetD (x, e) -> "LetD" $$ [var x; exp e]
   | VarD (x, t, e) -> "VarD" $$ [var x; typ t; exp e]
   | TypD (y, ys, t) -> "TypD" $$ [var y] @ list var ys @ [typ t]
-  | FuncD (x, ys, ps, ts, e) ->
+  | FuncD (x, ys, xts, t, e) ->
     "FuncD" $$ [var x] @ ["gen" $$ list var ys] @
-      ["param" $$ flatlist (fun (x, t) -> [var x; typ t]) ps] @
-      list typ ts @ [exp e]
-  | ClassD (x, ys, ps, so, ds) ->
+      ["param" $$ flatlist (fun (x, t) -> [var x; typ t]) xts] @
+      [typ t; exp e]
+  | ClassD (x, ys, xts, so, ds) ->
     "ClassD" $$ [var x] @ ["gen" $$ list var ys] @
-      ["param" $$ flatlist (fun (x, t) -> [var x; typ t]) ps] @
+      ["param" $$ flatlist (fun (x, t) -> [var x; typ t]) pxts] @
       opt (fun (y, ts, es) -> "sub" $$ [var y] @ list typ ts @ list exp es) so @
       list dec ds
   | ImportD (xs, url) -> "ImportD" $$ list var xs @ [Atom (string url)]

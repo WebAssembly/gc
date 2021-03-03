@@ -118,8 +118,8 @@ typ_post :
 
 typ :
   | typ_post { $1 }
-  | typ_param ARROW typ_param { FuncT ([], $1, $3) @@ at () }
-  | LT var_list GT typ_tup ARROW typ_param {
+  | typ_param ARROW typ { FuncT ([], $1, $3) @@ at () }
+  | LT var_list GT typ_tup ARROW typ {
       FuncT ($2, (match $4.it with TupT ts -> ts | _ -> [$4]), $6) @@ at ()
     }
 
@@ -201,19 +201,19 @@ exp_bin :
 
 exp :
   | exp_bin { $1 }
-  | RETURN %prec RETURN_NO_ARG { RetE [] @@ at () }
-  | RETURN exp_bin { RetE (match $2.it with TupE es -> es | _ -> [$2]) @@ at () }
+  | RETURN %prec RETURN_NO_ARG { RetE (TupE [] @@ at ()) @@ at () }
+  | RETURN exp_bin { RetE $2 @@ at () }
   | ASSERT exp_bin { AssertE $2 @@ at () }
   | IF exp_bin exp_block %prec IF_NO_ELSE { IfE ($2, $3, TupE [] @@ at ()) @@ at () }
   | IF exp_bin exp_block ELSE exp_block { IfE ($2, $3, $5) @@ at () }
   | WHILE exp_bin exp_block { WhileE ($2, $3) @@ at () }
   | FUNC gen_opt LPAR param_list RPAR exp {
       BlockE [
-        FuncD ("it" @@ at (), $2, $4, [], $6) @@ at ();
+        FuncD ("it" @@ at (), $2, $4, TupT [] @@ ati 1, $6) @@ at ();
         ExpD (VarE ("it" @@ at ()) @@ at ()) @@ at ();
       ] @@ at ()
     }
-  | FUNC gen_opt LPAR param_list RPAR COLON typ_param exp_block {
+  | FUNC gen_opt LPAR param_list RPAR COLON typ exp_block {
       BlockE [
         FuncD ("it" @@ at (), $2, $4, $7, $8) @@ at ();
         ExpD (VarE ("it" @@ at ()) @@ at ()) @@ at ();
@@ -259,9 +259,9 @@ dec :
   | TYPE var EQ typ { TypD ($2, [], $4) @@ at () }
   | TYPE var LT var_list GT EQ typ { TypD ($2, $4, $7) @@ at () }
   | FUNC var gen_opt LPAR param_list RPAR exp_block {
-      FuncD ($2, $3, $5, [], $7) @@ at ()
+      FuncD ($2, $3, $5, TupT [] @@ ati 1, $7) @@ at ()
     }
-  | FUNC var gen_opt LPAR param_list RPAR COLON typ_param exp_block {
+  | FUNC var gen_opt LPAR param_list RPAR COLON typ exp_block {
       FuncD ($2, $3, $5, $8, $9) @@ at ()
     }
   | CLASS var gen_opt LPAR param_list RPAR sup_opt LCURLY dec_list RCURLY {

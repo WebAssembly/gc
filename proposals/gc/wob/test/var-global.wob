@@ -1,0 +1,27 @@
+// Global let bindings
+
+let x = 45;
+let y = 25;
+assert x + y == 70;
+
+
+// Global var bindings
+
+var v : Int = 50;
+assert v == 50;
+
+v := 5;
+assert v == 5;
+
+
+// In loops
+
+let n = 20;
+var i : Int = 0;
+var sum : Int = 0;
+while (i < n) {
+  sum := sum + i;
+  i := i + 1;
+};
+
+sum;
