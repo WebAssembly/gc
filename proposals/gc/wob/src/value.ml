@@ -40,7 +40,7 @@ let rec eq v1 v2 =
 (* Default *)
 
 let rec default = function
-  | Type.Var _ -> assert false
+  | Type.(Var _ | Bot) -> assert false
   | Type.(Null | Obj | Array _ | Func _ | Inst _ | Class _) -> Null
   | Type.Bool -> Bool false
   | Type.Byte -> Byte '\x00'

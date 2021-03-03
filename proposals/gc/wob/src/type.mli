@@ -6,6 +6,7 @@ type sort = LetS | VarS | FuncS | ClassS | ProhibitedS
 
 type typ =
   | Var of var * typ list
+  | Bot
   | Null
   | Bool
   | Byte
