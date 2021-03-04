@@ -127,28 +127,41 @@ rule token = parse
   | "->" { ARROW }
   | ":=" { ASSIGN }
 
-  | "==" { EQOP }
-  | "!=" { NEOP }
-  | "<=" { LEOP }
-  | ">=" { GEOP }
-  | space"<"space { LTOP }
-  | space">"space { GTOP }
-  | space"<\n" { Lexing.new_line lexbuf; LTOP }
-  | space">\n" { Lexing.new_line lexbuf; GTOP }
-  | "\n<"space { Lexing.new_line lexbuf; LTOP }
-  | "\n>"space { Lexing.new_line lexbuf; GTOP }
-  | "\n<\n" { Lexing.new_line lexbuf; Lexing.new_line lexbuf; LTOP }
-  | "\n>\n" { Lexing.new_line lexbuf; Lexing.new_line lexbuf; GTOP }
-
   | "+" { ADDOP }
   | "-" { SUBOP }
   | "*" { MULOP }
   | "/" { DIVOP }
   | "%" { MODOP }
-  | "&&" { ANDOP }
-  | "||" { OROP }
-  | "!" { NOTOP }
+  | "&" { ANDOP }
+  | "|" { OROP }
+  | "^" { XOROP }
   | "#" { CATOP }
+
+  | "==" { EQOP }
+  | "!=" { NEOP }
+  | "<=" { LEOP }
+  | ">=" { GEOP }
+
+  | space"<"space { LTOP }
+  | space">"space { GTOP }
+  | space"<<"space { SHLOP }
+  | space">>"space { SHROP }
+  | space"<\n" { Lexing.new_line lexbuf; LTOP }
+  | space">\n" { Lexing.new_line lexbuf; GTOP }
+  | space"<<\n" { Lexing.new_line lexbuf; SHLOP }
+  | space">>\n" { Lexing.new_line lexbuf; SHROP }
+  | "\n<"space { Lexing.new_line lexbuf; LTOP }
+  | "\n>"space { Lexing.new_line lexbuf; GTOP }
+  | "\n<<"space { Lexing.new_line lexbuf; SHLOP }
+  | "\n>>"space { Lexing.new_line lexbuf; SHROP }
+  | "\n<\n" { Lexing.new_line lexbuf; Lexing.new_line lexbuf; LTOP }
+  | "\n>\n" { Lexing.new_line lexbuf; Lexing.new_line lexbuf; GTOP }
+  | "\n<<\n" { Lexing.new_line lexbuf; Lexing.new_line lexbuf; SHLOP }
+  | "\n>>\n" { Lexing.new_line lexbuf; Lexing.new_line lexbuf; SHROP }
+
+  | "&&" { ANDTHENOP }
+  | "||" { ORELSEOP }
+  | "!" { NOTOP }
 
   | nat as s { NAT s }
   | float as s { FLOAT s }

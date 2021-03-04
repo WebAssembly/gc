@@ -116,7 +116,7 @@ and check_exp' env e : T.typ =
   | UnE (op, e1) ->
     let t1 = check_exp env e1 in
     (match op, t1 with
-    | (PosOp | NegOp), T.Int -> T.Int
+    | (PosOp | NegOp | InvOp), T.Int -> T.Int
     | (PosOp | NegOp), T.Float -> T.Float
     | NotOp, T.Bool -> T.Bool
     | _ ->
@@ -132,10 +132,11 @@ and check_exp' env e : T.typ =
         (T.to_string t1) (T.to_string t2)
     in
     (match op, t with
-    | (AddOp | SubOp | MulOp | DivOp | ModOp), T.Int -> T.Int
-    | (AddOp | SubOp | MulOp | DivOp), T.Float -> T.Float
-    | (AndOp | OrOp), T.Bool -> T.Bool
-    | CatOp, T.Text -> T.Text
+    | (AddOp | SubOp | MulOp | DivOp | ModOp), T.Int
+    | (AndOp | OrOp | XorOp | ShlOp | ShrOp), T.Int -> t
+    | (AddOp | SubOp | MulOp | DivOp), T.Float -> t
+    | (AndThenOp | OrElseOp), T.Bool -> t
+    | CatOp, T.Text -> t
     | _ ->
       error e.at "binary operator not defined for types %s and %s"
         (T.to_string t1) (T.to_string t2)
@@ -502,28 +503,6 @@ and check_block pass env ds : T.typ * env =
 
 
 (* Programs *)
-
-let pre_pos = {file = "predefined"; line = 0; column = 0}
-let pre_region = {left = pre_pos; right = pre_pos}
-let pre f = List.fold_left (fun env (x, v) -> f env (x @@ pre_region) v) E.empty
-
-let initial_typ_env = pre E.extend_typ_gnd
-  [ "Bool", T.Bool;
-    "Byte", T.Byte;
-    "Int", T.Int;
-    "Float", T.Float;
-    "Text", T.Text;
-    "Object", T.Obj;
-  ]
-
-let initial_val_env = pre E.extend_val_let
-  [ "null", T.Null;
-    "true", T.Bool;
-    "false", T.Bool;
-    "nan", T.Float;
-  ]
-
-let initial_env = E.adjoin initial_typ_env initial_val_env
 
 let check_prog env p : T.typ * env =
   assert (p.et = None);
