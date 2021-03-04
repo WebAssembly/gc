@@ -29,9 +29,14 @@ and cls =
   }
 
 
-(* Types *)
+(* Constructors *)
 
 val var : var -> typ
+
+val as_array : typ -> typ (* raises Failure *)
+
+
+(* Operations *)
 
 val eq : typ -> typ -> bool
 val sub : typ -> typ -> bool
