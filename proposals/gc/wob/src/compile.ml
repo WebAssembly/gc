@@ -248,12 +248,13 @@ let rec compile_exp ctxt e =
   match e.it with
   | VarE x ->
     let scope, s, idx = compile_var ctxt x ctxt.envs in
+    if s <> T.LetS && s <> T.VarS then nyi x.at "closures";
     (match scope with
     | BlockScope | FuncScope ->
       emit_instr ctxt x.at W.(local_get (idx @@ x.at))
     | GlobalScope ->
       emit_instr ctxt x.at W.(global_get (idx @@ x.at))
-    | _ -> nyi x.at "local variable access"
+    | _ -> nyi x.at "class scope"
     );
     compile_coerce_block_type ctxt e.at (Source.et e)
 
