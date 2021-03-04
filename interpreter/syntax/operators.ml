@@ -25,8 +25,8 @@ let externht = ExternHeapType
 let defht x = DefHeapType x
 let rttht x no = RttHeapType (x, no)
 
-let i8st = PackedStorageType I8Type
-let i16st = PackedStorageType I16Type
+let i8st = PackedStorageType Pack8
+let i16st = PackedStorageType Pack16
 let valst t = ValueStorageType t
 let i32st = valst i32t
 let i64st = valst i64t

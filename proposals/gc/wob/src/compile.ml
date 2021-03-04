@@ -156,7 +156,8 @@ let rec lower_value_type ctxt at t : W.value_type =
 
 and lower_heap_type ctxt at t : W.heap_type =
   match t with
-  | T.Var _ | T.Null -> W.AnyHeapType
+  | T.Var _ -> W.AnyHeapType
+  | T.Null -> W.EqHeapType
   | T.Obj -> W.DataHeapType
   | t -> W.(DefHeapType (SynVar (lower_var_type ctxt at t)))
 
@@ -170,11 +171,11 @@ and lower_var_type ctxt at t : int32 =
     emit_type ctxt at W.(ArrayDefType (ArrayType ft) @@ at)
   | T.Func _ -> nyi at "function types"
   | T.Class _ -> nyi at "class types"
-  | _ -> assert false
+  | _ -> Printf.printf "[lower_var %s]\n%!" (T.to_string t);assert false
 
 and lower_storage_type ctxt at t : W.storage_type =
   match t with
-  | T.Bool | T.Byte | T.Tup [] | T.Bot -> W.(PackedStorageType I8Type)
+  | T.Bool | T.Byte | T.Tup [] | T.Bot -> W.(PackedStorageType Pack8)
   | t -> W.(ValueStorageType (lower_value_type ctxt at t))
 
 let lower_block_type ctxt at t : W.value_type option =
@@ -355,7 +356,7 @@ let rec compile_exp ctxt e =
       array_new_default (typeidx @@ e.at);
     ];
     let tmpidx =
-      if List.length es <= 1 then 0l else begin
+      if List.length es = 0 then 0l else begin
         let t' = W.(RefType (Nullable, DefHeapType (SynVar typeidx))) in
         let tmpidx = emit_local ctxt e.at t' in
         emit ctxt W.[local_tee (tmpidx @@ e.at)];
@@ -363,8 +364,8 @@ let rec compile_exp ctxt e =
       end
     in
     List.iteri (fun i eI ->
-      if i > 0 then emit ctxt W.[local_get (tmpidx @@ e.at)];
-      emit ctxt W.[i32_const (i32 (List.length es) @@ e.at)];
+      emit ctxt W.[local_get (tmpidx @@ e.at)];
+      emit ctxt W.[i32_const (i32 i @@ e.at)];
       compile_exp ctxt eI;
       emit ctxt W.[array_set (typeidx @@ e.at)];
     ) es
@@ -419,15 +420,17 @@ let rec compile_exp ctxt e =
   *)
 
   | NewArrayE (_t, e1, e2) ->
-    nyi e.at "array construction"
-  (*
-    let v1 = eval_exp env e1 in
-    let v2 = eval_exp env e2 in
-    (match v1 with
-    | V.Int i -> V.Array (List.init (Int32.to_int i) (fun _ -> ref v2))
-    | _ -> crash e.at "runtime type error at array instantiation"
-    )
-  *)
+    let typeidx = lower_var_type ctxt e.at (Source.et e) in
+    let t' = lower_value_type ctxt e1.at (Source.et e1) in
+    let tmpidx = emit_local ctxt e1.at t' in
+    compile_exp ctxt e1;
+    emit ctxt W.[local_set (tmpidx @@ e1.at)];
+    compile_exp ctxt e2;
+    emit ctxt W.[
+      local_get (tmpidx @@ e1.at);
+      rtt_canon (typeidx @@ e.at);
+      array_new (typeidx @@ e.at);
+    ]
 
   | DotE (e1, x) ->
     nyi e.at "object access"
@@ -454,20 +457,15 @@ let rec compile_exp ctxt e =
         emit_instr ctxt x.at W.(global_set (idx @@ x.at))
       | _ -> nyi x.at "local variable assignments"
       )
-    | IdxE (e1, e2) ->
-      nyi e.at "array assignments"
-    (*
-      let v1 = eval_exp env e1 in
-      let v2 = eval_exp env e2 in
-      (match v1, v2 with
-      | V.Null, _ -> trap e1.at "null reference at array access"
-      | V.Array vs, V.Int i when 0l <= i && i < Wasm.Lib.List32.length vs ->
-        Wasm.Lib.List32.nth vs i
-      | V.Array vs, V.Int i -> trap e.at "array index out of bounds"
-      | _ -> crash e.at "runtime type error at array access"
-      )
-    *)
-    | DotE (e1, x) ->
+
+    | IdxE (e11, e12) ->
+      let typeidx = lower_var_type ctxt e.at (Source.et e11) in
+      compile_exp ctxt e11;
+      compile_exp ctxt e12;
+      compile_exp ctxt e2;
+      emit ctxt W.[array_set (typeidx @@ e.at)]
+
+    | DotE (e11, x) ->
       nyi e.at "object field assignments"
     (*
       let v1 = eval_exp env e1 in
