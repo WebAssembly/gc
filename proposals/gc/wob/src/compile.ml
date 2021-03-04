@@ -148,28 +148,40 @@ let emit_func ctxt at ft f : int32 =
 
 (* Lowering types *)
 
-let lower_heap_type ctxt at t : W.heap_type =
+let rec lower_value_type ctxt at t : W.value_type =
+  match t with
+  | T.Bool | T.Byte | T.Int | T.Tup [] | T.Bot -> W.(NumType I32Type)
+  | T.Float -> W.(NumType F64Type)
+  | t -> W.(RefType (Nullable, lower_heap_type ctxt at t))
+
+and lower_heap_type ctxt at t : W.heap_type =
   match t with
   | T.Var _ | T.Null -> W.AnyHeapType
   | T.Obj -> W.DataHeapType
+  | t -> W.(DefHeapType (SynVar (lower_var_type ctxt at t)))
+
+and lower_var_type ctxt at t : int32 =
+  match t with
   | T.Inst _ -> nyi at "instance types"
-  | T.Array t -> nyi at "array types"
+  | T.Text -> nyi at "text types"
+  | T.Tup ts -> nyi at "tuple types"
+  | T.Array t1 -> 
+    let ft = W.FieldType (lower_storage_type ctxt at t1, W.Mutable) in
+    emit_type ctxt at W.(ArrayDefType (ArrayType ft) @@ at)
   | T.Func _ -> nyi at "function types"
   | T.Class _ -> nyi at "class types"
   | _ -> assert false
 
-let lower_value_type ctxt at t : W.value_type =
+and lower_storage_type ctxt at t : W.storage_type =
   match t with
-  | T.Bool | T.Byte | T.Int | T.Tup [] | T.Bot -> W.(NumType I32Type)
-  | T.Float -> W.(NumType F64Type)
-  | T.Text -> nyi at "text types"
-  | T.Tup ts -> nyi at "tuple types"
-  | t -> W.(RefType (Nullable, lower_heap_type ctxt at t))
+  | T.Bool | T.Byte | T.Tup [] | T.Bot -> W.(PackedStorageType I8Type)
+  | t -> W.(ValueStorageType (lower_value_type ctxt at t))
 
 let lower_block_type ctxt at t : W.value_type option =
   match t with
   | T.Tup [] -> None
   | t -> Some (lower_value_type ctxt at t)
+
 
 let default_const ctxt at t : W.const =
   let instr' =
@@ -336,28 +348,38 @@ let rec compile_exp ctxt e =
   *)
 
   | ArrayE es ->
-    nyi e.at "array construction"
-  (*
-    let vs = List.map (eval_exp env) es in
-    V.Array (List.map ref vs)
-  *)
+    let typeidx = lower_var_type ctxt e.at (Source.et e) in
+    emit ctxt W.[
+      i32_const (i32 (List.length es) @@ e.at);
+      rtt_canon (typeidx @@ e.at);
+      array_new_default (typeidx @@ e.at);
+    ];
+    let tmpidx =
+      if List.length es <= 1 then 0l else begin
+        let t' = W.(RefType (Nullable, DefHeapType (SynVar typeidx))) in
+        let tmpidx = emit_local ctxt e.at t' in
+        emit ctxt W.[local_tee (tmpidx @@ e.at)];
+        tmpidx
+      end
+    in
+    List.iteri (fun i eI ->
+      if i > 0 then emit ctxt W.[local_get (tmpidx @@ e.at)];
+      emit ctxt W.[i32_const (i32 (List.length es) @@ e.at)];
+      compile_exp ctxt eI;
+      emit ctxt W.[array_set (typeidx @@ e.at)];
+    ) es
 
   | IdxE (e1, e2) ->
-    nyi e.at "array indexing"
-  (*
-    let v1 = eval_exp env e1 in
-    let v2 = eval_exp env e2 in
-    (match v1, v2 with
-    | V.Null, _ -> trap e1.at "null reference at array access"
-    | V.Array vs, V.Int i when 0l <= i && i < Int32.of_int (List.length vs) ->
-      !(List.nth vs (Int32.to_int i))
-    | V.Array vs, V.Int i -> trap e.at "array index out of bounds"
-    | V.Text t, V.Int i when 0l <= i && i < Int32.of_int (String.length t) ->
-      V.Byte t.[Int32.to_int i]
-    | V.Text t, V.Int i -> trap e.at "text index out of bounds"
-    | _ -> crash e.at "runtime type error at array access"
-    )
-  *)
+    let typeidx = lower_var_type ctxt e.at (Source.et e1) in
+    compile_exp ctxt e1;
+    compile_exp ctxt e2;
+    let array_get_sxopt =
+      match T.as_array (Source.et e1) with
+      | T.Var _ -> nyi e.at "generic array indexing"
+      | T.Bool | T.Byte | T.Tup [] | T.Bot -> W.array_get_u
+      | _ -> W.array_get
+    in
+    emit ctxt [array_get_sxopt (typeidx @@ e.at)]
 
   | CallE (e1, ts, es) ->
     if ts <> [] then nyi e.at "generic function calls";
