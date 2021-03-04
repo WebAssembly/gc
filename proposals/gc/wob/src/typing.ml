@@ -29,7 +29,8 @@ struct
       error y.at "type binding for `%s` shadows previous binding at %s"
         y.it (Source.string_of_region kc.at)
 
-  let extend_typ_abs env y = extend_typ env y (0, fun _ -> T.var y.it)
+  let extend_typ_gnd env y t = extend_typ env y (0, fun _ -> t)
+  let extend_typ_abs env y = extend_typ_gnd env y (T.var y.it)
   let extend_typs_abs env ys = List.fold_left extend_typ_abs env ys
 
   let adjoin env1 env2 =
@@ -501,6 +502,28 @@ and check_block pass env ds : T.typ * env =
 
 
 (* Programs *)
+
+let pre_pos = {file = "predefined"; line = 0; column = 0}
+let pre_region = {left = pre_pos; right = pre_pos}
+let pre f = List.fold_left (fun env (x, v) -> f env (x @@ pre_region) v) E.empty
+
+let initial_typ_env = pre E.extend_typ_gnd
+  [ "Bool", T.Bool;
+    "Byte", T.Byte;
+    "Int", T.Int;
+    "Float", T.Float;
+    "Text", T.Text;
+    "Object", T.Obj;
+  ]
+
+let initial_val_env = pre E.extend_val_let
+  [ "null", T.Null;
+    "true", T.Bool;
+    "false", T.Bool;
+    "nan", T.Float;
+  ]
+
+let initial_env = E.adjoin initial_typ_env initial_val_env
 
 let check_prog env p : T.typ * env =
   assert (p.et = None);
