@@ -1,0 +1,51 @@
+// Literals
+
+let t0 = ();
+let t2 = (1, 2);
+let tn = (true, null, (), 3.1, (0, true, 1.2), 12, ());
+
+
+// Projection
+
+assert t2.0 == 1;
+assert t2.1 == 2;
+
+assert tn.0;
+assert tn.1 == null;
+assert tn.3 == 3.1;
+assert tn.4.2 == 1.2;
+assert tn.5 == 12;
+
+
+// Empty tuple
+
+let u = ();
+let u2 = () : ();
+var v : () = ();
+let au = [(), ()];
+let tu = (3, (), 5);
+func f() {};
+func g() { 4; () };
+let b = {};
+let b2 = { 4; () };
+let c = if false {} else { () };
+let w = while false { 4 };
+
+v := ();
+v := u;
+au[1] := ();
+au[1] := u;
+
+func h(x : Int, y : (), z : Int) : Int { return x + z };
+assert h(1, (), 2) == 3;
+assert h(1, u, 2) == 3;
+assert h(1, u2, 2) == 3;
+assert h(1, v, 2) == 3;
+assert h(1, au[1], 2) == 3;
+assert h(1, tu.1, 2) == 3;
+assert h(1, f(), 2) == 3;
+assert h(1, g(), 2) == 3;
+assert h(1, b, 2) == 3;
+assert h(1, b2, 2) == 3;
+assert h(1, c, 2) == 3;
+assert h(1, w, 2) == 3;

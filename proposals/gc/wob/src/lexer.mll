@@ -118,6 +118,7 @@ rule token = parse
   | "," { COMMA }
   | ":" { COLON }
   | "." { DOT }
+  | "."(num as s) { DOT_NUM s }
 
   | "=" { EQ }
   | "<" { LT }

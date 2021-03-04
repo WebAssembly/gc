@@ -132,7 +132,8 @@ let emit_block ctxt at head t' f =
   f ctxt';
   emit_instr ctxt at (head W.(ValBlockType t') (get_entities ctxt'.instrs))
 
-let emit_func ctxt at ft f : int32 =
+let emit_func ctxt at ts1' ts2' f : int32 =
+  let ft = W.(FuncType (ts1', ts2')) in
   let typeidx = emit_type ctxt at (W.FuncDefType ft @@ at) in
   let idx, func = alloc_entity ctxt.funcs in
   let ctxt' = {ctxt with locals = make_entities (); instrs = make_entities ()} in
@@ -165,13 +166,16 @@ and lower_var_type ctxt at t : int32 =
   match t with
   | T.Inst _ -> nyi at "instance types"
   | T.Text -> nyi at "text types"
-  | T.Tup ts -> nyi at "tuple types"
+  | T.Tup ts ->
+    let fts = List.map (fun tI ->
+      W.(FieldType (lower_storage_type ctxt at tI, Immutable))) ts in
+    emit_type ctxt at W.(StructDefType (StructType fts) @@ at)
   | T.Array t1 -> 
-    let ft = W.FieldType (lower_storage_type ctxt at t1, W.Mutable) in
+    let ft = W.(FieldType (lower_storage_type ctxt at t1, Mutable)) in
     emit_type ctxt at W.(ArrayDefType (ArrayType ft) @@ at)
   | T.Func _ -> nyi at "function types"
   | T.Class _ -> nyi at "class types"
-  | _ -> Printf.printf "[lower_var %s]\n%!" (T.to_string t);assert false
+  | _ -> assert false
 
 and lower_storage_type ctxt at t : W.storage_type =
   match t with
@@ -183,24 +187,29 @@ let lower_block_type ctxt at t : W.value_type option =
   | T.Tup [] -> None
   | t -> Some (lower_value_type ctxt at t)
 
+let lower_stack_type ctxt at t : W.value_type list =
+  Option.to_list (lower_block_type ctxt at t)
+
 
 let default_const ctxt at t : W.const =
   let instr' =
     match t with
-    | T.Var _ | T.Null | T.Obj | T.Inst _ | T.Array _ | T.Func _ | T.Class _ ->
-      W.(ref_null (lower_heap_type ctxt at t))
     | T.Bool | T.Byte | T.Int | T.Tup [] | T.Bot -> W.(i32_const (0l @@ at))
     | T.Float -> W.(f64_const (W.F64.of_float 0.0 @@ at))
-    | T.Text -> nyi at "text results"
-    | T.Tup ts -> nyi at "tuple results"
+    | T.Var _ | T.Null | T.Text | T.Obj | T.Tup _
+    | T.Inst _ | T.Array _ | T.Func _ | T.Class _ ->
+      W.(ref_null (lower_heap_type ctxt at t))
   in [instr' @@ at] @@ at
 
-let compile_coerce ctxt at t1 t2 =
-  if T.eq t1 t2 then () else
-  match t1, t2 with
-  | T.Bot, _ -> ()
-  | _, T.Tup [] -> emit_instr ctxt at W.(drop)
-  | _ -> nyi at "coercions"
+let compile_coerce_block_type ctxt at t =
+  match t with
+  | T.Tup [] -> emit_instr ctxt at W.(drop)
+  | _ -> ()
+
+let compile_coerce_value_type ctxt at t =
+  match t with
+  | T.Tup [] -> emit_instr ctxt at W.(i32_const (0l @@ at))
+  | _ -> ()
 
 
 (* Expressions *)
@@ -245,7 +254,8 @@ let rec compile_exp ctxt e =
     | GlobalScope ->
       emit_instr ctxt x.at W.(global_get (idx @@ x.at))
     | _ -> nyi x.at "local variable access"
-    )
+    );
+    compile_coerce_block_type ctxt e.at (Source.et e)
 
   | LitE l ->
     compile_lit ctxt l e.at
@@ -332,21 +342,24 @@ let rec compile_exp ctxt e =
     ()
 
   | TupE es ->
-    nyi e.at "tuple construction"
-  (*
-    let vs = List.map (eval_exp env) es in
-    V.Tup vs
-  *)
+    let typeidx = lower_var_type ctxt e.at (Source.et e) in
+    List.iter (fun eI ->
+      compile_exp ctxt eI;
+      compile_coerce_value_type ctxt eI.at (Source.et eI);
+    ) es;
+    emit ctxt W.[rtt_canon (typeidx @@ e.at); struct_new (typeidx @@ e.at)]
 
   | ProjE (e1, n) ->
-    nyi e.at "tuple projection"
-  (*
-    let v1 = eval_exp env e1 in
-    (match v1 with
-    | V.Tup vs when n < List.length vs -> List.nth vs n
-    | _ -> crash e.at "runtime type error at tuple access"
-    )
-  *)
+    let typeidx = lower_var_type ctxt e.at (Source.et e1) in
+    compile_exp ctxt e1;
+    let struct_get_sxopt =
+      match Source.et e with
+      | T.Var _ -> nyi e.at "generic tuple projection"
+      | T.Bool | T.Byte | T.Tup [] | T.Bot -> W.struct_get_u
+      | _ -> W.struct_get
+    in
+    emit ctxt [struct_get_sxopt (typeidx @@ e.at) (i32 n @@ e.at)];
+    compile_coerce_block_type ctxt e.at (Source.et e)
 
   | ArrayE es ->
     let typeidx = lower_var_type ctxt e.at (Source.et e) in
@@ -364,9 +377,9 @@ let rec compile_exp ctxt e =
       end
     in
     List.iteri (fun i eI ->
-      emit ctxt W.[local_get (tmpidx @@ e.at)];
-      emit ctxt W.[i32_const (i32 i @@ e.at)];
+      emit ctxt W.[local_get (tmpidx @@ e.at); i32_const (i32 i @@ e.at)];
       compile_exp ctxt eI;
+      compile_coerce_value_type ctxt eI.at (Source.et eI);
       emit ctxt W.[array_set (typeidx @@ e.at)];
     ) es
 
@@ -375,16 +388,20 @@ let rec compile_exp ctxt e =
     compile_exp ctxt e1;
     compile_exp ctxt e2;
     let array_get_sxopt =
-      match T.as_array (Source.et e1) with
+      match Source.et e with
       | T.Var _ -> nyi e.at "generic array indexing"
       | T.Bool | T.Byte | T.Tup [] | T.Bot -> W.array_get_u
       | _ -> W.array_get
     in
-    emit ctxt [array_get_sxopt (typeidx @@ e.at)]
+    emit ctxt [array_get_sxopt (typeidx @@ e.at)];
+    compile_coerce_block_type ctxt e.at (Source.et e)
 
   | CallE (e1, ts, es) ->
     if ts <> [] then nyi e.at "generic function calls";
-    List.iter (compile_exp ctxt) es;
+    List.iter (fun eI ->
+      compile_exp ctxt eI;
+      compile_coerce_value_type ctxt eI.at (Source.et eI);
+    ) es;
     (match e1.it with
     | VarE x ->
       let scope, s, idx = compile_var ctxt x ctxt.envs in
@@ -397,15 +414,6 @@ let rec compile_exp ctxt e =
       )
     | _ -> nyi e.at "indirect function calls"
     )
-  (*
-    let v1 = eval_exp env e1 in
-    let vs = List.map (eval_exp env) es in
-    (match v1 with
-    | V.Null -> trap e1.at "null reference at function call"
-    | V.Func f -> f (List.map (eval_typ env) ts) vs
-    | _ -> crash e.at "runtime type error at function call"
-    )
-  *)
 
   | NewE (x, ts, es) ->
     nyi e.at "object construction"
@@ -426,6 +434,7 @@ let rec compile_exp ctxt e =
     compile_exp ctxt e1;
     emit ctxt W.[local_set (tmpidx @@ e1.at)];
     compile_exp ctxt e2;
+    compile_coerce_value_type ctxt e2.at (Source.et e2);
     emit ctxt W.[
       local_get (tmpidx @@ e1.at);
       rtt_canon (typeidx @@ e.at);
@@ -449,6 +458,7 @@ let rec compile_exp ctxt e =
     (match e1.it with
     | VarE x ->
       compile_exp ctxt e2;
+      compile_coerce_value_type ctxt e2.at (Source.et e2);
       let scope, s, idx = compile_var ctxt x ctxt.envs in
       (match scope with
       | BlockScope | FuncScope ->
@@ -463,6 +473,7 @@ let rec compile_exp ctxt e =
       compile_exp ctxt e11;
       compile_exp ctxt e12;
       compile_exp ctxt e2;
+      compile_coerce_value_type ctxt e2.at (Source.et e2);
       emit ctxt W.[array_set (typeidx @@ e.at)]
 
     | DotE (e11, x) ->
@@ -541,6 +552,7 @@ and compile_dec ctxt d =
     let scope, env = List.hd ctxt.envs in
     let t' = lower_value_type ctxt x.at (Source.et e) in
     compile_exp ctxt e;
+    compile_coerce_value_type ctxt e.at (Source.et e);
     let idx =
       match scope with
       | BlockScope | FuncScope ->
@@ -567,8 +579,8 @@ and compile_dec ctxt d =
     let ts = List.map (fun (_, t) -> Source.et t) xts in
     let ats = List.map (fun (_, t) -> t.at) xts in
     let ts1' = List.map2 (lower_value_type ctxt) ats ts in
-    let t2' = lower_value_type ctxt t.at (Source.et t) in
-    ignore (emit_func ctxt d.at W.(FuncType (ts1', [t2'])) (fun ctxt idx ->
+    let ts2' = lower_stack_type ctxt t.at (Source.et t) in
+    ignore (emit_func ctxt d.at ts1' ts2' (fun ctxt idx ->
       let _, env' = List.hd ctxt.envs in
       env' := E.extend_val !env' x (T.FuncS, idx);
       let ctxt = enter_scope ctxt FuncScope in
@@ -650,7 +662,7 @@ and compile_decs ctxt ds =
   | [d] -> compile_dec ctxt d
   | d::ds' ->
     compile_dec ctxt d;
-    compile_coerce ctxt d.at (Source.et d) (T.Tup []);
+    if Source.et d <> T.Tup [] then emit_instr ctxt d.at W.(drop);
     compile_decs ctxt ds'
 
 
@@ -669,7 +681,7 @@ let compile_prog p : W.module_ =
   let result_idx = emit_global ctxt p.at W.Mutable t' const in
   let result_name = W.Utf8.decode "return" in
   emit_export ctxt p.at result_name result_idx (fun x -> W.GlobalExport x);
-  let start_idx = emit_func ctxt p.at W.(FuncType ([], [])) (fun ctxt _ ->
+  let start_idx = emit_func ctxt p.at [] [] (fun ctxt _ ->
     emit ctxt W.(global_get (result_idx @@ p.at));
     compile_decs ctxt ds;
     emit ctxt W.(global_set (result_idx @@ p.at));
