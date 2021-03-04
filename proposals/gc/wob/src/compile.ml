@@ -108,10 +108,11 @@ let emit_param ctxt at : int32 =
   ctxt.locals.cnt <- idx +% 1l;
   idx
 
-let emit_local ctxt at vtype : int32 =
-  emit_entity ctxt.locals (vtype @@ at)
+let emit_local ctxt at t' : int32 =
+  emit_entity ctxt.locals (t' @@ at)
 
-let emit_global ctxt at gtype ginit : int32 =
+let emit_global ctxt at mut t' ginit : int32 =
+  let gtype = W.GlobalType (t', mut) in
   emit_entity ctxt.globals (W.{gtype; ginit} @@ at)
 
 let emit_data ctxt at s : int32 =
@@ -126,10 +127,10 @@ let emit_data ctxt at s : int32 =
 let emit_instr ctxt at instr =
   ignore (emit_entity ctxt.instrs (instr @@ at))
 
-let emit_block ctxt at head t f =
+let emit_block ctxt at head t' f =
   let ctxt' = {ctxt with instrs = make_entities ()} in
   f ctxt';
-  emit_instr ctxt at (head W.(ValBlockType t) (get_entities ctxt'.instrs))
+  emit_instr ctxt at (head W.(ValBlockType t') (get_entities ctxt'.instrs))
 
 let emit_func ctxt at ft f : int32 =
   let typeidx = emit_type ctxt at (W.FuncDefType ft @@ at) in
@@ -145,33 +146,36 @@ let emit_func ctxt at ft f : int32 =
   idx
 
 
-(* Mapping types *)
+(* Lowering types *)
 
-let compile_typ' ctxt at t : W.value_type =
+let lower_heap_type ctxt at t : W.heap_type =
   match t with
-  | T.Var _ | T.Null -> W.(RefType (Nullable, AnyHeapType))
-  | T.Bool | T.Byte | T.Int | T.Tup [] | T.Bot -> W.(NumType I32Type)
-  | T.Float -> W.(NumType F64Type)
-  | T.Text -> nyi at "text types"
-  | T.Obj | T.Inst _ -> W.(RefType (Nullable, DataHeapType))
-  | T.Tup ts -> nyi at "tuple types"
+  | T.Var _ | T.Null -> W.AnyHeapType
+  | T.Obj -> W.DataHeapType
+  | T.Inst _ -> nyi at "instance types"
   | T.Array t -> nyi at "array types"
   | T.Func _ -> nyi at "function types"
   | T.Class _ -> nyi at "class types"
+  | _ -> assert false
 
-let compile_n_typ ctxt at t : W.value_type option =
+let lower_value_type ctxt at t : W.value_type =
+  match t with
+  | T.Bool | T.Byte | T.Int | T.Tup [] | T.Bot -> W.(NumType I32Type)
+  | T.Float -> W.(NumType F64Type)
+  | T.Text -> nyi at "text types"
+  | T.Tup ts -> nyi at "tuple types"
+  | t -> W.(RefType (Nullable, lower_heap_type ctxt at t))
+
+let lower_block_type ctxt at t : W.value_type option =
   match t with
   | T.Tup [] -> None
-  | t -> Some (compile_typ' ctxt at t)
+  | t -> Some (lower_value_type ctxt at t)
 
 let default_const ctxt at t : W.const =
   let instr' =
     match t with
     | T.Var _ | T.Null | T.Obj | T.Inst _ | T.Array _ | T.Func _ | T.Class _ ->
-      (match compile_typ' ctxt at t with
-      | W.RefType (_, ht) -> W.(ref_null ht)
-      | _ -> assert false
-      )
+      W.(ref_null (lower_heap_type ctxt at t))
     | T.Bool | T.Byte | T.Int | T.Tup [] | T.Bot -> W.(i32_const (0l @@ at))
     | T.Float -> W.(f64_const (W.F64.of_float 0.0 @@ at))
     | T.Text -> nyi at "text results"
@@ -181,25 +185,23 @@ let default_const ctxt at t : W.const =
 let compile_coerce ctxt at t1 t2 =
   if T.eq t1 t2 then () else
   match t1, t2 with
+  | T.Bot, _ -> ()
   | _, T.Tup [] -> emit_instr ctxt at W.(drop)
   | _ -> nyi at "coercions"
-
-
-(* Compiling types *)
-
-let compile_typ ctxt t : W.value_type =
-  compile_typ' ctxt t.at (Source.et t)
 
 
 (* Expressions *)
 
 let compile_lit ctxt l at =
   match l with
-  | NullLit -> ()
+  | NullLit ->
+    emit_instr ctxt at W.(ref_null (lower_heap_type ctxt at T.Null))
   | BoolLit b ->
     emit_instr ctxt at W.(i32_const ((if b then 1l else 0l) @@ at))
-  | IntLit i -> emit_instr ctxt at W.(i32_const (i @@ at))
-  | FloatLit z -> emit_instr ctxt at W.(f64_const (W.F64.of_float z @@ at))
+  | IntLit i ->
+    emit_instr ctxt at W.(i32_const (i @@ at))
+  | FloatLit z ->
+    emit_instr ctxt at W.(f64_const (W.F64.of_float z @@ at))
   | TextLit t ->
     let _addr = emit_data ctxt at t in
     (* TODO: alloc, copy *)
@@ -238,6 +240,7 @@ let rec compile_exp ctxt e =
   | UnE (op, e1) ->
     (match op, Source.et e with
     | NegOp, T.Int -> emit ctxt W.[i32_const (0l @@ e.at)]
+    | InvOp, T.Int -> emit ctxt W.[i32_const (-1l @@ e.at)]
     | _ -> ()
     );
     compile_exp ctxt e1;
@@ -246,11 +249,12 @@ let rec compile_exp ctxt e =
     | PosOp, T.Float -> ()
     | NegOp, T.Int -> emit ctxt W.[i32_sub]
     | NegOp, T.Float -> emit ctxt W.[f64_neg]
+    | InvOp, T.Int -> emit ctxt W.[i32_xor]
     | NotOp, T.Bool -> emit ctxt W.[i32_eqz]
     | _ -> assert false
     )
 
-  | BinE (e1, AndOp, e2) ->
+  | BinE (e1, AndThenOp, e2) ->
     emit_block ctxt e.at W.block W.(Some i32t) (fun ctxt ->
       emit ctxt W.[i32_const (0l @@ e1.at)];
       compile_exp ctxt e1;
@@ -258,7 +262,7 @@ let rec compile_exp ctxt e =
       compile_exp ctxt e2;
     )
 
-  | BinE (e1, OrOp, e2) ->
+  | BinE (e1, OrElseOp, e2) ->
     emit_block ctxt e.at W.block W.(Some i32t) (fun ctxt ->
       emit ctxt W.[i32_const (1l @@ e1.at)];
       compile_exp ctxt e1;
@@ -275,6 +279,11 @@ let rec compile_exp ctxt e =
     | MulOp, T.Int -> emit ctxt W.[i32_mul]
     | DivOp, T.Int -> emit ctxt W.[i32_div_s]
     | ModOp, T.Int -> emit ctxt W.[i32_rem_s]
+    | AndOp, T.Int -> emit ctxt W.[i32_and]
+    | OrOp,  T.Int -> emit ctxt W.[i32_or]
+    | XorOp, T.Int -> emit ctxt W.[i32_xor]
+    | ShlOp, T.Int -> emit ctxt W.[i32_shl]
+    | ShrOp, T.Int -> emit ctxt W.[i32_shr_s]
     | AddOp, T.Float -> emit ctxt W.[f64_add]
     | SubOp, T.Float -> emit ctxt W.[f64_sub]
     | MulOp, T.Float -> emit ctxt W.[f64_mul]
@@ -471,7 +480,7 @@ let rec compile_exp ctxt e =
     emit ctxt W.[i32_eqz; if_ W.voidbt [unreachable @@ e.at] []]
 
   | IfE (e1, e2, e3) ->
-    let bt = compile_n_typ ctxt e.at (Source.et e) in
+    let bt = lower_block_type ctxt e.at (Source.et e) in
     emit_block ctxt e.at W.block bt (fun ctxt ->
       emit_block ctxt e.at W.block None (fun ctxt ->
         compile_exp ctxt e1;
@@ -510,18 +519,18 @@ and compile_dec ctxt d =
 
   | LetD (x, e) | VarD (x, _, e) ->
     let scope, env = List.hd ctxt.envs in
-    let t = compile_typ' ctxt x.at (Source.et e) in
+    let t' = lower_value_type ctxt x.at (Source.et e) in
     compile_exp ctxt e;
     let idx =
       match scope with
       | BlockScope | FuncScope ->
-        let idx = emit_local ctxt x.at t in
+        let idx = emit_local ctxt x.at t' in
         emit ctxt W.[local_set (idx @@ d.at)];
         idx
 
       | GlobalScope ->
         let const = default_const ctxt x.at (Source.et e) in
-        let idx = emit_global ctxt x.at W.(GlobalType (t, Mutable)) const in
+        let idx = emit_global ctxt x.at W.Mutable t' const in
         emit ctxt W.[global_set (idx @@ d.at)];
         idx
 
@@ -535,9 +544,11 @@ and compile_dec ctxt d =
 
   | FuncD (x, ys, xts, t, e) ->
     if ys <> [] then nyi d.at "generic function definitions";
-    let ts1 = List.map (compile_typ ctxt) (List.map snd xts) in
-    let t2 = compile_typ ctxt t in
-    ignore (emit_func ctxt d.at W.(FuncType (ts1, [t2])) (fun ctxt idx ->
+    let ts = List.map (fun (_, t) -> Source.et t) xts in
+    let ats = List.map (fun (_, t) -> t.at) xts in
+    let ts1' = List.map2 (lower_value_type ctxt) ats ts in
+    let t2' = lower_value_type ctxt t.at (Source.et t) in
+    ignore (emit_func ctxt d.at W.(FuncType (ts1', [t2'])) (fun ctxt idx ->
       let _, env' = List.hd ctxt.envs in
       env' := E.extend_val !env' x (T.FuncS, idx);
       let ctxt = enter_scope ctxt FuncScope in
@@ -633,9 +644,9 @@ let compile_prog p : W.module_ =
   let Prog ds = p.it in
   let emit ctxt = emit_instr ctxt p.at in
   let ctxt = make_ctxt () in
-  let t = compile_typ' ctxt p.at (Source.et p) in
+  let t' = lower_value_type ctxt p.at (Source.et p) in
   let const = default_const ctxt p.at (Source.et p) in
-  let result_idx = emit_global ctxt p.at W.(GlobalType (t, Mutable)) const in
+  let result_idx = emit_global ctxt p.at W.Mutable t' const in
   let result_name = W.Utf8.decode "return" in
   emit_export ctxt p.at result_name result_idx (fun x -> W.GlobalExport x);
   let start_idx = emit_func ctxt p.at W.(FuncType ([], [])) (fun ctxt _ ->

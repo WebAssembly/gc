@@ -51,7 +51,8 @@ let float s at =
 %token LPAR RPAR LBRACK RBRACK LCURLY RCURLY COMMA SEMICOLON SEMICOLON_EOL
 %token COLON EQ LT GT ARROW ASSIGN SUB SUP DOT
 %token EQOP NEOP LEOP LTOP GTOP GEOP
-%token ADDOP SUBOP MULOP DIVOP MODOP ANDOP OROP NOTOP CATOP
+%token ADDOP SUBOP MULOP DIVOP MODOP ANDOP OROP XOROP SHLOP SHROP CATOP
+%token ANDTHENOP ORELSEOP NOTOP
 %token NEW IF ELSE WHILE RETURN ASSERT
 %token LET VAR FUNC TYPE CLASS IMPORT FROM
 %token<string> NAT
@@ -63,12 +64,15 @@ let float s at =
 %nonassoc ELSE WHILE
 
 %right ASSIGN
-%left OROP
-%left ANDOP
+%left ORELSEOP
+%left ANDTHENOP
 %nonassoc EQOP NEOP LTOP GTOP LEOP GEOP
 %left COLON SUP
 %left ADDOP SUBOP CATOP
+%left OROP
+%left ANDOP XOROP
 %left MULOP DIVOP MODOP
+%nonassoc SHLOP SHROP
 
 %start prog repl
 %type<Syntax.prog> prog
@@ -154,6 +158,7 @@ exp_un :
   | exp_post { $1 }
   | ADDOP exp_un { UnE (PosOp, $2) @@ at () }
   | SUBOP exp_un { UnE (NegOp, $2) @@ at () }
+  | XOROP exp_un { UnE (InvOp, $2) @@ at () }
   | NOTOP exp_un { UnE (NotOp, $2) @@ at () }
   | NEW var exp_arg { NewE ($2, [], $3) @@ at () }
   | NEW var LT typ_list GT exp_arg { NewE ($2, $4, $6) @@ at () }
@@ -170,6 +175,9 @@ exp_bin :
   | exp_bin MODOP exp_bin { BinE ($1, ModOp, $3) @@ at () }
   | exp_bin ANDOP exp_bin { BinE ($1, AndOp, $3) @@ at () }
   | exp_bin OROP  exp_bin { BinE ($1, OrOp,  $3) @@ at () }
+  | exp_bin XOROP exp_bin { BinE ($1, XorOp, $3) @@ at () }
+  | exp_bin SHLOP  exp_bin { BinE ($1, ShlOp,  $3) @@ at () }
+  | exp_bin SHROP exp_bin { BinE ($1, ShrOp, $3) @@ at () }
   | exp_bin CATOP exp_bin { BinE ($1, CatOp, $3) @@ at () }
   | exp_bin EQOP exp_bin { RelE ($1, EqOp, $3) @@ at () }
   | exp_bin NEOP exp_bin { RelE ($1, NeOp, $3) @@ at () }
@@ -177,6 +185,8 @@ exp_bin :
   | exp_bin GTOP exp_bin { RelE ($1, GtOp, $3) @@ at () }
   | exp_bin LEOP exp_bin { RelE ($1, LeOp, $3) @@ at () }
   | exp_bin GEOP exp_bin { RelE ($1, GeOp, $3) @@ at () }
+  | exp_bin ANDTHENOP exp_bin { BinE ($1, AndThenOp, $3) @@ at () }
+  | exp_bin ORELSEOP  exp_bin { BinE ($1, OrElseOp,  $3) @@ at () }
   | exp_bin COLON typ { AnnotE ($1, $3) @@ at () }
   | exp_bin SUP typ { CastE ($1, $3) @@ at () }
   | exp_bin ASSIGN exp_bin { AssignE ($1, $3) @@ at () }
@@ -266,7 +276,7 @@ dec_list_noeol :
 /* Programs */
 
 prog :
-  | dec_list EOF { Prog $1 @@ at () }
+  | dec_list EOF { Prog (Prelude.prelude @ $1) @@ at () }
 
 repl :
-  | dec_list_noeol SEMICOLON_EOL { Prog $1 @@ at () }
+  | dec_list_noeol SEMICOLON_EOL { Prog (Prelude.prelude @ $1) @@ at () }

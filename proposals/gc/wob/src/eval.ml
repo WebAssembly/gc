@@ -95,11 +95,12 @@ let rec eval_exp env e : V.value =
     | PosOp, V.Float z -> V.Float z
     | NegOp, V.Int i -> V.Int (Int32.neg i)
     | NegOp, V.Float z -> V.Float (-.z)
+    | InvOp, V.Int i -> V.Int (Int32.lognot i)
     | NotOp, V.Bool b -> V.Bool (not b)
     | _ -> crash e.at "runtime type error at unary operator"
     )
 
-  | BinE (e1, AndOp, e2) ->
+  | BinE (e1, AndThenOp, e2) ->
     let v1 = eval_exp env e1 in
     (match v1 with
     | V.Bool false -> V.Bool false
@@ -107,7 +108,7 @@ let rec eval_exp env e : V.value =
     | _ -> crash e.at "runtime type error at binary operator"
     )
 
-  | BinE (e1, OrOp, e2) ->
+  | BinE (e1, OrElseOp, e2) ->
     let v1 = eval_exp env e1 in
     (match v1 with
     | V.Bool false -> eval_exp env e2
@@ -124,6 +125,13 @@ let rec eval_exp env e : V.value =
     | MulOp, V.Int i1, V.Int i2 -> V.Int (Int32.mul i1 i2)
     | DivOp, V.Int i1, V.Int i2 -> V.Int (Int32.div i1 i2)
     | ModOp, V.Int i1, V.Int i2 -> V.Int (Int32.rem i1 i2)
+    | AndOp, V.Int i1, V.Int i2 -> V.Int (Int32.logand i1 i2)
+    | OrOp,  V.Int i1, V.Int i2 -> V.Int (Int32.logor i1 i2)
+    | XorOp, V.Int i1, V.Int i2 -> V.Int (Int32.logxor i1 i2)
+    | ShlOp, V.Int i1, V.Int i2 ->
+      V.Int Int32.(shift_left i1 (to_int i2 land 0x1f))
+    | ShrOp, V.Int i1, V.Int i2 ->
+      V.Int Int32.(shift_right i1 (to_int i2 land 0x1f))
     | AddOp, V.Float z1, V.Float z2 -> V.Float (z1 +. z2)
     | SubOp, V.Float z1, V.Float z2 -> V.Float (z1 -. z2)
     | MulOp, V.Float z1, V.Float z2 -> V.Float (z1 *. z2)
@@ -394,28 +402,6 @@ and eval_block pass env ds : V.value * env =
 
 
 (* Programs *)
-
-let pre_pos = {file = "predefined"; line = 0; column = 0}
-let pre_region = {left = pre_pos; right = pre_pos}
-let pre f = List.fold_left (fun env (x, v) -> f env (x @@ pre_region) v) E.empty
-
-let initial_typ_env = pre E.extend_typ_gnd
-  [ "Bool", T.Bool;
-    "Byte", T.Byte;
-    "Int", T.Int;
-    "Float", T.Float;
-    "Text", T.Text;
-    "Object", T.Obj;
-  ]
-
-let initial_val_env = pre E.extend_val_let
-  [ "null", V.Null;
-    "true", V.Bool true;
-    "false", V.Bool false;
-    "nan", V.Float nan;
-  ]
-
-let initial_env = E.adjoin initial_typ_env initial_val_env
 
 let eval_prog env p : V.value * env =
   let Prog ds = p.it in

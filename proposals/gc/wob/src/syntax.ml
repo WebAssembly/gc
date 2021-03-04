@@ -26,8 +26,11 @@ and typ' =
 
 (* Expressions *)
 
-type unop = PosOp | NegOp | NotOp
-type binop = AddOp | SubOp | MulOp | DivOp | ModOp | AndOp | OrOp | CatOp
+type unop = PosOp | NegOp | InvOp | NotOp
+type binop =
+  | AddOp | SubOp | MulOp | DivOp | ModOp
+  | AndOp | OrOp | XorOp | ShlOp | ShrOp | CatOp
+  | AndThenOp | OrElseOp
 type relop = EqOp | NeOp | LtOp | GtOp | LeOp | GeOp
 
 type lit =
