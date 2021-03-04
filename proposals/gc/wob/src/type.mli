@@ -33,8 +33,6 @@ and cls =
 
 val var : var -> typ
 
-val as_array : typ -> typ (* raises Failure *)
-
 
 (* Operations *)
 

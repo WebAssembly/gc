@@ -1,5 +1,11 @@
 // Accessing global scope
 
+func fac2() : Int {
+  if false { return 1 };
+  return 2
+};
+
+/*
 let x = 3; 
 var v : Int = 4; 
 func get_x() : Int { x }; 
@@ -84,3 +90,4 @@ func fib(n : Int) : Int { if n < 2 { n } else { fib(n-2) + fib(n-1) } };
 assert fib(0) == 0;
 assert fib(1) == 1;
 assert fib(10) == 55;
+*/

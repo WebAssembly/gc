@@ -1,0 +1,69 @@
+// Literals
+
+let a0 = [];
+let an = [null, null];
+let ab = [true, false];
+let ai = [0, 1, 2];
+let af = [0.0, 1.0, 2.0];
+let aa = [[0], [1], [2]];
+
+
+// Constructor
+
+let db = new Bool[10](false);
+let di = new Int[20](12);
+let df = new Float[20](3.14);
+let da = new Int[][20]([13, 14]);
+
+
+// Indexing
+
+assert an[0] == null;
+
+assert ab[0];
+assert ! ab[1];
+
+assert ai[0] == 0;
+assert ai[2] == 2;
+
+assert af[0] == 0.0;
+assert af[2] == 2.0;
+
+assert aa[0][0] == 0;
+assert aa[2][0] == 2;
+
+assert ! db[5];
+assert di[7] == 12;
+assert df[0] == 3.14;
+assert da[19][1] == 14;
+
+
+// Assignment
+
+ab[0] := false;
+assert ! ab[0];
+
+aa[1] := [3, 4];
+assert aa[1][1] == 4;
+
+da[2][0] := 15;
+assert da[4][0] == 15;
+
+
+// Loop
+
+let n = 100;
+let enum = new Int[n](0);
+var i : Int = 0;
+while i < n {
+  enum[i] := i;
+  i := i + 1;
+};
+
+var sum : Int = 0;
+i := 0;
+while i < n {
+  sum := sum + enum[i];
+  i := i + 1;
+};
+assert sum == n*(n - 1)/2;
