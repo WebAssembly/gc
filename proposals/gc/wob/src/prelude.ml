@@ -3,6 +3,7 @@ open Syntax
 
 let pos = {file = "predefined"; line = 0; column = 0}
 let at = {left = pos; right = pos}
+let region = at
 
 let pre_typs =
   [ "Bool", BoolT;
