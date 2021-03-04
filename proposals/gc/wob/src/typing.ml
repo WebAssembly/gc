@@ -270,7 +270,7 @@ and check_exp' env e : T.typ =
     let t2 = check_typ env t in
     if not (T.sub t1 t2) then
       error e1.at "annotation expects type %s but got %s"
-        (T.to_string t2) (T.to_string t2);
+        (T.to_string t2) (T.to_string t1);
     t2
 
   | CastE (e1, t) ->
