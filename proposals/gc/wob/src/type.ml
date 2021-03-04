@@ -29,11 +29,9 @@ and cls =
   }
 
 
-(* Constructors and accessors *)
+(* Constructors *)
 
 let var y = Var (y, [])
-
-let as_array = function Array t -> t | _ -> failwith "as_array"
 
 
 (* Printing *)

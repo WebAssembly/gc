@@ -49,16 +49,13 @@ let float s at =
 %token EOF
 
 %token LPAR RPAR LBRACK RBRACK LCURLY RCURLY COMMA SEMICOLON SEMICOLON_EOL
-%token COLON EQ LT GT ARROW ASSIGN SUB SUP DOT
+%token COLON EQ LT GT ARROW ASSIGN SUB SUP DOT DOT_NUM
 %token EQOP NEOP LEOP LTOP GTOP GEOP
 %token ADDOP SUBOP MULOP DIVOP MODOP ANDOP OROP XOROP SHLOP SHROP CATOP
 %token ANDTHENOP ORELSEOP NOTOP
 %token NEW IF ELSE WHILE RETURN ASSERT
 %token LET VAR FUNC TYPE CLASS IMPORT FROM
-%token<string> NAT
-%token<string> FLOAT
-%token<string> TEXT
-%token<string> ID
+%token<string> NAT FLOAT TEXT ID DOT_NUM
 
 %nonassoc RETURN_NO_ARG IF_NO_ELSE
 %nonassoc ELSE WHILE
@@ -149,7 +146,7 @@ exp_post :
   | exp_simple { $1 }
   | exp_tup { $1 }
   | exp_post LBRACK exp RBRACK { IdxE ($1, $3) @@ at () }
-  | exp_post DOT NAT { ProjE ($1, nat $3 (ati 3)) @@ at () }
+  | exp_post DOT_NUM { ProjE ($1, nat $2 (ati 2)) @@ at () }
   | exp_post DOT var { DotE ($1, $3) @@ at () }
   | exp_post exp_arg { CallE ($1, [], $2) @@ at () }
   | exp_post LT typ_list GT exp_arg { CallE ($1, $3, $5) @@ at () }
