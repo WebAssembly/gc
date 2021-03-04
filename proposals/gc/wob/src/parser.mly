@@ -91,17 +91,7 @@ var_list :
 /* Types */
 
 typ_simple :
-  | var {
-      (match $1.it with
-      | "Bool" -> BoolT
-      | "Byte" -> ByteT
-      | "Int" -> IntT
-      | "Float" -> FloatT
-      | "Text" -> TextT
-      | "Object" -> ObjT
-      | _ -> VarT ($1, [])
-      ) @@ at ()
-    }
+  | var { VarT ($1, []) @@ at () }
   | var LT typ_list GT { VarT ($1, $3) @@ at () }
 
 typ_tup :
@@ -141,15 +131,7 @@ exp_block :
 
 exp_simple :
   | exp_block { $1 }
-  | var {
-      (match $1.it with
-      | "null" -> LitE NullLit
-      | "true" -> LitE (BoolLit true)
-      | "false" -> LitE (BoolLit false)
-      | "nan" -> LitE (FloatLit nan)
-      | _ -> VarE $1
-      ) @@ $1.at
-    }
+  | var { VarE $1 @@ $1.at }
   | lit { LitE $1 @@ at () }
   | LBRACK exp_list RBRACK { ArrayE $2 @@ at () }
 

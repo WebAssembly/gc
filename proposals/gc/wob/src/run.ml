@@ -114,7 +114,7 @@ let frontend name lexbuf start : Syntax.prog * Type.typ option =
   let t_opt =
     if !Flags.unchecked then None else begin
       trace "Checking...";
-      let t, _env = Typing.check_prog Env.empty prog in
+      let t, _env = Typing.check_prog Typing.initial_env prog in
       Some t
     end
   in
@@ -134,7 +134,7 @@ let backend prog : Wasm.Ast.module_ =
 
 let eval prog =
   trace "Running...";
-  let v, _env = Eval.eval_prog Env.empty prog in
+  let v, _env = Eval.eval_prog Eval.initial_env prog in
   Printf.printf "%s" (Value.to_string v)
 
 let exec wasm =

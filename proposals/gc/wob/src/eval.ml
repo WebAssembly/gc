@@ -395,6 +395,28 @@ and eval_block pass env ds : V.value * env =
 
 (* Programs *)
 
+let pre_pos = {file = "predefined"; line = 0; column = 0}
+let pre_region = {left = pre_pos; right = pre_pos}
+let pre f = List.fold_left (fun env (x, v) -> f env (x @@ pre_region) v) E.empty
+
+let initial_typ_env = pre E.extend_typ_gnd
+  [ "Bool", T.Bool;
+    "Byte", T.Byte;
+    "Int", T.Int;
+    "Float", T.Float;
+    "Text", T.Text;
+    "Object", T.Obj;
+  ]
+
+let initial_val_env = pre E.extend_val_let
+  [ "null", V.Null;
+    "true", V.Bool true;
+    "false", V.Bool false;
+    "nan", V.Float nan;
+  ]
+
+let initial_env = E.adjoin initial_typ_env initial_val_env
+
 let eval_prog env p : V.value * env =
   let Prog ds = p.it in
   eval_block Full env ds
