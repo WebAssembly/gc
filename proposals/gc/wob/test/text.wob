@@ -1,0 +1,22 @@
+// Literals
+
+let t1 = "";
+let barb = "barb";
+let foo = "foo";
+
+
+// Indexing
+
+assert foo[0] < foo[1];
+assert foo[1] == foo[2];
+
+
+// Concatenation
+
+let foobarb = foo # barb;
+let barbfoo = barb # foo;
+
+assert foobarb[0] == "f"[0];
+assert foobarb[6] == "b"[0];
+assert barbfoo[0] == "b"[0];
+assert barbfoo[6] == "o"[0];
