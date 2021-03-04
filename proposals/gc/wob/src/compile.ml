@@ -19,8 +19,8 @@ let (@@) = Wasm.Source.(@@)
 let _f64 = W.F64.of_float
 let i32 = W.I32.of_int_s
 let (+%) = Int32.add
-let (-%) = Int32.sub
 (*
+let (-%) = Int32.sub
 let ( *%) = Int32.mul
 *)
 let (/%) = Int32.div
@@ -33,13 +33,17 @@ let nyi at s = raise (NYI (at, s))
 
 (* Compilation context *)
 
+module DefTypes = Map.Make(struct type t = W.def_type let compare = compare end)
+
 type scope = GlobalScope | BlockScope | FuncScope | ClassScope
 type env = (T.sort * int32, int32) E.env
 
 type 'a entities = {mutable list : 'a option ref list; mutable cnt : int32}
 
 type ctxt =
-  { types : W.type_ entities;
+  { envs : (scope * env ref) list;
+    deftypes : int32 DefTypes.t ref;
+    types : W.type_ entities;
     globals : W.global entities;
     funcs : W.func entities;
     datas : W.data_segment entities;
@@ -48,7 +52,9 @@ type ctxt =
     locals : W.local entities;
     instrs : W.instr entities;
     data_offset : int32 ref;
-    envs : (scope * env ref) list;
+    text_new : int32 option ref;
+    text_cat : int32 option ref;
+    text_cpy : int32 option ref;
   }
 
 let make_entities () = {list = []; cnt = 0l}
@@ -71,7 +77,9 @@ let emit_entity ents ent : int32 =
 
 
 let make_ctxt () =
-  { types = make_entities ();
+  { envs = [(GlobalScope, ref E.empty)];
+    deftypes = ref DefTypes.empty;
+    types = make_entities ();
     globals = make_entities ();
     funcs = make_entities ();
     datas = make_entities ();
@@ -80,7 +88,9 @@ let make_ctxt () =
     locals = make_entities ();
     instrs = make_entities ();
     data_offset = ref 0l;
-    envs = [(GlobalScope, ref E.empty)];
+    text_new = ref None;
+    text_cat = ref None;
+    text_cpy = ref None;
   }
 
 let enter_scope ctxt scope =
@@ -90,14 +100,12 @@ let enter_scope ctxt scope =
 (* Emitter *)
 
 let emit_type ctxt at type_ : int32 =
-  match
-    Wasm.Lib.List.index_where (function
-      | {contents = Some type_'} -> type_.W.it = type_'.W.it
-      | _ -> assert false
-    ) ctxt.types.list
-  with
-  | Some idx -> ctxt.types.cnt -% i32 idx -% 1l
-  | None -> emit_entity ctxt.types type_
+  match DefTypes.find_opt type_.W.it !(ctxt.deftypes) with
+  | Some idx -> idx
+  | None ->
+    let idx = emit_entity ctxt.types type_ in
+    ctxt.deftypes := DefTypes.add type_.W.it idx !(ctxt.deftypes);
+    idx
 
 let emit_export ctxt at name idx descf =
   let edesc = descf (idx @@ at) @@ at in
@@ -165,7 +173,9 @@ and lower_heap_type ctxt at t : W.heap_type =
 and lower_var_type ctxt at t : int32 =
   match t with
   | T.Inst _ -> nyi at "instance types"
-  | T.Text -> nyi at "text types"
+  | T.Text ->
+    let ft = W.(FieldType (PackedStorageType Pack8, Mutable)) in
+    emit_type ctxt at W.(ArrayDefType (ArrayType ft) @@ at)
   | T.Tup ts ->
     let fts = List.map (fun tI ->
       W.(FieldType (lower_storage_type ctxt at tI, Immutable))) ts in
@@ -212,22 +222,143 @@ let compile_coerce_value_type ctxt at t =
   | _ -> ()
 
 
+(* Intrinsics *)
+
+let compile_text_new ctxt : int32 =
+  match !(ctxt.text_new) with
+  | Some idx -> idx
+  | None ->
+    let at = Prelude.region in
+    let typeidx = lower_var_type ctxt at T.Text in
+    let t' = W.(RefType (Nullable, DefHeapType (SynVar typeidx))) in
+    emit_func ctxt at W.[i32t; i32t] [t'] (fun ctxt idx ->
+      ctxt.text_new := Some idx;
+      let srcidx = emit_param ctxt at in
+      let lenidx = emit_param ctxt at in
+      let dstidx = emit_local ctxt at t' in
+      List.iter (emit_instr ctxt at) W.[
+        local_get (lenidx @@ at);
+        rtt_canon (typeidx @@ at);
+        array_new_default (typeidx @@ at);
+        local_set (dstidx @@ at);
+        block voidbt (List.map (fun e -> e @@ at) [
+          loop voidbt (List.map (fun e -> e @@ at) [
+            local_get (lenidx @@ at);
+            i32_eqz;
+            br_if (1l @@ at);
+            local_get (dstidx @@ at);
+            local_get (lenidx @@ at);
+            i32_const (1l @@ at);
+            i32_sub;
+            local_tee (lenidx @@ at);
+            local_get (lenidx @@ at);
+            local_get (srcidx @@ at);
+            i32_add;
+            i32_load8_u 0 0l;
+            array_set (typeidx @@ at);
+            br (0l @@ at);
+          ])
+        ]);
+        local_get (dstidx @@ at);
+      ]
+    )
+
+let compile_text_cpy ctxt : int32 =
+  match !(ctxt.text_cpy) with
+  | Some idx -> idx
+  | None ->
+    let at = Prelude.region in
+    let typeidx = lower_var_type ctxt at T.Text in
+    let t' = W.(RefType (Nullable, DefHeapType (SynVar typeidx))) in
+    emit_func ctxt at W.[t'; i32t; t'; i32t; i32t] [] (fun ctxt idx ->
+      ctxt.text_cpy := Some idx;
+      let dstidx = emit_param ctxt at in
+      let dstkidx = emit_param ctxt at in
+      let srcidx = emit_param ctxt at in
+      let srckidx = emit_param ctxt at in
+      let lenidx = emit_param ctxt at in
+      emit_instr ctxt at W.(
+        block voidbt (List.map (fun e -> e @@ at) [
+          loop voidbt (List.map (fun e -> e @@ at) [
+            local_get (lenidx @@ at);
+            i32_eqz;
+            br_if (1l @@ at);
+            local_get (dstidx @@ at);
+            local_get (lenidx @@ at);
+            i32_const (1l @@ at);
+            i32_sub;
+            local_tee (lenidx @@ at);
+            local_get (dstkidx @@ at);
+            i32_add;
+            local_get (srcidx @@ at);
+            local_get (lenidx @@ at);
+            local_get (srckidx @@ at);
+            i32_add;
+            array_get_u (typeidx @@ at);
+            array_set (typeidx @@ at);
+            br (0l @@ at);
+          ])
+        ])
+      )
+    )
+
+let compile_text_cat ctxt : int32 =
+  match !(ctxt.text_cat) with
+  | Some idx -> idx
+  | None ->
+    let text_cpy = compile_text_cpy ctxt in
+    let at = Prelude.region in
+    let typeidx = lower_var_type ctxt at T.Text in
+    let t' = W.(RefType (Nullable, DefHeapType (SynVar typeidx))) in
+    emit_func ctxt at [t'; t'] [t'] (fun ctxt idx ->
+      ctxt.text_cat := Some idx;
+      let arg1idx = emit_param ctxt at in
+      let arg2idx = emit_param ctxt at in
+      let tmpidx = emit_local ctxt at t' in
+      List.iter (emit_instr ctxt at) W.[
+        local_get (arg1idx @@ at);
+        array_len (typeidx @@ at);
+        local_get (arg2idx @@ at);
+        array_len (typeidx @@ at);
+        i32_add;
+        rtt_canon (typeidx @@ at);
+        array_new_default (typeidx @@ at);
+        local_tee (tmpidx @@ at);
+        i32_const (0l @@ at);
+        local_get (arg1idx @@ at);
+        i32_const (0l @@ at);
+        local_get (arg1idx @@ at);
+        array_len (typeidx @@ at);
+        call (text_cpy @@ at);
+        local_get (tmpidx @@ at);
+        local_get (arg1idx @@ at);
+        array_len (typeidx @@ at);
+        local_get (arg2idx @@ at);
+        i32_const (0l @@ at);
+        local_get (arg2idx @@ at);
+        array_len (typeidx @@ at);
+        call (text_cpy @@ at);
+        local_get (tmpidx @@ at);
+      ]
+    )
+
+
 (* Expressions *)
 
 let compile_lit ctxt l at =
+  let emit ctxt = List.iter (emit_instr ctxt at) in
   match l with
-  | NullLit ->
-    emit_instr ctxt at W.(ref_null (lower_heap_type ctxt at T.Null))
-  | BoolLit b ->
-    emit_instr ctxt at W.(i32_const ((if b then 1l else 0l) @@ at))
-  | IntLit i ->
-    emit_instr ctxt at W.(i32_const (i @@ at))
-  | FloatLit z ->
-    emit_instr ctxt at W.(f64_const (W.F64.of_float z @@ at))
-  | TextLit t ->
-    let _addr = emit_data ctxt at t in
-    (* TODO: alloc, copy *)
-    nyi at "text literals"
+  | NullLit -> emit ctxt W.[ref_null (lower_heap_type ctxt at T.Null)]
+  | BoolLit b -> emit ctxt W.[i32_const ((if b then 1l else 0l) @@ at)]
+  | IntLit i -> emit ctxt W.[i32_const (i @@ at)]
+  | FloatLit z -> emit ctxt W.[f64_const (W.F64.of_float z @@ at)]
+  | TextLit s ->
+    let addr = emit_data ctxt at s in
+    emit ctxt W.[
+      i32_const (addr @@ at);
+      i32_const (i32 (String.length s) @@ at);
+      call (compile_text_new ctxt @@ at);
+    ]
 
 
 let rec compile_var ctxt x envs =
@@ -312,7 +443,7 @@ let rec compile_exp ctxt e =
     | SubOp, T.Float -> emit ctxt W.[f64_sub]
     | MulOp, T.Float -> emit ctxt W.[f64_mul]
     | DivOp, T.Float -> emit ctxt W.[f64_div]
-    | CatOp, T.Text -> nyi e.at "concatenation operator"
+    | CatOp, T.Text -> emit ctxt W.[call (compile_text_cat ctxt @@ e.at)]
     | _ -> assert false
     )
 
