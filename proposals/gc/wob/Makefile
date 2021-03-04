@@ -49,10 +49,6 @@ $(WASMDIRS:%=$(WASMDIR)/%): $(WASMDIR)/%:
 $(WASMFILES:%=$(WASMDIR)/%): $(WASMDIR)/%: $(WASMBASE)/% $(WASMDIRS:%=$(WASMDIR)/%)
 		cp $< $@
 
-#_build/wasm.%: $(WASMDIR)/_build/wasm.%
-#		mkdir -p _build
-#		cp $(WASMDIR)/_build/wasm.* _build/
-
 $(WASMDIR)/_build/wasm.cmx $(WASMDIR)/_build/wasm.cmxa: $(WASMDEPS)
 		make -C $(WASMDIR) libopt
 
