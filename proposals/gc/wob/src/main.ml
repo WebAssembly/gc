@@ -25,7 +25,7 @@ let argspec = Arg.align
   "-u", Arg.Set Flags.unchecked,
     " unchecked, do not perform type-checking (only without -c)";
   "-s", Arg.Set Flags.print_sig,
-    " print type signature";
+    " print type signature (default when interactive)";
   "-v", Arg.Set Flags.validate,
     " validate generated Wasm";
   "-x", Arg.Set Flags.textual,
