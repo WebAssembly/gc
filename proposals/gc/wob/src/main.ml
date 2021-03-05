@@ -16,7 +16,7 @@ let argspec = Arg.align
   "-", Arg.Set Flags.prompt,
     " start interactive prompt (default if no files given)";
   "-r", Arg.Set Flags.interpret,
-    " interpret input (default when interactive)";
+    " interpret input (default when interactive)";  (* TODO: for now *)
   "-c", Arg.Set Flags.compile,
     " compile input to Wasm (default when files given)";
   "-d", Arg.Set Flags.dry,
@@ -51,7 +51,6 @@ let () =
       if !Flags.prompt then
       (
         Flags.print_sig := true;
-        Flags.textual := true;
         banner ();
         Run.run_stdin ();
       )

@@ -1,0 +1,15 @@
+// Exporting definitions
+
+type T<X, Y> = (Y, X);
+
+let x = 9;
+var v : Float = 3.14;
+let s = "text";
+let p : T<Bool, Int> = (5, true);
+let a = new Int[20](7);
+
+func f() : Int { x };
+func g() : Float { v };
+
+type t = Int;
+let t = "_";

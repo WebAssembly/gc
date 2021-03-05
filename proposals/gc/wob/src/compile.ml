@@ -7,7 +7,6 @@ module E = Env
 module W =
 struct
   include Wasm
-  type 'a phrase = 'a Wasm.Source.phrase = {at : Wasm.Source.region; it : 'a}
   include Wasm.Ast
   include Wasm.Types
   include Wasm.Value
@@ -35,7 +34,7 @@ let nyi at s = raise (NYI (at, s))
 
 module DefTypes = Map.Make(struct type t = W.def_type let compare = compare end)
 
-type scope = GlobalScope | BlockScope | FuncScope | ClassScope
+type scope = PreScope | GlobalScope | BlockScope | FuncScope | ClassScope
 type env = (T.sort * int32, int32) E.env
 
 type 'a entities = {mutable list : 'a option ref list; mutable cnt : int32}
@@ -75,9 +74,24 @@ let emit_entity ents ent : int32 =
   define_entity r ent;
   idx
 
+let implicit_entity ents : int32 =
+  let idx = ents.cnt in
+  ents.cnt <- idx +% 1l;
+  idx
+
+
+let make_env () =
+  let env = ref Env.empty in
+  List.iteri (fun i (y, _) ->
+    env := E.extend_typ !env Source.(y @@ Prelude.region) (i32 i)
+  ) Prelude.typs;
+  List.iteri (fun i (x, _) ->
+    env := E.extend_val !env Source.(x @@ Prelude.region) (T.LetS, i32 i)
+  ) Prelude.vals;
+  env
 
 let make_ctxt () =
-  { envs = [(GlobalScope, ref E.empty)];
+  { envs = [(PreScope, make_env ())];
     deftypes = ref DefTypes.empty;
     types = make_entities ();
     globals = make_entities ();
@@ -100,21 +114,38 @@ let enter_scope ctxt scope =
 (* Emitter *)
 
 let emit_type ctxt at type_ : int32 =
-  match DefTypes.find_opt type_.W.it !(ctxt.deftypes) with
+  match DefTypes.find_opt type_ !(ctxt.deftypes) with
   | Some idx -> idx
   | None ->
-    let idx = emit_entity ctxt.types type_ in
-    ctxt.deftypes := DefTypes.add type_.W.it idx !(ctxt.deftypes);
+    let idx = emit_entity ctxt.types (type_ @@ at) in
+    ctxt.deftypes := DefTypes.add type_ idx !(ctxt.deftypes);
     idx
 
-let emit_export ctxt at name idx descf =
+let emit_import ctxt at mname name desc =
+  let module_name = W.Utf8.decode mname in
+  let item_name = W.Utf8.decode name in
+  let idesc = desc @@ at in
+  ignore (emit_entity ctxt.imports W.({module_name; item_name; idesc} @@ at))
+
+let emit_func_import ctxt at mname name ft =
+  let typeidx = emit_type ctxt at W.(FuncDefType ft) in
+  emit_import ctxt at mname name W.(FuncImport (typeidx @@ at));
+  implicit_entity ctxt.funcs
+
+let emit_global_import ctxt at mname name mut t =
+  emit_import ctxt at mname name W.(GlobalImport (GlobalType (t, mut)));
+  implicit_entity ctxt.globals
+
+let emit_export descf ctxt at name idx =
+  let name = W.Utf8.decode name in
   let edesc = descf (idx @@ at) @@ at in
   ignore (emit_entity ctxt.exports W.({name; edesc} @@ at))
 
+let emit_func_export = emit_export (fun x -> W.FuncExport x)
+let emit_global_export = emit_export (fun x -> W.GlobalExport x)
+
 let emit_param ctxt at : int32 =
-  let idx = ctxt.locals.cnt in
-  ctxt.locals.cnt <- idx +% 1l;
-  idx
+  implicit_entity ctxt.locals
 
 let emit_local ctxt at t' : int32 =
   emit_entity ctxt.locals (t' @@ at)
@@ -142,7 +173,7 @@ let emit_block ctxt at head t' f =
 
 let emit_func ctxt at ts1' ts2' f : int32 =
   let ft = W.(FuncType (ts1', ts2')) in
-  let typeidx = emit_type ctxt at (W.FuncDefType ft @@ at) in
+  let typeidx = emit_type ctxt at W.(FuncDefType ft) in
   let idx, func = alloc_entity ctxt.funcs in
   let ctxt' = {ctxt with locals = make_entities (); instrs = make_entities ()} in
   f ctxt' idx;
@@ -175,14 +206,14 @@ and lower_var_type ctxt at t : int32 =
   | T.Inst _ -> nyi at "instance types"
   | T.Text ->
     let ft = W.(FieldType (PackedStorageType Pack8, Mutable)) in
-    emit_type ctxt at W.(ArrayDefType (ArrayType ft) @@ at)
+    emit_type ctxt at W.(ArrayDefType (ArrayType ft))
   | T.Tup ts ->
     let fts = List.map (fun tI ->
       W.(FieldType (lower_storage_type ctxt at tI, Immutable))) ts in
-    emit_type ctxt at W.(StructDefType (StructType fts) @@ at)
+    emit_type ctxt at W.(StructDefType (StructType fts))
   | T.Array t1 -> 
     let ft = W.(FieldType (lower_storage_type ctxt at t1, Mutable)) in
-    emit_type ctxt at W.(ArrayDefType (ArrayType ft) @@ at)
+    emit_type ctxt at W.(ArrayDefType (ArrayType ft))
   | T.Func _ -> nyi at "function types"
   | T.Class _ -> nyi at "class types"
   | _ -> assert false
@@ -191,6 +222,22 @@ and lower_storage_type ctxt at t : W.storage_type =
   match t with
   | T.Bool | T.Byte | T.Tup [] | T.Bot -> W.(PackedStorageType Pack8)
   | t -> W.(ValueStorageType (lower_value_type ctxt at t))
+
+let lower_func_type ctxt at t : W.func_type =
+  match t with
+  | T.Func (ys, ts1, t2) ->
+    if ys <> [] then nyi at "generic functions";
+    W.FuncType (
+      List.map (lower_value_type ctxt at) ts1,
+      [lower_value_type ctxt at t2]
+    )
+  | T.Class cls ->
+    if cls.T.tparams <> [] then nyi at "generic classes";
+    W.FuncType (
+      List.map (lower_value_type ctxt at) cls.T.vparams,
+      [lower_value_type ctxt at (T.Inst (cls, List.map T.var cls.T.tparams))]
+    )
+  | _ -> assert false
 
 let lower_block_type ctxt at t : W.value_type option =
   match t with
@@ -368,7 +415,7 @@ let rec compile_var ctxt x envs =
     match E.find_opt_val x !env with
     | None ->
       let (scope', _, _) as result = compile_var ctxt x envs' in
-      if scope' <> GlobalScope && scope <> BlockScope then
+      if scope' <> PreScope && scope' <> GlobalScope && scope <> BlockScope then
         nyi x.at "outer scope variable access";
       result
     | Some {it = (s, idx); _} -> scope, s, idx
@@ -385,6 +432,9 @@ let rec compile_exp ctxt e =
       emit_instr ctxt x.at W.(local_get (idx @@ x.at))
     | GlobalScope ->
       emit_instr ctxt x.at W.(global_get (idx @@ x.at))
+    | PreScope ->
+      let _, l = List.nth Prelude.vals (Int32.to_int idx) in
+      compile_lit ctxt l e.at
     | _ -> nyi x.at "class scope"
     );
     compile_coerce_block_type ctxt e.at (Source.et e)
@@ -542,6 +592,7 @@ let rec compile_exp ctxt e =
         emit ctxt W.[call (idx @@ x.at)]
 
       | _, T.FuncS -> nyi x.at "local function calls"
+      | PreScope, _ -> assert false
       | _ -> nyi e.at "indirect function calls"
       )
     | _ -> nyi e.at "indirect function calls"
@@ -597,6 +648,7 @@ let rec compile_exp ctxt e =
         emit_instr ctxt x.at W.(local_set (idx @@ x.at))
       | GlobalScope ->
         emit_instr ctxt x.at W.(global_set (idx @@ x.at))
+      | PreScope -> assert false
       | _ -> nyi x.at "local variable assignments"
       )
 
@@ -699,6 +751,8 @@ and compile_dec ctxt d =
         idx
 
       | ClassScope -> nyi d.at "class field definitions"
+
+      | PreScope -> assert false
     in
     let s = match d.it with VarD _ -> T.VarS | _ -> T.LetS in
     env := E.extend_val !env x (s, idx)
@@ -785,8 +839,6 @@ and compile_dec ctxt d =
     E.adjoin (E.singleton_typ x con) (E.singleton_val x (T.ClassS, v_class))
   *)
 
-  | ImportD (_xs, _url) ->
-    nyi d.at "import declarations"
 
 and compile_decs ctxt ds =
   match ds with
@@ -804,22 +856,51 @@ and compile_block ctxt scope ds =
 
 (* Programs *)
 
+let compile_imp ctxt d =
+  let ImpD (xo, xs, url) = d.it in
+  let _, env = List.hd ctxt.envs in
+  let x = (match xo with None -> "" | Some x -> x.it ^ "_") in
+  List.iter2 (fun xI stat_opt ->
+    match stat_opt with
+    | None -> ()
+    | Some (sort, t) ->
+      let x' = Source.((x ^ xI.it) @@ xI.at) in
+      let idx =
+        match sort with
+        | T.LetS | T.VarS ->
+          emit_global_import ctxt xI.at url xI.it W.Mutable
+            (lower_value_type ctxt xI.at t)
+        | T.FuncS | T.ClassS ->
+          emit_func_import ctxt xI.at url xI.it
+            (lower_func_type ctxt xI.at t)
+        | T.ProhibitedS -> assert false
+      in env := E.extend_val !env x' (sort, idx)
+  ) xs (Source.et d)
+
 let compile_prog p : W.module_ =
-  let Prog ds = p.it in
+  let Prog (is, ds) = p.it in
   let emit ctxt = emit_instr ctxt p.at in
-  let ctxt = make_ctxt () in
+  let ctxt = enter_scope (make_ctxt ()) GlobalScope in
+  List.iter (compile_imp ctxt) is;
   let t' = lower_value_type ctxt p.at (Source.et p) in
   let const = default_const ctxt p.at (Source.et p) in
   let result_idx = emit_global ctxt p.at W.Mutable t' const in
-  let result_name = W.Utf8.decode "return" in
-  emit_export ctxt p.at result_name result_idx (fun x -> W.GlobalExport x);
-  let start_idx = emit_func ctxt p.at [] [] (fun ctxt _ ->
-    emit ctxt W.(global_get (result_idx @@ p.at));
-    compile_decs ctxt ds;
-    emit ctxt W.(global_set (result_idx @@ p.at));
-    emit ctxt W.(return)
-  )
+  let start_idx =
+    emit_func ctxt p.at [] [] (fun ctxt _ ->
+      compile_decs ctxt ds;
+      compile_coerce_value_type ctxt p.at (Source.et p);
+      emit ctxt W.(global_set (result_idx @@ p.at));
+    )
   in
+  emit_global_export ctxt p.at "return" result_idx;
+  let _, env = List.hd ctxt.envs in
+  E.iter_vals (fun x si ->
+    let sort, idx = si.it in
+    match sort with
+    | T.LetS | T.VarS -> emit_global_export ctxt si.at x idx
+    | T.FuncS | T.ClassS -> emit_func_export ctxt si.at x idx
+    | T.ProhibitedS -> assert false
+  ) !env;
   { W.empty_module with
     W.start = Some (start_idx @@ p.at);
     W.types = get_entities ctxt.types;

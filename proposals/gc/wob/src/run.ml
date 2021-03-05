@@ -1,20 +1,23 @@
 (* Errors & Tracing *)
 
+exception Recursive of string * exn * Printexc.raw_backtrace
+
 let trace name = if !Flags.trace then print_endline ("-- " ^ name)
 
 let error at category msg =
   trace ("Error: ");
   prerr_endline (Source.string_of_region at ^ ": " ^ category ^ ": " ^ msg);
-  false
+  None
 
-let handle f : bool =
-  try f (); true with
+let rec handle f =
+  try Some (f ()) with
   | Parse.Error (at, msg) -> error at "syntax error" msg
   | Typing.Error (at, msg) -> error at "type error" msg
   | Eval.Trap (at, msg) -> error at "runtime error" msg
   | Eval.Crash (at, msg) -> error at "crash" msg
   | Compile.NYI (at, msg) ->
     error at "compilation error" (msg ^ " not yet implemented")
+  | Link.Error (at, msg) -> error at "linking error" msg
   | Wasm.Valid.Invalid (at, msg) ->
     error at "validation error (compilation bug)" msg
   | Wasm.Import.Unknown (at, msg) -> error at "link failure" msg
@@ -23,20 +26,21 @@ let handle f : bool =
   | Wasm.Eval.Exhaustion (at, msg) -> error at "resource exhaustion" msg
   | Wasm.Eval.Crash (at, msg) -> error at "runtime crash" msg
   | Sys_error msg -> error Source.no_region "i/o error" msg
+  | Recursive (file, exn, backtrace) ->
+    prerr_endline (file ^ ": error while loading:");
+    handle (fun () -> Printexc.(raise_with_backtrace exn backtrace))
 
 
 (* Input *)
 
 let input_file file f =
   trace ("Loading (" ^ file ^ ")...");
-  match open_in file with
-  | exception Sys_error msg -> error Source.no_region "i/o error" msg
-  | ic ->
-    try
-      let success = f (Lexing.from_channel ic) in
-      close_in ic;
-      success
-    with exn -> close_in ic; raise exn
+  let ic = open_in file in
+  try
+    let result = f (Lexing.from_channel ic) in
+    close_in ic;
+    result
+  with exn -> close_in ic; raise exn
 
 let input_string string f =
   f (Lexing.from_string string)
@@ -61,8 +65,8 @@ let lexbuf_stdin buf len =
 let input_stdin f =
   let lexbuf = Lexing.from_function lexbuf_stdin in
   let rec loop () =
-    let success = f lexbuf in
-    if not success then Lexing.flush_input lexbuf;
+    let result = f lexbuf in
+    if result = None then Lexing.flush_input lexbuf;
     if Lexing.(lexbuf.lex_curr_pos >= lexbuf.lex_buffer_len - 1) then
       continuing := false;
     loop ()
@@ -108,17 +112,13 @@ let write_stdout m =
 
 (* Compilation pipeline *)
 
-let frontend name lexbuf start : Syntax.prog * Type.typ option =
+let frontend name lexbuf start env : Syntax.prog * (Type.typ * Typing.env) =
   trace "Parsing...";
   let prog = Parse.parse name lexbuf start in
-  let t_opt =
-    if !Flags.unchecked then None else begin
-      trace "Checking...";
-      let t, _env = Typing.check_prog Env.empty prog in
-      Some t
-    end
-  in
-  prog, t_opt
+  if !Flags.unchecked then prog, (Type.Bot, Env.empty) else begin
+    trace "Checking...";
+    prog, Typing.check_prog env prog
+  end
 
 let backend prog : Wasm.Ast.module_ =
   trace "Compiling...";
@@ -132,48 +132,106 @@ let backend prog : Wasm.Ast.module_ =
 
 (* Execution *)
 
-let eval prog =
+let eval env prog =
   trace "Running...";
-  let v, _env = Eval.eval_prog Env.empty prog in
-  Printf.printf "%s" (Value.to_string v)
+  let v, env' = Eval.eval_prog env prog in
+  Printf.printf "%s" (Value.to_string v);
+  env'
 
-let exec wasm =
+let exec wasm f =
   trace "Running Wasm...";
-  let open Wasm in
-  let inst = Eval.init wasm [] in
-  List.iter (fun (name, extern) ->
-    match extern with
-    | Instance.ExternGlobal glob when name = Utf8.decode "return" ->
-      Printf.printf "%s" (Value.string_of_value (Global.load glob))
-    | _ -> ()
-  ) inst.Instance.exports
+  let inst = Link.link wasm in
+  f inst;
+  match Wasm.Instance.export inst (Wasm.Utf8.decode "return") with
+  | Some (Wasm.Instance.ExternGlobal glob) ->
+    Printf.printf "%s" Wasm.(Value.string_of_value (Global.load glob))
+  | _ -> ()
+
+
+(* Registry *)
+
+module Reg = Env.Map
+
+type entry =
+  { stat : Typing.env;
+    dyn : Eval.env;
+    inst : Wasm.Instance.module_inst option;
+  }
+
+let reg : entry Reg.t ref = ref Reg.empty
+
+let register file stat dyn inst =
+  reg := Reg.add file {stat; dyn; inst} !reg
+
+
+(* Environment handling *)
+
+type env = Typing.env * Eval.env
+
+let env : env ref = ref (Env.empty, Env.empty)
+let env_name = "*env*"
+
+let inject_env senv prog =
+  let open Source in
+  let open Syntax in
+  let Prog (imps, decs) = prog.it in
+  let senv' = Env.fold_vals (fun x st senv' ->
+    Env.remove_typ (x @@ st.at) senv') senv senv in
+  let ys = Env.fold_typs (fun y kc ys -> (y @@ kc.at)::ys) senv' [] in
+  let nos = Env.fold_typs (fun _ _ nos -> None::nos) senv' [] in
+  let xs = Env.fold_vals (fun x st xs -> (x @@ st.at)::xs) senv [] in
+  let sts = Env.fold_vals (fun _ st sts -> Some (st.it) :: sts) senv [] in
+  let imp = ImpD (None, ys @ xs, env_name) @@ prog.at in
+  let prog' = Prog (imp :: imps, decs) @@ prog.at in
+  imp.et <- Some (nos @ sts);
+  prog'.et <- prog.et;
+  prog'
 
 
 (* Running *)
 
 let run name lexbuf start =
   handle (fun () ->
-    let prog, t_opt = frontend name lexbuf start in
-    if not !Flags.compile then
-      eval prog
-    else begin
-      let wasm = backend prog in
-      if !Flags.textual then write_stdout wasm;
-      if not !Flags.dry then exec wasm
-    end;
-    (match t_opt, not !Flags.dry with
-    | Some t, b ->
-      Printf.printf "%s%s\n" (if b then " : " else "") (Type.to_string t)
-    | None, b ->
-      if b then Printf.printf "\n"
-    )
+    let (senv, denv) = !env in
+    let prog, (t, senv') = frontend name lexbuf start senv in
+    let denv' =
+      if not !Flags.compile then
+        eval denv prog
+      else begin
+        let wasm = backend (inject_env senv prog) in
+        if !Flags.textual then write_stdout wasm;
+        if not !Flags.dry then
+          exec wasm (fun inst -> register env_name senv' Env.empty (Some inst));
+        Env.empty
+      end
+    in
+    env := (Env.adjoin senv senv', Env.adjoin denv denv');
+    let open Printf in
+    if not !Flags.unchecked then begin
+      printf "%s%s\n" (if !Flags.dry then "" else " : ") (Type.to_string t);
+      if !Flags.print_sig then begin
+        Env.iter_typs (fun x kc ->
+          let (k, c) = kc.Source.it in
+          let a = Char.code 'A' in
+          let ys = List.init k (fun i -> String.make 1 (Char.chr (a + i))) in
+          printf "type %s" x;
+          if k > 0 then printf "<%s>" (String.concat ", " ys);
+          printf " = %s\n" (Type.to_string (c (List.map Type.var ys)))
+        ) senv';
+        Env.iter_vals (fun x st ->
+          printf "%s : %s\n" x (Type.to_string (snd st.Source.it))
+        ) senv'
+      end
+    end
+    else if not !Flags.dry then
+      printf "\n"
   )
 
 let run_file file : bool =
-  input_file file (fun lexbuf -> run file lexbuf Parse.Prog)
+  input_file file (fun lexbuf -> run file lexbuf Parse.Prog) <> None
 
 let run_string string : bool =
-  input_string string (fun lexbuf -> run "string" lexbuf Parse.Prog)
+  input_string string (fun lexbuf -> run "string" lexbuf Parse.Prog) <> None
 
 let run_stdin () =
   input_stdin (fun lexbuf -> run "stdin" lexbuf Parse.Repl)
@@ -183,7 +241,7 @@ let run_stdin () =
 
 let compile name file lexbuf start =
   handle (fun () ->
-    let prog, t_opt = frontend name lexbuf start in
+    let prog, _ = frontend name lexbuf start Env.empty in
     if !Flags.compile then begin
       let wasm = backend prog in
       write_file file wasm
@@ -191,7 +249,45 @@ let compile name file lexbuf start =
   )
 
 let compile_file file : bool =
-  input_file file (fun lexbuf -> compile file file lexbuf Parse.Prog)
+  input_file file (fun lexbuf -> compile file file lexbuf Parse.Prog) <> None
 
 let compile_string string file : bool =
-  input_string file (fun lexbuf -> compile "string" file lexbuf Parse.Prog)
+  input_string file
+    (fun lexbuf -> compile "string" file lexbuf Parse.Prog) <> None
+
+
+(* Registry hooks *)
+
+let load_file url : entry =
+  try
+    trace (String.make 60 '-');
+    trace ("Loading import \"" ^ url ^ "\"...");
+    (* TODO: load sig or wasm from disk *)
+    let file = url ^ ".wob" in
+    let entry =
+      input_file file (fun lexbuf ->
+        let prog, (_, stat) = frontend file lexbuf Parse.Prog Env.empty in
+        let dyn, inst =
+          if not !Flags.compile then
+            eval Env.empty prog, None
+          else
+            Env.empty, Some (Link.link (backend prog))
+        in {stat; dyn; inst}
+      )
+    in
+    trace ("Finished import \"" ^ url ^ "\".");
+    trace (String.make 60 '-');
+    entry
+  with exn -> raise (Recursive (url, exn, Printexc.get_raw_backtrace ()))
+
+let find_entry url =
+  match Reg.find_opt url !reg with
+  | Some entry -> entry
+  | None ->
+    let entry = load_file url in
+    reg := Reg.add url entry !reg;
+    entry
+
+let _ = Typing.get_env := fun url -> (find_entry url).stat
+let _ = Eval.get_env := fun url -> (find_entry url).dyn
+let _ = Link.get_inst := fun url -> (find_entry url).inst

@@ -107,10 +107,13 @@ and dec d = match d.it with
       ["param" $$ flatlist (fun (x, t) -> [var x; typ t]) pxts] @
       opt (fun (y, ts, es) -> "sub" $$ [var y] @ list typ ts @ list exp es) so @
       list dec ds
-  | ImportD (xs, url) -> "ImportD" $$ list var xs @ [Atom (string url)]
 
 
 (* Modules *)
 
+let imp d = match d.it with
+  | ImpD (xo, xs, url) ->
+    "ImpD" $$ opt var xo @ list var xs @ [Atom (string url)]
+
 let prog m = match m.it with
-  | Prog ds -> "Prog" $$ list dec ds
+  | Prog (is, ds) -> "Prog" $$ list imp is @ list dec ds
