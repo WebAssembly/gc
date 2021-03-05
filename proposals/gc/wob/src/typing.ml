@@ -173,11 +173,8 @@ and check_exp' env e : T.typ =
   | ArrayE es ->
     let ts = List.map (check_exp env) es in
     let t =
-      match ts with
-      | [] -> T.Null (*TODO*)
-      | t::ts' ->
-        try List.fold_left T.lub t ts' with Failure _ ->
-          error e.at "array has inconsistent element types"
+      try List.fold_left T.lub T.Bot ts with Failure _ ->
+        error e.at "array has inconsistent element types"
     in
     T.Array t
 
@@ -480,9 +477,6 @@ and check_dec' pass env d : T.typ * env =
     T.Tup [],
     E.adjoin (E.singleton_typ x (k, con)) (E.singleton_val x (T.ClassS, t))
 
-  | ImportD (_xs, _url) ->
-    (* TODO *)
-    error d.at "imports not implemented yet"
 
 and check_decs pass env ds t : T.typ * env =
   match ds with
@@ -504,9 +498,49 @@ and check_block pass env ds : T.typ * env =
 
 (* Programs *)
 
+let get_env = ref (fun _url -> failwith "get_env")
+
+let check_imp env env' d : env =
+  let ImpD (xo, xs, url) = d.it in
+  let menv = !get_env url in
+  let x = (match xo with None -> "" | Some x -> x.it ^ "_") in
+  let env', stos =
+    List.fold_left (fun (env', stos) xI ->
+      if not (E.mem_val xI menv || E.mem_typ xI menv) then
+        error xI.at "unknown export `%s` in \"%s\"" xI.it url;
+      let x' = (x ^ xI.it) @@ xI.at in
+      (* TODO: technically, we have to selfify any class names here *)
+      let env', sto =
+        match E.find_opt_val xI menv with
+        | None -> env', None
+        | Some st -> E.extend_val env' x' st.it, Some st.it
+      in
+      let env' =
+        match E.find_opt_typ xI menv with
+        | None -> env'
+        | Some kc -> E.extend_typ env' x' kc.it
+      in
+      env', sto::stos
+    ) (env', []) xs
+  in
+  d.et <- Some (List.rev stos);
+  env'
+
+let env0 =
+  let at = Prelude.region in
+  E.empty
+  |> List.fold_right (fun (y, t) env ->
+      E.extend_typ_gnd env (y @@ at) (check_typ env (t @@ at))
+    ) Prelude.typs
+  |> List.fold_right (fun (x, l) env ->
+      E.extend_val_let env (x @@ at) (check_lit env l)
+    ) Prelude.vals
+
 let check_prog env p : T.typ * env =
   assert (p.et = None);
-  let Prog ds = p.it in
-  let t, env' = check_block Full env ds in
+  let Prog (is, ds) = p.it in
+  let env' = E.adjoin env0 env in
+  let env1 = List.fold_left (check_imp env') E.empty is in
+  let t, env2 = check_block Full (E.adjoin env' env1) ds in
   p.et <- Some t;
-  t, env'
+  t, Env.adjoin env1 env2

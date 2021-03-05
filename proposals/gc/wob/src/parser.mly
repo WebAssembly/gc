@@ -54,7 +54,7 @@ let float s at =
 %token ADDOP SUBOP MULOP DIVOP MODOP ANDOP OROP XOROP SHLOP SHROP CATOP
 %token ANDTHENOP ORELSEOP NOTOP
 %token NEW IF ELSE WHILE RETURN ASSERT
-%token LET VAR FUNC TYPE CLASS IMPORT FROM
+%token LET VAR FUNC TYPE CLASS IMPORT EXPORT FROM
 %token<string> NAT FLOAT TEXT ID DOT_NUM
 
 %nonassoc RETURN_NO_ARG IF_NO_ELSE
@@ -256,7 +256,6 @@ dec :
   | CLASS var gen_opt LPAR param_list RPAR sup_opt LCURLY dec_list RCURLY {
       ClassD ($2, $3, $5, $7, $9) @@ at ()
     }
-  | IMPORT var_list FROM TEXT { ImportD ($2, $4) @@ at () }
 
 dec_list :
   | /* empty */ { [] }
@@ -272,8 +271,27 @@ dec_list_noeol :
 
 /* Programs */
 
+imp :
+  | IMPORT LCURLY var_list RCURLY FROM TEXT { ImpD (None, $3, $6) @@ at () }
+  | IMPORT var LCURLY var_list RCURLY FROM TEXT {
+      ImpD (Some $2, $4, $7) @@ at ()
+    }
+
+imp_list :
+  | /* empty */ { [] }
+  | imp { [$1] }
+  | imp SEMICOLON imp_list { $1 :: $3 }
+  | imp SEMICOLON_EOL imp_list { $1 :: $3 }
+
+imp_list_noeol :
+  | /* empty */ { [] }
+  | imp { [$1] }
+  | imp SEMICOLON imp_list_noeol { $1 :: $3 }
+
 prog :
-  | dec_list EOF { Prog (Prelude.prelude @ $1) @@ at () }
+  | imp_list dec_list EOF { Prog ($1, $2) @@ at () }
 
 repl :
-  | dec_list_noeol SEMICOLON_EOL { Prog (Prelude.prelude @ $1) @@ at () }
+  | imp_list_noeol dec_list_noeol SEMICOLON_EOL {
+      Prog ($1, $2) @@ at ()
+    }

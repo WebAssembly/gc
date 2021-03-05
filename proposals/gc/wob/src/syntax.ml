@@ -75,11 +75,14 @@ and dec' =
   | TypD of var * var list * typ
   | FuncD of var * var list * (var * typ) list * typ * exp
   | ClassD of var * var list * (var * typ) list * (var * typ list * exp list) option * dec list
-  | ImportD of var list * string
 
 
 (* Modules *)
 
+type imp = (imp', (T.sort * T.typ) option list) Source.phrase
+and imp' =
+  | ImpD of var option * var list * string
+
 type prog = (prog', T.typ) Source.phrase
 and prog' =
-  | Prog of dec list
+  | Prog of imp list * dec list

@@ -55,6 +55,9 @@ let extend_typ env y t = {env with typs = Map.add y.it (t @@ y.at) env.typs}
 let extend_vals env xs vs = List.fold_left2 extend_val env xs vs
 let extend_typs env ys ts = List.fold_left2 extend_typ env ys ts
 
+let remove_val x env = {env with vals = Map.remove x.it env.vals}
+let remove_typ y env = {env with typs = Map.remove y.it env.typs}
+
 let singleton_val x v = extend_val empty x v
 let singleton_typ y t = extend_typ empty y t
 
