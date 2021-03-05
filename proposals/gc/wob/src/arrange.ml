@@ -39,6 +39,7 @@ let rec typ t = match t.it with
 let unop = function
   | PosOp -> "PosOp"
   | NegOp -> "NegOp"
+  | InvOp -> "InvOp"
   | NotOp -> "NotOp"
 
 let binop = function
@@ -49,6 +50,9 @@ let binop = function
   | ModOp -> "ModOp"
   | AndOp -> "AndOp"
   | OrOp  -> "OrOp"
+  | XorOp -> "XorOp"
+  | ShlOp -> "ShlOp"
+  | ShrOp -> "ShrOp"
   | CatOp -> "CatOp"
 
 let relop = function
@@ -58,6 +62,10 @@ let relop = function
   | GtOp -> "GtOp"
   | LeOp -> "LeOp"
   | GeOp -> "GeOp"
+
+let logop = function
+  | AndThenOp -> "AndThenOp"
+  | OrElseOp  -> "OrElseOp"
 
 
 let lit = function
@@ -73,6 +81,7 @@ let rec exp e = match e.it with
   | UnE (op, e1) -> "UnE" $$ [Atom (unop op); exp e1]
   | BinE (e1, op, e2) -> "BinE" $$ [exp e1; Atom (binop op); exp e2]
   | RelE (e1, op, e2) -> "RelE" $$ [exp e1; Atom (relop op); exp e2]
+  | LogE (e1, op, e2) -> "LogE" $$ [exp e1; Atom (logop op); exp e2]
   | TupE es -> "TupE" $$ list exp es
   | ProjE (e1, i) -> "ProjE" $$ [exp e1; Atom (string_of_int i)]
   | ArrayE es -> "ArrayE" $$ list exp es
@@ -104,7 +113,7 @@ and dec d = match d.it with
       [typ t; exp e]
   | ClassD (x, ys, xts, so, ds) ->
     "ClassD" $$ [var x] @ ["gen" $$ list var ys] @
-      ["param" $$ flatlist (fun (x, t) -> [var x; typ t]) pxts] @
+      ["param" $$ flatlist (fun (x, t) -> [var x; typ t]) xts] @
       opt (fun (y, ts, es) -> "sub" $$ [var y] @ list typ ts @ list exp es) so @
       list dec ds
 

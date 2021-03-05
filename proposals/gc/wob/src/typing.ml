@@ -135,7 +135,6 @@ and check_exp' env e : T.typ =
     | (AddOp | SubOp | MulOp | DivOp | ModOp), T.Int
     | (AndOp | OrOp | XorOp | ShlOp | ShrOp), T.Int -> t
     | (AddOp | SubOp | MulOp | DivOp), T.Float -> t
-    | (AndThenOp | OrElseOp), T.Bool -> t
     | CatOp, T.Text -> t
     | _ ->
       error e.at "binary operator not defined for types %s and %s"
@@ -157,6 +156,18 @@ and check_exp' env e : T.typ =
       error e.at "comparison operator not defined for types %s and %s"
         (T.to_string t1) (T.to_string t2)
     )
+
+  | LogE (e1, op, e2) ->
+    let t1 = check_exp env e1 in
+    let t2 = check_exp env e2 in
+    let t = try T.lub t1 t2 with Failure _ ->
+      error e.at "binary operator applied to incompatible types %s and %s"
+        (T.to_string t1) (T.to_string t2)
+    in
+    if t <> T.Bool then
+      error e.at "logical operator not defined for types %s and %s"
+        (T.to_string t1) (T.to_string t2);
+    t
 
   | TupE es ->
     let ts = List.map (check_exp env) es in
