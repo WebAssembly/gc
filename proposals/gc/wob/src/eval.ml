@@ -123,8 +123,12 @@ let rec eval_exp env e : V.value =
     | AddOp, V.Int i1, V.Int i2 -> V.Int (Int32.add i1 i2)
     | SubOp, V.Int i1, V.Int i2 -> V.Int (Int32.sub i1 i2)
     | MulOp, V.Int i1, V.Int i2 -> V.Int (Int32.mul i1 i2)
-    | DivOp, V.Int i1, V.Int i2 -> V.Int (Int32.div i1 i2)
-    | ModOp, V.Int i1, V.Int i2 -> V.Int (Int32.rem i1 i2)
+    | DivOp, V.Int i1, V.Int i2 ->
+      if i2 = 0l then trap e.at "division by zero" else
+      V.Int (Int32.div i1 i2)
+    | ModOp, V.Int i1, V.Int i2 ->
+      if i2 = 0l then trap e.at "modulo by zero" else
+      V.Int (Int32.rem i1 i2)
     | AndOp, V.Int i1, V.Int i2 -> V.Int (Int32.logand i1 i2)
     | OrOp,  V.Int i1, V.Int i2 -> V.Int (Int32.logor i1 i2)
     | XorOp, V.Int i1, V.Int i2 -> V.Int (Int32.logxor i1 i2)
@@ -376,9 +380,6 @@ and eval_dec pass env d : V.value * env =
     V.Tup [],
     E.adjoin (E.singleton_typ x con) (E.singleton_val x (T.ClassS, v_class))
 
-  | ImportD (_xs, _url) ->
-    (* TODO *)
-    crash d.at "imports not implemented yet"
 
 and eval_decs pass env ds v : V.value * env =
   match ds with
@@ -403,6 +404,40 @@ and eval_block pass env ds : V.value * env =
 
 (* Programs *)
 
+let get_env = ref (fun _url -> failwith "get_env")
+
+let eval_imp env env' d : env =
+  let ImpD (xo, xs, url) = d.it in
+  let menv = !get_env url in
+  let x = (match xo with None -> "" | Some x -> x.it ^ "_") in
+  List.fold_left (fun env' xI ->
+    let x' = (x ^ xI.it) @@ xI.at in
+    let env' =
+      match E.find_opt_val xI menv with
+      | None -> env'
+      | Some sv -> Env.extend_val env' x' sv.it
+    in
+    let env' =
+      match E.find_opt_typ xI menv with
+      | None -> env'
+      | Some c -> E.extend_typ env' x' c.it
+    in
+    env'
+  ) env' xs
+
+let env0 =
+  let at = Prelude.region in
+  E.empty
+  |> List.fold_right (fun (y, t) env ->
+      E.extend_typ_gnd env (y @@ at) (eval_typ env (t @@ at))
+    ) Prelude.typs
+  |> List.fold_right (fun (x, l) env ->
+      E.extend_val_let env (x @@ at) (eval_lit env l)
+    ) Prelude.vals
+
 let eval_prog env p : V.value * env =
-  let Prog ds = p.it in
-  eval_block Full env ds
+  let Prog (is, ds) = p.it in
+  let env' = Env.adjoin env0 env in
+  let env1 = List.fold_left (eval_imp env') E.empty is in
+  let v, env2 = eval_block Full (E.adjoin env' env1) ds in
+  v, E.adjoin env1 env2

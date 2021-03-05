@@ -1,2 +1,4 @@
 val region : Source.region
-val prelude : Syntax.dec list
+
+val typs : (string * Syntax.typ') list
+val vals : (string * Syntax.lit) list
