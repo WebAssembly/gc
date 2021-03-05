@@ -5,6 +5,7 @@ let banner () =
   print_endline (name ^ " " ^ version ^ " interpreter")
 
 let usage = "Usage: " ^ name ^ " [option] [file ...]"
+let help = ref (fun _ -> failwith "help")
 
 let args = ref []
 let add_arg source = args := !args @ [source]
@@ -20,14 +21,16 @@ let argspec = Arg.align
   "-c", Arg.Set Flags.compile,
     " compile input to Wasm (default when files given)";
   "-d", Arg.Set Flags.dry,
-    " dry, do not run checked (with -r) or compiled program (with -c)" ^
+    " dry, do not run program" ^
     " (default when compiling non-interactively)";
   "-u", Arg.Set Flags.unchecked,
     " unchecked, do not perform type-checking (only without -c)";
-  "-s", Arg.Set Flags.print_sig,
-    " print type signature (default when interactive)";
   "-v", Arg.Set Flags.validate,
     " validate generated Wasm";
+  "-a", Arg.Set Flags.print_ast,
+    " output abstract syntac";
+  "-s", Arg.Set Flags.print_sig,
+    " print type signature (default when interactive)";
   "-x", Arg.Set Flags.textual,
     " output textual Wasm";
   "-w", Arg.Int (fun n -> Flags.width := n),
@@ -36,7 +39,13 @@ let argspec = Arg.align
     " show version";
   "-t", Arg.Set Flags.trace,
     " trace execution";
+  "-h", Arg.Unit (fun () -> !help ()),
+    " show this list of options";
+  "-help", Arg.Unit (fun () -> !help ()), "";
+  "--help", Arg.Unit (fun () -> !help ()), "";
 ]
+
+let () = help := fun () -> Arg.usage argspec usage; exit 0
 
 let () =
   Printexc.record_backtrace true;

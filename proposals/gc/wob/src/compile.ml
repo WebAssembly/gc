@@ -459,22 +459,6 @@ let rec compile_exp ctxt e =
     | _ -> assert false
     )
 
-  | BinE (e1, AndThenOp, e2) ->
-    emit_block ctxt e.at W.block W.(Some i32t) (fun ctxt ->
-      emit ctxt W.[i32_const (0l @@ e1.at)];
-      compile_exp ctxt e1;
-      emit ctxt W.[i32_eqz; br_if (0l @@ e.at); drop];
-      compile_exp ctxt e2;
-    )
-
-  | BinE (e1, OrElseOp, e2) ->
-    emit_block ctxt e.at W.block W.(Some i32t) (fun ctxt ->
-      emit ctxt W.[i32_const (1l @@ e1.at)];
-      compile_exp ctxt e1;
-      emit ctxt W.[br_if (0l @@ e.at); drop];
-      compile_exp ctxt e2;
-    )
-
   | BinE (e1, op, e2) ->
     compile_exp ctxt e1;
     compile_exp ctxt e2;
@@ -518,6 +502,22 @@ let rec compile_exp ctxt e =
     | EqOp, T.Text -> nyi e.at "text comparison"
     | NeOp, T.Text -> nyi e.at "text comparison"
     | _ -> assert false
+    )
+
+  | LogE (e1, AndThenOp, e2) ->
+    emit_block ctxt e.at W.block W.(Some i32t) (fun ctxt ->
+      emit ctxt W.[i32_const (0l @@ e1.at)];
+      compile_exp ctxt e1;
+      emit ctxt W.[i32_eqz; br_if (0l @@ e.at); drop];
+      compile_exp ctxt e2;
+    )
+
+  | LogE (e1, OrElseOp, e2) ->
+    emit_block ctxt e.at W.block W.(Some i32t) (fun ctxt ->
+      emit ctxt W.[i32_const (1l @@ e1.at)];
+      compile_exp ctxt e1;
+      emit ctxt W.[br_if (0l @@ e.at); drop];
+      compile_exp ctxt e2;
     )
 
   | TupE [] ->

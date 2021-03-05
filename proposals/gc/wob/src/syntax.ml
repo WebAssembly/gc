@@ -30,8 +30,8 @@ type unop = PosOp | NegOp | InvOp | NotOp
 type binop =
   | AddOp | SubOp | MulOp | DivOp | ModOp
   | AndOp | OrOp | XorOp | ShlOp | ShrOp | CatOp
-  | AndThenOp | OrElseOp
 type relop = EqOp | NeOp | LtOp | GtOp | LeOp | GeOp
+type logop = AndThenOp | OrElseOp
 
 type lit =
   | NullLit
@@ -47,6 +47,7 @@ and exp' =
   | UnE of unop * exp
   | BinE of exp * binop * exp
   | RelE of exp * relop * exp
+  | LogE of exp * logop * exp
   | TupE of exp list
   | ProjE of exp * int
   | ArrayE of exp list

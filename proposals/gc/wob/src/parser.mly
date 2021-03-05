@@ -182,8 +182,8 @@ exp_bin :
   | exp_bin GTOP exp_bin { RelE ($1, GtOp, $3) @@ at () }
   | exp_bin LEOP exp_bin { RelE ($1, LeOp, $3) @@ at () }
   | exp_bin GEOP exp_bin { RelE ($1, GeOp, $3) @@ at () }
-  | exp_bin ANDTHENOP exp_bin { BinE ($1, AndThenOp, $3) @@ at () }
-  | exp_bin ORELSEOP  exp_bin { BinE ($1, OrElseOp,  $3) @@ at () }
+  | exp_bin ANDTHENOP exp_bin { LogE ($1, AndThenOp, $3) @@ at () }
+  | exp_bin ORELSEOP  exp_bin { LogE ($1, OrElseOp,  $3) @@ at () }
   | exp_bin COLON typ { AnnotE ($1, $3) @@ at () }
   | exp_bin SUP typ { CastE ($1, $3) @@ at () }
   | exp_bin ASSIGN exp_bin { AssignE ($1, $3) @@ at () }
