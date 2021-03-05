@@ -100,22 +100,6 @@ let rec eval_exp env e : V.value =
     | _ -> crash e.at "runtime type error at unary operator"
     )
 
-  | BinE (e1, AndThenOp, e2) ->
-    let v1 = eval_exp env e1 in
-    (match v1 with
-    | V.Bool false -> V.Bool false
-    | V.Bool true -> eval_exp env e2
-    | _ -> crash e.at "runtime type error at binary operator"
-    )
-
-  | BinE (e1, OrElseOp, e2) ->
-    let v1 = eval_exp env e1 in
-    (match v1 with
-    | V.Bool false -> eval_exp env e2
-    | V.Bool true -> V.Bool true
-    | _ -> crash e.at "runtime type error at binary operator"
-    )
-
   | BinE (e1, op, e2) ->
     let v1 = eval_exp env e1 in
     let v2 = eval_exp env e2 in
@@ -154,6 +138,22 @@ let rec eval_exp env e : V.value =
     | GtOp -> V.Bool (v1 > v2)
     | LeOp -> V.Bool (v1 <= v2)
     | GeOp -> V.Bool (v1 >= v2)
+    )
+
+  | LogE (e1, AndThenOp, e2) ->
+    let v1 = eval_exp env e1 in
+    (match v1 with
+    | V.Bool false -> V.Bool false
+    | V.Bool true -> eval_exp env e2
+    | _ -> crash e.at "runtime type error at binary operator"
+    )
+
+  | LogE (e1, OrElseOp, e2) ->
+    let v1 = eval_exp env e1 in
+    (match v1 with
+    | V.Bool false -> eval_exp env e2
+    | V.Bool true -> V.Bool true
+    | _ -> crash e.at "runtime type error at binary operator"
     )
 
   | TupE es ->

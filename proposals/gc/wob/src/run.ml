@@ -115,6 +115,8 @@ let write_stdout m =
 let frontend name lexbuf start env : Syntax.prog * (Type.typ * Typing.env) =
   trace "Parsing...";
   let prog = Parse.parse name lexbuf start in
+  if !Flags.print_ast then
+    Wasm.Sexpr.print !Flags.width (Arrange.prog prog);
   if !Flags.unchecked then prog, (Type.Bot, Env.empty) else begin
     trace "Checking...";
     prog, Typing.check_prog env prog
