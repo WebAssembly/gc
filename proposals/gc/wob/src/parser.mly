@@ -49,7 +49,7 @@ let float s at =
 %token EOF
 
 %token LPAR RPAR LBRACK RBRACK LCURLY RCURLY COMMA SEMICOLON SEMICOLON_EOL
-%token COLON EQ LT GT ARROW ASSIGN SUB SUP DOT DOT_NUM
+%token COLON EQ LT GT ARROW ASSIGN SUB SUP DOT DOT_NUM DOLLAR
 %token EQOP NEOP LEOP LTOP GTOP GEOP
 %token ADDOP SUBOP MULOP DIVOP MODOP ANDOP OROP XOROP SHLOP SHROP CATOP
 %token ANDTHENOP ORELSEOP NOTOP
@@ -105,6 +105,7 @@ typ_param :
 typ_post :
   | typ_simple { $1 }
   | typ_tup { $1 }
+  | typ_post DOLLAR { BoxT $1 @@ at () }
   | typ_post LBRACK RBRACK { ArrayT $1 @@ at () }
 
 typ :
@@ -145,6 +146,7 @@ exp_arg :
 exp_post :
   | exp_simple { $1 }
   | exp_tup { $1 }
+  | exp_post DOLLAR { UnboxE $1 @@ at () }
   | exp_post LBRACK exp RBRACK { IdxE ($1, $3) @@ at () }
   | exp_post DOT_NUM { ProjE ($1, nat $2 (ati 2)) @@ at () }
   | exp_post DOT var { DotE ($1, $3) @@ at () }
@@ -153,6 +155,7 @@ exp_post :
 
 exp_un :
   | exp_post { $1 }
+  | DOLLAR exp_un { BoxE $2 @@ at () }
   | ADDOP exp_un { UnE (PosOp, $2) @@ at () }
   | SUBOP exp_un { UnE (NegOp, $2) @@ at () }
   | XOROP exp_un { UnE (InvOp, $2) @@ at () }

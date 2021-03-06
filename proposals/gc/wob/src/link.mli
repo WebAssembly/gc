@@ -1,4 +1,4 @@
-val get_inst : (string -> Wasm.Instance.module_inst option) ref
+val get_inst : (Source.region -> string -> Wasm.Instance.module_inst option) ref
 
 exception Error of Source.region * string
 

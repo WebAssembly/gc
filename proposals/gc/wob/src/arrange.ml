@@ -28,6 +28,7 @@ let rec typ t = match t.it with
   | FloatT -> Atom "FloatT"
   | TextT -> Atom "TextT"
   | ObjT -> Atom "ObjT"
+  | BoxT t -> "BoxT" $$ [typ t]
   | TupT ts -> "TupT" $$ list typ ts
   | ArrayT t -> "ArrayT" $$ [typ t]
   | FuncT (ys, ts1, t2) ->
@@ -78,6 +79,8 @@ let lit = function
 let rec exp e = match e.it with
   | VarE x -> "VarE" $$ [var x]
   | LitE l -> "LitE" $$ [lit l]
+  | BoxE e1 -> "BoxE" $$ [exp e1]
+  | UnboxE e1 -> "UnboxE" $$ [exp e1]
   | UnE (op, e1) -> "UnE" $$ [Atom (unop op); exp e1]
   | BinE (e1, op, e2) -> "BinE" $$ [exp e1; Atom (binop op); exp e2]
   | RelE (e1, op, e2) -> "RelE" $$ [exp e1; Atom (relop op); exp e2]

@@ -12,6 +12,7 @@ and value =
   | Int of int32
   | Float of float
   | Text of string
+  | Box of value
   | Tup of value list
   | Array of value ref list
   | Obj of typ * obj
@@ -24,19 +25,20 @@ and cls = typ -> typ list -> value list -> value * (unit -> unit)
 
 (* Accessors *)
 
-let is_ref = function
-  | Null | Bool _ | Byte _ | Int _ | Float _ | Text _ -> false
-  | Tup _ -> false
-  | Array _ | Obj _ | Func _ | Class _ -> true
-
 let as_obj = function Obj (_, obj) -> obj | _ -> assert false
 
 
 (* Comparison *)
 
+let is_ref = function
+  | Null | Bool _ | Byte _ | Int _ | Float _ | Text _ -> false
+  | Box _ | Tup _ -> false
+  | Array _ | Obj _ | Func _ | Class _ -> true
+
 let rec eq v1 v2 =
   v1 == v2 ||
   match v1, v2 with
+  | Box v1, Box v2 -> eq v1 v2
   | Tup vs1, Tup vs2 ->
     List.length vs1 = List.length vs2 && List.for_all2 eq vs1 vs2
   | v1, v2 when is_ref v1 && is_ref v2 -> v1 == v2
@@ -54,6 +56,7 @@ let rec default = function
   | Type.Int -> Int 0l
   | Type.Float -> Float 0.0
   | Type.Text -> Text ""
+  | Type.Box t -> Box (default t)
   | Type.Tup ts -> Tup (List.map default ts)
 
 
@@ -68,6 +71,7 @@ let rec to_string = function
   | Int i -> Int32.to_string i
   | Float z -> string_of_float z
   | Text t -> "\"" ^ String.escaped t ^ "\""
+  | Box v -> "$" ^ to_string v
   | Tup vs -> "(" ^ list to_string vs ^ ")"
   | Array vs -> "[" ^ list to_string (List.map (!) vs) ^ "]"
   | Obj (t, _) -> "(new " ^ Type.to_string t ^ ")"

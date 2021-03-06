@@ -1,6 +1,6 @@
 (* Errors & Tracing *)
 
-exception Recursive of string * exn * Printexc.raw_backtrace
+exception Recursive of Source.region * exn * Printexc.raw_backtrace
 
 let trace name = if !Flags.trace then print_endline ("-- " ^ name)
 
@@ -26,8 +26,8 @@ let rec handle f =
   | Wasm.Eval.Exhaustion (at, msg) -> error at "resource exhaustion" msg
   | Wasm.Eval.Crash (at, msg) -> error at "runtime crash" msg
   | Sys_error msg -> error Source.no_region "i/o error" msg
-  | Recursive (file, exn, backtrace) ->
-    prerr_endline (file ^ ": error while loading:");
+  | Recursive (at, exn, backtrace) ->
+    ignore (error at "error while loading" "");
     handle (fun () -> Printexc.(raise_with_backtrace exn backtrace))
 
 
@@ -93,9 +93,10 @@ let read_binary_file file =
 let read_sig_file file =
   let file' = Filename.chop_extension file ^ ".wos" in
   with_in_file open_in_bin file' (fun ic ->
-    let tag = Marshal.from_channel ic in
-    if tag <> marshal_tag then
-      raise (Sys_error "incompatible signature file");
+    if Marshal.from_channel ic <> marshal_tag then
+      raise (Sys_error "signature file is from incompatible build");
+    if Marshal.from_channel ic <> (!Flags.boxed, !Flags.parametric) then
+      raise (Sys_error "signature file has incompatible language mode");
     Marshal.from_channel ic
   )
 
@@ -135,6 +136,7 @@ let write_sig_file file stat =
   let file' = Filename.chop_extension file ^ ".wos" in
   with_out_file open_out_bin file' (fun oc ->
     Marshal.to_channel oc marshal_tag [];
+    Marshal.to_channel oc (!Flags.boxed, !Flags.parametric) [];
     Marshal.to_channel oc stat [Marshal.Closures]
   )
 
@@ -292,7 +294,7 @@ let compile_string string file : bool =
 
 (* Registry hooks *)
 
-let load_file url : entry =
+let load_file url at : entry =
   try
     trace (String.make 60 '-');
     trace ("Loading import \"" ^ url ^ "\"...");
@@ -332,16 +334,16 @@ let load_file url : entry =
     trace ("Finished import \"" ^ url ^ "\".");
     trace (String.make 60 '-');
     entry
-  with exn -> raise (Recursive (url, exn, Printexc.get_raw_backtrace ()))
+  with exn -> raise (Recursive (at, exn, Printexc.get_raw_backtrace ()))
 
-let find_entry url =
+let find_entry url at =
   match Reg.find_opt url !reg with
   | Some entry -> entry
   | None ->
-    let entry = load_file url in
+    let entry = load_file url at in
     reg := Reg.add url entry !reg;
     entry
 
-let _ = Typing.get_env := fun url -> (find_entry url).stat
-let _ = Eval.get_env := fun url -> (find_entry url).dyn
-let _ = Link.get_inst := fun url -> (find_entry url).inst
+let _ = Typing.get_env := fun at url -> (find_entry url at).stat
+let _ = Eval.get_env := fun at url -> (find_entry url at).dyn
+let _ = Link.get_inst := fun at url -> (find_entry url at).inst

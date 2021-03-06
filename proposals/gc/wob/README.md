@@ -24,7 +24,7 @@ The `wob` implementation encompasses:
 * Compiler to Wasm (WIP)
 * A read-eval-print-loop that can run either interpreted or compiled code
 
-The language is fully implemented in the interpreter, but the compiler does not yet support closures, classes, and generics. It does, however, implement garbage-collected tuples, arrays, and text strings, already making use of many of the constructs in the GC proposal's MVP.
+The language is fully implemented in the interpreter, but the compiler does not yet support closures, classes, and casts. It does, however, implement garbage-collected tuples, arrays, text strings, and generics, already making use of many of the constructs in the GC proposal's MVP.
 
 
 ### Usage
@@ -67,6 +67,7 @@ typ ::=
   id ('<' typ,* '>')?                      named use
   '(' typ,* ')'                            tuple
   typ '[' ']'                              array
+  typ '$'                                  boxed
   ('<' id,* '>')? '(' typ,* ')' '->' typ   function
   typ '->' typ                             function (shorthand)
 ```
@@ -97,6 +98,8 @@ exp ::=
   exp ('<' typ,* '>')? '(' exp,* ')'       function call
   'new' id ('<' typ,* '>')? '(' exp,* ')'  class instantiation
   'new' typ '[' exp ']' '(' exp ')'        array instantiation
+  '$' exp                                  box value
+  exp '$'                                  unbox boxed value
   exp ':' typ                              static type annotation
   exp ':>' typ                             dynamic type cast
   'assert' exp                             assertion
@@ -175,7 +178,7 @@ func fac(x : Int) : Int {
 
 assert fac(5) == 120;
 
-func foreach<T>(a : T[], n : Int, f : T -> ()) {
+func foreach(a : Int[], n : Int, f : Int -> ()) {
   var i : Int = 0;
   while i < n {
     f(a[i]);
@@ -185,8 +188,32 @@ func foreach<T>(a : T[], n : Int, f : T -> ()) {
 
 let a = [1, 2, 5, 6, -8];
 var sum : Int = 0;
-foreach<Int>(a, 5, func(k : Int) { sum := sum + k });
+foreach(a, 5, func(k : Int) { sum := sum + k });
 assert sum == 6;
+```
+
+#### Generics
+```
+func fold<T, R>(a : T[], n : Int, x : R, f : (Int, T, R) -> R) : R {
+  var i : Int = 0;
+  var r : R = x;
+  while (i < n) {
+    r := f(i, a[i], r);
+    i := i + 1;
+  };
+  return r;
+};
+
+
+func f<X>(x : X, f : <Y>(Y) -> Y) : (Int, X, Float) {
+  let t = (1, x, 1e100);
+  (f<Int$>($t.0), f<X>(t.1), f<Float$>($t.2));
+};
+
+let t = f<Bool$>($false, func<T>(x : T) : T { x });
+assert t.0 == 1;
+assert !t.1;
+assert t.2 == 1e100;
 ```
 
 #### Classes
