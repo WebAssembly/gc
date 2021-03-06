@@ -16,7 +16,7 @@
   };
 
   let o = new B();
-  assert o.v0 == 10;
+  assert o.v0 == 20;
   assert o.v1 == 20;
   assert o.v2 == 20;
 };
@@ -37,7 +37,7 @@
   };
 
   let o = new B();
-  assert o.v0 == 10;
+  assert o.v0 == 20;
   assert o.v1 == 20;
   assert o.v2 == 20;
   assert o.v3 == 20;
@@ -59,7 +59,7 @@
   };
 
   let o = new B();
-  assert o.v0 == 10;
+  assert o.v0 == 0;
   assert o.v1 == 0;
   assert o.v2 == 20;
   assert o.v3 == 20;
@@ -81,7 +81,7 @@
   };
 
   let o = new B();
-  assert o.v0 == 10;
+  assert o.v0 == 20;
   assert o.v1 == 20;
   assert o.v2 == 20;
   assert o.v3 == 20;
@@ -103,7 +103,7 @@
   };
 
   let o = new B();
-  assert o.v0 == 10;
+  assert o.v0 == 0;
   assert o.v1 == 0;
   assert o.v2 == 0;
   assert o.v3 == 20;
