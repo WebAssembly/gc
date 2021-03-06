@@ -1,3 +1,5 @@
+// @FLAGS -b
+
 // Transitive imports
 
 import {M_T, M_x, M_v, M_s, M_p, M_f, M_g, M_t, M_C} from "test/import";

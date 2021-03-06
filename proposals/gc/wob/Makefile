@@ -91,14 +91,14 @@ wasmtest:		cleantest $(TESTFILES:%.wob=wasmtest/%)
 debugtest:	$(TESTFILES:%.wob=debugtest/%)
 
 test/%:		$(OPT)
-		@ ./$(NAME) -r $(TESTDIR)/$(@F).wob
+		@ ./$(NAME) -r $(shell grep "@FLAGS" $(TESTDIR)/$(@F).wob | sed 's/.*@FLAGS//g') $(TESTDIR)/$(@F).wob
 wasmtest/%:		$(OPT)
 	  @ if ! grep -q "@FAIL-WASM" $(TESTDIR)/$(@F).wob; \
-		  then ./$(NAME) -r -c -v $(TESTDIR)/$(@F).wob; \
+		  then ./$(NAME) -r -c -v $(shell grep "@FLAGS" $(TESTDIR)/$(@F).wob | sed 's/.*@FLAGS//g') $(TESTDIR)/$(@F).wob; \
 		  else echo Skipping $(@F).wob; \
 		fi
 debugtest/%:	$(UNOPT)
-		@ ./$(NAME) -r $(TESTDIR)/$(@F).wob
+		@ ./$(NAME) -r $(shell grep "@FLAGS" $(TESTDIR)/$(@F).wob | sed 's/.*@FLAGS//g') $(TESTDIR)/$(@F).wob
 
 
 # Miscellaneous targets
@@ -110,4 +110,4 @@ clean:
 		$(OCB) -clean
 
 cleantest:
-		rm -f test/*.wasm test/*.wos
+		rm -f test/*.wasm test/*.wat test/*.wos

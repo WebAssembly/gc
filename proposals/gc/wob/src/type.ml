@@ -14,6 +14,7 @@ type typ =
   | Float
   | Text
   | Obj
+  | Box of typ
   | Tup of typ list
   | Array of typ
   | Func of var list * typ list * typ
@@ -30,9 +31,22 @@ and cls =
   }
 
 
-(* Constructors *)
+(* Constructors and accessors *)
 
 let var y = Var (y, [])
+
+let is_var = function Var _ -> true | _ -> false
+
+let as_tup = function Tup ts -> ts | _ -> assert false
+let as_array = function Array t -> t | _ -> assert false
+let as_func = function Func (ys, ts1, t2) -> ys, ts1, t2 | _ -> assert false
+
+
+(* Predicates *)
+
+let is_boxed = function
+  | Bool | Byte | Int | Float -> false
+  | _ -> true
 
 
 (* Printing *)
@@ -50,6 +64,7 @@ let rec to_string = function
   | Float -> "Float"
   | Text -> "Text"
   | Obj -> "Object"
+  | Box t -> to_string t ^ "$"
   | Tup ts -> "(" ^ list to_string ts ^ ")"
   | Array t -> to_string t ^ "[]"
   | Func ([], ts1, t2) -> params ts1 ^ " -> " ^ to_string t2
@@ -74,7 +89,7 @@ let rec free = function
   | Var (y, ts) -> Set.singleton y ++ list free ts
   | Bot | Null | Bool | Byte | Int | Float | Text | Obj -> Set.empty
   | Tup ts -> list free ts
-  | Array t -> free t
+  | Box t | Array t -> free t
   | Func (ys, ts1, t2) -> Set.diff (list free ts1 ++ free t2) (Set.of_list ys)
   | Inst (c, ts) -> Set.singleton c.name ++ list free ts
   | Class c ->
@@ -118,6 +133,7 @@ let rec subst s t =
   | Var (y, ts) when Subst.mem y s -> Subst.find y s (List.map (subst s) ts)
   | Var (y, ts) -> Var (y, List.map (subst s) ts)
   | Bot | Null | Bool | Byte | Int | Float | Text | Obj -> t
+  | Box t -> Box (subst s t)
   | Tup ts -> Tup (List.map (subst s) ts)
   | Array t -> Array (subst s t)
   | Func (ys, ts1, t2) ->
@@ -149,6 +165,7 @@ let rec eq t1 t2 =
   t1 == t2 ||
   match t1, t2 with
   | Var (y1, ts1), Var (y2, ts2) -> y1 = y2 && List.for_all2 eq ts1 ts2
+  | Box t1', Box t2' -> eq t1' t2'
   | Tup ts1, Tup ts2 ->
     List.length ts1 = List.length ts2 && List.for_all2 eq ts1 ts2
   | Array t1', Array t2' -> eq t1' t2'
@@ -174,6 +191,7 @@ let rec sub t1 t2 =
   | Null, Inst _ -> true
   | Null, Class _ -> true
   | Inst _, Obj -> true
+  | Box t1', Box t2' -> sub t1' t2'
   | Tup ts1, Tup ts2 ->
     List.length ts1 = List.length ts2 && List.for_all2 sub ts1 ts2
   | Inst (c1, ts1), Inst (c2, ts2) ->
@@ -184,6 +202,7 @@ let rec lub t1 t2 =
   if sub t1 t2 then t2 else
   if sub t2 t1 then t1 else
   match t1, t2 with
+  | Box t1', Box t2' -> Box (lub t1' t2')
   | Inst (c1, ts1), Inst (c2, ts2) ->
     lub (super_class c1 ts1) (super_class c2 ts2)
   | Tup ts1, Tup ts2 when List.length ts1 = List.length ts2 ->

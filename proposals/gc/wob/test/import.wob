@@ -1,3 +1,5 @@
+// @FLAGS -b
+
 // Imports
 
 import M {T, x, v, s, p, f, g, t, a, C} from "test/export";
