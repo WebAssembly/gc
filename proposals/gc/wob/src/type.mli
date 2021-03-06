@@ -22,6 +22,7 @@ type typ =
 
 and cls =
   { name : var;
+    id : int;
     tparams : var list;
     mutable vparams : typ list;
     mutable sup : typ;
@@ -47,8 +48,7 @@ val to_string : typ -> string
 
 (* Classes *)
 
-val empty_class : var -> var list -> cls
-val gen_class : var -> var list -> cls
+val gen_class : 'id -> var -> var list -> cls
 val eq_class : cls -> cls -> bool
 
 

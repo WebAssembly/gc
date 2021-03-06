@@ -337,7 +337,7 @@ and eval_dec pass env d : V.value * env =
     let ys' = List.map it ys in
     let xs = List.map fst xts in
     let cls =
-      if pass <> Post then T.gen_class x.it ys' else
+      if pass <> Post then T.gen_class d x.it ys' else
       match eval_exp env (this x) with
       | V.Class (cls, _, _) -> cls
       | _ -> assert false

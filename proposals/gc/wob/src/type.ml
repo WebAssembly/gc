@@ -22,6 +22,7 @@ type typ =
 
 and cls =
   { name : var;
+    id : int;
     tparams : var list;
     mutable vparams : typ list;
     mutable sup : typ;
@@ -55,7 +56,7 @@ let rec to_string = function
   | Func (ys, ts1, t2) ->
     "<" ^ list Fun.id ys ^ ">(" ^ params ts1 ^ ") -> " ^ to_string t2
   | Inst (c, ts) -> to_string (Var (c.name, ts))
-  | Class c -> "class " ^ c.name
+  | Class c -> "class " ^ c.name ^ "/" ^ string_of_int c.id
 
 and params = function
   | [t] -> to_string t
@@ -142,7 +143,7 @@ and subst_cls s c =
 let super_class c ts =
   subst (typ_subst c.tparams ts) c.sup
 
-let eq_class c1 c2 = c1.name = c2.name
+let eq_class c1 c2 = c1.name = c2.name && c1.id = c2.id
 
 let rec eq t1 t2 =
   t1 == t2 ||
@@ -192,23 +193,11 @@ let rec lub t1 t2 =
 
 (* Classes *)
 
-let class_cnts = ref Env.Map.empty
-
-let class_name y =
-  let i =
-    match Env.Map.find_opt y !class_cnts with
-    | None -> 0
-    | Some i -> i
-  in
-  class_cnts := Env.Map.add y (i + 1) !class_cnts;
-  if i = 0 then y else y ^ "/" ^ string_of_int i
-
-let empty_class y ys =
+let gen_class id y ys =
   { name = y;
+    id = Hashtbl.hash id;
     tparams = ys;
     vparams = [];
     sup = Obj;
     def = Env.Map.empty;
   }
-
-let gen_class y ys = empty_class (class_name y) ys
