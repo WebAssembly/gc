@@ -14,6 +14,7 @@ type typ =
   | Float
   | Text
   | Obj
+  | Box of typ
   | Tup of typ list
   | Array of typ
   | Func of var list * typ list * typ
@@ -30,12 +31,20 @@ and cls =
   }
 
 
-(* Constructors *)
+(* Constructors and accessors *)
 
 val var : var -> typ
 
+val is_var : typ -> bool
+
+val as_tup : typ -> typ list
+val as_array : typ -> typ
+val as_func : typ -> var list * typ list * typ
+
 
 (* Operations *)
+
+val is_boxed : typ -> bool
 
 val eq : typ -> typ -> bool
 val sub : typ -> typ -> bool

@@ -3,13 +3,13 @@ open Wasm.Ast
 
 exception Error of Source.region * string
 
-let get_inst = ref (fun _ -> failwith "get_inst")
+let get_inst = ref (fun _ _ -> failwith "get_inst")
 
 let link_import im =
   let {module_name; item_name; idesc} = im.it in
   let mname = Wasm.Utf8.encode module_name in
   let name = Wasm.Utf8.encode item_name in
-  match !get_inst mname with
+  match !get_inst im.at mname with
   | None -> raise (Error (im.at, "unknown module \"" ^ mname ^ "\""))
   | Some inst ->
     match Wasm.Instance.export inst item_name with

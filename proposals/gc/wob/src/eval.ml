@@ -53,8 +53,9 @@ let rec eval_typ env t : T.typ =
   | FloatT -> T.Float
   | TextT -> T.Text
   | ObjT -> T.Obj
+  | BoxT t1 -> T.Box (eval_typ env t1)
   | TupT ts -> T.Tup (List.map (eval_typ env) ts)
-  | ArrayT t -> T.Array (eval_typ env t)
+  | ArrayT t1 -> T.Array (eval_typ env t1)
   | FuncT (ys, ts1, t2) ->
     let ys' = List.map Source.it ys in
     let env' = E.extend_typs_abs env ys in
@@ -154,6 +155,17 @@ let rec eval_exp env e : V.value =
     | V.Bool false -> eval_exp env e2
     | V.Bool true -> V.Bool true
     | _ -> crash e.at "runtime type error at binary operator"
+    )
+
+  | BoxE e1 ->
+    let v1 = eval_exp env e1 in
+    V.Box v1
+
+  | UnboxE e1 ->
+    let v1 = eval_exp env e1 in
+    (match v1 with
+    | V.Box v -> v
+    | _ -> crash e.at "runtime type error at unboxing"
     )
 
   | TupE es ->
@@ -413,11 +425,11 @@ and eval_block pass env ds : V.value * env =
 
 (* Programs *)
 
-let get_env = ref (fun _url -> failwith "get_env")
+let get_env = ref (fun _at _url -> failwith "get_env")
 
 let eval_imp env env' d : env =
   let ImpD (xo, xs, url) = d.it in
-  let menv = !get_env url in
+  let menv = !get_env d.at url in
   let x = (match xo with None -> "" | Some x -> x.it ^ "_") in
   List.fold_left (fun env' xI ->
     let x' = (x ^ xI.it) @@ xI.at in

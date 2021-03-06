@@ -1,3 +1,5 @@
+// @FLAGS -b
+
 // Exporting definitions
 
 type T<X, Y> = (Y, X);

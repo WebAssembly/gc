@@ -1,3 +1,4 @@
+// @FLAGS -b
 // @FAIL-WASM
 
 // Generic classes

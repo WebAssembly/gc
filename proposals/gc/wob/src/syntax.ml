@@ -19,6 +19,7 @@ and typ' =
   | FloatT
   | TextT
   | ObjT
+  | BoxT of typ
   | TupT of typ list
   | ArrayT of typ
   | FuncT of var list * typ list * typ
@@ -44,6 +45,8 @@ type exp = (exp', T.typ) Source.phrase
 and exp' =
   | VarE of var
   | LitE of lit
+  | BoxE of exp
+  | UnboxE of exp
   | UnE of unop * exp
   | BinE of exp * binop * exp
   | RelE of exp * relop * exp

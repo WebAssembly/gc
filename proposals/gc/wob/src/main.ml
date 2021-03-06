@@ -31,6 +31,10 @@ let argspec = Arg.align
     " output abstract syntac";
   "-s", Arg.Set Flags.print_sig,
     " print type signature (default when interactive)";
+  "-b", Arg.Set Flags.boxed,
+    " universal generics, box everything";
+  "-p", Arg.Set Flags.parametric,
+    " parametric generics, disallows casts";
   "-x", Arg.Set Flags.textual,
     " output textual Wasm";
   "-w", Arg.Int (fun n -> Flags.width := n),

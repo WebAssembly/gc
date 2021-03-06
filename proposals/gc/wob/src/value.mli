@@ -12,6 +12,7 @@ and value =
   | Int of int32
   | Float of float
   | Text of string
+  | Box of value
   | Tup of value list
   | Array of value ref list
   | Obj of typ * obj
@@ -23,8 +24,6 @@ and cls = typ -> typ list -> value list -> value * (unit -> unit)
 
 
 (* Accessors *)
-
-val is_ref : value -> bool
 
 val as_obj : value -> obj
 

@@ -119,6 +119,7 @@ rule token = parse
   | ":" { COLON }
   | "." { DOT }
   | "."(num as s) { DOT_NUM s }
+  | "$" { DOLLAR }
 
   | "=" { EQ }
   | "<" { LT }

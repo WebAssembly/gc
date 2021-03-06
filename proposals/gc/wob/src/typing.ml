@@ -49,7 +49,13 @@ let check_typ_var env y : T.kind * T.con =
   | None -> error y.at "unknown type identifier `%s`" y.it
 
 
-let rec check_typ env t : T.typ =
+let rec check_typ_boxed env t : T.typ =
+  let t' = check_typ env t in
+  if not (T.is_boxed t' || !Flags.boxed) then
+    error t.at "boxed type expected but got %s" (T.to_string t');
+  t'
+
+and check_typ env t : T.typ =
   let t' = check_typ' env t in
   assert (t.et = None || T.eq (Option.get t.et) t');
   t.et <- Some t';
@@ -61,15 +67,16 @@ and check_typ' (env : env) t : T.typ =
     let k, c = check_typ_var env y in
     if List.length ts <> k then
       error t.at "wrong number of type arguments at type use";
-    c (List.map (check_typ env) ts)
+    c (List.map (check_typ_boxed env) ts)
   | BoolT -> T.Bool
   | ByteT -> T.Byte
   | IntT -> T.Int
   | FloatT -> T.Float
   | TextT -> T.Text
   | ObjT -> T.Obj
+  | BoxT t1 -> T.Box (check_typ env t1)
   | TupT ts -> T.Tup (List.map (check_typ env) ts)
-  | ArrayT t -> T.Array (check_typ env t)
+  | ArrayT t1 -> T.Array (check_typ env t1)
   | FuncT (ys, ts1, t2) ->
     let ys' = List.map Source.it ys in
     let env' = E.extend_typs_abs env ys in
@@ -169,6 +176,17 @@ and check_exp' env e : T.typ =
         (T.to_string t1) (T.to_string t2);
     t
 
+  | BoxE e1 ->
+    let t1 = check_exp env e1 in
+    T.Box t1
+
+  | UnboxE e1 ->
+    let t1 = check_exp env e1 in
+    (match t1 with
+    | T.Box t -> t
+    | _ -> error e.at "box type expected but got %s" (T.to_string t1)
+    )
+
   | TupE es ->
     let ts = List.map (check_exp env) es in
     T.Tup ts
@@ -202,7 +220,7 @@ and check_exp' env e : T.typ =
 
   | CallE (e1, ts, es) ->
     let t1 = check_exp env e1 in
-    let ts' = List.map (check_typ env) ts in
+    let ts' = List.map (check_typ_boxed env) ts in
     (match t1 with
     | T.Func (ys, ts1, t2) ->
       if List.length ts' <> List.length ys then
@@ -224,7 +242,7 @@ and check_exp' env e : T.typ =
 
   | NewE (x, ts, es) ->
     let t1 = check_var env x in
-    let ts' = List.map (check_typ env) ts in
+    let ts' = List.map (check_typ_boxed env) ts in
     (match t1 with
     | T.Class cls ->
       if List.length ts' <> List.length cls.T.tparams then
@@ -514,11 +532,11 @@ and check_block pass env ds : T.typ * env =
 
 (* Programs *)
 
-let get_env = ref (fun _url -> failwith "get_env")
+let get_env = ref (fun _at _url -> failwith "get_env")
 
 let check_imp env env' d : env =
   let ImpD (xo, xs, url) = d.it in
-  let menv = !get_env url in
+  let menv = !get_env d.at url in
   let x = (match xo with None -> "" | Some x -> x.it ^ "_") in
   let env', stos =
     List.fold_left (fun (env', stos) xI ->
