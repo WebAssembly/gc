@@ -33,14 +33,20 @@ let rec handle f =
 
 (* Input *)
 
-let input_file file f =
-  trace ("Loading (" ^ file ^ ")...");
-  let ic = open_in file in
+(* Let's hope this is build-dependen enough *)
+let marshal_tag = Hashtbl.hash (Marshal.to_string handle [Marshal.Closures])
+
+let with_in_file open_in_mode file f =
+  let ic = open_in_mode file in
   try
-    let result = f (Lexing.from_channel ic) in
+    let result = f ic in
     close_in ic;
     result
   with exn -> close_in ic; raise exn
+
+let input_file file f =
+  trace ("Loading (" ^ file ^ ")...");
+  with_in_file open_in file (fun ic -> f (Lexing.from_channel ic))
 
 let input_string string f =
   f (Lexing.from_string string)
@@ -75,28 +81,44 @@ let input_stdin f =
     print_endline "";
     trace "Bye."
 
+let read_binary_file file =
+  let file' = Filename.chop_extension file ^ ".wasm" in
+  trace ("Reading (" ^ file ^ ")...");
+  let bin = with_in_file open_in_bin file'
+    (fun ic -> really_input_string ic (in_channel_length ic)) in
+  trace "Decoding...";
+  Wasm.Decode.decode file' bin
+
+
+let read_sig_file file =
+  let file' = Filename.chop_extension file ^ ".wos" in
+  with_in_file open_in_bin file' (fun ic ->
+    let tag = Marshal.from_channel ic in
+    if tag <> marshal_tag then
+      raise (Sys_error "incompatible signature file");
+    Marshal.from_channel ic
+  )
+
 
 (* Output *)
 
+let with_out_file open_out_mode file f =
+  let oc = open_out_mode file in
+  try
+    f oc; close_out oc
+  with exn -> close_out oc; raise exn
+
 let write_binary_file file m =
   let file' = file ^ ".wasm" in
-  trace ("Encoding (" ^ file' ^ ")...");
+  trace "Encoding...";
   let s = Wasm.Encode.encode m in
-  let oc = open_out_bin file' in
-  try
-    trace "Writing...";
-    output_string oc s;
-    close_out oc
-  with exn -> close_out oc; raise exn
+  trace ("Writing (" ^ file' ^ ")...");
+  with_out_file open_out_bin file' (fun oc -> output_string oc s)
 
 let write_textual_file file m =
   let file' = file ^ ".wat" in
   trace ("Writing (" ^ file' ^ ")...");
-  let oc = open_out file' in
-  try
-    Wasm.Print.module_ oc !Flags.width m;
-    close_out oc
-  with exn -> close_out oc; raise exn
+  with_out_file open_out file' (fun oc -> Wasm.Print.module_ oc !Flags.width m)
 
 let write_file file m =
   let file' = Filename.chop_extension file in
@@ -108,6 +130,13 @@ let write_file file m =
 let write_stdout m =
   trace "Printing Wasm...";
   Wasm.Print.module_ stdout !Flags.width m
+
+let write_sig_file file stat =
+  let file' = Filename.chop_extension file ^ ".wos" in
+  with_out_file open_out_bin file' (fun oc ->
+    Marshal.to_channel oc marshal_tag [];
+    Marshal.to_channel oc stat [Marshal.Closures]
+  )
 
 
 (* Compilation pipeline *)
@@ -243,10 +272,11 @@ let run_stdin () =
 
 let compile name file lexbuf start =
   handle (fun () ->
-    let prog, _ = frontend name lexbuf start Env.empty in
+    let prog, (_, stat) = frontend name lexbuf start Env.empty in
     if !Flags.compile then begin
       let wasm = backend prog in
-      write_file file wasm
+      write_file file wasm;
+      write_sig_file file (stat : Typing.env);
     end
   )
 
@@ -264,18 +294,32 @@ let load_file url : entry =
   try
     trace (String.make 60 '-');
     trace ("Loading import \"" ^ url ^ "\"...");
-    (* TODO: load sig or wasm from disk *)
-    let file = url ^ ".wob" in
+    let src_file = url ^ ".wob" in
+    let sig_file = url ^ ".wos" in
+    let wasm_file = url ^ ".wasm" in
     let entry =
-      input_file file (fun lexbuf ->
-        let prog, (_, stat) = frontend file lexbuf Parse.Prog Env.empty in
-        let dyn, inst =
-          if not !Flags.compile then
-            snd (Eval.eval_prog Env.empty prog), None
-          else
-            Env.empty, Some (Link.link (backend prog))
-        in {stat; dyn; inst}
-      )
+      if
+        !Flags.compile && Sys.file_exists sig_file &&
+        (!Flags.dry || Sys.file_exists wasm_file)
+      then begin
+        let stat = read_sig_file sig_file in
+        let inst =
+          if !Flags.dry then None else
+          Some (Link.link (read_binary_file wasm_file))
+        in {stat; dyn = Env.empty; inst}
+      end
+      else begin
+        input_file src_file (fun lexbuf ->
+          let prog, (_, stat) = frontend src_file lexbuf Parse.Prog Env.empty in
+          let dyn, inst =
+            if not !Flags.compile then
+              snd (Eval.eval_prog Env.empty prog), None
+            else
+              Env.empty,
+              if !Flags.dry then None else Some (Link.link (backend prog))
+          in {stat; dyn; inst}
+        )
+      end
     in
     trace ("Finished import \"" ^ url ^ "\".");
     trace (String.make 60 '-');
