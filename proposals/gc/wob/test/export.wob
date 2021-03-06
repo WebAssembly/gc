@@ -13,3 +13,5 @@ func g() : Float { v };
 
 type t = Int;
 let t = "_";
+
+class C() {};

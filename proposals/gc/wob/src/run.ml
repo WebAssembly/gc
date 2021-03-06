@@ -271,7 +271,7 @@ let load_file url : entry =
         let prog, (_, stat) = frontend file lexbuf Parse.Prog Env.empty in
         let dyn, inst =
           if not !Flags.compile then
-            eval Env.empty prog, None
+            snd (Eval.eval_prog Env.empty prog), None
           else
             Env.empty, Some (Link.link (backend prog))
         in {stat; dyn; inst}

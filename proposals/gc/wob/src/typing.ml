@@ -420,7 +420,12 @@ and check_dec' pass env d : T.typ * env =
   | ClassD (x, ys, xts, sup_opt, ds) ->
     let k = List.length ys in
     let ys' = List.map it ys in
-    let cls = T.empty_class x.it ys' in
+    let cls =
+      if pass <> Post then T.gen_class d x.it ys' else
+      match check_exp env (DotE (VarE ("this" @@ d.at) @@ d.at, x) @@ d.at) with
+      | T.Class cls -> cls
+      | _ -> assert false
+    in
     let con ts = T.Inst (cls, ts) in
     let env' = E.extend_typ env x (k, con) in
     let env' = E.extend_typs_abs env' ys in
