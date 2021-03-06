@@ -203,7 +203,12 @@ and lower_heap_type ctxt at t : W.heap_type =
 
 and lower_var_type ctxt at t : int32 =
   match t with
-  | T.Inst _ -> nyi at "instance types"
+  | T.Inst (cls, ts) ->
+    (* TODO: temporary hack to enable empty classes *)
+    if ts <> [] || cls.T.tparams <> [] || cls.T.vparams <> []
+      || cls.T.sup <> T.Obj || cls.T.def <> Env.Map.empty then
+      nyi at "instance types";
+    emit_type ctxt at W.(StructDefType (StructType []))
   | T.Text ->
     let ft = W.(FieldType (PackedStorageType Pack8, Mutable)) in
     emit_type ctxt at W.(ArrayDefType (ArrayType ft))
@@ -599,7 +604,10 @@ let rec compile_exp ctxt e =
     )
 
   | NewE (x, ts, es) ->
-    nyi e.at "object construction"
+    (* TODO: temporary hack to enable empty classes *)
+    if ts <> [] || es <> [] then nyi e.at "object construction";
+    let typeidx = lower_var_type ctxt e.at (Source.et e) in
+    emit ctxt W.[rtt_canon (typeidx @@ e.at); struct_new (typeidx @@ e.at)]
   (*
     let v1 = eval_var env x in
     let vs = List.map (eval_exp env) es in
@@ -789,7 +797,16 @@ and compile_dec ctxt d =
   *)
 
   | ClassD (x, ys, xts, sup_opt, ds) ->
-    nyi d.at "class definitions"
+    (* TODO: temporary hack to enable empty classes *)
+    let scope, env = List.hd ctxt.envs in
+    if scope <> GlobalScope || ys <> [] || xts <> [] || sup_opt <> None || ds <> [] then
+      nyi d.at "class definitions";
+    let typeidx = emit_type ctxt d.at W.(StructDefType (StructType [])) in
+    let t = W.(RefType (Nullable, DefHeapType (SynVar typeidx))) in
+    ignore (emit_func ctxt d.at [] [t] (fun ctxt idx ->
+      env := E.extend_val !env x (T.FuncS, idx);
+      emit ctxt W.[unreachable]
+    ))
   (*
     let ys' = List.map it ys in
     let xs = List.map fst xts in
