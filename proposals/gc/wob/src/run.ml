@@ -144,8 +144,10 @@ let write_sig_file file stat =
 let frontend name lexbuf start env : Syntax.prog * (Type.typ * Typing.env) =
   trace "Parsing...";
   let prog = Parse.parse name lexbuf start in
-  if !Flags.print_ast then
+  if !Flags.print_ast then begin
+    trace "Abstract syntax:";
     Wasm.Sexpr.print !Flags.width (Arrange.prog prog);
+  end;
   if !Flags.unchecked then prog, (Type.Bot, Env.empty) else begin
     trace "Checking...";
     prog, Typing.check_prog env prog
@@ -316,7 +318,13 @@ let load_file url : entry =
               snd (Eval.eval_prog Env.empty prog), None
             else
               Env.empty,
-              if !Flags.dry then None else Some (Link.link (backend prog))
+              if !Flags.dry then None else
+              let wasm = backend prog in
+              if not !Flags.prompt then begin
+                write_file wasm_file wasm;
+                write_sig_file sig_file (stat : Typing.env)
+              end;
+              Some (Link.link wasm)
           in {stat; dyn; inst}
         )
       end
