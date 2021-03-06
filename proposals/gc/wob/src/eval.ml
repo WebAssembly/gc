@@ -199,7 +199,7 @@ let rec eval_exp env e : V.value =
     let vs = List.map (eval_exp env) es in
     (match v1 with
     | V.Null -> trap x.at "null reference at class instantiation"
-    | V.Class (_, f) -> f (List.map (eval_typ env) ts) vs
+    | V.Class (_, f, _) -> f (List.map (eval_typ env) ts) vs
     | _ -> crash e.at "runtime type error at class instantiation"
     )
 
@@ -330,7 +330,8 @@ and eval_dec pass env d : V.value * env =
       let env' = E.extend_vals_let env' xs vs in
       try eval_exp env' e with Return v -> v
     in
-    V.Tup [], E.singleton_val x (T.FuncS, V.Func f)
+    let v = if pass = Post then eval_exp env (this x) else V.Func f in
+    V.Tup [], E.singleton_val x (T.FuncS, v)
 
   | ClassD (x, ys, xts, sup_opt, ds) ->
     let ys' = List.map it ys in
@@ -338,7 +339,7 @@ and eval_dec pass env d : V.value * env =
     let cls =
       if pass <> Post then T.gen_class x.it ys' else
       match eval_exp env (this x) with
-      | V.Class (cls, _) -> cls
+      | V.Class (cls, _, _) -> cls
       | _ -> assert false
     in
     let con ts = T.Inst (cls, ts) in
@@ -347,35 +348,43 @@ and eval_dec pass env d : V.value * env =
       let env'' = E.extend_typs_abs env' ys in
       cls.T.sup <- eval_typ env'' (VarT (x2, ts2) @@ x2.at)
     ) sup_opt;
-    let rec v_class = V.Class (cls, f)
-    and f ts vs =
+    let rec v_class = V.Class (cls, inst, alloc)
+    and inst ts vs =
+      let v_inst, init = alloc (con ts) ts vs in
+      init (); v_inst
+    and alloc t_inst ts vs =
       let env'' = E.extend_val env' x (T.ClassS, v_class) in
       let env'' = E.extend_typs_gnd env'' ys ts in
       let env'' = E.extend_vals_let env'' xs vs in
-      let obj, env''' =
+      let v_inst, init', env''' =
         match sup_opt with
-        | None -> ref E.Map.empty, env''
+        | None -> V.Obj (t_inst, ref E.Map.empty), (fun () -> ()), env''
         | Some (x2, ts2, es2) ->
-          match eval_exp env'' (NewE (x2, ts2, es2) @@ x2.at) with
-          | V.Obj (_, obj') ->
-            obj', E.Map.fold (fun x v env ->
-              Env.extend_val env (x @@ x2.at) v) !obj' env''
-          | v -> crash x2.at "runtime type error at super class instantiation, got %s"
-             (V.to_string v)
+          let v2 = eval_var env'' x2 in
+          let ts2' = List.map (eval_typ env'') ts2 in
+          let vs2 = List.map (eval_exp env'') es2 in
+          (match v2 with
+          | V.Null -> trap x2.at "null reference at class instantiation"
+          | V.Class (_, _, alloc') ->
+            let v_inst, init' = alloc' t_inst ts2' vs2 in
+            v_inst, init', E.Map.fold (fun x v env ->
+              Env.extend_val env (x @@ x2.at) v) !(V.as_obj v_inst) env''
+          | _ -> crash x2.at "runtime type error at class instantiation"
+          )
       in
-      let v_inst = V.Obj (con ts, obj) in
       (* Rebind local vars to shadow parent fields *)
       let env''' = E.extend_val env''' x (T.ClassS, v_class) in
       let env''' = E.extend_vals_let env''' xs vs in
       let env''' = E.extend_val_let env''' ("this" @@ x.at) v_inst in
       let _, oenv = eval_block Pre env''' ds in
+      let obj = V.as_obj v_inst in
       obj := E.fold_vals (fun x sv obj ->
         match E.Map.find_opt x obj with
         | None -> E.Map.add x sv.it obj
         | Some (s, v') -> v' := !(snd sv.it); obj
       ) oenv !obj;
-      ignore (eval_block Post env''' ds);
-      v_inst
+      v_inst,
+      fun () -> init' (); ignore (eval_block Post env''' ds)
     in
     V.Tup [],
     E.adjoin (E.singleton_typ x con) (E.singleton_val x (T.ClassS, v_class))

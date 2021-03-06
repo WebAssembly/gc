@@ -14,14 +14,22 @@ and value =
   | Text of string
   | Tup of value list
   | Array of value ref list
-  | Obj of typ * (Type.sort * value ref) Env.Map.t ref
+  | Obj of typ * obj
   | Func of func
-  | Class of Type.cls * func
+  | Class of Type.cls * func * cls
+
+and obj = (Type.sort * value ref) Env.Map.t ref
+and cls = typ -> typ list -> value list -> value * (unit -> unit)
 
 
-(* Values *)
+(* Accessors *)
 
 val is_ref : value -> bool
+
+val as_obj : value -> obj
+
+
+(* Operations *)
 
 val eq : value -> value -> bool
 

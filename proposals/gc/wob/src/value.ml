@@ -14,18 +14,25 @@ and value =
   | Text of string
   | Tup of value list
   | Array of value ref list
-  | Obj of typ * (Type.sort * value ref) Env.Map.t ref
+  | Obj of typ * obj
   | Func of func
-  | Class of Type.cls * func
+  | Class of Type.cls * func * cls
+
+and obj = (Type.sort * value ref) Env.Map.t ref
+and cls = typ -> typ list -> value list -> value * (unit -> unit)
 
 
-(* Comparison *)
+(* Accessors *)
 
 let is_ref = function
   | Null | Bool _ | Byte _ | Int _ | Float _ | Text _ -> false
   | Tup _ -> false
   | Array _ | Obj _ | Func _ | Class _ -> true
 
+let as_obj = function Obj (_, obj) -> obj | _ -> assert false
+
+
+(* Comparison *)
 
 let rec eq v1 v2 =
   v1 == v2 ||
