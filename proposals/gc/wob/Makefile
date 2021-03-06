@@ -87,7 +87,7 @@ TESTS =		$(TESTFILES:%.wob=%)
 .PHONY:		test debugtest partest
 
 test:		$(TESTFILES:%.wob=test/%)
-wasmtest:		$(TESTFILES:%.wob=wasmtest/%)
+wasmtest:		cleantest $(TESTFILES:%.wob=wasmtest/%)
 debugtest:	$(TESTFILES:%.wob=debugtest/%)
 
 test/%:		$(OPT)
@@ -108,3 +108,6 @@ debugtest/%:	$(UNOPT)
 clean:
 		rm -rf $(WASMDIR) _tags
 		$(OCB) -clean
+
+cleantest:
+		rm -f test/*.wasm test/*.wos

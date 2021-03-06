@@ -905,7 +905,11 @@ let add_import (m : module_) (ext : extern) (im : import) (inst : module_inst)
   let et = Types.sem_extern_type inst.types it in
   let et' = extern_type_of inst.types ext in
   if not (Match.match_extern_type [] [] et' et) then
-    Link.error im.at "incompatible import type";
+    Link.error im.at ("incompatible import type for " ^
+      "\"" ^ Utf8.encode im.it.module_name ^ "\" " ^
+      "\"" ^ Utf8.encode im.it.item_name ^ "\": " ^
+      "expected " ^ Types.string_of_extern_type et ^
+      ", got " ^ Types.string_of_extern_type et');
   match ext with
   | ExternFunc func -> {inst with funcs = func :: inst.funcs}
   | ExternTable tab -> {inst with tables = tab :: inst.tables}
