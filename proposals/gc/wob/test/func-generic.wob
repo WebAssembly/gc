@@ -58,3 +58,28 @@ assert b[1].$ == 4;
 assert b[2].$ == 3;
 assert b[3].$ == 2;
 assert b[4].$ == 1;
+
+
+func reversed<X>(a : X[], init : X) : X[] {
+  let b = new X[#a](init);
+  var i : Int = 0;
+  while i < #a {
+    b[i] := a[i];
+    i := i + 1;
+  };
+  return b;
+};
+
+let a2 = ["1", "2", "3"];
+let b2 = reversed<Text>(a2, "");
+assert b2[0] == "3";
+assert b2[1] == "2";
+assert b2[2] == "1";
+
+assert reversed<Int[]>([[7]], [0])[0][0] == 7;
+
+func nul<X>() : X {
+  return null;
+};
+
+assert nul<Int$>() == null;
