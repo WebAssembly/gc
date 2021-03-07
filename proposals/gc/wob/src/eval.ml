@@ -125,7 +125,7 @@ let rec eval_exp env e : V.value =
     | SubOp, V.Float z1, V.Float z2 -> V.Float (z1 -. z2)
     | MulOp, V.Float z1, V.Float z2 -> V.Float (z1 *. z2)
     | DivOp, V.Float z1, V.Float z2 -> V.Float (z1 /. z2)
-    | CatOp, V.Text t1, V.Text t2 -> V.Text (t1 ^ t2)
+    | AddOp, V.Text t1, V.Text t2 -> V.Text (t1 ^ t2)
     | _ -> crash e.at "runtime type error at binary operator"
     )
 

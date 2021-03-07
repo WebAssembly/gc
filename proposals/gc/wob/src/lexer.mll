@@ -137,7 +137,7 @@ rule token = parse
   | "&" { ANDOP }
   | "|" { OROP }
   | "^" { XOROP }
-  | "#" { CATOP }
+  | "#" { LENOP }
 
   | "==" { EQOP }
   | "!=" { NEOP }

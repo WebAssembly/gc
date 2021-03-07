@@ -142,7 +142,7 @@ and check_exp' env e : T.typ =
     | (AddOp | SubOp | MulOp | DivOp | ModOp), T.Int
     | (AndOp | OrOp | XorOp | ShlOp | ShrOp), T.Int -> t
     | (AddOp | SubOp | MulOp | DivOp), T.Float -> t
-    | CatOp, T.Text -> t
+    | AddOp, T.Text -> t
     | _ ->
       error e.at "binary operator not defined for types %s and %s"
         (T.to_string t1) (T.to_string t2)
@@ -156,7 +156,7 @@ and check_exp' env e : T.typ =
         (T.to_string t1) (T.to_string t2)
     in
     (match op, t with
-    | (EqOp | NeOp), (T.Null | T.Bool | T.Obj | T.Array _ | T.Inst _)
+    | (EqOp | NeOp), (T.Null | T.Bool | T.Text | T.Obj | T.Array _ | T.Inst _)
     | (EqOp | NeOp | LtOp | GtOp | LeOp | GeOp), (T.Byte | T.Int | T.Float) ->
       T.Bool
     | _ ->

@@ -1,13 +1,13 @@
 // Literals
 
-let t1 = "";
+let empty = "";
 let foo = "foo";
 let barb = "barb";
 
 
 // Length
 
-assert #t1 == 0;
+assert #empty == 0;
 assert #foo == 3;
 assert #barb == 4;
 
@@ -20,8 +20,8 @@ assert foo[1] == foo[2];
 
 // Concatenation
 
-let foobarb = foo # barb;
-let barbfoo = barb # foo;
+let foobarb = foo + barb;
+let barbfoo = barb + foo;
 
 assert #foobarb == 7;
 assert #barbfoo == 7;
@@ -29,3 +29,25 @@ assert foobarb[0] == "f"[0];
 assert foobarb[6] == "b"[0];
 assert barbfoo[0] == "b"[0];
 assert barbfoo[6] == "o"[0];
+
+
+// Comparison
+
+assert empty == empty;
+assert foo == foo;
+assert empty == "";
+assert foo == "foo";
+assert barb == "barb";
+assert foobarb == "foobarb";
+assert barbfoo == "barbfoo";
+
+assert empty != foo;
+assert foo != foobarb;
+
+assert ! (empty != empty);
+assert ! (foo != foo);
+assert ! (empty != "");
+assert ! (foo != "foo");
+assert ! (barb != "barb");
+assert ! (foobarb != "foobarb");
+assert ! (barbfoo != "barbfoo");
