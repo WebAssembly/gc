@@ -365,7 +365,7 @@ and eval_dec pass env d : V.value * env =
     in
     let con ts = T.Inst (cls, ts) in
     let env' = E.extend_typ env x con in
-    Option.iter (fun (x2, ts2, _) ->
+    Option.iter (fun {it = (x2, ts2, _); _} ->
       let env'' = E.extend_typs_abs env' ys in
       cls.T.sup <- eval_typ env'' (VarT (x2, ts2) @@ x2.at)
     ) sup_opt;
@@ -380,7 +380,7 @@ and eval_dec pass env d : V.value * env =
       let v_inst, init', env''' =
         match sup_opt with
         | None -> V.Obj (t_inst, ref E.Map.empty), (fun () -> ()), env''
-        | Some (x2, ts2, es2) ->
+        | Some {it = (x2, ts2, es2); _} ->
           let v2 = eval_var env'' x2 in
           let ts2' = List.map (eval_typ env'') ts2 in
           let vs2 = List.map (eval_exp env'') es2 in

@@ -240,8 +240,8 @@ gen_opt :
 
 sup_opt :
   | /* empty */ { None }
-  | SUB var LPAR exp_list RPAR { Some ($2, [], $4) }
-  | SUB var LT typ_list GT LPAR exp_list RPAR { Some ($2, $4, $7) }
+  | SUB var LPAR exp_list RPAR { Some (($2, [], $4) @@ at ()) }
+  | SUB var LT typ_list GT LPAR exp_list RPAR { Some (($2, $4, $7) @@ at ()) }
 
 dec :
   | exp { ExpD $1 @@ at () }

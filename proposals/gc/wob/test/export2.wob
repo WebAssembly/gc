@@ -1,4 +1,4 @@
 // More exports
 
-let q = (7, false);
+let q = (7$, false$);
 let a = [4, 5];
