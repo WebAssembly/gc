@@ -54,6 +54,7 @@ and exp' =
   | TupE of exp list
   | ProjE of exp * int
   | ArrayE of exp list
+  | LenE of exp
   | IdxE of exp * exp
   | CallE of exp * typ list * exp list
   | NewE of var * typ list * exp list

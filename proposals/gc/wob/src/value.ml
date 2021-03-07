@@ -71,7 +71,7 @@ let rec to_string = function
   | Int i -> Int32.to_string i
   | Float z -> string_of_float z
   | Text t -> "\"" ^ String.escaped t ^ "\""
-  | Box v -> "$" ^ to_string v
+  | Box v -> to_string v ^ "$"
   | Tup vs -> "(" ^ list to_string vs ^ ")"
   | Array vs -> "[" ^ list to_string (List.map (!) vs) ^ "]"
   | Obj (t, _) -> "(new " ^ Type.to_string t ^ ")"
