@@ -1,0 +1,48 @@
+// @FAIL-WASM
+
+// Recursive class invocation
+
+class C(x : Int) {
+  let x = x;
+  var y : Int = x;
+  func f() { y := y + 1 };
+  func g() : C { new C(x) };
+  func h() : C { new C(y) };
+};
+
+let c = new C(1);
+assert c.x == 1;
+assert c.y == 1;
+c.f();
+assert c.y == 2;
+
+let c1 = c.g();
+assert c1.x == 1;
+assert c1.y == 1;
+c1.f();
+assert c1.y == 2;
+assert c.y == 2;
+
+let c2 = c.h();
+assert c2.x == 2;
+assert c2.y == 2;
+c2.f();
+assert c2.y == 3;
+assert c.y == 2;
+
+class D(x : Int) <: C(2*x) {
+  func h() : C { new C(this.y + 1) };
+  func k() : D { new D(this.y - 3) };
+};
+
+let d = new D(1);
+assert d.y == 2;
+d.f();
+
+let d1 = d.h();
+assert d.y == 3;
+assert d1.x == 4;
+
+let d2 = d.k();
+assert d.y == 3;
+assert d2.x == 0;

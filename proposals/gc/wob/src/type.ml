@@ -40,6 +40,8 @@ let is_var = function Var _ -> true | _ -> false
 let as_tup = function Tup ts -> ts | _ -> assert false
 let as_array = function Array t -> t | _ -> assert false
 let as_func = function Func (ys, ts1, t2) -> ys, ts1, t2 | _ -> assert false
+let as_inst = function Inst (c, ts) -> c, ts | _ -> assert false
+let as_class = function Class c -> c | _ -> assert false
 
 
 (* Predicates *)

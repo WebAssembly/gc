@@ -117,9 +117,11 @@ and dec d = match d.it with
       [typ t; exp e]
   | ClassD (x, ys, xts, so, ds) ->
     "ClassD" $$ [var x] @ ["gen" $$ list var ys] @
-      ["param" $$ flatlist (fun (x, t) -> [var x; typ t]) xts] @
-      opt (fun (y, ts, es) -> "sub" $$ [var y] @ list typ ts @ list exp es) so @
+      ["param" $$ flatlist (fun (x, t) -> [var x; typ t]) xts] @ opt sup so @
       list dec ds
+
+and sup s = match s.it with
+  | x, ts, es -> "sup" $$ [var x] @ list typ ts @ list exp es
 
 
 (* Modules *)

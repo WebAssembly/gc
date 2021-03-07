@@ -72,14 +72,17 @@ and exp' =
 
 (* Declarations *)
 
-and dec = (dec', T.typ) Source.phrase
+and dec = (dec', T.typ * T.typ list) Source.phrase
 and dec' =
   | ExpD of exp
   | LetD of var * exp
   | VarD of var * typ * exp
   | TypD of var * var list * typ
   | FuncD of var * var list * (var * typ) list * typ * exp
-  | ClassD of var * var list * (var * typ) list * (var * typ list * exp list) option * dec list
+  | ClassD of var * var list * (var * typ) list * sup option * dec list
+
+and sup = (sup', T.cls) Source.phrase
+and sup' = var * typ list * exp list
 
 
 (* Modules *)

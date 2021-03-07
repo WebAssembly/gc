@@ -40,6 +40,8 @@ val is_var : typ -> bool
 val as_tup : typ -> typ list
 val as_array : typ -> typ
 val as_func : typ -> var list * typ list * typ
+val as_inst : typ -> cls * typ list
+val as_class : typ -> cls
 
 
 (* Operations *)

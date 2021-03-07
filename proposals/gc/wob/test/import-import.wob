@@ -1,19 +1,17 @@
-// @FLAGS -b
-
 // Transitive imports
 
 import {M_T, M_x, M_v, M_s, M_p, M_f, M_g, M_t, M_C} from "test/import";
 import {v, C} from "test/export";
 
-type U = M_T<Bool, Int>;
+type U = M_T<Bool$, Int$>;
 
 assert M_x == 9;
 assert M_v == 2.7;
 M_v := 3.0;
 assert M_v == 3.0;
 assert M_s[2] == "x"[0];
-assert M_p.0 == 5;
-assert M_p.1;
+assert M_p.0.$ == 5;
+assert M_p.1.$;
 
 assert M_f() == 9;
 assert M_g() == 3.0;
