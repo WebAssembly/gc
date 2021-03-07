@@ -146,7 +146,8 @@ exp_arg :
 exp_post :
   | exp_simple { $1 }
   | exp_tup { $1 }
-  | exp_post DOLLAR { UnboxE $1 @@ at () }
+  | exp_post DOLLAR { BoxE $1 @@ at () }
+  | exp_post DOT DOLLAR { UnboxE $1 @@ at () }
   | exp_post LBRACK exp RBRACK { IdxE ($1, $3) @@ at () }
   | exp_post DOT_NUM { ProjE ($1, nat $2 (ati 2)) @@ at () }
   | exp_post DOT var { DotE ($1, $3) @@ at () }
@@ -155,11 +156,11 @@ exp_post :
 
 exp_un :
   | exp_post { $1 }
-  | DOLLAR exp_un { BoxE $2 @@ at () }
   | ADDOP exp_un { UnE (PosOp, $2) @@ at () }
   | SUBOP exp_un { UnE (NegOp, $2) @@ at () }
   | XOROP exp_un { UnE (InvOp, $2) @@ at () }
   | NOTOP exp_un { UnE (NotOp, $2) @@ at () }
+  | CATOP exp_un { LenE $2 @@ at () }
   | NEW var exp_arg { NewE ($2, [], $3) @@ at () }
   | NEW var LT typ_list GT exp_arg { NewE ($2, $4, $6) @@ at () }
   | NEW typ_post LBRACK exp RBRACK LPAR exp RPAR {

@@ -88,6 +88,7 @@ let rec exp e = match e.it with
   | TupE es -> "TupE" $$ list exp es
   | ProjE (e1, i) -> "ProjE" $$ [exp e1; Atom (string_of_int i)]
   | ArrayE es -> "ArrayE" $$ list exp es
+  | LenE e1 -> "LenE" $$ [exp e1]
   | IdxE (e1, e2) -> "IdxE" $$ [exp e1; exp e2]
   | CallE (e1, ts, es) -> "CallE" $$ [exp e1] @ list typ ts @ list exp es
   | NewE (y, ts, es) -> "NewE" $$ [var y] @ list typ ts @ list exp es

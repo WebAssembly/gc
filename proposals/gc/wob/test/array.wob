@@ -16,6 +16,23 @@ let df = new Float[20](3.14);
 let da = new Int[][20]([13, 14]);
 
 
+// Length
+
+assert #a0 == 0;
+assert #an == 2;
+assert #ab == 2;
+assert #ai == 3;
+assert #af == 3;
+assert #aa == 3;
+assert #aa[0] == 1;
+
+assert #db == 10;
+assert #di == 20;
+assert #df == 20;
+assert #da == 20;
+assert #da[10] == 2;
+
+
 // Indexing
 
 assert an[0] == null;
@@ -52,18 +69,17 @@ assert da[4][0] == 15;
 
 // Loop
 
-let n = 100;
-let enum = new Int[n](0);
+let enum = new Int[100](0);
 var i : Int = 0;
-while i < n {
+while i < #enum {
   enum[i] := i;
   i := i + 1;
 };
 
 var sum : Int = 0;
 i := 0;
-while i < n {
+while i < #enum {
   sum := sum + enum[i];
   i := i + 1;
 };
-assert sum == n*(n - 1)/2;
+assert sum == #enum*(#enum - 1)/2;
