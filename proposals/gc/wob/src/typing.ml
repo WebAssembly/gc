@@ -207,6 +207,13 @@ and check_exp' env e : T.typ =
     in
     T.Array t
 
+  | LenE e1 ->
+    let t1 = check_exp env e1 in
+    (match t1 with
+    | T.Text | T.Array _ -> T.Int
+    | _ -> error e1.at "array or text type expected but got %s" (T.to_string t1)
+    )
+
   | IdxE (e1, e2) ->
     let t1 = check_exp env e1 in
     let t2 = check_exp env e2 in
@@ -215,7 +222,7 @@ and check_exp' env e : T.typ =
     | T.Array t, T.Int -> t
     | T.Array t, _ ->
       error e2.at "integer type expected but got %s" (T.to_string t2)
-    | _ -> error e1.at "array type expected but got %s" (T.to_string t1)
+    | _ -> error e1.at "array or text type expected but got %s" (T.to_string t1)
     )
 
   | CallE (e1, ts, es) ->

@@ -183,18 +183,27 @@ let rec eval_exp env e : V.value =
     let vs = List.map (eval_exp env) es in
     V.Array (List.map ref vs)
 
+  | LenE e1 ->
+    let v1 = eval_exp env e1 in
+    (match v1 with
+    | V.Null -> trap e1.at "null reference at length operation"
+    | V.Array vs -> V.Int (Int32.of_int (List.length vs))
+    | V.Text t -> V.Int (Int32.of_int (String.length t))
+    | _ -> crash e.at "runtime type error at length operation"
+    )
+
   | IdxE (e1, e2) ->
     let v1 = eval_exp env e1 in
     let v2 = eval_exp env e2 in
     (match v1, v2 with
-    | V.Null, _ -> trap e1.at "null reference at array access"
+    | V.Null, _ -> trap e1.at "null reference at indexing operation"
     | V.Array vs, V.Int i when 0l <= i && i < Int32.of_int (List.length vs) ->
       !(List.nth vs (Int32.to_int i))
     | V.Array vs, V.Int i -> trap e.at "array index out of bounds"
     | V.Text t, V.Int i when 0l <= i && i < Int32.of_int (String.length t) ->
       V.Byte t.[Int32.to_int i]
     | V.Text t, V.Int i -> trap e.at "text index out of bounds"
-    | _ -> crash e.at "runtime type error at array access"
+    | _ -> crash e.at "runtime type error at indexing operation"
     )
 
   | CallE (e1, ts, es) ->

@@ -635,6 +635,11 @@ let rec compile_exp ctxt e =
       emit ctxt W.[array_set (typeidx @@ e.at)];
     ) es
 
+  | LenE e1 ->
+    let typeidx = lower_var_type ctxt e.at (Source.et e1) in
+    compile_exp ctxt e1;
+    emit ctxt W.[array_len (typeidx @@ e.at)]
+
   | IdxE (e1, e2) ->
     let typeidx = lower_var_type ctxt e.at (Source.et e1) in
     compile_exp ctxt e1;
