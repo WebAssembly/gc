@@ -39,6 +39,7 @@ all:		unopt opt test
 
 .PHONY: wasm-deps
 wasm-deps: $(WASMDEPS)
+	@echo $(WASMDEPS)
 
 $(WASMDIR):
 		mkdir -p $@
@@ -51,10 +52,13 @@ $(WASMFILES:%=$(WASMDIR)/%): $(WASMDIR)/%: $(WASMBASE)/% $(WASMDIRS:%=$(WASMDIR)
 
 $(WASMDIR)/_build/wasm.cmx $(WASMDIR)/_build/wasm.cmxa: $(WASMDEPS)
 		make -C $(WASMDIR) libopt
+		touch $@
+		$(OCB) -clean
 
 $(WASMDIR)/_build/wasm.cmo $(WASMDIR)/_build/wasm.cma: $(WASMDEPS)
 		make -C $(WASMDIR) libunopt
-
+		touch $@
+		$(OCB) -clean
 
 
 # Building executable
@@ -105,9 +109,9 @@ debugtest/%:	$(UNOPT)
 
 .PHONY:		clean
 
-clean:
+clean: cleantest
 		rm -rf $(WASMDIR) _tags
 		$(OCB) -clean
 
 cleantest:
-		rm -f test/*.wasm test/*.wat test/*.wos
+		rm -f test/*.wasm test/*.wat

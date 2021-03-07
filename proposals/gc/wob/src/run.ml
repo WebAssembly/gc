@@ -1,5 +1,6 @@
 (* Errors & Tracing *)
 
+exception WobWasm of Source.region * string
 exception Recursive of Source.region * exn * Printexc.raw_backtrace
 
 let trace name = if !Flags.trace then print_endline ("-- " ^ name)
@@ -25,6 +26,7 @@ let rec handle f =
   | Wasm.Eval.Trap (at, msg) -> error at "runtime trap" msg
   | Wasm.Eval.Exhaustion (at, msg) -> error at "resource exhaustion" msg
   | Wasm.Eval.Crash (at, msg) -> error at "runtime crash" msg
+  | WobWasm (at, msg) -> error at "file format error" msg
   | Sys_error msg -> error Source.no_region "i/o error" msg
   | Recursive (at, exn, backtrace) ->
     ignore (error at "error while loading" "");
@@ -87,18 +89,26 @@ let read_binary_file file =
   let bin = with_in_file open_in_bin file'
     (fun ic -> really_input_string ic (in_channel_length ic)) in
   trace "Decoding...";
-  Wasm.Decode.decode file' bin
-
-
-let read_sig_file file =
-  let file' = Filename.chop_extension file ^ ".wos" in
-  with_in_file open_in_bin file' (fun ic ->
-    if Marshal.from_channel ic <> marshal_tag then
-      raise (Sys_error "signature file is from incompatible build");
-    if Marshal.from_channel ic <> (!Flags.boxed, !Flags.parametric) then
-      raise (Sys_error "signature file has incompatible language mode");
-    Marshal.from_channel ic
-  )
+  let m = Wasm.Decode.decode file' bin in
+  let pos = Source.{no_pos with file = file'} in
+  let at = Source.{left = pos; right = pos} in
+  match Wasm.Decode.decode_custom (Wasm.Utf8.decode "wob-sig") file' bin with
+  | [] ->
+    raise (WobWasm (at, "wasm binary is missing signature information"))
+  | _::_::_ ->
+    raise (WobWasm (at, "wasm binary has duplicate signature information"))
+  | [s] ->
+    try
+      let bs = Bytes.of_string s in
+      if Marshal.from_string s 0 <> marshal_tag then
+        raise (WobWasm (at, "wasm binary is from incompatible build"));
+      let off1 = Marshal.total_size bs 0 in
+      if Marshal.from_string s off1 <> (!Flags.boxed, !Flags.parametric) then
+        raise (WobWasm (at, "wasm binary has incompatible language mode"));
+      let off2 = off1 + Marshal.total_size bs off1 in
+      m, Marshal.from_string s off2
+    with Failure _ ->
+      raise (WobWasm (at, "wasm binary has malformed signature information"))
 
 
 (* Output *)
@@ -109,36 +119,37 @@ let with_out_file open_out_mode file f =
     f oc; close_out oc
   with exn -> close_out oc; raise exn
 
-let write_binary_file file m =
+let write_binary_file file m (senv : Typing.env) =
   let file' = file ^ ".wasm" in
   trace "Encoding...";
-  let s = Wasm.Encode.encode m in
+  let s1 = Wasm.Encode.encode m in
+  let custom =
+    Marshal.to_string marshal_tag [] ^
+    Marshal.to_string (!Flags.boxed, !Flags.parametric) [] ^
+    Marshal.to_string senv [Marshal.Closures]
+  in
+  let s2 = Wasm.Encode.encode_custom (Wasm.Utf8.decode "wob-sig") custom in
   trace ("Writing (" ^ file' ^ ")...");
-  with_out_file open_out_bin file' (fun oc -> output_string oc s)
+  with_out_file open_out_bin file' (fun oc ->
+    output_string oc s1;
+    output_string oc s2;
+  )
 
 let write_textual_file file m =
   let file' = file ^ ".wat" in
   trace ("Writing (" ^ file' ^ ")...");
   with_out_file open_out file' (fun oc -> Wasm.Print.module_ oc !Flags.width m)
 
-let write_file file m =
+let write_file file m senv =
   let file' = Filename.chop_extension file in
   if !Flags.textual then
     write_textual_file file' m
   else
-    write_binary_file file' m
+    write_binary_file file' m senv
 
 let write_stdout m =
   trace "Printing Wasm...";
   Wasm.Print.module_ stdout !Flags.width m
-
-let write_sig_file file stat =
-  let file' = Filename.chop_extension file ^ ".wos" in
-  with_out_file open_out_bin file' (fun oc ->
-    Marshal.to_channel oc marshal_tag [];
-    Marshal.to_channel oc (!Flags.boxed, !Flags.parametric) [];
-    Marshal.to_channel oc stat [Marshal.Closures]
-  )
 
 
 (* Compilation pipeline *)
@@ -277,11 +288,8 @@ let run_stdin () =
 let compile name file lexbuf start =
   handle (fun () ->
     let prog, (_, stat) = frontend name lexbuf start Env.empty in
-    if !Flags.compile then begin
-      let wasm = backend prog in
-      write_file file wasm;
-      write_sig_file file (stat : Typing.env);
-    end
+    if !Flags.compile then
+      write_file file (backend prog) stat
   )
 
 let compile_file file : bool =
@@ -299,18 +307,12 @@ let load_file url at : entry =
     trace (String.make 60 '-');
     trace ("Loading import \"" ^ url ^ "\"...");
     let src_file = url ^ ".wob" in
-    let sig_file = url ^ ".wos" in
     let wasm_file = url ^ ".wasm" in
     let entry =
-      if
-        !Flags.compile && Sys.file_exists sig_file &&
-        (!Flags.dry || Sys.file_exists wasm_file)
-      then begin
-        let stat = read_sig_file sig_file in
-        let inst =
-          if !Flags.dry then None else
-          Some (Link.link (read_binary_file wasm_file))
-        in {stat; dyn = Env.empty; inst}
+      if !Flags.compile && Sys.file_exists wasm_file then begin
+        let wasm, stat = read_binary_file wasm_file in
+        let inst = if !Flags.dry then None else Some (Link.link wasm) in
+        {stat; dyn = Env.empty; inst}
       end
       else begin
         input_file src_file (fun lexbuf ->
@@ -322,10 +324,8 @@ let load_file url at : entry =
               Env.empty,
               if !Flags.dry then None else
               let wasm = backend prog in
-              if not !Flags.prompt then begin
-                write_file wasm_file wasm;
-                write_sig_file sig_file (stat : Typing.env)
-              end;
+              if not !Flags.prompt then
+                write_file wasm_file wasm stat;
               Some (Link.link wasm)
           in {stat; dyn; inst}
         )
