@@ -1,19 +1,17 @@
-// @FLAGS -b
-
 // Imports
 
 import M {T, x, v, s, p, f, g, t, a, C} from "test/export";
 import M2 {q, a} from "test/export2";
 
-type U = M_T<Bool, Int>;
+type U = M_T<Bool$, Int$>;
 
 assert M_x == 9;
 assert M_v == 3.14;
 M_v := 2.7;
 assert M_v == 2.7;
 assert M_s[2] == "x"[0];
-assert M_p.0 == 5;
-assert M_p.1;
+assert M_p.0.$ == 5;
+assert M_p.1.$;
 
 assert M_f() == 9;
 assert M_g() == 2.7;
@@ -24,5 +22,5 @@ assert M_t[0] == "_"[0];
 
 // Type compatibility
 
-let ps : (Int, Bool)[] = [M_p, M2_q];
+let ps : (Int$, Bool$)[] = [M_p, M2_q];
 let as : Int[][] = [M_a, M2_a];
