@@ -35,17 +35,46 @@ exception NYI of Source.region * string
 let nyi at s = raise (NYI (at, s))
 
 
-(* Compilation context *)
-
-module DefTypes = Map.Make(struct type t = W.def_type let compare = compare end)
+(* Environment *)
 
 type scope = PreScope | GlobalScope | BlockScope | FuncScope | ClassScope
 type env = (T.sort * int32, int32) E.env
+
+let make_env () =
+  let env = ref Env.empty in
+  List.iteri (fun i (y, _) ->
+    env := E.extend_typ !env Source.(y @@ Prelude.region) (i32 i)
+  ) Prelude.typs;
+  List.iteri (fun i (x, _) ->
+    env := E.extend_val !env Source.(x @@ Prelude.region) (T.LetS, i32 i)
+  ) Prelude.vals;
+  env
+
+
+(* Class table *)
+
+module ClsEnv = Map.Make(Int)
+
+type cls =
+  { env : env;
+    inst_idx : int32;
+    disp_idx : int32;
+    inst_flds : W.field_type list;
+    disp_flds : W.field_type list;
+  }
+
+type cls_env = cls ClsEnv.t
+
+
+(* Compilation context *)
+
+module DefTypes = Map.Make(struct type t = W.def_type let compare = compare end)
 
 type 'a entities = {mutable list : 'a option ref list; mutable cnt : int32}
 
 type ctxt =
   { envs : (scope * env ref) list;
+    clss : cls_env ref;
     deftypes : int32 DefTypes.t ref;
     types : W.type_ entities;
     globals : W.global entities;
@@ -59,6 +88,7 @@ type ctxt =
     text_new : int32 option ref;
     text_cat : int32 option ref;
     text_cpy : int32 option ref;
+    text_cmp : int32 option ref;
   }
 
 let make_entities () = {list = []; cnt = 0l}
@@ -84,19 +114,9 @@ let implicit_entity ents : int32 =
   ents.cnt <- idx +% 1l;
   idx
 
-
-let make_env () =
-  let env = ref Env.empty in
-  List.iteri (fun i (y, _) ->
-    env := E.extend_typ !env Source.(y @@ Prelude.region) (i32 i)
-  ) Prelude.typs;
-  List.iteri (fun i (x, _) ->
-    env := E.extend_val !env Source.(x @@ Prelude.region) (T.LetS, i32 i)
-  ) Prelude.vals;
-  env
-
 let make_ctxt () =
   { envs = [(PreScope, make_env ())];
+    clss = ref ClsEnv.empty;
     deftypes = ref DefTypes.empty;
     types = make_entities ();
     globals = make_entities ();
@@ -110,6 +130,7 @@ let make_ctxt () =
     text_new = ref None;
     text_cat = ref None;
     text_cpy = ref None;
+    text_cmp = ref None;
   }
 
 let enter_scope ctxt scope =
@@ -433,6 +454,58 @@ let compile_text_cat ctxt : int32 =
       ]
     )
 
+let compile_text_cmp ctxt : int32 =
+  match !(ctxt.text_cmp) with
+  | Some idx -> idx
+  | None ->
+    let at = Prelude.region in
+    let typeidx = lower_var_type ctxt at T.Text in
+    let t' = W.(RefType (Nullable, DefHeapType (SynVar typeidx))) in
+    emit_func ctxt at [t'; t'] W.[i32t] (fun ctxt idx ->
+      ctxt.text_cmp := Some idx;
+      let arg1idx = emit_param ctxt at in
+      let arg2idx = emit_param ctxt at in
+      let lenidx = emit_local ctxt at W.i32t in
+      List.iter (emit_instr ctxt at) W.[
+        block voidbt (List.map (fun e -> e @@ at) [
+          local_get (arg1idx @@ at);
+          local_get (arg2idx @@ at);
+          ref_eq;
+          if_ voidbt (List.map (fun e -> e @@ at) [
+            i32_const (1l @@ at); return
+          ]) [];
+          local_get (arg1idx @@ at);
+          array_len (typeidx @@ at);
+          local_get (arg2idx @@ at);
+          array_len (typeidx @@ at);
+          local_tee (lenidx @@ at);
+          i32_ne;
+          br_if (0l @@ at);
+          block voidbt (List.map (fun e -> e @@ at) [
+            loop voidbt (List.map (fun e -> e @@ at) [
+              local_get (lenidx @@ at);
+              i32_eqz;
+              br_if (1l @@ at);
+              local_get (arg1idx @@ at);
+              local_get (lenidx @@ at);
+              i32_const (1l @@ at);
+              i32_sub;
+              local_tee (lenidx @@ at);
+              array_get_u (typeidx @@ at);
+              local_get (arg2idx @@ at);
+              local_get (lenidx @@ at);
+              array_get_u (typeidx @@ at);
+              i32_eq;
+              br_if (0l @@ at);
+            ])
+          ]);
+          i32_const (1l @@ at);
+          return;
+        ]);
+        i32_const (0l @@ at);
+      ]
+    )
+
 
 (* Expressions *)
 
@@ -521,7 +594,7 @@ let rec compile_exp ctxt e =
     | SubOp, T.Float -> emit ctxt W.[f64_sub]
     | MulOp, T.Float -> emit ctxt W.[f64_mul]
     | DivOp, T.Float -> emit ctxt W.[f64_div]
-    | CatOp, T.Text -> emit ctxt W.[call (compile_text_cat ctxt @@ e.at)]
+    | AddOp, T.Text -> emit ctxt W.[call (compile_text_cat ctxt @@ e.at)]
     | _ -> assert false
     )
 
@@ -543,8 +616,8 @@ let rec compile_exp ctxt e =
     | GeOp, T.Float -> emit ctxt W.[f64_ge]
     | EqOp, (T.Null | T.Obj | T.Array _ | T.Inst _) -> emit ctxt W.[ref_eq]
     | NeOp, (T.Null | T.Obj | T.Array _ | T.Inst _) -> emit ctxt W.[ref_eq; i32_eqz]
-    | EqOp, T.Text -> nyi e.at "text comparison"
-    | NeOp, T.Text -> nyi e.at "text comparison"
+    | EqOp, T.Text -> emit ctxt W.[call (compile_text_cmp ctxt @@ e.at)]
+    | NeOp, T.Text -> emit ctxt W.[call (compile_text_cmp ctxt @@ e.at); i32_eqz]
     | _ -> assert false
     )
 
@@ -858,16 +931,6 @@ and compile_dec ctxt d =
       ) xts;
       compile_exp ctxt e;
     ))
-  (*
-    let xs = List.map fst xts in
-    let rec f ts vs =
-      let env' = E.extend_val env x (T.FuncS, V.Func f) in
-      let env' = E.extend_typs_gnd env' ys ts in
-      let env' = E.extend_vals_let env' xs vs in
-      try eval_exp env' e with Return [v] -> v | Return vs -> V.Tup vs
-    in
-    V.Tup [], E.singleton_val x (T.FuncS, V.Func f)
-  *)
 
   | ClassD (x, ys, xts, sup_opt, ds) ->
     (* TODO: temporary hack to enable empty classes *)
@@ -884,9 +947,9 @@ and compile_dec ctxt d =
     let ys' = List.map it ys in
     let xs = List.map fst xts in
     let cls =
-      if pass <> Post then T.gen_class x.it ys' else
+      if pass <> Post then T.gen_class d x.it ys' else
       match eval_exp env (this x) with
-      | V.Class (cls, _) -> cls
+      | V.Class (cls, _, _) -> cls
       | _ -> assert false
     in
     let con ts = T.Inst (cls, ts) in
@@ -895,35 +958,43 @@ and compile_dec ctxt d =
       let env'' = E.extend_typs_abs env' ys in
       cls.T.sup <- eval_typ env'' (VarT (x2, ts2) @@ x2.at)
     ) sup_opt;
-    let rec v_class = V.Class (cls, f)
-    and f ts vs =
+    let rec v_class = V.Class (cls, inst, alloc)
+    and inst ts vs =
+      let v_inst, init = alloc (con ts) ts vs in
+      init (); v_inst
+    and alloc t_inst ts vs =
       let env'' = E.extend_val env' x (T.ClassS, v_class) in
       let env'' = E.extend_typs_gnd env'' ys ts in
       let env'' = E.extend_vals_let env'' xs vs in
-      let obj, env''' =
+      let v_inst, init', env''' =
         match sup_opt with
-        | None -> ref E.Map.empty, env''
+        | None -> V.Obj (t_inst, ref E.Map.empty), (fun () -> ()), env''
         | Some (x2, ts2, es2) ->
-          match eval_exp env'' (NewE (x2, ts2, es2) @@ x2.at) with
-          | V.Obj (_, obj') ->
-            obj', E.Map.fold (fun x v env ->
-              Env.extend_val env (x @@ x2.at) v) !obj' env''
-          | v -> crash x2.at "runtime type error at super class instantiation, got %s"
-             (V.to_string v)
+          let v2 = eval_var env'' x2 in
+          let ts2' = List.map (eval_typ env'') ts2 in
+          let vs2 = List.map (eval_exp env'') es2 in
+          (match v2 with
+          | V.Null -> trap x2.at "null reference at class instantiation"
+          | V.Class (_, _, alloc') ->
+            let v_inst, init' = alloc' t_inst ts2' vs2 in
+            v_inst, init', E.Map.fold (fun x v env ->
+              Env.extend_val env (x @@ x2.at) v) !(V.as_obj v_inst) env''
+          | _ -> crash x2.at "runtime type error at class instantiation"
+          )
       in
-      let v_inst = V.Obj (con ts, obj) in
       (* Rebind local vars to shadow parent fields *)
       let env''' = E.extend_val env''' x (T.ClassS, v_class) in
       let env''' = E.extend_vals_let env''' xs vs in
       let env''' = E.extend_val_let env''' ("this" @@ x.at) v_inst in
       let _, oenv = eval_block Pre env''' ds in
+      let obj = V.as_obj v_inst in
       obj := E.fold_vals (fun x sv obj ->
         match E.Map.find_opt x obj with
         | None -> E.Map.add x sv.it obj
         | Some (s, v') -> v' := !(snd sv.it); obj
       ) oenv !obj;
-      ignore (eval_block Post env''' ds);
-      v_inst
+      v_inst,
+      fun () -> init' (); ignore (eval_block Post env''' ds)
     in
     V.Tup [],
     E.adjoin (E.singleton_typ x con) (E.singleton_val x (T.ClassS, v_class))
