@@ -33,3 +33,28 @@ assert snd<Int$, Bool$>(p2).$;
 let p3 = pair<Float$, Byte$>(3.14$, "1"[0]$);
 assert fst<Float$, Byte$>(p3).$ == 3.14;
 assert snd<Float$, Byte$>(p3).$ == "1"[0];
+
+
+func reverse<X>(a : X[]) {
+  var i : Int = 0;
+  while i < #a - i - 1 {
+    let tmp = a[i];
+    a[i] := a[#a - i - 1];
+    a[#a - i - 1] := tmp;
+    i := i + 1;
+  };
+};
+
+let a = [1$, 2$, 3$, 4$];
+let b = [1$, 2$, 3$, 4$, 5$];
+reverse<Int$>(a);
+reverse<Int$>(b);
+assert a[0].$ == 4;
+assert a[1].$ == 3;
+assert a[2].$ == 2;
+assert a[3].$ == 1;
+assert b[0].$ == 5;
+assert b[1].$ == 4;
+assert b[2].$ == 3;
+assert b[3].$ == 2;
+assert b[4].$ == 1;
