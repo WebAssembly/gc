@@ -14,7 +14,7 @@ To that end, Wob features:
 * classes and inheritance
 * first-class generics
 * safe runtime casts
-* simple modules
+* simple modules with separate compilation and dynamic linking
 
 For simplicity, Wob omits various other common features, such as access control to classes and modules, more advanced control constructs, or sophisticated type inference, which are mostly independent from code generation and data representation problems. It also doesn't currently have interface types.
 
@@ -76,7 +76,7 @@ typ ::=
 
 ```
 unop  ::= '+' | '-' | '^' | '!'
-binop ::= '+' | '-' | '*' | '/' | '%' | '&' | '|' | '^' | '<<' | '>>' | '#'
+binop ::= '+' | '-' | '*' | '/' | '%' | '&' | '|' | '^' | '<<' | '>>'
 relop ::= '==' | '!=' | '<' | '>' | '<=' | '>='
 logop ::= '&&' | '||'
 

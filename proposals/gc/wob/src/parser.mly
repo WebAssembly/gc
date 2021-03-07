@@ -51,7 +51,7 @@ let float s at =
 %token LPAR RPAR LBRACK RBRACK LCURLY RCURLY COMMA SEMICOLON SEMICOLON_EOL
 %token COLON EQ LT GT ARROW ASSIGN SUB SUP DOT DOT_NUM DOLLAR
 %token EQOP NEOP LEOP LTOP GTOP GEOP
-%token ADDOP SUBOP MULOP DIVOP MODOP ANDOP OROP XOROP SHLOP SHROP CATOP
+%token ADDOP SUBOP MULOP DIVOP MODOP ANDOP OROP XOROP SHLOP SHROP LENOP
 %token ANDTHENOP ORELSEOP NOTOP
 %token NEW IF ELSE WHILE RETURN ASSERT
 %token LET VAR FUNC TYPE CLASS IMPORT EXPORT FROM
@@ -160,7 +160,7 @@ exp_un :
   | SUBOP exp_un { UnE (NegOp, $2) @@ at () }
   | XOROP exp_un { UnE (InvOp, $2) @@ at () }
   | NOTOP exp_un { UnE (NotOp, $2) @@ at () }
-  | CATOP exp_un { LenE $2 @@ at () }
+  | LENOP exp_un { LenE $2 @@ at () }
   | NEW var exp_arg { NewE ($2, [], $3) @@ at () }
   | NEW var LT typ_list GT exp_arg { NewE ($2, $4, $6) @@ at () }
   | NEW typ_post LBRACK exp RBRACK LPAR exp RPAR {
@@ -177,9 +177,8 @@ exp_bin :
   | exp_bin ANDOP exp_bin { BinE ($1, AndOp, $3) @@ at () }
   | exp_bin OROP  exp_bin { BinE ($1, OrOp,  $3) @@ at () }
   | exp_bin XOROP exp_bin { BinE ($1, XorOp, $3) @@ at () }
-  | exp_bin SHLOP  exp_bin { BinE ($1, ShlOp,  $3) @@ at () }
+  | exp_bin SHLOP exp_bin { BinE ($1, ShlOp,  $3) @@ at () }
   | exp_bin SHROP exp_bin { BinE ($1, ShrOp, $3) @@ at () }
-  | exp_bin CATOP exp_bin { BinE ($1, CatOp, $3) @@ at () }
   | exp_bin EQOP exp_bin { RelE ($1, EqOp, $3) @@ at () }
   | exp_bin NEOP exp_bin { RelE ($1, NeOp, $3) @@ at () }
   | exp_bin LTOP exp_bin { RelE ($1, LtOp, $3) @@ at () }
