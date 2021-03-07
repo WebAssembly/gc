@@ -69,6 +69,7 @@ main.native:	_tags
 
 # Building library
 
+FILES =		$(shell ls $(DIRS:%=%/*.ml*))
 PACK =		$(shell echo `echo $(LIB) | sed 's/^\(.\).*$$/\\1/g' | tr [:lower:] [:upper:]``echo $(LIB) | sed 's/^.\(.*\)$$/\\1/g'`)
 
 .INTERMEDIATE:	$(LIB).mlpack
@@ -83,16 +84,16 @@ $(LIB).mlpack:	$(DIRS)
 $(LIB).mllib:
 		echo Wasm >$@
 
-_build/$(LIB).cmo: $(LIB).mlpack _tags
+_build/$(LIB).cmo: $(FILES) $(LIB).mlpack _tags Makefile
 		$(OCB) -quiet $(LIB).cmo
 
-_build/$(LIB).cmx: $(LIB).mlpack _tags
+_build/$(LIB).cmx: $(FILES) $(LIB).mlpack _tags Makefile
 		$(OCB) -quiet $(LIB).cmx
 
-_build/$(LIB).cma: $(LIB).mllib _tags
+_build/$(LIB).cma: $(FILES) $(LIB).mllib _tags Makefile
 		$(OCBA) -quiet $(LIB).cma
 
-_build/$(LIB).cmxa: $(LIB).mllib _tags
+_build/$(LIB).cmxa: $(FILES) $(LIB).mllib _tags Makefile
 		$(OCBA) -quiet $(LIB).cmxa
 
 
