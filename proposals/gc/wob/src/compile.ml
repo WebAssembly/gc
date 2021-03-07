@@ -407,10 +407,20 @@ let compile_coerce_abs_block_type ctxt at t =
     emit ctxt W.[ref_as_i31]
   | T.Text | T.Box _ | T.Tup _ | T.Obj
   | T.Inst _ | T.Array _ | T.Func _ | T.Class _ ->
+    let t' = lower_value_type ctxt at t in
+    let tmpidx = emit_local ctxt at W.(RefType (Nullable, AnyHeapType)) in
+    let typeidx = lower_var_type ctxt at t in
     emit ctxt W.[
-      ref_as_data;  (* TODO: handle null *)
-      rtt_canon (lower_var_type ctxt at t @@ at);
-      ref_cast;
+      local_tee (tmpidx @@ at);
+      ref_is_null;
+      if_ W.(valbt t') [
+        ref_null (DefHeapType (SynVar typeidx)) @@ at
+      ] [
+        local_get (tmpidx @@ at) @@ at;
+        ref_as_data @@ at;
+        rtt_canon (typeidx @@ at) @@ at;
+        ref_cast @@ at;
+      ]
     ]
   | _ -> ()
 
@@ -682,7 +692,7 @@ let rec compile_exp ctxt e =
   | RelE (e1, op, e2) ->
     compile_exp ctxt e1;
     compile_exp ctxt e2;
-    (match op, Source.et e1 with
+    (match op, T.lub (Source.et e1) (Source.et e2) with
     | EqOp, (T.Int | T.Byte | T.Bool) -> emit ctxt W.[i32_eq]
     | NeOp, (T.Int | T.Byte | T.Bool) -> emit ctxt W.[i32_ne]
     | LtOp, (T.Int | T.Byte | T.Bool) -> emit ctxt W.[i32_lt_s]
@@ -695,8 +705,8 @@ let rec compile_exp ctxt e =
     | GtOp, T.Float -> emit ctxt W.[f64_gt]
     | LeOp, T.Float -> emit ctxt W.[f64_le]
     | GeOp, T.Float -> emit ctxt W.[f64_ge]
-    | EqOp, (T.Null | T.Obj | T.Array _ | T.Inst _) -> emit ctxt W.[ref_eq]
-    | NeOp, (T.Null | T.Obj | T.Array _ | T.Inst _) -> emit ctxt W.[ref_eq; i32_eqz]
+    | EqOp, (T.Null | T.Obj | T.Box _ | T.Array _ | T.Inst _) -> emit ctxt W.[ref_eq]
+    | NeOp, (T.Null | T.Obj | T.Box _ | T.Array _ | T.Inst _) -> emit ctxt W.[ref_eq; i32_eqz]
     | EqOp, T.Text -> emit ctxt W.[call (compile_text_cmp ctxt @@ e.at)]
     | NeOp, T.Text -> emit ctxt W.[call (compile_text_cmp ctxt @@ e.at); i32_eqz]
     | _ -> assert false
@@ -1272,7 +1282,6 @@ let compile_prog p : W.module_ =
         } @@ p.at
       ];
     W.memories =
-      if !(ctxt.data_offset) = 0l then [] else
       let sz = (!(ctxt.data_offset) +% 0xffffl) /% 0x10000l in
       [{W.mtype = W.(MemoryType {min = sz; max = Some sz})} @@ p.at]
   } @@ p.at

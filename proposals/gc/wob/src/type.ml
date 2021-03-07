@@ -187,11 +187,7 @@ let rec sub t1 t2 =
   t1 == t2 ||
   match t1, t2 with
   | Bot, _ -> true
-  | Null, Obj -> true
-  | Null, Array _ -> true
-  | Null, Func _ -> true
-  | Null, Inst _ -> true
-  | Null, Class _ -> true
+  | Null, t2 when is_boxed t2 -> true
   | Inst _, Obj -> true
   | Box t1', Box t2' -> sub t1' t2'
   | Tup ts1, Tup ts2 ->

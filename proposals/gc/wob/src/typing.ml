@@ -156,7 +156,8 @@ and check_exp' env e : T.typ =
         (T.to_string t1) (T.to_string t2)
     in
     (match op, t with
-    | (EqOp | NeOp), (T.Null | T.Bool | T.Text | T.Obj | T.Array _ | T.Inst _)
+    | (EqOp | NeOp),
+      (T.Null | T.Bool | T.Text | T.Obj | T.Box _ | T.Array _ | T.Inst _)
     | (EqOp | NeOp | LtOp | GtOp | LeOp | GeOp), (T.Byte | T.Int | T.Float) ->
       T.Bool
     | _ ->
