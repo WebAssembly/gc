@@ -61,10 +61,14 @@ let remove_typ y env = {env with typs = Map.remove y.it env.typs}
 let singleton_val x v = extend_val empty x v
 let singleton_typ y t = extend_typ empty y t
 
+let not_found x =
+  Printf.printf "[find `%s` @@ %s]\n%!" x.it (string_of_region x.at);
+  raise Not_found
+
 let mem_val x env = Map.mem x.it env.vals
 let mem_typ y env = Map.mem y.it env.typs
-let find_val x env = Map.find x.it env.vals
-let find_typ y env = Map.find y.it env.typs
+let find_val x env = try Map.find x.it env.vals with Not_found -> not_found x 
+let find_typ y env = try Map.find y.it env.typs with Not_found -> not_found y
 let find_opt_val x env = Map.find_opt x.it env.vals
 let find_opt_typ y env = Map.find_opt y.it env.typs
 
