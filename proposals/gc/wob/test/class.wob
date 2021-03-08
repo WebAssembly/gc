@@ -1,34 +1,35 @@
 // Base classes
 
 class Counter(x : Int) {
-//  let a = x;
-//  var c : Int = a;
-var c : Int = x;
+  let a = x;
+  var c : Int = a;
   func get() : Int { return c };
   func set(x : Int) { c := x };
   func inc() { c := c + 1 };
   func get2() : Int { get() };
   func get3() : Int { this.get() };
+  func get0() : Int { x };
 };
 
 let c = new Counter(5);
-//assert c.a == 5;
+assert c.a == 5;
 assert c.c == 5;
 assert c.get() == 5;
 assert c.get2() == 5;
 assert c.get3() == 5;
+assert c.get0() == 5;
 
 c.c := 6;
-//assert c.a == 5;
+assert c.a == 5;
 assert c.c == 6;
 assert c.get() == 6;
 
 c.inc();
-//assert c.a == 5;
+assert c.a == 5;
 assert c.c == 7;
 assert c.get() == 7;
 
 c.set(10);
-//assert c.a == 5;
+assert c.a == 5;
 assert c.c == 10;
 assert c.get() == 10;

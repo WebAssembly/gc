@@ -41,6 +41,14 @@ type env = (T.sort * int32, int32) E.env
 type scope =
   PreScope | GlobalScope | BlockScope | FuncScope | ClassScope of T.typ
 
+let hidden_prefix = "hidden-"
+let hidden_length = String.length hidden_prefix
+let hidden i region = Source.(("hidden-" ^ Int32.to_string i) @@ region)
+let is_hidden x = x.it > "hidden-" && x.it < "hidden."
+let as_hidden x =
+  let s = String.sub x.it hidden_length (String.length x.it - hidden_length) in
+  Int32.of_string s
+
 let cls_disp = 0l
 let cls_new = 1l
 
@@ -55,9 +63,10 @@ let make_env () =
   ) Prelude.vals;
   env
 
-type pass = Full | Pre of W.value_type * Source.region | Post
+type pass = FullPass | MethPass of W.value_type * region | LetPass | VarPass
 
-let is_pre = function Pre _ -> true | _ -> false
+let is_meth_pass = function MethPass _ -> true | _ -> false
+let is_fld_pass = function LetPass | VarPass -> true | _ -> false
 
 
 (* Class table *)
@@ -275,14 +284,13 @@ and lower_var_type ctxt at t : int32 =
     let ft = W.(FieldType (PackedStorageType Pack8, Mutable)) in
     emit_type ctxt at W.(ArrayDefType (ArrayType ft))
   | T.Box t1 ->
-    let ft = W.(FieldType (lower_storage_type ctxt at t1, Immutable)) in
+    let ft = lower_field_type ctxt at W.Immutable t1 in
     emit_type ctxt at W.(StructDefType (StructType [ft]))
   | T.Tup ts ->
-    let fts = List.map (fun tI ->
-      W.(FieldType (lower_storage_type ctxt at tI, Immutable))) ts in
+    let fts = List.map (lower_field_type ctxt at W.Immutable) ts in
     emit_type ctxt at W.(StructDefType (StructType fts))
-  | T.Array t1 -> 
-    let ft = W.(FieldType (lower_storage_type ctxt at t1, Mutable)) in
+  | T.Array t1 ->
+    let ft = lower_field_type ctxt at W.Mutable t1 in
     emit_type ctxt at W.(ArrayDefType (ArrayType ft))
   | T.Func _ -> nyi at "function types"
   | T.Class cls -> (lower_class ctxt at cls).cls_idx
@@ -293,6 +301,9 @@ and lower_storage_type ctxt at t : W.storage_type =
   | T.Bool | T.Byte -> W.(PackedStorageType Pack8)
   | T.Int | T.Float -> W.(ValueStorageType (lower_value_type ctxt at t))
   | t -> W.(ValueStorageType (RefType (Nullable, AnyHeapType)))
+
+and lower_field_type ctxt at mut t : W.field_type =
+  W.(FieldType (lower_storage_type ctxt at t, mut))
 
 and lower_block_value_type ctxt at t : W.value_type option =
   match t with
@@ -340,12 +351,14 @@ and lower_class ctxt at cls =
   in
   let cls', define_cls' = emit_cls ctxt at cls.T.id sup_cls' in
   let inst_t = T.Inst (cls, List.map T.var cls.T.tparams) in
+  let param_fts =
+    List.map (lower_field_type ctxt at W.Immutable) cls.T.vparams in
   let clsenv, inst_fts_r, disp_fts_r, _, _ =
     List.fold_left (fun (env, inst_fts, disp_fts, inst_i, disp_i) (x, (s, t)) ->
       match s with
       | T.LetS | T.VarS ->
         let mut = if s = T.LetS then W.Immutable else W.Mutable in
-        let ft = W.FieldType (lower_storage_type ctxt at t, mut) in
+        let ft = lower_field_type ctxt at mut t in
         E.extend_val env (Source.(@@) x at) (s, inst_i),
         ft::inst_fts, disp_fts,
         inst_i +% 1l, disp_i
@@ -362,10 +375,11 @@ and lower_class ctxt at cls =
       | T.ClassS -> nyi at "nested class definitions"
       | T.ProhibitedS -> assert false
     ) (sup_clsenv, [], [],
-        1l +% i32 (List.length sup_inst_fts), i32 (List.length sup_disp_fts))
+        1l +% i32 (List.length param_fts) +% i32 (List.length sup_inst_fts),
+        i32 (List.length sup_disp_fts))
       cls.T.def
   in
-  let inst_fts = sup_inst_fts @ List.rev inst_fts_r in
+  let inst_fts = sup_inst_fts @ param_fts @ List.rev inst_fts_r in
   let disp_fts = sup_disp_fts @ List.rev disp_fts_r in
   let disp_vt = W.(RefType (NonNullable, DefHeapType (SynVar cls'.disp_idx))) in
   let disp_ft = W.(FieldType (ValueStorageType disp_vt, Immutable)) in
@@ -386,7 +400,7 @@ and lower_class ctxt at cls =
 
 (* Coercions *)
 
-let default_const ctxt at t : W.const =
+let default_exp ctxt at t : W.instr' list =
   let instr' =
     match t with
     | T.Bool | T.Byte | T.Int -> W.i32_const (0l @@ at)
@@ -394,7 +408,10 @@ let default_const ctxt at t : W.const =
     | T.Var _ | T.Null | T.Text | T.Obj | T.Box _ | T.Tup _
     | T.Inst _ | T.Array _ | T.Func _ | T.Class _ | T.Bot ->
       W.ref_null (lower_heap_type ctxt at t)
-  in [instr' @@ at] @@ at
+  in [instr']
+
+let default_const ctxt at t : W.const =
+  List.map (fun instr' -> instr' @@ at) (default_exp ctxt at t) @@ at
 
 let compile_coerce_block_type ctxt at t =
   match t with
@@ -629,6 +646,7 @@ let compile_lit ctxt l at =
 let rec compile_var ctxt x envs : scope * T.sort * int32 =
   match envs with
   | [] ->
+   Printf.printf "[compile_var `%s` @@ %s]\n%!" x.it (Source.string_of_region x.at);
    assert false
   | (scope, env)::envs' ->
     match E.find_opt_val x !env with
@@ -641,7 +659,9 @@ let rec compile_var ctxt x envs : scope * T.sort * int32 =
       | _ -> nyi x.at "outer scope variable access"
       );
       result
-    | Some {it = (s, idx); _} -> scope, s, idx
+    | Some {it = (s, idx); _} ->
+      assert (match scope with ClassScope _ -> true | _ -> idx >= 0l);
+      scope, s, idx
 
 
 let rec compile_exp ctxt e =
@@ -660,10 +680,14 @@ let rec compile_exp ctxt e =
     | GlobalScope ->
       emit_instr ctxt x.at W.(global_get (idx @@ x.at));
       compile_coerce_block_type ctxt e.at (Source.et e)
-    | ClassScope t ->
+    | ClassScope _ when idx >= 0l ->  (* in constructor, we have let binding *)
+      emit_instr ctxt x.at W.(local_get (idx @@ x.at));
+      compile_coerce_block_type ctxt e.at (Source.et e)
+    | ClassScope this_t ->
       let this = Source.(VarE ("this" @@ x.at) @@ x.at) in
-      this.et <- Some t;
-      compile_exp ctxt {e with it = DotE (this, x)}
+      this.et <- Some this_t;
+      let x' = if idx < -1l then hidden (Int32.neg idx) x.at else x in
+      compile_exp ctxt {e with it = DotE (this, x')}
     )
 
   | LitE l ->
@@ -848,9 +872,9 @@ let rec compile_exp ctxt e =
           compile_coerce_value_type ctxt eI.at (Source.et eI);
         ) es;
         emit ctxt W.[call (idx @@ x.at)]
-      | ClassScope t, T.FuncS ->
+      | ClassScope this_t, T.FuncS ->
         let this = Source.(VarE ("this" @@ x.at) @@ x.at) in
-        this.et <- Some t;
+        this.et <- Some this_t;
         compile_exp ctxt
           {e with it = CallE ({e1 with it = DotE (this, x)}, ts, es)}
       | _, T.FuncS -> nyi x.at "local function calls"
@@ -920,7 +944,11 @@ let rec compile_exp ctxt e =
   | DotE (e1, x) ->
     let t1 = Source.et e1 in
     let cls' = lower_class ctxt e1.at (fst (T.as_inst t1)) in
-    let s, idx = (E.find_val x cls'.env).it in
+    let s, idx =
+      if is_hidden x
+      then T.LetS, as_hidden x
+      else (E.find_val x cls'.env).it
+    in
     compile_exp ctxt e1;
     (match s with
     | T.LetS | T.VarS ->
@@ -950,9 +978,9 @@ let rec compile_exp ctxt e =
         compile_exp ctxt e2;
         compile_coerce_value_type ctxt e2.at (Source.et e2);
         emit_instr ctxt x.at W.(global_set (idx @@ x.at))
-      | ClassScope t ->
+      | ClassScope this_t ->
         let this = Source.(VarE ("this" @@ x.at) @@ x.at) in
-        this.et <- Some t;
+        this.et <- Some this_t;
         compile_exp ctxt
           {e with it = AssignE ({e1 with it = DotE (this, x)}, e2)}
       )
@@ -1031,82 +1059,108 @@ let rec compile_exp ctxt e =
 
 and compile_dec pass ctxt d =
   let emit ctxt = List.iter (emit_instr ctxt d.at) in
+  let scope, env = List.hd ctxt.envs in
   match d.it with
+  | ExpD _ when is_meth_pass pass || pass = LetPass ->
+    ()
+
   | ExpD e ->
-    if not (is_pre pass) then
-      compile_exp ctxt e
+    compile_exp ctxt e
+
+  | LetD _ when pass = VarPass ->
+    ()
+
+  | LetD (x, _e) when is_meth_pass pass ->
+    env := E.extend_val !env x (T.LetS, -1l)
 
   | LetD (x, e) ->
-    if pass <> Full then
-      nyi d.at "immutable class fields";
-    let scope, env = List.hd ctxt.envs in
     let t = List.hd (snd (Source.et d)) in
     let t' = lower_value_type ctxt x.at t in
     compile_exp ctxt e;
     compile_coerce_value_type ctxt e.at t;
     let idx =
       match scope with
+      | PreScope -> assert false
+
       | BlockScope | FuncScope ->
+        assert (pass = FullPass);
         let idx = emit_local ctxt x.at t' in
         emit ctxt W.[local_set (idx @@ d.at)];
         idx
 
       | GlobalScope ->
-        assert (pass = Full);
+        assert (pass = FullPass);
         let const = default_const ctxt x.at t in
         let idx = emit_global ctxt x.at W.Mutable t' const in
         emit ctxt W.[global_set (idx @@ d.at)];
         idx
 
-      | ClassScope _ -> nyi d.at "immutable class field definitions"
-
-      | PreScope -> assert false
+      | ClassScope _ ->
+        assert (pass = LetPass);
+        let idx = emit_local ctxt x.at t' in
+        emit ctxt W.[local_tee (idx @@ d.at)];
+        idx
     in
     env := E.extend_val !env x (T.LetS, idx)
 
+  | VarD (x, _, e) when pass = LetPass ->
+    emit ctxt (default_exp ctxt x.at (List.hd (snd (Source.et d))))
+
+  | VarD (x, _, _e) when is_meth_pass pass ->
+    env := E.extend_val !env x (T.LetS, -1l)
+
   | VarD (x, _, e) ->
-    let scope, env = List.hd ctxt.envs in
     let t = List.hd (snd (Source.et d)) in
     let t' = lower_value_type ctxt x.at t in
     let idx =
-      if is_pre pass then -1l else begin
+      match scope with
+      | PreScope -> assert false
+
+      | BlockScope | FuncScope ->
+        assert (pass = FullPass);
+        let idx = emit_local ctxt x.at t' in
         compile_exp ctxt e;
         compile_coerce_value_type ctxt e.at t;
-        match scope with
-        | BlockScope | FuncScope ->
-          if pass = Post then -1l else
-          let idx = emit_local ctxt x.at t' in
-          emit ctxt W.[local_set (idx @@ d.at)];
-          idx
+        emit ctxt W.[local_set (idx @@ d.at)];
+        idx
 
-        | GlobalScope ->
-          assert (pass = Full);
-          let const = default_const ctxt x.at t in
-          let idx = emit_global ctxt x.at W.Mutable t' const in
-          emit ctxt W.[global_set (idx @@ d.at)];
-          idx
+      | GlobalScope ->
+        assert (pass = FullPass);
+        let const = default_const ctxt x.at t in
+        let idx = emit_global ctxt x.at W.Mutable t' const in
+        compile_exp ctxt e;
+        compile_coerce_value_type ctxt e.at t;
+        emit ctxt W.[global_set (idx @@ d.at)];
+        idx
 
-        | ClassScope t_this ->
-          assert false;  (* class'es var defs are emitted in constructors' scope *)
-
-        | PreScope -> assert false
-      end;
+      | ClassScope this_t ->
+        assert (pass = VarPass);
+        let this = Source.(VarE ("this" @@ x.at) @@ x.at) in
+        let dot = Source.(DotE (this, x) @@ x.at) in
+        let assign = Source.(AssignE (dot, e) @@ d.at) in
+        this.et <- Some this_t;
+        dot.et <- Some t;
+        assign.et <- Some (fst (Source.et d));
+        compile_exp ctxt assign;
+        -1l
     in
     env := E.extend_val !env x (T.VarS, idx)
 
-  | TypD (_y, _ys, _t) ->
+  | TypD _ ->
+    ()
+
+  | FuncD _ when is_fld_pass pass ->
     ()
 
   | FuncD (x, ys, xts, _t, e) ->
     if ys <> [] && not !Flags.parametric then
       nyi d.at "generic function definitions";
-    if pass <> Post then
     let t = List.hd (snd (Source.et d)) in
     let W.FuncType (ts1', ts2') = lower_func_type ctxt d.at t in
     (*TODO: check for override, adjust parameter type accordingly *)
     let ts1'', this_at =
       match pass with
-      | Pre (t0', at) -> t0' :: ts1', at
+      | MethPass (t0', at) -> t0' :: ts1', at
       | _ -> ts1', Source.no_region
     in
     let idx = emit_func ctxt d.at ts1'' ts2'
@@ -1115,7 +1169,7 @@ and compile_dec pass ctxt d =
         env' := E.extend_val !env' x (T.FuncS, idx);
         let ctxt = enter_scope ctxt FuncScope in
         let _, env = List.hd ctxt.envs in
-        if is_pre pass then begin
+        if is_meth_pass pass then begin
           let idx = emit_param ctxt this_at in
           (*TODO: check downcast on override *)
           env := E.extend_val !env Source.("this" @@ this_at) (T.LetS, idx)
@@ -1127,16 +1181,17 @@ and compile_dec pass ctxt d =
         compile_exp ctxt e
       )
     in
-    if is_pre pass then begin
+    if is_meth_pass pass then begin
       emit_func_ref ctxt d.at idx;
       emit ctxt W.[ref_func (idx @@ d.at)]
     end
 
+  | ClassD _ when pass <> FullPass ->
+    nyi d.at "nested class definitions"
+
   | ClassD (x, ys, xts, sup_opt, ds) ->
     if ys <> [] && not !Flags.parametric then
       nyi d.at "generic class definitions";
-    if pass <> Full then nyi d.at "nested class definitions";
-    let scope, env = List.hd ctxt.envs in
     let cls = T.as_class (List.hd (snd (Source.et d))) in
     let inst_t = T.Inst (cls, List.map T.var cls.T.tparams) in
     let cls' = lower_class ctxt d.at cls in
@@ -1183,8 +1238,12 @@ and compile_dec pass ctxt d =
     ) sup_opt;
     if sup_opt <> None then nyi d.at "class inheritance";
     (* Second, compile functions and push them on stack *)
+    let _, env = List.hd ctxt.envs in
     (*TODO: add parent functions into environment*)
-    compile_decs (Pre (lower_value_type ctxt x.at inst_t, x.at)) ctxt ds;
+    List.iteri (fun i (x, _) ->
+      env := E.extend_val !env x (T.LetS, i32 (-2 - i))
+    ) xts;
+    compile_decs (MethPass (lower_value_type ctxt x.at inst_t, x.at)) ctxt ds;
     (* Third, allocate struct *)
     emit ctxt W.[
       rtt_canon (cls'.disp_idx @@ d.at);
@@ -1195,13 +1254,11 @@ and compile_dec pass ctxt d =
     let W.FuncType (ts1', ts2') = lower_func_type ctxt d.at (T.Class cls) in
     let new_idx =
       emit_func ctxt d.at ts1' ts2' (fun ctxt _ ->
-        let ctxt = enter_scope ctxt FuncScope in
-        let _, env = List.hd ctxt.envs in
         List.iter (fun (x, _) ->
-          env := E.extend_val !env x (T.LetS, emit_param ctxt x.at)
+          env := E.extend_val !env x (T.LetS, emit_param ctxt x.at);
         ) xts;
-        let this_idx = emit_local ctxt d.at (lower_value_type ctxt x.at inst_t) in
-        env := E.extend_val !env Source.("this" @@ d.at) (T.LetS, this_idx);
+        let this = emit_local ctxt d.at (lower_value_type ctxt x.at inst_t) in
+        env := E.extend_val !env Source.("this" @@ d.at) (T.LetS, this);
         (match scope with
         | BlockScope | FuncScope -> emit ctxt W.[local_get (idx @@ d.at)]
         | GlobalScope -> emit ctxt W.[global_get (idx @@ d.at)]
@@ -1211,11 +1268,16 @@ and compile_dec pass ctxt d =
         emit ctxt W.[
           struct_get (cls'.cls_idx @@ d.at) (cls_disp @@ d.at);
         ];
-        compile_decs Post ctxt ds;
+        List.iteri (fun i (x, _) ->
+          emit ctxt W.[local_get (i32 i @@ x.at)]
+        ) xts;
+        compile_decs LetPass ctxt ds;
         emit ctxt W.[
           rtt_canon (cls'.inst_idx @@ d.at);
           struct_new (cls'.inst_idx @@ d.at);
-        ]
+          local_tee (this @@ x.at);
+        ];
+        compile_decs VarPass ctxt ds;
       )
     in
 
@@ -1250,7 +1312,7 @@ and compile_decs pass ctxt ds =
 
 
 and compile_block ctxt scope ds =
-  compile_decs Full (enter_scope ctxt scope) ds
+  compile_decs FullPass (enter_scope ctxt scope) ds
 
 
 (* Programs *)
@@ -1289,7 +1351,7 @@ let compile_prog p : W.module_ =
   let result_idx = emit_global ctxt p.at W.Mutable t' const in
   let start_idx =
     emit_func ctxt p.at [] [] (fun ctxt _ ->
-      compile_decs Full ctxt ds;
+      compile_decs FullPass ctxt ds;
       compile_coerce_value_type ctxt p.at (Source.et p);
       emit ctxt W.(global_set (result_idx @@ p.at));
     )
