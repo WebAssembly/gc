@@ -287,7 +287,7 @@ and string_of_heap_type = function
   | RttHeapType (x, None) -> "(rtt " ^ string_of_var x ^ ")"
   | RttHeapType (x, Some n) ->
     "(rtt " ^ Int32.to_string n ^ " " ^ string_of_var x ^ ")"
-  | BotHeapType -> "unreachable"
+  | BotHeapType -> "something"
 
 and string_of_ref_type = function
   | (nul, t) ->
@@ -296,7 +296,7 @@ and string_of_ref_type = function
 and string_of_value_type = function
   | NumType t -> string_of_num_type t
   | RefType t -> string_of_ref_type t
-  | BotType -> "(unreachable)"
+  | BotType -> "(something)"
 
 and string_of_stack_type = function
   | [t] -> string_of_value_type t

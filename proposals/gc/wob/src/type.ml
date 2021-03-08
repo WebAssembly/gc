@@ -27,7 +27,7 @@ and cls =
     tparams : var list;
     mutable vparams : typ list;
     mutable sup : typ;
-    mutable def : (sort * typ) Env.Map.t;
+    mutable def : (var * (sort * typ)) list;
   }
 
 
@@ -152,7 +152,7 @@ and subst_cls s c =
     tparams = ys';
     vparams = List.map (subst s') c.vparams;
     sup = subst s' c.sup;
-    def = Subst.map (fun (sort, t) -> sort, subst s' t) c.def;
+    def = List.map (fun (x, (sort, t)) -> (x, (sort, subst s' t))) c.def;
   }
 
 
@@ -216,5 +216,5 @@ let gen_class id y ys =
     tparams = ys;
     vparams = [];
     sup = Obj;
-    def = Env.Map.empty;
+    def = [];
   }

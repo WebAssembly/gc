@@ -284,7 +284,7 @@ and check_exp' env e : T.typ =
     let t1 = check_exp env e1 in
     (match t1 with
     | T.Inst (cls, ts) ->
-      (match E.Map.find_opt x.it cls.T.def with
+      (match List.assoc_opt x.it cls.T.def with
       | Some (s, t) -> T.subst (T.typ_subst cls.T.tparams ts) t
       | None -> error e1.at "unknown field `%s`" x.it
       )
@@ -380,7 +380,7 @@ and check_exp_ref env e : T.typ =
   | DotE (e1, x) ->
     (match e1.et with
     | Some (T.Inst (cls, _)) ->
-      let s, _ = E.Map.find x.it cls.T.def in
+      let s, _ = List.assoc x.it cls.T.def in
       if s <> T.VarS then
         error x.at "mutable field expected"
     | _ -> error x.at "mutable field expected"
@@ -466,19 +466,19 @@ and check_dec' pass env d : T.typ * T.typ list * env =
       let env'' = E.extend_val env' x (T.ClassS, t) in
       let env'' = E.extend_vals_let env'' xs1 ts1 in
       let env'' = E.extend_val env'' ("this" @@ x.at) (T.ProhibitedS, t_inst) in
-      let obj', env''' =
+      let sup_obj, env''' =
         match sup_opt with
-        | None -> E.Map.empty, env''
+        | None -> [], env''
         | Some sup ->
           let (x2, ts2, es2) = sup.it in
           match check_exp env'' (NewE (x2, ts2, es2) @@ sup.at) with
           | T.Inst (cls, _) ->
             sup.et <- Some cls;
             cls.T.def,
-            E.Map.fold (fun x (s, t) env ->
+            List.fold_left (fun env'' (x, (s, t)) ->
               let s' = if s = T.LetS then s else T.ProhibitedS in
-              E.extend_val env (x @@ x2.at) (s', t)
-            ) cls.T.def env''
+              E.extend_val env'' (x @@ x2.at) (s', t)
+            ) env'' cls.T.def
           | _ -> assert false
       in
       (* Rebind local vars to shadow parent fields *)
@@ -486,24 +486,28 @@ and check_dec' pass env d : T.typ * T.typ list * env =
       let env''' = E.extend_vals_let env''' xs1 ts1 in
       let env''' = E.extend_val env''' ("this" @@ x.at) (T.ProhibitedS, t_inst) in
       let _, oenv = check_block Pre env''' ds in
-      cls.T.def <-
-        E.fold_vals (fun x {it = (s, t); _} obj ->
-          (match E.Map.find_opt x obj with
-          | None -> ()
-          | Some (s', t') ->
-            if s' <> T.FuncS then
-              error d.at "class overrides parent member `%s` that is not a function" x;
-            if s <> T.FuncS then
-              error d.at "class overrides parent member `%s` with a non-function" x;
-            if not (T.sub t t') then
-              error d.at "class overrides parent member `%s` of type %s with incompatible type %s"
-                x (T.to_string t') (T.to_string t)
-          );
-          E.Map.add x (s, t) obj
-        ) oenv obj';
+      E.iter_vals (fun x {it = (s, t); at; _} ->
+        (match List.assoc_opt x sup_obj with
+        | None -> ()
+        | Some (s', t') ->
+          if s' <> T.FuncS then
+            error at "overriding superclass member `%s` that is not a function" x;
+          if s <> T.FuncS then
+            error at "overriding superclass function `%s` with a non-function" x;
+          if not (T.sub t t') then
+            error at "overriding superclass function `%s` of type %s with incompatible type %s"
+              x (T.to_string t') (T.to_string t)
+        )
+      ) oenv;
+      let obj = E.vals oenv
+        |> List.sort (fun (_, st1) (_, st2) -> compare_by_region st1 st2)
+        |> List.map (fun (x, st) -> (x, st.it))
+      in
+      cls.T.def <- sup_obj @ obj;
       (* Rebind unprohibited *)
-      let env'''' = E.Map.fold (fun x (s, t) env ->
-        E.extend_val env (x @@ (E.Map.find x env'''.E.vals).at) (s, t)) obj' env''' in
+      let env'''' = List.fold_left (fun env (x, (s, t)) ->
+        E.extend_val env
+          (x @@ (E.Map.find x env'''.E.vals).at) (s, t)) env''' sup_obj in
       (* Rebind local vars to shadow parent fields *)
       let env'''' = E.extend_val env'''' x (T.ClassS, t) in
       let env'''' = E.extend_vals_let env'''' xs1 ts1 in

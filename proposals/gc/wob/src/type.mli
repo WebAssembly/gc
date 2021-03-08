@@ -27,7 +27,7 @@ and cls =
     tparams : var list;
     mutable vparams : typ list;
     mutable sup : typ;
-    mutable def : (sort * typ) Env.Map.t;
+    mutable def : (var * (sort * typ)) list;
   }
 
 
