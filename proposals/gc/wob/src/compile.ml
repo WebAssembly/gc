@@ -341,7 +341,7 @@ and lower_class ctxt at cls =
   let cls', define_cls' = emit_cls ctxt at cls.T.id sup_cls' in
   let inst_t = T.Inst (cls, List.map T.var cls.T.tparams) in
   let clsenv, inst_fts_r, disp_fts_r, _, _ =
-    E.Map.fold (fun x (s, t) (env, inst_fts, disp_fts, inst_i, disp_i) ->
+    List.fold_left (fun (env, inst_fts, disp_fts, inst_i, disp_i) (x, (s, t)) ->
       match s with
       | T.LetS | T.VarS ->
         let mut = if s = T.LetS then W.Immutable else W.Mutable in
@@ -350,22 +350,27 @@ and lower_class ctxt at cls =
         ft::inst_fts, disp_fts,
         inst_i +% 1l, disp_i
       | T.FuncS ->
-        let ft = W.FieldType (lower_storage_type ctxt at t, W.Immutable) in
+        let ys, ts1, t2 = T.as_func t in
+        let fnt = lower_func_type ctxt at (T.Func (ys, inst_t::ts1, t2)) in
+        let idx = emit_type ctxt at W.(FuncDefType (fnt)) in
+        let dt = W.(DefHeapType (SynVar idx)) in
+        let st = W.(ValueStorageType (RefType (NonNullable, dt))) in
+        let ft = W.(FieldType (st, Immutable)) in
         E.extend_val env (Source.(@@) x at) (s, disp_i),
         inst_fts, ft::disp_fts,
         inst_i, disp_i +% 1l
       | T.ClassS -> nyi at "nested class definitions"
       | T.ProhibitedS -> assert false
-    ) cls.T.def (sup_clsenv, [], [],
+    ) (sup_clsenv, [], [],
         1l +% i32 (List.length sup_inst_fts), i32 (List.length sup_disp_fts))
+      cls.T.def
   in
   let inst_fts = sup_inst_fts @ List.rev inst_fts_r in
   let disp_fts = sup_disp_fts @ List.rev disp_fts_r in
   let disp_vt = W.(RefType (NonNullable, DefHeapType (SynVar cls'.disp_idx))) in
   let disp_ft = W.(FieldType (ValueStorageType disp_vt, Immutable)) in
-  let ts1' = List.map (lower_value_type ctxt at) cls.T.vparams in
-  let ts2' = [lower_value_type ctxt at inst_t] in
-  let new_idx = emit_type ctxt at W.(FuncDefType (FuncType (ts1', ts2'))) in
+  let fnt = lower_func_type ctxt at (T.Class cls) in
+  let new_idx = emit_type ctxt at W.(FuncDefType (fnt)) in
   let new_vt = W.(RefType (NonNullable, DefHeapType (SynVar new_idx))) in
   let new_ft = W.(FieldType (ValueStorageType new_vt, Immutable)) in
   let cls_fts = [disp_ft; new_ft] in
@@ -624,7 +629,6 @@ let compile_lit ctxt l at =
 let rec compile_var ctxt x envs : scope * T.sort * int32 =
   match envs with
   | [] ->
-Printf.printf "[%s @@ %s]\n%!" x.it (Source.string_of_region x.at);
    assert false
   | (scope, env)::envs' ->
     match E.find_opt_val x !env with
@@ -833,21 +837,50 @@ let rec compile_exp ctxt e =
 
   | CallE (e1, ts, es) ->
     if ts <> [] && not !Flags.parametric then nyi e.at "generic function calls";
-    List.iter (fun eI ->
-      compile_exp ctxt eI;
-      compile_coerce_value_type ctxt eI.at (Source.et eI);
-    ) es;
     (match e1.it with
     | VarE x ->
       let scope, s, idx = compile_var ctxt x ctxt.envs in
       (match scope, s with
-      | GlobalScope, T.FuncS ->
-        emit ctxt W.[call (idx @@ x.at)]
-
-      | _, T.FuncS -> nyi x.at "local function calls"
       | PreScope, _ -> assert false
+      | GlobalScope, T.FuncS ->
+        List.iter (fun eI ->
+          compile_exp ctxt eI;
+          compile_coerce_value_type ctxt eI.at (Source.et eI);
+        ) es;
+        emit ctxt W.[call (idx @@ x.at)]
+      | ClassScope t, T.FuncS ->
+        let this = Source.(VarE ("this" @@ x.at) @@ x.at) in
+        this.et <- Some t;
+        compile_exp ctxt
+          {e with it = CallE ({e1 with it = DotE (this, x)}, ts, es)}
+      | _, T.FuncS -> nyi x.at "local function calls"
       | _ -> nyi e.at "indirect function calls"
       )
+
+    | DotE (e11, x) ->
+      let t11 = Source.et e11 in
+      let cls' = lower_class ctxt e11.at (fst (T.as_inst t11)) in
+      let s, idx = (E.find_val x cls'.env).it in
+      let tmpidx = emit_local ctxt e11.at (lower_value_type ctxt e11.at t11) in
+      compile_exp ctxt e11;
+      emit ctxt W.[local_tee (tmpidx @@ e.at)];
+      List.iter (fun eI ->
+        compile_exp ctxt eI;
+        compile_coerce_value_type ctxt eI.at (Source.et eI);
+      ) es;
+      (match s with
+      | T.FuncS ->
+        emit ctxt W.[
+          local_get (tmpidx @@ e11.at);
+          struct_get (cls'.inst_idx @@ e11.at) (0l @@ x.at);
+          struct_get (cls'.disp_idx @@ e11.at) (idx @@ x.at);
+          call_ref;
+        ];
+      | T.LetS | T.VarS -> nyi e.at "indirect function calls"
+      | T.ClassS -> nyi e.at "nested classes"
+      | T.ProhibitedS -> assert false
+      )
+
     | _ -> nyi e.at "indirect function calls"
     );
     let _, _, t' = T.as_func (Source.et e1) in
@@ -896,9 +929,7 @@ let rec compile_exp ctxt e =
         | T.Bool | T.Byte -> W.struct_get_u
         | _ -> W.struct_get
       in
-      emit ctxt [
-        struct_get_sxopt (lower_var_type ctxt e1.at t1 @@ x.at) (idx @@ x.at)
-      ];
+      emit ctxt [struct_get_sxopt (cls'.inst_idx @@ e1.at) (idx @@ x.at)];
       compile_coerce_abs_block_type ctxt e.at (Source.et e)
     | T.FuncS -> nyi e.at "closures"
     | T.ClassS -> nyi e.at "nested classes"
@@ -942,9 +973,7 @@ let rec compile_exp ctxt e =
       compile_exp ctxt e11;
       compile_exp ctxt e2;
       compile_coerce_value_type ctxt e2.at (Source.et e2);
-      emit ctxt W.[
-        struct_set (lower_var_type ctxt e11.at t11 @@ x.at) (idx @@ x.at)
-      ]
+      emit ctxt W.[struct_set (cls'.inst_idx @@ e11.at) (idx @@ x.at)]
 
     | _ -> assert false
     )
@@ -1059,16 +1088,6 @@ and compile_dec pass ctxt d =
 
         | ClassScope t_this ->
           assert false;  (* class'es var defs are emitted in constructors' scope *)
-(*
-          let this = Source.(VarE ("this" @@ x.at) @@ x.at) in
-          let dot = Source.(DotE (this, x) @@ x.at) in
-          let assign = Source.(AssignE (dot, e) @@ d.at) in
-          this.et <- Some t_this;
-          dot.et <- Some t;
-          assign.et <- Some (T.Tup []);
-          compile_exp ctxt assign;
-          -1l
-*)
 
         | PreScope -> assert false
       end;
@@ -1082,8 +1101,8 @@ and compile_dec pass ctxt d =
     if ys <> [] && not !Flags.parametric then
       nyi d.at "generic function definitions";
     if pass <> Post then
-    let W.FuncType (ts1', ts2') =
-      lower_func_type ctxt d.at (List.hd (snd (Source.et d))) in
+    let t = List.hd (snd (Source.et d)) in
+    let W.FuncType (ts1', ts2') = lower_func_type ctxt d.at t in
     (*TODO: check for override, adjust parameter type accordingly *)
     let ts1'', this_at =
       match pass with
@@ -1173,8 +1192,7 @@ and compile_dec pass ctxt d =
     ];
 
     (* Emit constructor function *)
-    let ts1' = List.map (lower_value_type ctxt d.at) cls.T.vparams in
-    let ts2' = [lower_value_type ctxt d.at inst_t] in
+    let W.FuncType (ts1', ts2') = lower_func_type ctxt d.at (T.Class cls) in
     let new_idx =
       emit_func ctxt d.at ts1' ts2' (fun ctxt _ ->
         let ctxt = enter_scope ctxt FuncScope in

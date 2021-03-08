@@ -76,3 +76,6 @@ let fold_vals f env a = Map.fold f env.vals a
 let fold_typs f env a = Map.fold f env.typs a
 let iter_vals f env = Map.iter f env.vals
 let iter_typs f env = Map.iter f env.typs
+
+let vals env = Map.bindings env.vals
+let typs env = Map.bindings env.typs
