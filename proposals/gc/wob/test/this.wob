@@ -1,5 +1,3 @@
-// @FAIL-WASM
-
 // Basic use of `this`
 
 class Counter(x : Int) {

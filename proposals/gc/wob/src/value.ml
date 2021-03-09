@@ -50,7 +50,7 @@ let rec eq v1 v2 =
 
 let rec default = function
   | Type.(Var _ | Bot) -> assert false
-  | Type.(Null | Obj | Array _ | Func _ | Inst _ | Class _) -> Null
+  | Type.(Null | Boxed | Obj | Array _ | Func _ | Inst _ | Class _) -> Null
   | Type.Bool -> Bool false
   | Type.Byte -> Byte '\x00'
   | Type.Int -> Int 0l
@@ -77,3 +77,4 @@ let rec to_string = function
   | Obj (t, _) -> "(new " ^ Type.to_string t ^ ")"
   | Func _ -> "func"
   | Class _ -> "class"
+  

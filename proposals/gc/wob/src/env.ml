@@ -83,3 +83,7 @@ let iter_typs f env = Map.iter f env.typs
 
 let vals env = Map.bindings env.vals
 let typs env = Map.bindings env.typs
+
+let sort bs = List.sort (fun (_, st1) (_, st2) -> compare_by_region st1 st2) bs
+let sorted_vals env = sort (vals env)
+let sorted_typs env = sort (typs env)

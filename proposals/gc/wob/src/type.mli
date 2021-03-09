@@ -14,6 +14,7 @@ type typ =
   | Float
   | Text
   | Obj
+  | Boxed
   | Box of typ
   | Tup of typ list
   | Array of typ
@@ -45,8 +46,6 @@ val as_class : typ -> cls
 
 
 (* Operations *)
-
-val is_boxed : typ -> bool
 
 val eq : typ -> typ -> bool
 val sub : typ -> typ -> bool
