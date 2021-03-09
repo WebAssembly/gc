@@ -1,0 +1,37 @@
+// @FLAGS -b
+// @FAIL-WASM
+
+// Generic higher-order methods
+
+class PA<T, U>(n : Int, x : T, y : U) {
+  let s = new (T, U)[n]((x, y));
+  func getL(i : Int) : T { s[i].0 };
+  func getR(i : Int) : U { s[i].1 };
+};
+
+class PAS<T, U>(n : Int, x : T, y : U) <: PA<T, U>(n, x, y) {
+  func setL(i : Int, x : T) { s[i] := (x, s[i].1) };
+  func setR(i : Int, y : U) { s[i] := (s[i].0, y) };
+};
+
+class PAG<T, U>(n : Int, x : T, y : U) <: PAS<T, U>(n, x, y) {
+  func fold<R>(s : R, f : (Int, T, U, R) -> R) : R {
+    var i : Int = 0;
+    var r : R = s;
+    while i < n {
+      r := f(i, getL(i), getR(i), r);
+      i := i + 1;
+    };
+    return r;
+  };
+};
+
+let pag = new PAG<Int, Float>(10, 7, 3.14);
+
+type I = Int;
+type F = Float;
+let l = pag.fold<I>(0, func(i : I, l : I, r : F, s : I) : I { s + l });
+let r = pag.fold<F>(0.0, func(i : I, l : I, r : F, s : F) : F { s + r });
+assert l == 10*7;
+assert r == 10.0*3.14;
+

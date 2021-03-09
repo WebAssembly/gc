@@ -37,6 +37,7 @@ and cls =
 val var : var -> typ
 
 val is_var : typ -> bool
+val is_inst : typ -> bool
 
 val as_tup : typ -> typ list
 val as_array : typ -> typ

@@ -285,7 +285,8 @@ and check_exp' env e : T.typ =
     (match t1 with
     | T.Inst (cls, ts) ->
       (match List.assoc_opt x.it cls.T.def with
-      | Some (s, t) -> T.subst (T.typ_subst cls.T.tparams ts) t
+      | Some (s, t) ->
+        T.subst (T.typ_subst cls.T.tparams ts) t
       | None -> error e1.at "unknown field `%s`" x.it
       )
     | _ -> error e1.at "object type expected but got %s" (T.to_string t1)
