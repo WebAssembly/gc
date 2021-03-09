@@ -83,6 +83,7 @@ type cls =
     mutable disp_flds : W.field_type list;
     mutable param_vals : W.value_type list;
     mutable pre_vals : (string * W.value_type) list;
+    mutable overrides : (int32 * string) list;
   }
 
 type cls_env = cls ClsEnv.t
@@ -96,6 +97,7 @@ let make_cls sup inst_idx disp_idx cls_idx =
     disp_flds = [];
     param_vals = [];
     pre_vals = [];
+    overrides = [];
     env = E.empty;
   }
 
@@ -128,6 +130,9 @@ let rec _print_cls ctxt cls =
   printf "pre_vals =";
     List.iter (fun (x, t) ->
       printf " %s:%s" x (W.string_of_value_type t)) cls.pre_vals;
+    printf "\n";
+  printf "overrides =";
+    List.iter (fun (i, x) -> printf " %s/%ld" x i) cls.overrides;
     printf "\n";
   printf "env.vals ="; print_env cls.env;
   if cls.sup = None then printf "sup : none\n%!";
@@ -329,7 +334,7 @@ and lower_var_type ctxt at t : int32 =
   | T.Obj ->
     emit_type ctxt at W.(StructDefType (StructType []))
   | T.Inst (cls, ts) ->
-    if ts <> [] then nyi at "generic instance types";
+    if ts <> [] && not !Flags.parametric then nyi at "generic instance types";
     (lower_class ctxt at cls).inst_idx
   | T.Text ->
     let ft = W.(FieldType (PackedStorageType Pack8, Mutable)) in
@@ -393,14 +398,13 @@ and lower_func_type ctxt at t : W.func_type =
 and lower_class ctxt at cls =
   match ClsEnv.find_opt cls.T.id !(ctxt.clss) with Some cls' -> cls' | None ->
 
-  let (cls', define_cls'), sup' =
+  let (cls', define_cls'), sup', sup_def =
     match cls.T.sup with
     | T.Obj ->
-      emit_cls ctxt at cls.T.id None,
-      make_cls None (-1l) (-1l) (-1l)
+      emit_cls ctxt at cls.T.id None, make_cls None (-1l) (-1l) (-1l), []
     | T.Inst (sup, _) ->
       let sup' = lower_class ctxt at sup in
-      emit_cls ctxt at cls.T.id (Some sup'), sup'
+      emit_cls ctxt at cls.T.id (Some sup'), sup', sup.T.def
     | _ -> assert false
   in
 
@@ -418,26 +422,25 @@ and lower_class ctxt at cls =
   let param_fts =
     List.map (lower_field_type ctxt at W.Immutable) cls.T.vparams in
 
-  let clsenv, pre_binds_r, inst_fts_r, disp_fts_r, _, _ =
+  let clsenv, pre_binds_r, overrides, inst_fts_r, disp_fts_r, _, _ =
     List.fold_left
-    (fun (clsenv, pre_binds, inst_fts, disp_fts, inst_i, disp_i) (x, (s, t)) ->
-      (* TODO: handle overriding *)
-      if E.mem_val Source.(x @@ no_region) sup'.env then
-        clsenv, pre_binds, inst_fts, disp_fts, inst_i, disp_i
-      else
+    (fun (clsenv, pre_binds, ov, inst_fts, disp_fts, inst_i, disp_i) (x, (s, t)) ->
+      match E.find_opt_val Source.(x @@ no_region) sup'.env with
+      | Some si ->
+        assert (s = T.FuncS && fst si.it = T.FuncS);
+        clsenv, pre_binds, (snd si.it, x)::ov, inst_fts, disp_fts, inst_i, disp_i
+      | None ->
       match s with
       | T.LetS ->
         let ft = lower_field_type ctxt at W.Immutable t in
         E.extend_val clsenv (Source.(@@) x at) (s, inst_i),
-        (x, lower_value_type ctxt at t) :: pre_binds,
-        ft::inst_fts, disp_fts,
-        inst_i +% 1l, disp_i
+        (x, lower_value_type ctxt at t) :: pre_binds, ov,
+        ft::inst_fts, disp_fts, inst_i +% 1l, disp_i
       | T.VarS ->
         let ft = lower_field_type ctxt at W.Mutable t in
         E.extend_val clsenv (Source.(@@) x at) (s, inst_i),
-        (hidden 0l, lower_value_type ctxt at t) :: pre_binds,
-        ft::inst_fts, disp_fts,
-        inst_i +% 1l, disp_i
+        (hidden 0l, lower_value_type ctxt at t) :: pre_binds, ov,
+        ft::inst_fts, disp_fts, inst_i +% 1l, disp_i
       | T.FuncS ->
         let ys, ts1, t2 = T.as_func t in
         let fnt = lower_func_type ctxt at (T.Func (ys, inst_t::ts1, t2)) in
@@ -445,15 +448,14 @@ and lower_class ctxt at cls =
         let dt = W.(DefHeapType (SynVar idx)) in
         let st = W.(ValueStorageType (RefType (NonNullable, dt))) in
         let ft = W.(FieldType (st, Immutable)) in
-        E.extend_val clsenv (Source.(@@) x at) (s, disp_i), pre_binds,
-        inst_fts, ft::disp_fts,
-        inst_i, disp_i +% 1l
+        E.extend_val clsenv (Source.(@@) x at) (s, disp_i), pre_binds, ov,
+        inst_fts, ft::disp_fts, inst_i, disp_i +% 1l
       | T.ClassS -> nyi at "nested class definitions"
       | T.ProhibitedS -> assert false
-    ) (sup'.env, [], [], [],
+    ) (sup'.env, [], [], [], [],
         1l +% i32 (List.length cls.T.vparams) +% i32 (List.length sup'.inst_flds),
         i32 (List.length sup'.disp_flds))
-      cls.T.def
+      (W.Lib.List.drop (List.length sup_def) cls.T.def)
   in
 
   let pre_binds = sup'.pre_vals @ param_binds @ List.rev pre_binds_r in
@@ -490,6 +492,7 @@ and lower_class ctxt at cls =
   cls'.disp_flds <- disp_fts;
   cls'.param_vals <- param_vts;
   cls'.pre_vals <- pre_binds;
+  cls'.overrides <- overrides;
   define_cls' (inst_dt @@ at) (disp_dt @@ at) (cls_dt @@ at);
   cls'
 
@@ -1359,24 +1362,32 @@ and compile_dec pass ctxt d =
           emit ctxt W.[
             local_tee (suptmp @@ x2.at);
             struct_get (sup_cls'.cls_idx @@ x2.at) (cls_disp @@ x2.at);
-            local_tee (disptmp @@ x2.at);
+            local_set (disptmp @@ x2.at);
           ];
           List.iteri (fun i _ ->
-            (* TODO: handle overrides *)
-            if i > 0 then emit ctxt W.[local_get (disptmp @@ x2.at)];
-            emit ctxt W.[ nop;
-              struct_get (sup_cls'.disp_idx @@ x2.at) (i32 i @@ x2.at);
-            ];
+            match List.assoc_opt (i32 i) cls'.overrides with
+            | None ->
+              emit ctxt W.[
+                local_get (disptmp @@ x2.at);
+                struct_get (sup_cls'.disp_idx @@ x2.at) (i32 i @@ x2.at);
+              ];
+            | Some x ->
+              nyi x2.at "overrides";
+(*
+              let _, i' = (E.find_val Source.(x @@ x2.at) func_env).it in
+              emit_func_ref ctxt d.at i';
+              emit ctxt W.[ref_func (i' @@ d.at)]
+*)
           ) sup_cls'.disp_flds
         end;
         suptmp @@ x2.at, sup_cls', sup_vt
     in
 
     (* Second, push own functions, minus overrides *)
+    let overrides = List.map snd cls'.overrides in
     List.iter (fun (x, si) ->
       match si.it with
-      | T.FuncS, i when i >= 0l ->
-        (* TODO: filter overrides *)
+      | T.FuncS, i when i >= 0l && not (List.mem x overrides) ->
         emit_func_ref ctxt d.at i;
         emit ctxt W.[ref_func (i @@ d.at)]
       | _ -> ()
