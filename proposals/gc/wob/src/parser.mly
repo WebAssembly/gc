@@ -188,7 +188,11 @@ exp_bin :
   | exp_bin ANDTHENOP exp_bin { LogE ($1, AndThenOp, $3) @@ at () }
   | exp_bin ORELSEOP  exp_bin { LogE ($1, OrElseOp,  $3) @@ at () }
   | exp_bin COLON typ { AnnotE ($1, $3) @@ at () }
-  | exp_bin SUP typ { CastE ($1, $3) @@ at () }
+  | exp_bin SUP typ {
+      if !Flags.parametric then
+        error (at ()) "down casts are not allowed in parametric mode";
+      CastE ($1, $3) @@ at ()
+    }
   | exp_bin ASSIGN exp_bin { AssignE ($1, $3) @@ at () }
 
 exp :
