@@ -63,10 +63,7 @@ let make_env () =
   ) Prelude.vals;
   env
 
-type pass = FullPass | MethPass of W.value_type * region | LetPass | VarPass
-
-let is_meth_pass = function MethPass _ -> true | _ -> false
-let is_fld_pass = function LetPass | VarPass -> true | _ -> false
+type pass = FullPass | FuncPass | LetPass | VarPass
 
 
 (* Class table *)
@@ -83,7 +80,7 @@ type cls =
     mutable disp_flds : W.field_type list;
     mutable param_vals : W.value_type list;
     mutable pre_vals : (string * W.value_type) list;
-    mutable overrides : (int32 * string) list;
+    mutable overrides : (int32 * (string * W.value_type)) list;
   }
 
 type cls_env = cls ClsEnv.t
@@ -132,7 +129,9 @@ let rec _print_cls ctxt cls =
       printf " %s:%s" x (W.string_of_value_type t)) cls.pre_vals;
     printf "\n";
   printf "overrides =";
-    List.iter (fun (i, x) -> printf " %s/%ld" x i) cls.overrides;
+    List.iter (fun (i, (x, vt)) ->
+      printf " %s/%ld:%s" x i (W.string_of_value_type vt)
+    ) cls.overrides;
     printf "\n";
   printf "env.vals ="; print_env cls.env;
   if cls.sup = None then printf "sup : none\n%!";
@@ -148,6 +147,8 @@ type 'a entities = {mutable list : 'a option ref list; mutable cnt : int32}
 type ctxt =
   { envs : (scope * env ref) list;
     clss : cls_env ref;
+    inst : W.value_type;
+    overrides : (string * W.value_type) list;
     deftypes : int32 DefTypes.t ref;
     types : W.type_ entities;
     globals : W.global entities;
@@ -191,6 +192,8 @@ let implicit_entity ents : int32 =
 let make_ctxt () =
   { envs = [(PreScope, make_env ())];
     clss = ref ClsEnv.empty;
+    inst = W.BotType;
+    overrides = [];
     deftypes = ref DefTypes.empty;
     types = make_entities ();
     globals = make_entities ();
@@ -427,8 +430,13 @@ and lower_class ctxt at cls =
     (fun (clsenv, pre_binds, ov, inst_fts, disp_fts, inst_i, disp_i) (x, (s, t)) ->
       match E.find_opt_val Source.(x @@ no_region) sup'.env with
       | Some si ->
-        assert (s = T.FuncS && fst si.it = T.FuncS);
-        clsenv, pre_binds, (snd si.it, x)::ov, inst_fts, disp_fts, inst_i, disp_i
+        let s', t = List.assoc x sup_def in
+        assert (s = T.FuncS && fst si.it = T.FuncS && s' = T.FuncS);
+        let _, ts1, _ = T.as_func t in
+        assert (T.is_inst (List.hd ts1));
+        let vt = lower_value_type ctxt si.at (List.hd ts1) in
+        clsenv, pre_binds, (snd si.it, (x, vt))::ov,
+        inst_fts, disp_fts, inst_i, disp_i
       | None ->
       match s with
       | T.LetS ->
@@ -894,7 +902,7 @@ let rec compile_exp ctxt e =
         | _ -> W.struct_get
       in
       emit ctxt [struct_get_sxopt (typeidx @@ e.at) (0l @@ e.at)];
-      compile_coerce_block_type ctxt e.at (Source.et e)
+      compile_coerce_abs_block_type ctxt e.at (Source.et e)
     )
 
   | TupE [] ->
@@ -1161,13 +1169,13 @@ and compile_dec pass ctxt d =
   let emit ctxt = List.iter (emit_instr ctxt d.at) in
   let scope, env = List.hd ctxt.envs in
   match d.it with
-  | ExpD _ when is_meth_pass pass || pass = LetPass ->
+  | ExpD _ when pass = FuncPass || pass = LetPass ->
     ()
 
   | ExpD e ->
     compile_exp ctxt e
 
-  | LetD (x, _e) when is_meth_pass pass || pass = VarPass ->
+  | LetD (x, _e) when pass = FuncPass || pass = VarPass ->
     env := E.extend_val !env x (T.LetS, -1l)
 
   | LetD (x, e) ->
@@ -1203,7 +1211,7 @@ and compile_dec pass ctxt d =
   | VarD (x, _, e) when pass = LetPass ->
     emit ctxt (default_exp ctxt x.at (List.hd (snd (Source.et d))))
 
-  | VarD (x, _, _e) when is_meth_pass pass ->
+  | VarD (x, _, _e) when pass = FuncPass ->
     env := E.extend_val !env x (T.VarS, -1l)
 
   | VarD (x, _, e) ->
@@ -1246,7 +1254,7 @@ and compile_dec pass ctxt d =
   | TypD _ ->
     ()
 
-  | FuncD _ when is_fld_pass pass ->
+  | FuncD _ when pass = LetPass || pass = VarPass ->
     ()
 
   | FuncD (x, ys, xts, _t, e) ->
@@ -1254,11 +1262,11 @@ and compile_dec pass ctxt d =
       nyi d.at "generic function definitions";
     let t = List.hd (snd (Source.et d)) in
     let W.FuncType (ts1', ts2') = lower_func_type ctxt d.at t in
-    (*TODO: check for override, adjust parameter type accordingly *)
-    let ts1'', this_at =
-      match pass with
-      | MethPass (t0', at) -> t0' :: ts1', at
-      | _ -> ts1', Source.no_region
+    let ts1'', t0'_opt =
+      if pass <> FuncPass then ts1', None else
+      match List.assoc_opt x.it ctxt.overrides with
+      | None -> ctxt.inst :: ts1', None
+      | Some t0'' -> t0'' :: ts1', Some ctxt.inst
     in
     ignore (emit_func ctxt d.at ts1'' ts2'
       (fun ctxt idx ->
@@ -1266,10 +1274,27 @@ and compile_dec pass ctxt d =
         env' := E.extend_val !env' x (T.FuncS, idx);
         let ctxt = enter_scope ctxt FuncScope in
         let _, env = List.hd ctxt.envs in
-        if is_meth_pass pass then begin
-          let idx = emit_param ctxt this_at in
-          (*TODO: check downcast on override *)
-          env := E.extend_val !env Source.("this" @@ this_at) (T.LetS, idx)
+        if pass = FuncPass then begin
+          let this_param = emit_param ctxt x.at in
+          let this =
+            match t0'_opt with
+            | None -> this_param
+            | Some t0' ->
+              let this = emit_local ctxt x.at t0' in
+              let typeidx =
+                match t0' with
+                | W.(RefType (_, DefHeapType (SynVar idx))) -> idx
+                | _ -> assert false
+              in
+              emit ctxt W.[
+                local_get (this_param @@ x.at);
+                rtt_canon (typeidx @@ x.at);
+                ref_cast;
+                local_set (this @@ x.at);
+              ];
+              this
+          in
+          env := E.extend_val !env Source.("this" @@ x.at) (T.LetS, this)
         end;
         List.iter (fun (x, _) ->
           let idx = emit_param ctxt x.at in
@@ -1330,7 +1355,13 @@ and compile_dec pass ctxt d =
     let save_env = !env in
 
     (* Compile own functions *)
-    compile_decs (MethPass (lower_value_type ctxt x.at inst_t, x.at)) ctxt ds;
+    let ctxt =
+      { ctxt with
+        inst = lower_value_type ctxt x.at inst_t;
+        overrides = List.map snd cls'.overrides;
+      }
+    in
+    compile_decs FuncPass ctxt ds;
     let func_env = !env in
     env := save_env;
 
@@ -1371,23 +1402,19 @@ and compile_dec pass ctxt d =
                 local_get (disptmp @@ x2.at);
                 struct_get (sup_cls'.disp_idx @@ x2.at) (i32 i @@ x2.at);
               ];
-            | Some x ->
-              nyi x2.at "overrides";
-(*
+            | Some (x, _) ->
               let _, i' = (E.find_val Source.(x @@ x2.at) func_env).it in
               emit_func_ref ctxt d.at i';
               emit ctxt W.[ref_func (i' @@ d.at)]
-*)
           ) sup_cls'.disp_flds
         end;
         suptmp @@ x2.at, sup_cls', sup_vt
     in
 
     (* Second, push own functions, minus overrides *)
-    let overrides = List.map snd cls'.overrides in
     List.iter (fun (x, si) ->
       match si.it with
-      | T.FuncS, i when i >= 0l && not (List.mem x overrides) ->
+      | T.FuncS, i when i >= 0l && not (List.mem_assoc x ctxt.overrides) ->
         emit_func_ref ctxt d.at i;
         emit ctxt W.[ref_func (i @@ d.at)]
       | _ -> ()

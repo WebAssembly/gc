@@ -1,4 +1,3 @@
-// @FLAGS -b
 // @FAIL-WASM
 
 // Generic classes
@@ -14,40 +13,36 @@ class PAS<T, U>(n : Int, x : T, y : U) <: PA<T, U>(n, x, y) {
   func setR(i : Int, y : U) { s[i] := (s[i].0, y) };
 };
 
-let pas = new PAS<Int, Float>(20, 0, 3.14);
+let pas = new PAS<Int$, Float$>(20, 0$, 3.14$);
 
-assert pas.getL(1) == 0;
-assert pas.getR(1) == 3.14;
+assert pas.getL(1).$ == 0;
+assert pas.getR(1).$ == 3.14;
 
-pas.setL(1, 5);
-assert pas.getL(1) == 5;
-assert pas.getR(1) == 3.14;
+pas.setL(1, 5$);
+assert pas.getL(1).$ == 5;
+assert pas.getR(1).$ == 3.14;
 
-pas.setR(1, 2.71);
-assert pas.getL(1) == 5;
-assert pas.getR(1) == 2.71;
+pas.setR(1, 2.71$);
+assert pas.getL(1).$ == 5;
+assert pas.getR(1).$ == 2.71;
 
 
 // Generic methods
 
 class PAG<T, U>(n : Int, x : T, y : U) <: PAS<T, U>(n, x, y) {
-  func fold<R>(s : R, f : (Int, T, U, R) -> R) : R {
+  func replaceL<V>(z : V) : PAG<V, U> {
+    let r = new PAG<V, U>(n, z, y);
     var i : Int = 0;
-    var r : R = s;
-    while (i < n) {
-      r := f(i, getL(i), getR(i), r);
+    while i < n {
+      r.s[i] := (z, getR(i));
       i := i + 1;
     };
     return r;
   };
+
 };
 
-let pag = new PAG<Int, Float>(10, 7, 3.14);
+let pag = new PAG<Int$, Float$>(10, 7$, 3.14$);
 
-type I = Int;
-type F = Float;
-let l = pag.fold<I>(0, func(i : I, l : I, r : F, s : I) : I { s + l });
-let r = pag.fold<F>(0.0, func(i : I, l : I, r : F, s : F) : F { s + r });
-assert l == 10*7;
-assert r == 10.0*3.14;
-
+let pag2 : PAG<Bool$, Float$> = pag.replaceL<Bool$>(false$);
+assert ! pag2.getL(9).$;

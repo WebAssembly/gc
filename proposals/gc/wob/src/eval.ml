@@ -199,10 +199,10 @@ let rec eval_exp env e : V.value =
     | V.Null, _ -> trap e1.at "null reference at indexing operation"
     | V.Array vs, V.Int i when 0l <= i && i < Int32.of_int (List.length vs) ->
       !(List.nth vs (Int32.to_int i))
-    | V.Array vs, V.Int i -> trap e.at "array index out of bounds"
+    | V.Array vs, V.Int i -> trap e.at "array index %ld out of bounds" i
     | V.Text t, V.Int i when 0l <= i && i < Int32.of_int (String.length t) ->
       V.Byte t.[Int32.to_int i]
-    | V.Text t, V.Int i -> trap e.at "text index out of bounds"
+    | V.Text t, V.Int i -> trap e.at "text index %ld out of bounds" i
     | _ -> crash e.at "runtime type error at indexing operation"
     )
 
