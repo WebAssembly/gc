@@ -64,7 +64,7 @@ func reversed<X>(a : X[], init : X) : X[] {
   let b = new X[#a](init);
   var i : Int = 0;
   while i < #a {
-    b[i] := a[i];
+    b[i] := a[#a - i - 1];
     i := i + 1;
   };
   return b;

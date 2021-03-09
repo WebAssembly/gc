@@ -51,7 +51,7 @@ let check_typ_var env y : T.kind * T.con =
 
 let rec check_typ_boxed env t : T.typ =
   let t' = check_typ env t in
-  if not (T.is_boxed t' || !Flags.boxed) then
+  if not (T.sub t' T.Boxed || !Flags.boxed) then
     error t.at "boxed type expected but got %s" (T.to_string t');
   t'
 
@@ -499,10 +499,7 @@ and check_dec' pass env d : T.typ * T.typ list * env =
               x (T.to_string t') (T.to_string t)
         )
       ) oenv;
-      let obj = E.vals oenv
-        |> List.sort (fun (_, st1) (_, st2) -> compare_by_region st1 st2)
-        |> List.map (fun (x, st) -> (x, st.it))
-      in
+      let obj = List.map (fun (x, st) -> (x, st.it)) (E.sorted_vals oenv) in
       cls.T.def <- sup_obj @ obj;
       (* Rebind unprohibited *)
       let env'''' = List.fold_left (fun env (x, (s, t)) ->

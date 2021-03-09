@@ -1,5 +1,3 @@
-// @FAIL-WASM
-
 // Inheritance
 
 class Counter(x : Int) {
@@ -10,26 +8,71 @@ class Counter(x : Int) {
   func inc() { c := c + 1 };
 };
 
-class DCounter(x : Int) <: Counter(x) {
+class DCounter(x : Int) <: Counter(x + 1) {
   func dec() { c := c - 1 };
+
+  func get_() : Int { return c };
+  func get_this() : Int { this.c };
+  func get_get() : Int { get() };
+  func get_this_get() : Int { this.get() };
+
+  func set_(x : Int) { c := x };
+  func set_this(x : Int) { this.c := x };
+  func set_set(x : Int) { set(x) };
+  func set_this_set(x : Int) { this.set(x) };
+
+  func get_x() : Int { x };
+  func get_a() : Int { a };
+  func get_get_a() : Int { get_a() };
+  func get_this_a() : Int { this.a };
+  func get_this_get_a() : Int { this.get_a() };
 };
 
 let d = new DCounter(7);
-assert d.a == 7;
-assert d.c == 7;
-assert d.get() == 7;
-
-d.inc();
-assert d.a == 7;
+assert d.a == 8;
 assert d.c == 8;
 assert d.get() == 8;
 
+d.inc();
+assert d.a == 8;
+assert d.c == 9;
+assert d.get() == 9;
+
 d.set(13);
-assert d.a == 7;
+assert d.a == 8;
 assert d.c == 13;
 assert d.get() == 13;
 
 d.dec();
-assert d.a == 7;
+assert d.a == 8;
 assert d.c == 12;
 assert d.get() == 12;
+
+assert d.get_x() == 7;
+assert d.a == 8;
+assert d.get_a() == 8;
+assert d.get_get_a() == 8;
+assert d.get_this_a() == 8;
+assert d.get_this_get_a() == 8;
+assert d.c == 12;
+assert d.get_() == 12;
+assert d.get_get() == 12;
+assert d.get_this() == 12;
+assert d.get_this_get() == 12;
+
+d.c := 6;
+assert d.a == 8;
+assert d.c == 6;
+assert d.get() == 6;
+assert d.get_get() == 6;
+assert d.get_this() == 6;
+assert d.get_this_get() == 6;
+
+d.set_(10);
+assert d.c == 10;
+d.set_set(11);
+assert d.c == 11;
+d.set_this(12);
+assert d.c == 12;
+d.set_this_set(13);
+assert d.c == 13;

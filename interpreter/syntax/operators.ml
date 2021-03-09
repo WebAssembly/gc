@@ -41,7 +41,7 @@ let funct ts1 ts2 = FuncDefType (FuncType (ts1, ts2))
 
 let voidbt = ValBlockType None
 let valbt t = ValBlockType (Some t)
-let idxbt x = VarBlockType x
+let varbt x = VarBlockType (SynVar x)
 
 let lim x y = {min = x; max = y}
 let tablet lim rt = TableType (lim, rt)

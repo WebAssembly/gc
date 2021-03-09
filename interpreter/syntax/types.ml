@@ -252,7 +252,7 @@ let string_of_name n =
 let rec string_of_var =
   let inner = ref false in
   function
-  | SynVar x -> Int32.to_string x
+  | SynVar x -> I32.to_string_u x
   | SemVar x ->
     if !inner then "..." else
     ( inner := true;

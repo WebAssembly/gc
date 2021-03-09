@@ -1,4 +1,3 @@
-// @FLAGS -b
 // @FAIL-WASM
 
 // Polymorphic recursion
@@ -15,22 +14,22 @@ func polyr<X>(i : Int, x : X) {
   polyr<C<X>>(i + 1, cx);
 };
 
-polyr<Int>(0, 9);
-assert p[0] :> C<Int> != null;
-assert p[0] :> C<C<Int>> == null;
-assert p[0] :> C<C<C<Int>>> == null;
-assert p[0] :> C<Bool> == null;
+polyr<Int$>(0, 9$);
+assert p[0] :> C<Int$> != null;
+assert p[0] :> C<C<Int$>> == null;
+assert p[0] :> C<C<C<Int$>>> == null;
+assert p[0] :> C<Bool$> == null;
 
-assert p[1] :> C<Int> == null;
-assert p[1] :> C<C<Int>> != null;
-assert p[1] :> C<C<C<Int>>> == null;
-assert p[1] :> C<C<Bool>> == null;
+assert p[1] :> C<Int$> == null;
+assert p[1] :> C<C<Int$>> != null;
+assert p[1] :> C<C<C<Int$>>> == null;
+assert p[1] :> C<C<Bool$>> == null;
 
-assert p[2] :> C<Int> == null;
-assert p[2] :> C<C<Int>> == null;
-assert p[2] :> C<C<C<Int>>> != null;
-assert p[2] :> C<C<C<C<Int>>>> == null;
-assert p[2] :> C<C<C<Bool>>> == null;
+assert p[2] :> C<Int$> == null;
+assert p[2] :> C<C<Int$>> == null;
+assert p[2] :> C<C<C<Int$>>> != null;
+assert p[2] :> C<C<C<C<Int$>>>> == null;
+assert p[2] :> C<C<C<Bool$>>> == null;
 
 {
   var i : Int = 0;
@@ -56,7 +55,7 @@ assert p[2] :> C<C<C<Bool>>> == null;
     }
   };
   while i < n {
-    check<Int>(0);
+    check<Int$>(0);
     i := i + 1;
   }
 };
