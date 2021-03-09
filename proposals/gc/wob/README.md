@@ -4,7 +4,12 @@ An experimental language and implementation for exploring and evaluating the GC 
 
 ### Overview
 
-Wob is a typed mini-OO language in the style of C# and others. It is meant to be representative for the most relevant problems that arise when compiling such languages.
+Wob is a typed mini-OO language in the style of C# and friends. It is meant to be representative for the most relevant problems that arise when compiling such languages. These arguably are:
+
+* generics
+* classes
+* safe downcasts
+* separate compilation
 
 To that end, Wob features:
 
@@ -14,7 +19,7 @@ To that end, Wob features:
 * classes and inheritance
 * first-class generics
 * safe runtime casts
-* simple modules with separate compilation and dynamic linking
+* simple modules with separate compilation and client-side linking
 
 For simplicity, Wob omits various other common features, such as access control to classes and modules, more advanced control constructs, or sophisticated type inference, which are mostly independent from code generation and data representation problems. It also doesn't currently have interface types.
 
