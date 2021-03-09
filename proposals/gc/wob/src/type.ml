@@ -14,6 +14,7 @@ type typ =
   | Float
   | Text
   | Obj
+  | Boxed
   | Box of typ
   | Tup of typ list
   | Array of typ
@@ -44,13 +45,6 @@ let as_inst = function Inst (c, ts) -> c, ts | _ -> assert false
 let as_class = function Class c -> c | _ -> assert false
 
 
-(* Predicates *)
-
-let is_boxed = function
-  | Bool | Byte | Int | Float -> false
-  | _ -> true
-
-
 (* Printing *)
 
 let list f xs = String.concat ", " (List.map f xs)
@@ -66,6 +60,7 @@ let rec to_string = function
   | Float -> "Float"
   | Text -> "Text"
   | Obj -> "Object"
+  | Boxed -> "Boxed"
   | Box t -> to_string t ^ "$"
   | Tup ts -> "(" ^ list to_string ts ^ ")"
   | Array t -> to_string t ^ "[]"
@@ -89,7 +84,7 @@ let list f ts = List.fold_left (++) Set.empty (List.map f ts)
 
 let rec free = function
   | Var (y, ts) -> Set.singleton y ++ list free ts
-  | Bot | Null | Bool | Byte | Int | Float | Text | Obj -> Set.empty
+  | Bot | Null | Bool | Byte | Int | Float | Text | Obj | Boxed -> Set.empty
   | Tup ts -> list free ts
   | Box t | Array t -> free t
   | Func (ys, ts1, t2) -> Set.diff (list free ts1 ++ free t2) (Set.of_list ys)
@@ -134,7 +129,7 @@ let rec subst s t =
   match t with
   | Var (y, ts) when Subst.mem y s -> Subst.find y s (List.map (subst s) ts)
   | Var (y, ts) -> Var (y, List.map (subst s) ts)
-  | Bot | Null | Bool | Byte | Int | Float | Text | Obj -> t
+  | Bot | Null | Bool | Byte | Int | Float | Text | Obj | Boxed -> t
   | Box t -> Box (subst s t)
   | Tup ts -> Tup (List.map (subst s) ts)
   | Array t -> Array (subst s t)
@@ -187,7 +182,9 @@ let rec sub t1 t2 =
   t1 == t2 ||
   match t1, t2 with
   | Bot, _ -> true
-  | Null, t2 when is_boxed t2 -> true
+  | (Bool | Byte | Int | Float), Boxed -> false
+  | _, Boxed -> true
+  | Null, t2 -> sub t2 Boxed
   | Inst _, Obj -> true
   | Box t1', Box t2' -> sub t1' t2'
   | Tup ts1, Tup ts2 ->

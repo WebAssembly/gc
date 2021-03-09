@@ -2,27 +2,47 @@
 
 class Counter(x : Int) {
   let a = x;
-  var c : Int = a;
+  var c : Int = a + x - x;
+
   func get() : Int { return c };
+  func get_this() : Int { this.c };
+  func get_get() : Int { get() };
+  func get_this_get() : Int { this.get() };
+
   func set(x : Int) { c := x };
+  func set_this(x : Int) { this.c := x };
+  func set_set(x : Int) { set(x) };
+  func set_this_set(x : Int) { this.set(x) };
+
   func inc() { c := c + 1 };
-  func get2() : Int { get() };
-  func get3() : Int { this.get() };
-  func get0() : Int { x };
+
+  func get_x() : Int { x };
+  func get_a() : Int { a };
+  func get_get_a() : Int { get_a() };
+  func get_this_a() : Int { this.a };
+  func get_this_get_a() : Int { this.get_a() };
 };
 
 let c = new Counter(5);
+assert c.get_x() == 5;
 assert c.a == 5;
+assert c.get_a() == 5;
+assert c.get_get_a() == 5;
+assert c.get_this_a() == 5;
+assert c.get_this_get_a() == 5;
 assert c.c == 5;
 assert c.get() == 5;
-assert c.get2() == 5;
-assert c.get3() == 5;
-assert c.get0() == 5;
+assert c.get_get() == 5;
+assert c.get_this() == 5;
+assert c.get_this_get() == 5;
 
 c.c := 6;
 assert c.a == 5;
 assert c.c == 6;
 assert c.get() == 6;
+assert c.get_get() == 6;
+assert c.get_this() == 6;
+assert c.get_this_get() == 6;
 
 c.inc();
 assert c.a == 5;
@@ -33,3 +53,10 @@ c.set(10);
 assert c.a == 5;
 assert c.c == 10;
 assert c.get() == 10;
+
+c.set_set(11);
+assert c.c == 11;
+c.set_this(12);
+assert c.c == 12;
+c.set_this_set(13);
+assert c.c == 13;
