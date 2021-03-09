@@ -37,6 +37,7 @@ and cls =
 let var y = Var (y, [])
 
 let is_var = function Var _ -> true | _ -> false
+let is_inst = function Inst _ -> true | _ -> false
 
 let as_tup = function Tup ts -> ts | _ -> assert false
 let as_array = function Array t -> t | _ -> assert false
@@ -137,10 +138,11 @@ let rec subst s t =
     let ys' = List.map fresh ys in
     let s' = adjoin_subst s (typ_subst ys (List.map var ys')) in
     Func (ys', List.map (subst s') ts1, subst s' t2)
-  | Inst (c, ts) -> Inst (subst_cls s c, List.map (subst s) ts)
+  | Inst (c, ts) -> Inst ((*subst_cls s*) c, List.map (subst s) ts)
   | Class c -> Class (subst_cls s c)
 
 and subst_cls s c =
+  if Env.Set.subset (Env.Map.dom s) (Env.Set.of_list c.tparams) then c else
   let ys' = List.map fresh c.tparams in
   let s' = adjoin_subst s (typ_subst c.tparams (List.map var ys')) in
   { c with
