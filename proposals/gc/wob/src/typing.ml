@@ -448,7 +448,7 @@ and check_dec' pass env d : T.typ * T.typ list * env =
     let k = List.length ys in
     let ys' = List.map it ys in
     let cls =
-      if pass <> Post then T.gen_class d x.it ys' else
+      if pass <> Post then T.gen_cls d x.it ys' else
       match check_exp env (DotE (VarE ("this" @@ d.at) @@ d.at, x) @@ d.at) with
       | T.Class cls -> cls
       | _ -> assert false

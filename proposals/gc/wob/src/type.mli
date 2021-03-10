@@ -59,8 +59,10 @@ val to_string : typ -> string
 
 (* Classes *)
 
-val gen_class : 'id -> var -> var list -> cls
-val eq_class : cls -> cls -> bool
+val gen_cls : 'id -> var -> var list -> cls
+val eq_cls : cls -> cls -> bool
+
+val cls_depth : cls -> int
 
 
 (* Substitutions *)

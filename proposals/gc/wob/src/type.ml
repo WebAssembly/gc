@@ -155,10 +155,10 @@ and subst_cls s c =
 
 (* Equivalence and Subtyping *)
 
-let super_class c ts =
+let sup_cls c ts =
   subst (typ_subst c.tparams ts) c.sup
 
-let eq_class c1 c2 = c1.name = c2.name && c1.id = c2.id
+let eq_cls c1 c2 = c1.name = c2.name && c1.id = c2.id
 
 let rec eq t1 t2 =
   t1 == t2 ||
@@ -176,8 +176,8 @@ let rec eq t1 t2 =
     let s2 = typ_subst ys2 ys' in
     List.for_all2 eq (List.map (subst s1) ts11) (List.map (subst s2) ts21) &&
     eq (subst s1 t12) (subst s2 t22)
-  | Inst (c1, ts1), Inst (c2, ts2) -> eq_class c1 c2 && List.for_all2 eq ts1 ts2
-  | Class c1, Class c2 -> eq_class c1 c2
+  | Inst (c1, ts1), Inst (c2, ts2) -> eq_cls c1 c2 && List.for_all2 eq ts1 ts2
+  | Class c1, Class c2 -> eq_cls c1 c2
   | t1, t2 -> t1 = t2
 
 let rec sub t1 t2 =
@@ -192,7 +192,7 @@ let rec sub t1 t2 =
   | Tup ts1, Tup ts2 ->
     List.length ts1 = List.length ts2 && List.for_all2 sub ts1 ts2
   | Inst (c1, ts1), Inst (c2, ts2) ->
-    eq_class c1 c2 && List.for_all2 eq ts1 ts2 || sub (super_class c1 ts1) t2
+    eq_cls c1 c2 && List.for_all2 eq ts1 ts2 || sub (sup_cls c1 ts1) t2
   | t1, t2 -> eq t1 t2
 
 let rec lub t1 t2 =
@@ -200,8 +200,7 @@ let rec lub t1 t2 =
   if sub t2 t1 then t1 else
   match t1, t2 with
   | Box t1', Box t2' -> Box (lub t1' t2')
-  | Inst (c1, ts1), Inst (c2, ts2) ->
-    lub (super_class c1 ts1) (super_class c2 ts2)
+  | Inst (c1, ts1), Inst (c2, ts2) -> lub (sup_cls c1 ts1) (sup_cls c2 ts2)
   | Tup ts1, Tup ts2 when List.length ts1 = List.length ts2 ->
     Tup (List.map2 lub ts1 ts2)
   | _, _ -> failwith "lub"
@@ -209,7 +208,7 @@ let rec lub t1 t2 =
 
 (* Classes *)
 
-let gen_class id y ys =
+let gen_cls id y ys =
   { name = y;
     id = Hashtbl.hash id;
     tparams = ys;
@@ -217,3 +216,9 @@ let gen_class id y ys =
     sup = Obj;
     def = [];
   }
+
+let rec cls_depth c =
+  match c.sup with
+  | Obj -> 1
+  | Inst (c', _) -> 1 + cls_depth c'
+  | _ -> assert false
