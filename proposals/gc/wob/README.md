@@ -2,7 +2,7 @@
 
 An experimental language and implementation for exploring and evaluating the GC proposal.
 
-### Overview
+## Overview
 
 Wob is a typed mini-OO language in the style of C# and friends. It is meant to be representative for the most relevant problems that arise when compiling such languages. These arguably are:
 
@@ -32,9 +32,9 @@ The `wob` implementation encompasses:
 The language is fully implemented in the interpreter, but the compiler does not yet support closures and casts. It does, however, implement garbage-collected objects, tuples, arrays, text strings, classes, and generics, making use of [most of the constructs](#under-the-hood) in the GC proposal's MVP.
 
 
-### Usage
+## Usage
 
-#### Building
+### Building
 
 Saying
 ```
@@ -42,7 +42,7 @@ make
 ```
 in the `wob` directory should produce a binary `wob` in that directory.
 
-#### Invocation
+### Invocation
 
 The `wob` binary is both compiler and REPL. For example:
 
@@ -62,7 +62,7 @@ Points of note:
 
 * When batch-executing, all Wasm code is itself executed via the Wasm reference interpreter, so don't expect performance miracles.
 
-#### Test Suite
+### Test Suite
 
 Run
 ```
@@ -75,9 +75,9 @@ make wasmtest
 to run the compiler.
 
 
-### Syntax
+## Syntax
 
-#### Types
+### Types
 
 ```
 typ ::=
@@ -94,7 +94,7 @@ Notes:
 * Generics can only be instantiated with _boxed_ types, which excludes the primitive data types `Bool`, `Byte`, `Int`, and `Float`. These can be converted to boxed types via `Bool$`, `Int$`, etc. There is no autoboxing.
 
 
-#### Expressions
+### Expressions
 
 ```
 unop  ::= '+' | '-' | '^' | '!'
@@ -145,7 +145,7 @@ Notes:
 * An `assert` failure is indicated by executing an `unreachable` instruction in Wasm and thereby trapping.
 
 
-#### Declarations
+### Declarations
 ```
 param ::=
   id ':' typ
@@ -175,7 +175,7 @@ Note:
 * For simplicity, there is no access control for objects.
 
 
-#### Modules
+### Modules
 ```
 imp ::=
   'import' id? '{' id,* '}' 'from' text           import
@@ -212,9 +212,9 @@ Notes:
 * The `this` identifier is only bound within a class.
 
 
-### Examples
+## Examples
 
-#### Functions
+### Functions
 ```
 func fac(x : Int) : Int {
   if x == 0 { return 1 };
@@ -222,7 +222,8 @@ func fac(x : Int) : Int {
 };
 
 assert fac(5) == 120;
-
+```
+```
 func foreach(a : Int[], f : Int -> ()) {
   var i : Int = 0;
   while i < #a {
@@ -237,7 +238,7 @@ foreach(a, func(k : Int) { sum := sum + k });
 assert sum == 6;
 ```
 
-#### Generics
+### Generics
 ```
 func fold<T, R>(a : T[], x : R, f : (Int, T, R) -> R) : R {
   var i : Int = 0;
@@ -248,8 +249,8 @@ func fold<T, R>(a : T[], x : R, f : (Int, T, R) -> R) : R {
   };
   return r;
 };
-
-
+```
+```
 func f<X>(x : X, f : <Y>(Y) -> Y) : (Int, X, Float) {
   let t = (1, x, 1e100);
   (f<Int$>(t.0$), f<X>(t.1), f<Float$>(t.2$));
@@ -261,7 +262,7 @@ assert !t.1;
 assert t.2 == 1e100;
 ```
 
-#### Classes
+### Classes
 ```
 class Counter(x : Int) {
   var c : Int = x;
@@ -282,7 +283,7 @@ class ECounter(x : Int) <: DCounter(x*2) {
 let e = new ECounter(8);
 ```
 
-#### Modules
+### Modules
 ```
 // Module "intpair"
 type Pair = (Int, Int);
@@ -299,14 +300,14 @@ let p = IP_pair(4, 5);
 assert IP_fst(p) == 4;
 ```
 
-### Under the Hood
+## Under the Hood
 
 
-#### Use of GC instructions
+### Use of GC instructions
 
 The compiler makes use of the following constructs from the GC proposal.
 
-Types:
+#### Types
 ```
 i8
 anyref  eqref  dataref  i31ref  (ref $t)  (ref null $t)  (rtt n $t)
@@ -314,7 +315,7 @@ struct  array
 ```
 (Currently unused is `i16`).
 
-Instructions:
+#### Instructions
 ```
 ref.eq
 ref.is_null  ref.as_non_null  ref.as_i31  ref.as_data  ref.cast
@@ -327,7 +328,7 @@ rtt.canon  rtt.sub
 (Currently unused are the remaining `ref.is_*` and `ref.as_*` instructions, `ref.test`, the `br_on_*` instructions, the signed `*.get_s` instructions, and `struct.new_default`.)
 
 
-#### Value representations
+### Value representations
 
 | Wob type | Wasm value type | Wasm field type |
 | -------- | --------------- | --------------- |
@@ -350,7 +351,7 @@ rtt.canon  rtt.sub
 Notably, all fields of boxed type have to be represented as `anyref`, in order to be compatible with [generics](#generics).
 
 
-#### Generics
+### Generics
 
 Generics require boxed types and use `anyref` as a universal representation for any value of variable type.
 
@@ -366,7 +367,7 @@ fst<Text, Text>(p);
 If `p` was not represented as `ref (struct anyref anyref)`, then the call to `fst` would produce invalid Wasm.
 
 
-#### Bindings
+### Bindings
 
 Wob bindings are mapped to Wasm as follows.
 
@@ -378,14 +379,14 @@ Wob bindings are mapped to Wasm as follows.
 | `class`         | immutable `global`| not supported yet | not supported yet |
 
 
-#### Object and Class representation
+### Object and Class representation
 
 Objects are represented in the obvious manner, as a struct whose first field is a reference to the dispatch table, while the rest of the fields represent the parameter, `let`, and `var` bindings of the class and its super classes, in definition order. Paremeter and `let` fields are immutable.
 
-Class declarations translate to a global binding a class `descriptor`, which is represented as a struct with the following fields:
+Class declarations translate to a global binding a class _descriptor_, which is represented as a struct with the following fields:
 
 | Index | Type | Description |
-| ----- | ---- |             |
+| ----- | ---- | ----------- |
 | 0     | ref (struct ...) | Dispatch table |
 | 1     | rtt $C | Instance RTT |
 | 2     | ref (func ...) | Constructor function |
@@ -404,7 +405,7 @@ Objects are allocated by a class'es constructor function with a 2-phase initiali
 * Finally, the instance struct is returned.
 
 
-#### Modules
+### Modules
 
 Each Wob module compiles into a Wasm module. The body of a Wob module is compiled into the Wasm start function.
 
