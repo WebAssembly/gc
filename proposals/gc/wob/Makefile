@@ -92,15 +92,18 @@ TESTS =		$(TESTFILES:%.wob=%)
 
 test:		$(TESTFILES:%.wob=test/%)
 wasmtest:		cleantest $(TESTFILES:%.wob=wasmtest/%)
+		make cleantest
 debugtest:	$(TESTFILES:%.wob=debugtest/%)
 
 test/%:		$(OPT)
 		@ ./$(NAME) -r $(shell grep "@FLAGS" $(TESTDIR)/$(@F).wob | sed 's/.*@FLAGS//g') $(TESTDIR)/$(@F).wob
+
 wasmtest/%:		$(OPT)
 	  @ if ! grep -q "@FAIL-WASM" $(TESTDIR)/$(@F).wob; \
 		  then ./$(NAME) -r -c -v $(shell grep "@FLAGS" $(TESTDIR)/$(@F).wob | sed 's/.*@FLAGS//g') $(TESTDIR)/$(@F).wob; \
 		  else echo Skipping $(@F).wob; \
 		fi
+
 debugtest/%:	$(UNOPT)
 		@ ./$(NAME) -r $(shell grep "@FLAGS" $(TESTDIR)/$(@F).wob | sed 's/.*@FLAGS//g') $(TESTDIR)/$(@F).wob
 
