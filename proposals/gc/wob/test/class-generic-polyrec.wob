@@ -1,0 +1,18 @@
+// Polymorphic recursion
+
+let n = 100;
+
+class C<X>(x : X) { let x : X = x };
+var p : Object[] = new Object[n](null);
+
+func polyr<X>(i : Int, x : X) {
+  if i == n { return };
+  let cx = new C<X>(x);
+  p[i] := cx;
+  polyr<C<X>>(i + 1, cx);
+};
+
+polyr<Int$>(0, 9$);
+
+assert p[0] != null;
+assert p[n-1] != null;
