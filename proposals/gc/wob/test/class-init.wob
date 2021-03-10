@@ -1,110 +1,102 @@
-// @FAIL-WASM
-
 // Initialization
 
-{
-  class A() {
-    func bar() : Int { return 10 };
-    func foo() : Int { bar() };
-    var v0 : Int = foo();
-  };
-
-  class B() <: A() {
-    var v1 : Int = foo();
-    func bar() : Int { return 20 };
-    var v2 : Int = foo();
-  };
-
-  let o = new B();
-  assert o.v0 == 20;
-  assert o.v1 == 20;
-  assert o.v2 == 20;
+class A1() {
+  func bar() : Int { return 10 };
+  func foo() : Int { bar() };
+  var v0 : Int = foo();
 };
 
-{
-  class A() {
-    func bar() : Int { return 10 };
-    func foo() : Int { bar() };
-    var v0 : Int = foo();
-  };
-
-  class B() <: A() {
-    var v1 : Int = foo();
-    let a = 20;
-    var v2 : Int = foo();
-    func bar() : Int { return a };
-    var v3 : Int = foo();
-  };
-
-  let o = new B();
-  assert o.v0 == 20;
-  assert o.v1 == 20;
-  assert o.v2 == 20;
-  assert o.v3 == 20;
+class B1() <: A1() {
+  var v1 : Int = foo();
+  func bar() : Int { return 20 };
+  var v2 : Int = foo();
 };
 
-{
-  class A() {
-    func bar() : Int { return 10 };
-    func foo() : Int { bar() };
-    var v0 : Int = foo();
-  };
+let o1 = new B1();
+assert o1.v0 == 20;
+assert o1.v1 == 20;
+assert o1.v2 == 20;
 
-  class B() <: A() {
-    var v1 : Int = foo();
-    var a : Int = 20;
-    var v2 : Int = foo();
-    func bar() : Int { return a };
-    var v3 : Int = foo();
-  };
 
-  let o = new B();
-  assert o.v0 == 0;
-  assert o.v1 == 0;
-  assert o.v2 == 20;
-  assert o.v3 == 20;
+class A2() {
+  func bar() : Int { return 10 };
+  func foo() : Int { bar() };
+  var v0 : Int = foo();
 };
 
-{
-  class A() {
-    func bar() : Int { return 10 };
-    func foo() : Int { bar() };
-    var v0 : Int = foo();
-  };
-
-  class B() <: A() {
-    var v1 : Int = foo();
-    func bar() : Int { return this.a };
-    var v2 : Int = foo();
-    let a = 20;
-    var v3 : Int = foo();
-  };
-
-  let o = new B();
-  assert o.v0 == 20;
-  assert o.v1 == 20;
-  assert o.v2 == 20;
-  assert o.v3 == 20;
+class B2() <: A2() {
+  var v1 : Int = foo();
+  let a = 20;
+  var v2 : Int = foo();
+  func bar() : Int { return a };
+  var v3 : Int = foo();
 };
 
-{
-  class A() {
-    func bar() : Int { return 10 };
-    func foo() : Int { bar() };
-    var v0 : Int = foo();
-  };
+let o2 = new B2();
+assert o2.v0 == 20;
+assert o2.v1 == 20;
+assert o2.v2 == 20;
+assert o2.v3 == 20;
 
-  class B() <: A() {
-    var v1 : Int = foo();
-    func bar() : Int { return this.a };
-    var v2 : Int = foo();
-    var a : Int = 20;
-    var v3 : Int = foo();
-  };
 
-  let o = new B();
-  assert o.v0 == 0;
-  assert o.v1 == 0;
-  assert o.v2 == 0;
-  assert o.v3 == 20;
+class A3() {
+  func bar() : Int { return 10 };
+  func foo() : Int { bar() };
+  var v0 : Int = foo();
 };
+
+class B3() <: A3() {
+  var v1 : Int = foo();
+  var a : Int = 20;
+  var v2 : Int = foo();
+  func bar() : Int { return a };
+  var v3 : Int = foo();
+};
+
+let o3 = new B3();
+assert o3.v0 == 0;
+assert o3.v1 == 0;
+assert o3.v2 == 20;
+assert o3.v3 == 20;
+
+
+class A4() {
+  func bar() : Int { return 10 };
+  func foo() : Int { bar() };
+  var v0 : Int = foo();
+};
+
+class B4() <: A4() {
+  var v1 : Int = foo();
+  func bar() : Int { return this.a };
+  var v2 : Int = foo();
+  let a = 20;
+  var v3 : Int = foo();
+};
+
+let o4 = new B4();
+assert o4.v0 == 20;
+assert o4.v1 == 20;
+assert o4.v2 == 20;
+assert o4.v3 == 20;
+
+
+class A5() {
+  func bar() : Int { return 10 };
+  func foo() : Int { bar() };
+  var v0 : Int = foo();
+};
+
+class B5() <: A5() {
+  var v1 : Int = foo();
+  func bar() : Int { return this.a };
+  var v2 : Int = foo();
+  var a : Int = 20;
+  var v3 : Int = foo();
+};
+
+let o5 = new B5();
+assert o5.v0 == 0;
+assert o5.v1 == 0;
+assert o5.v2 == 0;
+assert o5.v3 == 20;
