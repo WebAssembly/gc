@@ -1,6 +1,8 @@
-// @FAIL-WASM
-
 // Shadowing
+
+let x = 1;
+
+// Shadowing parent field with parameters or self
 
 class A(x : Int) { let x = x; type B = Int; };
 class B(x : Int) <: A(x + 1) { let y = x; func b() : B { new B(9) } };
@@ -9,3 +11,45 @@ let b = new B(3);
 assert b.x == 4;
 assert b.y == 3;
 assert b.b().x == 10;
+
+
+// Shadowing globals with locals
+
+class C() {
+  let y = x;
+  var v : Int = x;
+  func f() : Int { x };
+  let x = 2;
+  let z = x;
+  var w : Int = x;
+  func g() : Int { x };
+};
+
+let c = new C();
+assert c.x == 2;
+assert c.y == 1;
+assert c.z == 2;
+assert c.v == 1;
+assert c.w == 2;
+assert c.f() == 1;
+assert c.g() == 2;
+
+
+class D() {
+  let y = x;
+  var v : Int = x;
+  func f() : Int { x };
+  var x : Int = 2;
+  // let z = x;  // forbidden
+  var w : Int = x;
+  func g() : Int { x };
+};
+
+let d = new D();
+assert d.x == 2;
+assert d.y == 1;
+//assert d.z == 2;
+assert d.v == 1;
+assert d.w == 2;
+assert d.f() == 1;
+assert d.g() == 2;
