@@ -1,0 +1,7 @@
+// Class import
+
+import {C} from "test/export-class";
+
+class D(x : Int) <: C(x + 1) {
+  func inc(x : Int) { v := get() + x };
+};

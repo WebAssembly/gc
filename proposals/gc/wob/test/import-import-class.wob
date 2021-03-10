@@ -1,0 +1,29 @@
+// Transitive class imports
+
+import {C, D} from "test/import-class";
+import M {C} from "test/export-class";
+
+
+// Type generativity
+
+let c : M_C = new C(0);
+let mc : C = new M_C(0);
+
+
+// Inheritance with override
+
+class E() <: D(0) {
+  func get() : Int { -v };
+};
+
+let e = new E();
+assert e.v == 1;
+assert e.get() == -1;
+
+e.inc(3);
+assert e.v == 2;
+assert e.get() == -2;
+
+e.inc(1);
+assert e.v == -1;
+assert e.get() == 1;

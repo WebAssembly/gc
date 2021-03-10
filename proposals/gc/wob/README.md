@@ -89,6 +89,11 @@ typ ::=
   typ '->' typ                             function (shorthand)
 ```
 
+Notes:
+
+* Generics can only be instantiated with _boxed_ types, which excludes the primitive data types `Bool`, `Byte`, `Int`, and `Float`. These can be converted to boxed types via `Bool$`, `Int$`, etc. There is no autoboxing.
+
+
 #### Expressions
 
 ```
@@ -131,9 +136,13 @@ exp ::=
 block :
   '{' dec;* '}'                            block
 ```
-There is no distinction between expressions and statements: a block can be used in any expression context and it evaluates to the value of its last expression, or `()` (the empty tuple) if its last `dec` isn't an expression.
+Notes:
 
-An `assert` failure is indicated by executing an `unreachable` instruction in Wasm and thereby trapping.
+* There is no distinction between expressions and statements: a block can be used in any expression context and it evaluates to the value of its last expression, or `()` (the empty tuple) if its last `dec` isn't an expression.
+
+* In the REPL, the entire input is treated as a block, and its result is the input result.
+
+* An `assert` failure is indicated by executing an `unreachable` instruction in Wasm and thereby trapping.
 
 
 #### Declarations
@@ -152,7 +161,18 @@ dec ::=
       block
   'type' id ('<' id,* '>')? '=' typ               type alias
 ```
-Classes have just one constructor, whose parameters are the definition's parameters and whose body is the class body. Inside class scope, immutable 'let' bindings can only refer to the class parameters or 'let' variables from the super-class, or any bindings from outer scope.
+
+Note:
+
+* All scoping is strictly linear, i.e., it is not currently possible to forward-reference a binding, not even inside a class, except through the use of `this`. Functions and classes can, however, recursively refer to themselves.
+
+* Classes have just one constructor, whose parameters are the class definition's parameters and whose body is the class body.
+
+* Inside class scope, immutable `let` bindings can only refer to the class parameters or `let` variables from a super-class, or any bindings from outer scope; they have neither access to methods nor `this`. That prevents the ability to observe uninitialised `let` through dispatch, which is crucial, since these have to be represented as immutable Wasm fields on the instance.
+
+* Classes are nominal types.
+
+* For simplicity, there is no access control for objects.
 
 
 #### Modules
@@ -163,9 +183,16 @@ imp ::=
 module ::=
   imp;* dec;*
 ```
-A module executes by executing all contained declarations in order. For simplicity, there is no access control beyond using blocks, that is, all top-level declarations are exported.
 
-Imports are loaded eagerly and recursively. When an import specifies a qualifying identifier `M`, then all names from the import list are renamed to include the prefix `M_` -- this is a hack to avoid the introduction of name spacing constructs.
+Notes:
+
+* A module executes by executing all contained declarations in order.
+
+* For simplicity, there is no access control beyond using blocks, that is, all top-level declarations are exported.
+
+* Imports are loaded eagerly and recursively. When an import specifies a qualifying identifier `M`, then all names from the import list are renamed to include the prefix `M_` -- this is a hack to avoid the introduction of name spacing constructs.
+
+* With batch compilation, modifying a module generally requires recompiling its dependencies, otherwise Wasm linking may fail.
 
 
 ### Prebound Identifiers
@@ -179,7 +206,10 @@ Bool  Byte  Int  Float  Text  Object
 ```
 true  false  null  nan  this
 ```
-The `this` identifier is only bound within a class.
+
+Notes:
+
+* The `this` identifier is only bound within a class.
 
 
 ### Examples
@@ -271,6 +301,9 @@ assert IP_fst(p) == 4;
 
 ### Under the Hood
 
+
+#### Use of GC instructions
+
 The compiler makes use of the following constructs from the GC proposal.
 
 Types:
@@ -292,3 +325,106 @@ rtt.canon  rtt.sub
 ```
 
 (Currently unused are the remaining `ref.is_*` and `ref.as_*` instructions, `ref.test`, the `br_on_*` instructions, the signed `*.get_s` instructions, and `struct.new_default`.)
+
+
+#### Value representations
+
+| Wob type | Wasm value type | Wasm field type |
+| -------- | --------------- | --------------- |
+| Bool     | i32             | i8              |
+| Byte     | i32             | i8              |
+| Int      | i32             | i32             |
+| Float    | f64             | f64             |
+| Bool$    | i31ref          | anyref          |
+| Byte$    | i31ref          | anyref          |
+| Int$     | ref (struct i32)| anyref          |
+| Float$   | ref (struct f64)| anyref          |
+| Text     | ref (array i8)  | anyref          |
+| Object   | ref (struct)    | anyref          |
+| (Float,Text)|ref (struct f64 anyref)| anyref |
+| Float[]  | ref (array f64) | anyref          |
+| Text[]   | ref (array anyref)| anyref        |
+| C        | ref (struct (ref $vt) ...)|anyref |
+| <T>      | anyref          | anyref          |
+
+Notably, all fields of boxed type have to be represented as `anyref`, in order to be compatible with [generics](#generics).
+
+
+#### Generics
+
+Generics require boxed types and use `anyref` as a universal representation for any value of variable type.
+
+References returned from a generic function call are cast back to their concrete type when that type is known at the call site.
+
+Moreover, arrays and tuples likewise represent all fields of boxed type with `anyref`, i.e., they are treated like generic types as well. This is necessary to enable passing them to generic functions that abstract some of their types, for example:
+```
+func fst<X, Y>(p : (X, Y)) : X { p.0 };
+
+let p = ("foo", "bar");
+fst<Text, Text>(p);
+```
+If `p` was not represented as `ref (struct anyref anyref)`, then the call to `fst` would produce invalid Wasm.
+
+
+#### Bindings
+
+Wob bindings are mapped to Wasm as follows.
+
+| Wob declaration | in global scope | in func/block scope | in class scope |
+| --------------- | --------------- | ------------------- | -------------- |
+| `let`           | immutable `global` | `local`          | immutable field in instance struct |
+| `var`           | mutable `global`| `local`             | mutable field in instance struct |
+| `func`          | `func`          | not supported yet   | immutable field in dispatch struct |
+| `class`         | immutable `global`| not supported yet | not supported yet |
+
+
+#### Object and Class representation
+
+Objects are represented in the obvious manner, as a struct whose first field is a reference to the dispatch table, while the rest of the fields represent the parameter, `let`, and `var` bindings of the class and its super classes, in definition order. Paremeter and `let` fields are immutable.
+
+Class declarations translate to a global binding a class `descriptor`, which is represented as a struct with the following fields:
+
+| Index | Type | Description |
+| ----- | ---- |             |
+| 0     | ref (struct ...) | Dispatch table |
+| 1     | rtt $C | Instance RTT |
+| 2     | ref (func ...) | Constructor function |
+| 3     | ref (func ...) | Pre-allocation |
+| 4     | ref (func ...) | Post-allocation |
+| 5     | ref $Super | Super class descriptor |
+
+Objects are allocated by a class'es constructor function with a 2-phase initialisation protocol:
+
+* The first phase evaluates constructor args and invokes the pre-alloc hook, which initialises parameter and `let` fields, after possibly invoking the pre-alloc hook of the super class to do the same; this returns the values of all immutable fields (including constructor parameters as hidden fields).
+
+* With these values as initialisation values, the instance struct is allocated.
+
+* The second phase invokes the post-alloc hook, which evaluates expression declarations and `var` fields, after possibly invoking the post-alloc hook of the super class to do the same; this initialises var fields via mutation.
+
+* Finally, the instance struct is returned.
+
+
+#### Modules
+
+Each Wob module compiles into a Wasm module. The body of a Wob module is compiled into the Wasm start function.
+
+All global definitions are automatically turned into exports, of their respective [binding form](#bindings) (for simplicity, there currently is no access control). In addition, an exported global named `"return"` is generated for the program block's result value.
+
+Import declarations directly map to Wasm imports of the same name. No other imports are generated for a module.
+
+
+#### Linking
+
+A Wob program can be executed by _linking_ its main module. Linking does not require any magic, it simply locates all imported modules (by appending `.wasm` to the URL, which is interpreted as file path), recursively links them (using a simple registry to share instantiations), and maps exports to imports by name.
+
+
+#### Batch compilation
+
+The batch compiler inserts a custom section named `"wob-sig"` into the Wasm binary, which contains all static type information about the module. This is read back when compiling against an import of another module. (In principle, this information could also be stored in a separate file, since the Wasm code itself is not needed to compile an importing module.)
+
+
+#### REPL
+
+In the REPL, each input is compiled into a new module and [linked](#linking) immediately.
+
+Furthermore, before compilation, each input is preprocessed by injecting imports from an implicit module named `"*env*"`, which represents the REPL's environment. That makes previous interactive definitions available to the module.
