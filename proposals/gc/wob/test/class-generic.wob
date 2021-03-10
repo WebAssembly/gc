@@ -1,5 +1,3 @@
-// @FAIL-WASM
-
 // Generic classes
 
 class PA<T, U>(n : Int, x : T, y : U) {

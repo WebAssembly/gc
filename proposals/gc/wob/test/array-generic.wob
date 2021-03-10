@@ -1,0 +1,11 @@
+// Generic array types
+
+func make<T>(n : Int, x : T) : T[] {
+  return new T[n](x);
+};
+
+let a1 = new Int$[5](7$);
+let a2 = make<Int$>(6, 8$);
+
+[a1, a2];
+if true { a1 } else { a2 };

@@ -902,7 +902,7 @@ let rec compile_exp ctxt e =
         | _ -> W.struct_get
       in
       emit ctxt [struct_get_sxopt (typeidx @@ e.at) (0l @@ e.at)];
-      compile_coerce_abs_block_type ctxt e.at (Source.et e)
+      compile_coerce_block_type ctxt e.at (Source.et e)
     )
 
   | TupE [] ->
@@ -968,54 +968,59 @@ let rec compile_exp ctxt e =
 
   | CallE (e1, ts, es) ->
     if ts <> [] && not !Flags.parametric then nyi e.at "generic function calls";
-    (match e1.it with
-    | VarE x ->
-      let scope, s, idx = compile_var ctxt x ctxt.envs in
-      (match scope, s with
-      | PreScope, _ -> assert false
-      | GlobalScope, T.FuncS ->
+    let t1 =
+      match e1.it with
+      | VarE x ->
+        let scope, s, idx = compile_var ctxt x ctxt.envs in
+        (match scope, s with
+        | PreScope, _ -> assert false
+        | GlobalScope, T.FuncS ->
+          List.iter (fun eI ->
+            compile_exp ctxt eI;
+            compile_coerce_value_type ctxt eI.at (Source.et eI);
+          ) es;
+          emit ctxt W.[call (idx @@ x.at)]
+        | ClassScope this_t, T.FuncS ->
+          let this = Source.(VarE ("this" @@ x.at) @@ x.at) in
+          this.et <- Some this_t;
+          compile_exp ctxt
+            {e with it = CallE ({e1 with it = DotE (this, x)}, ts, es)}
+        | _, T.FuncS -> nyi x.at "local function calls"
+        | _ -> nyi e.at "indirect function calls"
+        );
+        Source.et e1
+
+      | DotE (e11, x) ->
+        let t11 = Source.et e11 in
+        let cls' = lower_class ctxt e11.at (fst (T.as_inst t11)) in
+        let s, idx = (E.find_val x cls'.env).it in
+        let tmpidx = emit_local ctxt e11.at (lower_value_type ctxt e11.at t11) in
+        compile_exp ctxt e11;
+        emit ctxt W.[local_tee (tmpidx @@ e.at)];
         List.iter (fun eI ->
           compile_exp ctxt eI;
           compile_coerce_value_type ctxt eI.at (Source.et eI);
         ) es;
-        emit ctxt W.[call (idx @@ x.at)]
-      | ClassScope this_t, T.FuncS ->
-        let this = Source.(VarE ("this" @@ x.at) @@ x.at) in
-        this.et <- Some this_t;
-        compile_exp ctxt
-          {e with it = CallE ({e1 with it = DotE (this, x)}, ts, es)}
-      | _, T.FuncS -> nyi x.at "local function calls"
+        (match s with
+        | T.FuncS ->
+          emit ctxt W.[
+            local_get (tmpidx @@ e11.at);
+            struct_get (cls'.inst_idx @@ e11.at) (0l @@ x.at);
+            struct_get (cls'.disp_idx @@ e11.at) (idx @@ x.at);
+            call_ref;
+          ];
+        | T.LetS | T.VarS -> nyi e.at "indirect function calls"
+        | T.ClassS -> nyi e.at "nested classes"
+        | T.ProhibitedS -> assert false
+        );
+        let cls, _ = T.as_inst (Source.et e11) in
+        snd (List.assoc x.it cls.T.def)
+
       | _ -> nyi e.at "indirect function calls"
-      )
-
-    | DotE (e11, x) ->
-      let t11 = Source.et e11 in
-      let cls' = lower_class ctxt e11.at (fst (T.as_inst t11)) in
-      let s, idx = (E.find_val x cls'.env).it in
-      let tmpidx = emit_local ctxt e11.at (lower_value_type ctxt e11.at t11) in
-      compile_exp ctxt e11;
-      emit ctxt W.[local_tee (tmpidx @@ e.at)];
-      List.iter (fun eI ->
-        compile_exp ctxt eI;
-        compile_coerce_value_type ctxt eI.at (Source.et eI);
-      ) es;
-      (match s with
-      | T.FuncS ->
-        emit ctxt W.[
-          local_get (tmpidx @@ e11.at);
-          struct_get (cls'.inst_idx @@ e11.at) (0l @@ x.at);
-          struct_get (cls'.disp_idx @@ e11.at) (idx @@ x.at);
-          call_ref;
-        ];
-      | T.LetS | T.VarS -> nyi e.at "indirect function calls"
-      | T.ClassS -> nyi e.at "nested classes"
-      | T.ProhibitedS -> assert false
-      )
-
-    | _ -> nyi e.at "indirect function calls"
-    );
-    let _, _, t' = T.as_func (Source.et e1) in
-    if T.is_var t' then
+    in
+    (* TODO: this isn't enough once we have closures or nested classes *)
+    let _, _, t = T.as_func t1 in
+    if T.is_var t then
       compile_coerce_abs_block_type ctxt e.at (Source.et e)
 
   | NewE (x, ts, es) ->
