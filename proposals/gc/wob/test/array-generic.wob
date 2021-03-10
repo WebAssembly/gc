@@ -9,3 +9,5 @@ let a2 = make<Int$>(6, 8$);
 
 [a1, a2];
 if true { a1 } else { a2 };
+
+();
