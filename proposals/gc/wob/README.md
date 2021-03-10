@@ -429,3 +429,43 @@ The batch compiler inserts a custom section named `"wob-sig"` into the Wasm bina
 In the REPL, each input is compiled into a new module and [linked](#linking) immediately.
 
 Furthermore, before compilation, each input is preprocessed by injecting imports from an implicit module named `"*env*"`, which represents the REPL's environment. That makes previous interactive definitions available to the module.
+
+
+#### Running from JavaScript
+
+Wob's linking model is as straightforward as it can get, and requires no language-specific support. It merely assumes that modules are loaded and instantiated in a bottom-up manner.
+
+Here is a template for minimal glue code to run Wob programs in an environment like node.js. Invoking `run("name")` should suffice to run a compiled `name.wasm` and return its result, provided the dependencies are also avaliable in the right place.
+```
+'use strict';
+
+let fs = require('fs').promises;
+
+function arraybuffer(bytes) {
+  let buffer = new ArrayBuffer(bytes.length);
+  let view = new Uint8Array(buffer);
+  for (let i = 0; i < bytes.length; ++i) {
+    view[i] = bytes.charCodeAt(i);
+  }
+  return buffer;
+}
+
+let registry = {};
+
+async function link(name) {
+  let bytes = await fs.readFile(name + ".wasm", "binary");
+  let binary = arraybuffer(bytes);
+  let module = await WebAssembly.compile(binary);
+  for (let im of WebAssembly.Module.imports(module)) {
+    link(im.module);
+  }
+  let instance = await WebAssembly.instantiate(module, registry);
+  registry[name] = instance.exports;
+  return instance;
+}
+
+async function run(name) {
+  let instance = await link(name);
+  return instance.return;
+}
+```
