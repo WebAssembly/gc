@@ -1,0 +1,6 @@
+// Class export
+
+class C(x : Int) {
+  var v : Int = x;
+  func get() : Int { v };
+};

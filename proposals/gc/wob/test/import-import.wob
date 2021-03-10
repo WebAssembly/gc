@@ -1,7 +1,7 @@
 // Transitive imports
 
-import {M_T, M_x, M_v, M_s, M_p, M_f, M_g, M_t, M_C} from "test/import";
-import {v, C} from "test/export";
+import {M_T, M_x, M_v, M_s, M_p, M_f, M_g, M_t} from "test/import";
+import {v} from "test/export";
 
 type U = M_T<Bool$, Int$>;
 
@@ -18,12 +18,6 @@ assert M_g() == 3.0;
 
 type X<X> = M_t;
 assert M_t[0] == "_"[0];
-
-
-// Type generativity
-
-let c : M_C = new C();
-let mc : C = new M_C();
 
 
 // Unique instantiation

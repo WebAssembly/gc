@@ -1,4 +1,4 @@
-// Exporting definitions
+// Exports
 
 type T<X, Y> = (Y, X);
 
@@ -13,5 +13,3 @@ func g() : Float { v };
 
 type t = Int;
 let t = "_";
-
-class C() {};
