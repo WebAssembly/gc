@@ -47,10 +47,11 @@ let as_hidden x =
   Int32.of_string s
 
 let cls_disp = 0l
-let cls_new = 1l
-let cls_pre_alloc = 2l
-let cls_post_alloc = 3l
-let cls_sup = 4l
+let cls_rtt = 1l
+let cls_new = 2l
+let cls_pre_alloc = 3l
+let cls_post_alloc = 4l
+let cls_sup = 5l
 
 
 let make_env () =
@@ -471,6 +472,9 @@ and lower_class ctxt at cls =
   let disp_fts = sup'.disp_flds @ List.rev disp_fts_r in
   let disp_vt = W.(RefType (NonNullable, DefHeapType (SynVar cls'.disp_idx))) in
   let disp_ft = W.(FieldType (ValueStorageType disp_vt, Immutable)) in
+  let rtt_ht = W.(RttHeapType (SynVar cls'.inst_idx, Some (i32 (T.cls_depth cls)))) in
+  let rtt_vt = W.(RefType (NonNullable, rtt_ht)) in
+  let rtt_ft = W.(FieldType (ValueStorageType rtt_vt, Immutable)) in
   let new_fnt = lower_func_type ctxt at (T.Class cls) in
   let new_idx = emit_type ctxt at W.(FuncDefType (new_fnt)) in
   let new_vt = W.(RefType (NonNullable, DefHeapType (SynVar new_idx))) in
@@ -486,7 +490,7 @@ and lower_class ctxt at cls =
   let sup_vt = if cls'.sup = None then W.i32t else
     W.(RefType (NonNullable, DefHeapType (SynVar sup'.cls_idx))) in
   let sup_ft = W.(FieldType (ValueStorageType sup_vt, Immutable)) in
-  let cls_fts = [disp_ft; new_ft; pre_ft; post_ft; sup_ft] in
+  let cls_fts = [disp_ft; rtt_ft; new_ft; pre_ft; post_ft; sup_ft] in
   let inst_dt = W.(StructDefType (StructType (disp_ft :: inst_fts))) in
   let disp_dt = W.(StructDefType (StructType disp_fts)) in
   let cls_dt = W.(StructDefType (StructType cls_fts)) in
@@ -1293,7 +1297,7 @@ and compile_dec pass ctxt d =
               in
               emit ctxt W.[
                 local_get (this_param @@ x.at);
-                rtt_canon (typeidx @@ x.at);
+                rtt_canon (typeidx @@ x.at);  (* TODO: use cls_rtt *)
                 ref_cast;
                 local_set (this @@ x.at);
               ];
@@ -1372,9 +1376,9 @@ and compile_dec pass ctxt d =
 
     (* Construct dispatch table *)
     (* First, bind and push parent functions, or overrides *)
-    let suptmp, sup_cls', sup_vt =
+    let suptmp, sup_at, sup_cls', sup_vt =
       match sup_opt with
-      | None -> -1l @@ no_region, cls', W.i32t
+      | None -> -1l, no_region, cls', W.i32t
       | Some sup ->
         let (x2, _, _) = sup.it in
         let sup_cls' = lower_class ctxt x2.at (Source.et sup) in
@@ -1413,7 +1417,7 @@ and compile_dec pass ctxt d =
               emit ctxt W.[ref_func (i' @@ d.at)]
           ) sup_cls'.disp_flds
         end;
-        suptmp @@ x2.at, sup_cls', sup_vt
+        suptmp, x2.at, sup_cls', sup_vt
     in
 
     (* Second, push own functions, minus overrides *)
@@ -1429,6 +1433,21 @@ and compile_dec pass ctxt d =
     emit ctxt W.[
       rtt_canon (cls'.disp_idx @@ d.at);
       struct_new (cls'.disp_idx @@ d.at);
+    ];
+
+    (* Allocate RTT (and leave on stack) *)
+    if sup_opt = None then
+      emit ctxt W.[
+        rtt_canon (lower_var_type ctxt d.at T.Obj @@ d.at)
+      ]
+    else begin
+      emit ctxt W.[
+        local_get (suptmp @@ sup_at);
+        struct_get (sup_cls'.cls_idx @@ sup_at) (cls_rtt @@ sup_at);
+      ]
+    end;
+    emit ctxt W.[
+      rtt_sub (cls'.inst_idx @@ d.at);
     ];
 
     (* Emit pre-alloc function *)
@@ -1556,7 +1575,8 @@ and compile_dec pass ctxt d =
 
         (* Alloc instance *)
         emit ctxt W.[
-          rtt_canon (cls'.inst_idx @@ d.at);
+          local_get (self @@ d.at);
+          struct_get (cls'.cls_idx @@ d.at) (cls_rtt @@ d.at);
           struct_new (cls'.inst_idx @@ d.at);
           local_tee (this @@ x.at);
         ];
@@ -1578,10 +1598,11 @@ and compile_dec pass ctxt d =
 
     (* Construct class record (dispatch table is still on stack) *)
     assert (cls_disp = 0l);
-    assert (cls_new == 1l);
-    assert (cls_pre_alloc == 2l);
-    assert (cls_post_alloc == 3l);
-    assert (cls_sup == 4l);
+    assert (cls_rtt == 1l);
+    assert (cls_new == 2l);
+    assert (cls_pre_alloc == 3l);
+    assert (cls_post_alloc == 4l);
+    assert (cls_sup == 5l);
     emit_func_ref ctxt at new_idx;
     emit_func_ref ctxt at pre_alloc_idx;
     emit_func_ref ctxt at post_alloc_idx;
@@ -1593,7 +1614,7 @@ and compile_dec pass ctxt d =
     (if sup_opt = None then
       emit ctxt W.[i32_const (0l @@ d.at)]
     else
-      emit ctxt W.[local_get suptmp; ref_as_non_null]  (* TODO *)
+      emit ctxt W.[local_get (suptmp @@ sup_at); ref_as_non_null]  (* TODO *)
     );
     emit ctxt W.[
       rtt_canon (cls'.cls_idx @@ d.at);
