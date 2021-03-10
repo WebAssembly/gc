@@ -29,7 +29,7 @@ The `wob` implementation encompasses:
 * Compiler to Wasm (WIP)
 * A read-eval-print-loop that can run either interpreted or compiled code
 
-The language is fully implemented in the interpreter, but the compiler does not yet support closures, classes, and casts. It does, however, implement garbage-collected tuples, arrays, text strings, and generics, already making use of many of the constructs in the GC proposal's MVP.
+The language is fully implemented in the interpreter, but the compiler does not yet support closures and casts. It does, however, implement garbage-collected objects, tuples, arrays, text strings, classes, and generics, making use of [most of the constructs](#under-the-hood) in the GC proposal's MVP.
 
 
 ### Usage
@@ -61,6 +61,18 @@ Points of note:
 * That measn that there is no I/O. However, a program can communicate results via module exports or run assertions.
 
 * When batch-executing, all Wasm code is itself executed via the Wasm reference interpreter, so don't expect performance miracles.
+
+#### Test Suite
+
+Run
+```
+make test
+```
+to run the interpreter against the tests, or
+```
+make wasmtest
+```
+to run the compiler.
 
 
 ### Syntax
@@ -115,9 +127,6 @@ exp ::=
   'while' exp block                        loop
   'func' ('<' id,* '>')? '(' param,* ')'   anonymous function (shorthand)
       (':' typ) block
-  'class' ('<' id,* '>')? '(' param,* ')'  anonymous class (shorthand)
-      ('<:' id ('<' typ,* '>')? '(' exp,* ')')?
-      block
 
 block :
   '{' dec;* '}'                            block
@@ -259,3 +268,27 @@ import IP {pair, fst} from "intpair";
 let p = IP_pair(4, 5);
 assert IP_fst(p) == 4;
 ```
+
+### Under the Hood
+
+The compiler makes use of the following constructs from the GC proposal.
+
+Types:
+```
+i8
+anyref  eqref  dataref  i31ref  (ref $t)  (ref null $t)  (rtt n $t)
+struct  array
+```
+(Currently unused is `i16`).
+
+Instructions:
+```
+ref.eq
+ref.is_null  ref.as_non_null  ref.as_i31  ref.as_data  ref.cast
+i31.new  i31.get_u
+struct.new  struct.get  struct.get_u  struct.set
+array.new  array.new_default  array.get  array.get_u  array.set  array.len
+rtt.canon  rtt.sub
+```
+
+(Currently unused are the remaining `ref.is_*` and `ref.as_*` instructions, `ref.test`, the `br_on_*` instructions, the signed `*.get_s` instructions, and `struct.new_default`.)

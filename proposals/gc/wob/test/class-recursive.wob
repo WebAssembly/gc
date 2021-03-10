@@ -1,5 +1,3 @@
-// @FAIL-WASM
-
 // Recursive class invocation
 
 class C(x : Int) {

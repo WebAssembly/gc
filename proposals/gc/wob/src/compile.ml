@@ -177,6 +177,30 @@ let enter_scope ctxt scope =
   {ctxt with envs = (scope, ref E.empty) :: ctxt.envs}
 
 
+let lookup_def_type ctxt idx =
+  (Option.get !(W.Lib.List32.nth (List.rev ctxt.types.list) idx)).W.Source.it
+
+let lookup_field_type ctxt idx i =
+  match lookup_def_type ctxt idx with
+  | W.(StructDefType (StructType fts)) ->
+    let W.FieldType (t, _) = W.Lib.List32.nth fts i in
+    (match t with
+    | W.ValueStorageType t -> t
+    | _ -> assert false
+    )
+  | _ -> assert false
+
+let lookup_ref_field_type ctxt idx i =
+  match lookup_field_type ctxt idx i with
+  | W.(RefType (_, DefHeapType (SynVar idx'))) -> idx'
+  | _ -> assert false
+
+let lookup_param_type ctxt idx i =
+  match lookup_def_type ctxt idx with
+  | W.(FuncDefType (FuncType (ts, _))) -> List.nth ts i
+  | _ -> assert false
+
+
 (* Debug printing *)
 
 let string_of_sort = function
@@ -192,19 +216,11 @@ let print_env env =
   Printf.printf "\n"
 
 let string_of_type ctxt idx =
-  let type_ = W.Lib.List32.nth (get_entities ctxt.types) idx in
-  W.string_of_def_type type_.W.Source.it
+  W.string_of_def_type (lookup_def_type ctxt idx)
 
 let string_of_field_type ctxt idx i =
-  match (W.Lib.List32.nth (get_entities ctxt.types) idx).W.Source.it with
-  | W.(StructDefType (StructType fts)) ->
-    let W.FieldType (t, _) = W.Lib.List32.nth fts i in
-    (match t with
-    | W.(ValueStorageType (RefType (_, DefHeapType (SynVar idx)))) ->
-      Int32.to_string idx ^ " = " ^ string_of_type ctxt idx
-    | _ -> assert false
-    )
-  | _ -> assert false
+  let idx' = lookup_ref_field_type ctxt idx i in
+  Int32.to_string idx' ^ " = " ^ string_of_type ctxt idx'
 
 let rec _print_cls ctxt cls =
   let open Printf in
@@ -452,11 +468,8 @@ and lower_class ctxt at tcls =
     (fun (clsenv, pre_binds, ov, inst_fts, disp_fts, inst_i, disp_i) (x, (s, t)) ->
       match E.find_opt_val Source.(x @@ no_region) sup.env with
       | Some si ->
-        let s', t = List.assoc x tsup_def in
-        assert (s = T.FuncS && fst si.it = T.FuncS && s' = T.FuncS);
-        let _, ts1, _ = T.as_func t in
-        assert (T.is_inst (List.hd ts1));
-        let vt = lower_value_type ctxt si.at (List.hd ts1) in
+        let ft_idx = lookup_ref_field_type ctxt sup.disp_idx (snd si.it) in
+        let vt = lookup_param_type ctxt ft_idx 0 in
         clsenv, pre_binds, (snd si.it, (x, vt))::ov,
         inst_fts, disp_fts, inst_i, disp_i
       | None ->
@@ -1235,7 +1248,7 @@ and compile_dec pass ctxt d =
     in
     env := E.extend_val !env x (T.LetS, idx)
 
-  | VarD (x, _, e) when pass = LetPass ->
+  | VarD (x, _, _e) when pass = LetPass ->
     emit ctxt (default_exp ctxt x.at (List.hd (snd (Source.et d))))
 
   | VarD (x, _, _e) when pass = FuncPass ->
@@ -1281,8 +1294,11 @@ and compile_dec pass ctxt d =
   | TypD _ ->
     ()
 
-  | FuncD _ when pass = LetPass || pass = VarPass ->
+  | FuncD _ when pass = LetPass ->
     ()
+
+  | FuncD (x, _ys, _xts, _t, _e) when pass = VarPass ->
+    env := E.extend_val !env x (T.FuncS, -1l)
 
   | FuncD (x, ys, xts, _t, e) ->
     if ys <> [] && not !Flags.parametric then
@@ -1318,7 +1334,7 @@ and compile_dec pass ctxt d =
               ];
               compile_var ctxt Source.(ctxt.self @@ x.at) (T.Class tcls);
               emit ctxt W.[
-                struct_get (cls.inst_idx @@ x.at) (cls_rtt @@ x.at);
+                struct_get (cls.cls_idx @@ x.at) (cls_rtt @@ x.at);
                 ref_cast;
                 local_set (this @@ x.at);
               ];
@@ -1515,6 +1531,7 @@ and compile_dec pass ctxt d =
               emit ctxt W.[local_get (i32 i @@ sup_at)]
             ) locals;
             List.iteri (fun i (x, _) ->
+              env := E.extend_val !env x (T.LetS, i32 (i + sup_let_depth));
               emit ctxt W.[local_get (i32 (i + sup_let_depth) @@ x.at)]
             ) xts;
             compile_decs LetPass ctxt ds;
