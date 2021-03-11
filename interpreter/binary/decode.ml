@@ -182,7 +182,7 @@ let ref_type s =
 let value_type s =
   either (fun s -> NumType (num_type s)) (fun s -> RefType (ref_type s)) s
 
-let stack_type s = vec value_type s
+let result_type s = vec value_type s
 
 let packed_type s =
   let pos = pos s in
@@ -207,8 +207,8 @@ let array_type s =
   ArrayType (field_type s)
 
 let func_type s =
-  let ins = stack_type s in
-  let out = stack_type s in
+  let ins = result_type s in
+  let out = result_type s in
   FuncType (ins, out)
 
 let def_type s =
