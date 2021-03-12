@@ -124,9 +124,9 @@ typ_list :
 /* Expressions */
 
 lit :
-  | NAT { IntLit (int $1 (at ())) }
-  | FLOAT { FloatLit (float $1 (at ())) }
-  | TEXT { TextLit $1 }
+  | NAT { IntL (int $1 (at ())) }
+  | FLOAT { FloatL (float $1 (at ())) }
+  | TEXT { TextL $1 }
 
 exp_block :
   | LCURLY dec_list RCURLY { BlockE $2 @@ at () }

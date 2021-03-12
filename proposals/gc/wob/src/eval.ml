@@ -74,11 +74,11 @@ let eval_var env x : V.value =
 
 let eval_lit _env lit : V.value =
   match lit with
-  | NullLit -> V.Null
-  | BoolLit b -> V.Bool b
-  | IntLit i -> V.Int i
-  | FloatLit z -> V.Float z
-  | TextLit t -> V.Text t
+  | NullL -> V.Null
+  | BoolL b -> V.Bool b
+  | IntL i -> V.Int i
+  | FloatL z -> V.Float z
+  | TextL t -> V.Text t
 
 
 let rec eval_exp env e : V.value =
