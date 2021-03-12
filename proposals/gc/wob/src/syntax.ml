@@ -30,7 +30,7 @@ and typ' =
 type unop = PosOp | NegOp | InvOp | NotOp
 type binop =
   | AddOp | SubOp | MulOp | DivOp | ModOp
-  | AndOp | OrOp | XorOp | ShlOp | ShrOp | CatOp
+  | AndOp | OrOp | XorOp | ShlOp | ShrOp
 type relop = EqOp | NeOp | LtOp | GtOp | LeOp | GeOp
 type logop = AndThenOp | OrElseOp
 
