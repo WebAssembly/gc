@@ -776,11 +776,11 @@ let compile_text_cmp ctxt : int32 =
 let compile_lit ctxt l at =
   let emit ctxt = List.iter (emit_instr ctxt at) in
   match l with
-  | NullLit -> emit ctxt W.[ref_null (lower_heap_type ctxt at T.Null)]
-  | BoolLit b -> emit ctxt W.[i32_const ((if b then 1l else 0l) @@ at)]
-  | IntLit i -> emit ctxt W.[i32_const (i @@ at)]
-  | FloatLit z -> emit ctxt W.[f64_const (W.F64.of_float z @@ at)]
-  | TextLit s ->
+  | NullL -> emit ctxt W.[ref_null (lower_heap_type ctxt at T.Null)]
+  | BoolL b -> emit ctxt W.[i32_const ((if b then 1l else 0l) @@ at)]
+  | IntL i -> emit ctxt W.[i32_const (i @@ at)]
+  | FloatL z -> emit ctxt W.[f64_const (W.F64.of_float z @@ at)]
+  | TextL s ->
     let addr = emit_data ctxt at s in
     emit ctxt W.[
       i32_const (addr @@ at);

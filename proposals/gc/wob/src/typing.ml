@@ -99,11 +99,11 @@ let check_var env x : T.typ =
 
 let check_lit _env lit : T.typ =
   match lit with
-  | NullLit -> T.Null
-  | BoolLit _ -> T.Bool
-  | IntLit _ -> T.Int
-  | FloatLit _ -> T.Float
-  | TextLit _ -> T.Text
+  | NullL -> T.Null
+  | BoolL _ -> T.Bool
+  | IntL _ -> T.Int
+  | FloatL _ -> T.Float
+  | TextL _ -> T.Text
 
 
 let rec check_exp env e : T.typ =

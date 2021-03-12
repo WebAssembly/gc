@@ -14,8 +14,8 @@ let typs =
   ]
 
 let vals =
-  [ "null", NullLit;
-    "true", BoolLit true;
-    "false", BoolLit false;
-    "nan", FloatLit nan;
+  [ "null", NullL;
+    "true", BoolL true;
+    "false", BoolL false;
+    "nan", FloatL nan;
   ]
