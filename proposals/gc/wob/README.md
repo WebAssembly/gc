@@ -352,7 +352,7 @@ rtt.canon  rtt.sub
 
 ### Value representations
 
-Wob types are lowered to Wams as shown in the following table.
+Wob types are lowered to Wasm as shown in the following table.
 
 | Wob type | Wasm value type | Wasm field type |
 | -------- | --------------- | --------------- |
