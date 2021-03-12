@@ -1,10 +1,10 @@
 # Wob -- Wasm Objects
 
-An experimental language and implementation for exploring and evaluating the GC proposal.
+An experimental object-oriented language and implementation for exploring and evaluating the Wasm [GC proposal](https://github.com/WebAssembly/gc/#gc-proposal-for-webassembly).
 
 ## Overview
 
-Wob is a typed mini-OO language in the style of C# and friends. It is meant to be representative for the most relevant problems that arise when compiling such languages. These arguably are:
+Wob is a typed mini-OO language in the style of C# and friends. It is meant to be representative of the most relevant problems that arise when compiling such languages to Wasm with GC extensions. These arguably are:
 
 * generics
 * classes
