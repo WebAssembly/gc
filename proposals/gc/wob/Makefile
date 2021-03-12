@@ -7,6 +7,7 @@
 # Configuration
 
 NAME =		wob
+EXT =			$(NAME)
 UNOPT = 	$(NAME).debug
 OPT =   	$(NAME)
 
@@ -85,27 +86,27 @@ main.native: _tags $(WASMDIR)/_build/wasm.cmxa
 # Executing test suite
 
 TESTDIR =	test
-TESTFILES =	$(shell cd $(TESTDIR); ls *.wob)
-TESTS =		$(TESTFILES:%.wob=%)
+TESTFILES =	$(shell cd $(TESTDIR); ls *.$(EXT))
+TESTS =		$(TESTFILES:%.$(EXT)=%)
 
 .PHONY:		test debugtest partest
 
-test:		$(TESTFILES:%.wob=test/%)
-wasmtest:		cleantest $(TESTFILES:%.wob=wasmtest/%)
+test:		$(TESTFILES:%.$(EXT)=test/%)
+wasmtest:		cleantest $(TESTFILES:%.$(EXT)=wasmtest/%)
 		make cleantest
-debugtest:	$(TESTFILES:%.wob=debugtest/%)
+debugtest:	$(TESTFILES:%.$(EXT)=debugtest/%)
 
 test/%:		$(OPT)
-		@ ./$(NAME) -r $(shell grep "@FLAGS" $(TESTDIR)/$(@F).wob | sed 's/.*@FLAGS//g') $(TESTDIR)/$(@F).wob
+		@ ./$(NAME) -r $(shell grep "@FLAGS" $(TESTDIR)/$(@F).$(EXT) | sed 's/.*@FLAGS//g') $(TESTDIR)/$(@F).$(EXT)
 
 wasmtest/%:		$(OPT)
-	  @ if ! grep -q "@FAIL-WASM" $(TESTDIR)/$(@F).wob; \
-		  then ./$(NAME) -r -c -v $(shell grep "@FLAGS" $(TESTDIR)/$(@F).wob | sed 's/.*@FLAGS//g') $(TESTDIR)/$(@F).wob; \
-		  else echo Skipping $(@F).wob; \
+	  @ if ! grep -q "@FAIL-WASM" $(TESTDIR)/$(@F).$(EXT); \
+		  then ./$(NAME) -r -c -v $(shell grep "@FLAGS" $(TESTDIR)/$(@F).$(EXT) | sed 's/.*@FLAGS//g') $(TESTDIR)/$(@F).$(EXT); \
+		  else echo Skipping $(@F).$(EXT); \
 		fi
 
 debugtest/%:	$(UNOPT)
-		@ ./$(NAME) -r $(shell grep "@FLAGS" $(TESTDIR)/$(@F).wob | sed 's/.*@FLAGS//g') $(TESTDIR)/$(@F).wob
+		@ ./$(NAME) -r $(shell grep "@FLAGS" $(TESTDIR)/$(@F).$(EXT) | sed 's/.*@FLAGS//g') $(TESTDIR)/$(@F).$(EXT)
 
 
 # Miscellaneous targets
