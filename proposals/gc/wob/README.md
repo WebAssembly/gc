@@ -48,6 +48,7 @@ The `wob` binary is both compiler and REPL. For example:
 
 * `wob` starts the interactive prompt, using the interpreter.
 * `wob -c` starts the interactive prompt, but each input is compiled and run via Wasm.
+* `wob -c -x` same, but the generated Wasm code is also shown for each input.
 * `wob -r <file.wob>` batch-executes the file via the interpreter.
 * `wob -r -c <file.wob>` batch-executes the file via Wasm.
 * `wob -c <file.wob>` compiles the file to `<file.wasm>`.
