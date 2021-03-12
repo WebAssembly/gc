@@ -54,7 +54,6 @@ let binop = function
   | XorOp -> "XorOp"
   | ShlOp -> "ShlOp"
   | ShrOp -> "ShrOp"
-  | CatOp -> "CatOp"
 
 let relop = function
   | EqOp -> "EqOp"
