@@ -352,6 +352,8 @@ rtt.canon  rtt.sub
 
 ### Value representations
 
+Wob types are lowered to Wams as shown in the following table.
+
 | Wob type | Wasm value type | Wasm field type |
 | -------- | --------------- | --------------- |
 | Bool     | i32             | i8              |
@@ -391,7 +393,7 @@ If `p` was not represented as `ref (struct anyref anyref)`, then the call to `fs
 
 ### Bindings
 
-Wob bindings are mapped to Wasm as follows.
+Wob bindings are compiled to Wasm as follows.
 
 | Wob declaration | in global scope | in func/block scope | in class scope |
 | --------------- | --------------- | ------------------- | -------------- |
