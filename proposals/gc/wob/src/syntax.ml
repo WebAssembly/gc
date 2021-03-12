@@ -35,11 +35,11 @@ type relop = EqOp | NeOp | LtOp | GtOp | LeOp | GeOp
 type logop = AndThenOp | OrElseOp
 
 type lit =
-  | NullLit
-  | BoolLit of bool
-  | IntLit of int32
-  | FloatLit of float
-  | TextLit of string
+  | NullL
+  | BoolL of bool
+  | IntL of int32
+  | FloatL of float
+  | TextL of string
 
 type exp = (exp', T.typ) Source.phrase
 and exp' =

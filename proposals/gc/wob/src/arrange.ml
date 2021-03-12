@@ -21,9 +21,9 @@ let var x = Atom x.it
 (* Types *)
 
 let rec typ t = match t.it with
-  | VarT (b, ts) -> "VarT" $$ [var b] @ list typ ts
-  | ByteT -> Atom "ByteT"
+  | VarT (y, ts) -> "VarT" $$ [var y] @ list typ ts
   | BoolT -> Atom "BoolT"
+  | ByteT -> Atom "ByteT"
   | IntT -> Atom "IntT"
   | FloatT -> Atom "FloatT"
   | TextT -> Atom "TextT"
@@ -69,11 +69,11 @@ let logop = function
 
 
 let lit = function
-  | NullLit -> Atom "NullLit"
-  | BoolLit b -> "BoolLit" $$ [Atom (string_of_bool b)]
-  | IntLit i -> "IntLit" $$ [Atom (Int32.to_string i)]
-  | FloatLit z -> "FloatLit" $$ [Atom (string_of_float z)]
-  | TextLit t -> "TextLit" $$ [Atom (string t)]
+  | NullL -> Atom "NullL"
+  | BoolL b -> "BoolL" $$ [Atom (string_of_bool b)]
+  | IntL i -> "IntL" $$ [Atom (Int32.to_string i)]
+  | FloatL z -> "FloatL" $$ [Atom (string_of_float z)]
+  | TextL t -> "TextL" $$ [Atom (string t)]
 
 let rec exp e = match e.it with
   | VarE x -> "VarE" $$ [var x]
