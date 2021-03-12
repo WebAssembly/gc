@@ -31,6 +31,27 @@ The `wob` implementation encompasses:
 
 The language is fully implemented in the interpreter, but the compiler does not yet support closures and casts. It does, however, implement garbage-collected objects, tuples, arrays, text strings, classes, and generics, making use of [most of the constructs](#under-the-hood) in the GC proposal's MVP.
 
+For example, here is a short transcript of a REPL session with [`wob -c -x`](#invocation):
+```
+proposals/gc/wob$ ./wob -x -c
+wob 0.1 interpreter
+> func f(x : Int) : Int { x + 7 }; f(5);
+(module
+  (type $0 (func))
+  (type $1 (func (param i32) (result i32)))
+  (global $0 (mut i32) (i32.const 0))
+  (func $0 (type 0) (i32.const 5) (call 1) (global.set 0))
+  (func $1 (type 1) (local.get 0) (i32.const 7) (i32.add))
+  (export "return" (global 0))
+  (export "f" (func 1))
+  (start 0)
+)
+12 : Int
+f : Int -> Int
+> 
+```
+See [below](#under-the-hood) for a brief explanation regarding the produced code.
+
 
 ## Usage
 
