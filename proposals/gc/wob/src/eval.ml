@@ -265,7 +265,7 @@ let rec eval_exp env e : V.value =
     (match v1 with
     | V.Bool true -> V.Tup []
     | V.Bool false -> trap e.at "assertion failure"
-    | _ -> crash e.at "runtime type error at conditional"
+    | _ -> crash e.at "runtime type error at assertion"
     )
 
   | IfE (e1, e2, e3) ->

@@ -49,7 +49,7 @@ let float s at =
 %token EOF
 
 %token LPAR RPAR LBRACK RBRACK LCURLY RCURLY COMMA SEMICOLON SEMICOLON_EOL
-%token COLON EQ LT GT ARROW ASSIGN SUB SUP DOT DOT_NUM DOLLAR
+%token COLON EQ LT GT ARROW ASSIGN SUB SUP DOT DOLLAR
 %token EQOP NEOP LEOP LTOP GTOP GEOP
 %token ADDOP SUBOP MULOP DIVOP MODOP ANDOP OROP XOROP SHLOP SHROP LENOP
 %token ANDTHENOP ORELSEOP NOTOP
@@ -65,7 +65,7 @@ let float s at =
 %left ANDTHENOP
 %nonassoc EQOP NEOP LTOP GTOP LEOP GEOP
 %left COLON SUP
-%left ADDOP SUBOP CATOP
+%left ADDOP SUBOP
 %left OROP
 %left ANDOP XOROP
 %left MULOP DIVOP MODOP
@@ -133,7 +133,7 @@ exp_block :
 
 exp_simple :
   | exp_block { $1 }
-  | var { VarE $1 @@ $1.at }
+  | var { VarE $1 @@ at () }
   | lit { LitE $1 @@ at () }
   | LBRACK exp_list RBRACK { ArrayE $2 @@ at () }
 
@@ -200,8 +200,10 @@ exp :
   | RETURN %prec RETURN_NO_ARG { RetE (TupE [] @@ at ()) @@ at () }
   | RETURN exp_bin { RetE $2 @@ at () }
   | ASSERT exp_bin { AssertE $2 @@ at () }
-  | IF exp_bin exp_block %prec IF_NO_ELSE { IfE ($2, $3, TupE [] @@ at ()) @@ at () }
   | IF exp_bin exp_block ELSE exp_block { IfE ($2, $3, $5) @@ at () }
+  | IF exp_bin exp_block %prec IF_NO_ELSE {
+      IfE ($2, $3, TupE [] @@ at ()) @@ at ()
+    }
   | WHILE exp_bin exp_block { WhileE ($2, $3) @@ at () }
   | FUNC gen_opt LPAR param_list RPAR exp {
       BlockE [
