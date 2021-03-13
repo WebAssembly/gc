@@ -1,6 +1,5 @@
 (* Types *)
 
-type var = string
 type typ = Type.typ
 
 and func = typ list -> value list -> value
@@ -77,4 +76,3 @@ let rec to_string = function
   | Obj (t, _) -> "(new " ^ Type.to_string t ^ ")"
   | Func _ -> "func"
   | Class _ -> "class"
-  

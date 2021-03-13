@@ -1,6 +1,5 @@
 (* Types *)
 
-type var = string
 type typ = Type.typ
 
 and func = typ list -> value list -> value
@@ -32,6 +31,6 @@ val as_obj : value -> obj
 
 val eq : value -> value -> bool
 
-val default : Type.typ -> value
+val default : typ -> value
 
 val to_string : value -> string

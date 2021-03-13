@@ -26,8 +26,8 @@ end
 
 
 type ('v, 't) env =
-  { vals : ('v, int) phrase Map.t;
-    typs : ('t, int) phrase Map.t;
+  { vals : ('v, unit) phrase Map.t;
+    typs : ('t, unit) phrase Map.t;
   }
 
 let empty = {vals = Map.empty; typs = Map.empty}

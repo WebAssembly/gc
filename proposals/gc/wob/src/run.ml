@@ -1,6 +1,6 @@
 (* Errors & Tracing *)
 
-exception WobWasm of Source.region * string
+exception WasmFormat of Source.region * string
 exception Recursive of Source.region * exn * Printexc.raw_backtrace
 
 let trace name = if !Flags.trace then print_endline ("-- " ^ name)
@@ -26,7 +26,7 @@ let rec handle f =
   | Wasm.Eval.Trap (at, msg) -> error at "runtime trap" msg
   | Wasm.Eval.Exhaustion (at, msg) -> error at "resource exhaustion" msg
   | Wasm.Eval.Crash (at, msg) -> error at "runtime crash" msg
-  | WobWasm (at, msg) -> error at "file format error" msg
+  | WasmFormat (at, msg) -> error at "file format error" msg
   | Sys_error msg -> error Source.no_region "i/o error" msg
   | Recursive (at, exn, backtrace) ->
     ignore (error at "error while loading" "");
@@ -94,21 +94,21 @@ let read_binary_file file =
   let at = Source.{left = pos; right = pos} in
   match Wasm.Decode.decode_custom (Wasm.Utf8.decode "wob-sig") file' bin with
   | [] ->
-    raise (WobWasm (at, "wasm binary is missing signature information"))
+    raise (WasmFormat (at, "wasm binary is missing signature information"))
   | _::_::_ ->
-    raise (WobWasm (at, "wasm binary has duplicate signature information"))
+    raise (WasmFormat (at, "wasm binary has duplicate signature information"))
   | [s] ->
     try
       let bs = Bytes.of_string s in
       if Marshal.from_string s 0 <> marshal_tag then
-        raise (WobWasm (at, "wasm binary is from incompatible build"));
+        raise (WasmFormat (at, "wasm binary is from incompatible build"));
       let off1 = Marshal.total_size bs 0 in
       if Marshal.from_string s off1 <> (!Flags.boxed, !Flags.parametric) then
-        raise (WobWasm (at, "wasm binary has incompatible language mode"));
+        raise (WasmFormat (at, "wasm binary has incompatible language mode"));
       let off2 = off1 + Marshal.total_size bs off1 in
       m, Marshal.from_string s off2
     with Failure _ ->
-      raise (WobWasm (at, "wasm binary has malformed signature information"))
+      raise (WasmFormat (at, "wasm binary has malformed signature information"))
 
 
 (* Output *)
