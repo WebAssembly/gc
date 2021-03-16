@@ -106,8 +106,8 @@ let float =
   | "0x" hexnum ('.' hexfrac?)? ('p' | 'P') sign? num
 let char = '\'' (character | byte+) '\''
 let text = '"' character* '"'
-let lid = lletter ((letter | digit | '_')*)
-let uid = uletter ((letter | digit | '_')*)
+let lid = lletter ((letter | digit | '_' | '\'')*)
+let uid = uletter ((letter | digit | '_' | '\'')*)
 
 rule token = parse
   | "(" { LPAR }
@@ -122,13 +122,13 @@ rule token = parse
   | "|" { BAR }
   | ":" { COLON }
   | "." { DOT }
-  | "."(num as s) { DOT_NUM s }
 
   | "=" { EQ }
   | "->" { ARROW }
-  | "->" { DARROW }
+  | "=>" { DARROW }
   | "!" { DEREF }
   | ":=" { ASSIGN }
+  | "::" { CONS }
 
   | "+" { ADDOP }
   | "-" { SUBOP }
@@ -177,6 +177,7 @@ rule token = parse
   | "module" { MODULE }
   | "of" { OF }
   | "rec" { REC }
+  | "ref" { REF }
   | "signature" { SIGNATURE }
   | "then" { THEN }
   | "type" { TYPE }
@@ -186,10 +187,10 @@ rule token = parse
   | lid as s { LID s }
   | uid as s { UID s }
 
-  | "//"utf8_no_nl*eof { EOF }
-  | "//"utf8_no_nl*'\n' { Lexing.new_line lexbuf; token lexbuf }
-  | "//"utf8_no_nl* { token lexbuf (* causes error on following position *) }
-  | "/*" { comment (Lexing.lexeme_start_p lexbuf) lexbuf; token lexbuf }
+  | ";;"utf8_no_nl*eof { EOF }
+  | ";;"utf8_no_nl*'\n' { Lexing.new_line lexbuf; token lexbuf }
+  | ";;"utf8_no_nl* { token lexbuf (* causes error on following position *) }
+  | "(;" { comment (Lexing.lexeme_start_p lexbuf) lexbuf; token lexbuf }
   | space { token lexbuf }
   | '\n' { Lexing.new_line lexbuf; token lexbuf }
   | eof { EOF }
@@ -198,8 +199,8 @@ rule token = parse
   | _ { error lexbuf "malformed UTF-8 encoding" }
 
 and comment start = parse
-  | "*/" { () }
-  | "/*" { comment (Lexing.lexeme_start_p lexbuf) lexbuf; comment start lexbuf }
+  | ";)" { () }
+  | "(;" { comment (Lexing.lexeme_start_p lexbuf) lexbuf; comment start lexbuf }
   | '\n' { Lexing.new_line lexbuf; comment start lexbuf }
   | eof { error_nest start lexbuf "unclosed comment" }
   | utf8 { comment start lexbuf }

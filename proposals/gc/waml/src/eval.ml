@@ -2,6 +2,7 @@ open Source
 open Syntax
 
 module V = Value
+module S = Env
 
 
 (* Error handling *)
@@ -20,15 +21,11 @@ type env = (Value.value, unit, Value.module_, unit) Env.env
 module E =
 struct
   include Env
+
+  let to_vals env = List.map (fun (x, v) -> (x, v.it)) (vals env)
   let of_vals xvs at =
     let xs, vs = List.split xvs in
     extend_vals empty (List.map (fun x -> x @@ at) xs) vs
-  let of_mods xms at =
-    let xs, ms = List.split xms in
-    extend_mods empty (List.map (fun x -> x @@ at) xs) ms
-
-  let to_vals env = List.map (fun (x, v) -> (x, v.it)) (vals env)
-  let to_mods env = List.map (fun (x, m) -> (x, m.it)) (mods env)
 end
 
 
@@ -49,9 +46,9 @@ let rec eval_val_path env q : V.value =
   | PlainP x -> eval_val_var env x
   | QualP (q1, x) ->
     match eval_mod_path env q1 with
-    | V.Str (xvs, _xms) ->
-      (match List.assoc_opt x.it xvs with
-      | Some v -> v
+    | V.Str s ->
+      (match S.find_opt_val x s with
+      | Some v -> v.it
       | None -> crash x.at "unknown value component `%s`" x.it
       )
     | _ -> crash q1.at "runtime error in path"
@@ -61,10 +58,10 @@ and eval_mod_path env q : V.module_ =
   | PlainP x -> eval_mod_var env x
   | QualP (q1, x) ->
     match eval_mod_path env q1 with
-    | V.Str (_xvs, xms) ->
-      (match List.assoc_opt x.it xms with
-      | Some m -> m
-      | None -> crash x.at "unknown value component `%s`" x.it
+    | V.Str s ->
+      (match S.find_opt_mod x s with
+      | Some m -> m.it
+      | None -> crash x.at "unknown module component `%s`" x.it
       )
     | _ -> crash q1.at "runtime error in path"
 
@@ -100,6 +97,9 @@ let rec eval_pat env p v : env option =
     if x <> x' then None else
     eval_pats env ps vs p.at
 
+  | RefP p, V.Ref r ->
+    eval_pat env p !r
+
   | TupP ps, V.Tup vs ->
     eval_pats env ps vs p.at
 
@@ -130,10 +130,9 @@ let rec eval_exp env e : V.value =
   | LitE l ->
     eval_lit env l
 
-  | ConE (q, es) ->
+  | ConE q ->
     let x' = eval_con_path env q in
-    let vs = List.map (eval_exp env) es in
-    V.Con (x', vs)
+    V.Con (x', [])
 
   | UnE (op, e1) ->
     let v1 = eval_exp env e1 in
@@ -226,17 +225,12 @@ let rec eval_exp env e : V.value =
     let vs = List.map (eval_exp env) es in
     V.Tup vs
 
-  | ProjE (e1, n) ->
-    let v1 = eval_exp env e1 in
-    (match v1 with
-    | V.Tup vs when n < List.length vs -> List.nth vs n
-    | _ -> crash e.at "runtime type error at tuple access"
-    )
-
   | FunE (p1, e2) ->
     let f xvs v1 =
-      match eval_pat (E.adjoin env (E.of_vals xvs e.at)) p1 v1 with
-      | Some env' -> eval_exp (E.adjoin env env') e2
+      let xvs' = List.map (fun (x, v) -> x, V.fix xvs v) xvs in
+      let env' = E.adjoin env (E.of_vals xvs' e.at) in
+      match eval_pat (E.adjoin env env') p1 v1 with
+      | Some env1 -> eval_exp (E.adjoin (E.adjoin env env') env1) e2
       | None -> trap e.at "pattern match failure for function argument"
     in V.Fun f
 
@@ -245,6 +239,7 @@ let rec eval_exp env e : V.value =
     let v2 = eval_exp env e2 in
     (match v1 with
     | V.Fun f1 -> f1 [] v2
+    | V.Con (x', vs) -> V.Con (x', vs @ [v2])
     | _ -> crash e.at "runtime type error at function application"
     )
 
@@ -283,7 +278,7 @@ and eval_mod env m : V.module_ =
 
   | StrM ds ->
     let _, env' = eval_decs env ds (V.Tup []) in
-    V.Str (E.to_vals env', E.to_mods env')
+    V.Str env'
 
   | FunM (x1, _, m2) ->
     let f m1 = eval_mod (E.extend_mod env x1 m1) m2 in
@@ -347,12 +342,12 @@ and eval_dec env d : V.value * env =
 
   | RecD ds ->
     let _, env' = eval_decs env ds (V.Tup []) in
-    V.Tup [], E.map_vals (V.close (E.to_vals env')) env'
+    V.Tup [], E.map_vals (V.fix (E.to_vals env')) env'
 
   | InclD m ->
     match eval_mod env m with
-    | V.Str (xvs, xms) ->
-      V.Tup [], E.adjoin (E.of_vals xvs d.at) (E.of_mods xms d.at)
+    | V.Str env' ->
+      V.Tup [], env'
     | _ -> crash d.at "runtime error at include"
 
 and eval_decs env ds v : V.value * env =
@@ -370,9 +365,8 @@ let get_env = ref (fun _at _url -> failwith "get_env")
 
 let eval_imp env env' d : env =
   let ImpD (x, url) = d.it in
-  let menv = !get_env d.at url in
-  let m = V.Str (E.to_vals menv, E.to_mods menv) in
-  E.singleton_mod x m
+  let s = !get_env d.at url in
+  E.extend_mod env' x (V.Str s)
 
 let env0 =
   let at = Prelude.region in
@@ -380,8 +374,8 @@ let env0 =
   |> List.fold_right (fun (x, l) env ->
       E.extend_val env (x @@ at) (eval_lit env l)
     ) Prelude.vals
-  |> List.fold_right (fun (x, k) env ->
-      E.extend_val env (x @@ at) (V.con x k)
+  |> List.fold_right (fun (x, t) env ->
+      E.extend_val env (x @@ at) (V.con x 0)
     ) Prelude.cons
 
 let eval_prog env p : V.value * env =

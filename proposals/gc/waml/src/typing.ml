@@ -8,108 +8,205 @@ module T = Type
 
 exception Error of Source.region * string
 
-(*
 let error at fmt = Printf.ksprintf (fun s -> raise (Error (at, s))) fmt
-*)
 
 
 (* Environments *)
 
-type env = (T.typ, T.kind * T.con, unit, unit) Env.env
+type env = (Type.poly, Type.con, Type.sig_, Type.sig_) Env.env
 
 module E =
 struct
   include Env
-(*
-  let extend_val_let env x t = extend_val env x (T.LetS, t)
-  let extend_vals_let env xs ts =
-    extend_vals env xs (List.map (fun t -> (T.LetS, t)) ts)
-
-  let extend_typ env y kc =
+  let extend_typ env y c =
     match find_opt_typ y env with
-    | None -> Env.extend_typ env y kc
-    | Some kc ->
+    | None -> Env.extend_typ env y c
+    | Some c' ->
       error y.at "type binding for `%s` shadows previous binding at %s"
-        y.it (Source.string_of_region kc.at)
+        y.it (Source.string_of_region c'.at)
 
-  let extend_typ_gnd env y t = extend_typ env y (0, fun _ -> t)
-  let extend_typ_abs env y = extend_typ_gnd env y (T.var y.it)
-  let extend_typs_abs env ys = List.fold_left extend_typ_abs env ys
+  let extend_mod env x s =
+    match find_opt_mod x env with
+    | None -> Env.extend_mod env x s
+    | Some s' ->
+      error x.at "module binding for `%s` shadows previous binding at %s"
+        x.it (Source.string_of_region s'.at)
+
+  let extend_val_mono env x t = extend_val env x (T.Forall ([], t))
+  let extend_typ_gnd env y t = extend_typ env y (T.Lambda ([], t))
+  let extend_typ_var env y = extend_typ_gnd env y (T.var y.it)
+  let extend_typs_var env ys = List.fold_left extend_typ_var env ys
 
   let adjoin env1 env2 =
-    fold_typs (fun y kc env -> extend_typ env (y @@ kc.at) kc.it) env2
-      (fold_vals (fun x st env -> extend_val env (x @@ st.at) st.it) env2 env1)
-*)
+    env1
+    |> fold_vals (fun x t env -> extend_val env (x @@ t.at) t.it) env2
+    |> fold_typs (fun y c env -> extend_typ env (y @@ c.at) c.it) env2
+    |> fold_mods (fun x s env -> extend_mod env (x @@ s.at) s.it) env2
+    |> fold_sigs (fun y s env -> extend_sig env (y @@ s.at) s.it) env2
 end
 
-(*
-type pass = Full | Pre | Post
+type pass = Full | RecPre | Rec
+
+
+(* Paths *)
+
+let check_val_var env x : T.poly =
+  match E.find_opt_val x env with
+  | Some t -> t.it
+  | None -> error x.at "unknown value identifier `%s`" x.it
+
+let check_typ_con env y : T.con =
+  match E.find_opt_typ y env with
+  | Some c -> c.it
+  | None -> error y.at "unknown type identifier `%s`" y.it
+
+let check_mod_var env x : T.sig_ =
+  match E.find_opt_mod x env with
+  | Some s -> s.it
+  | None -> error x.at "unknown module identifier `%s`" x.it
+
+let check_sig_con env y : T.sig_ =
+  match E.find_opt_sig y env with
+  | Some s -> s.it
+  | None -> error y.at "unknown signature identifier `%s`" y.it
+
+
+let rec check_str_path env q : T.str =
+  match check_mod_path env q with
+  | T.Str (bs, str) -> assert (bs = []); str
+  | _ -> error q.at "structure expected"
+
+and check_val_path env q : T.poly =
+  match q.it with
+  | PlainP x -> check_val_var env x
+  | QualP (q1, x) ->
+    match E.find_opt_val x (check_str_path env q1) with
+    | Some t -> t.it
+    | None -> error x.at "unknown value component `%s`" x.it
+
+and check_typ_path env q : T.con =
+  match q.it with
+  | PlainP y -> check_typ_con env y
+  | QualP (q1, y) ->
+    match E.find_opt_typ y (check_str_path env q1) with
+    | Some c -> c.it
+    | None -> error y.at "unknown type component `%s`" y.it
+
+and check_mod_path env q : T.sig_ =
+  match q.it with
+  | PlainP x -> check_mod_var env x
+  | QualP (q1, x) ->
+    match E.find_opt_mod x (check_str_path env q1) with
+    | Some s -> s.it
+    | None -> error x.at "unknown module component `%s`" x.it
+
+and check_sig_path env q : T.sig_ =
+  match q.it with
+  | PlainP y -> check_sig_con env y
+  | QualP (q1, y) ->
+    match E.find_opt_sig y (check_str_path env q1) with
+    | Some s -> s.it
+    | None -> error y.at "unknown signature component `%s`" y.it
 
 
 (* Types *)
 
-let check_typ_var env y : T.kind * T.con =
-  match E.find_opt_typ y env with
-  | Some kc -> kc.it
-  | None -> error y.at "unknown type identifier `%s`" y.it
-
-
-let rec check_typ_boxed env t : T.typ =
-  let t' = check_typ env t in
-  if not (T.sub t' T.Boxed || !Flags.boxed) then
-    error t.at "boxed type expected but got %s" (T.to_string t');
-  t'
-
-and check_typ env t : T.typ =
+let rec check_typ env t : T.typ =
   let t' = check_typ' env t in
-  assert (t.et = None || T.eq (Option.get t.et) t');
+  assert (t.et = None || T.eq t' (Option.get t.et));
   t.et <- Some t';
   t'
 
 and check_typ' (env : env) t : T.typ =
   match t.it with
-  | VarT (y, ts) ->
-    let k, c = check_typ_var env y in
-    if List.length ts <> k then
+  | VarT y ->
+    let T.Lambda (bs, t') = check_typ_con env y in
+    assert (bs = []);
+    t'
+  | ConT (q, ts) ->
+    let T.Lambda (bs, t') = check_typ_path env q in
+    if List.length ts <> List.length bs then
       error t.at "wrong number of type arguments at type use";
-    c (List.map (check_typ_boxed env) ts)
+    T.subst (T.typ_subst bs (List.map (check_typ env) ts)) t'
   | BoolT -> T.Bool
   | ByteT -> T.Byte
   | IntT -> T.Int
   | FloatT -> T.Float
   | TextT -> T.Text
-  | ObjT -> T.Obj
-  | BoxT t1 -> T.Box (check_typ env t1)
+  | RefT t1 -> T.Ref (check_typ env t1)
   | TupT ts -> T.Tup (List.map (check_typ env) ts)
-  | ArrayT t1 -> T.Array (check_typ env t1)
-  | FuncT (ys, ts1, t2) ->
-    let ys' = List.map Source.it ys in
-    let env' = E.extend_typs_abs env ys in
-    T.Func (ys', List.map (check_typ env') ts1, check_typ env' t2)
+  | FunT (t1, t2) -> T.Fun (check_typ env t1, check_typ env t2)
 
 
-(* Expressions *)
+(* Patterns *)
 
-let check_var_sort env x : T.sort * T.typ =
-  match E.find_opt_val x env with
-  | Some st ->
-    if fst st.it = T.ProhibitedS then
-      error x.at "`%s` cannot be used here" x.it;
-    st.it
-  | None -> error x.at "unknown value identifier `%s`" x.it
-
-let check_var env x : T.typ =
-  snd (check_var_sort env x)
+let unify t1 t2 at =
+  try T.unify t1 t2 with T.Unify (t1', t2') ->
+    if t1 = t1' && t2 = t2' then
+      error at "type mismatch: cannot unify types %s and %s"
+        (T.string_of_typ t1) (T.string_of_typ t2)
+    else
+      error at "type mismatch: cannot unify types %s and %s, because %s and %s are incompatible"
+        (T.string_of_typ t1) (T.string_of_typ t2)
+        (T.string_of_typ t1') (T.string_of_typ t2')
 
 
 let check_lit _env lit : T.typ =
   match lit with
-  | NullL -> T.Null
-  | BoolL _ -> T.Bool
   | IntL _ -> T.Int
   | FloatL _ -> T.Float
   | TextL _ -> T.Text
 
+let rec check_pat env p : T.typ * env =
+  let t, env' = check_pat' env p in
+  p.et <- Some t;
+  t, env'
+
+and check_pat' env p : T.typ * env =
+  match p.it with
+  | WildP ->
+    T.(infer Any), E.empty
+
+  | VarP x ->
+    let t = T.(infer Any) in
+    t, E.singleton_val x (T.Forall ([], t))
+
+  | LitP l ->
+    let t = check_lit env l in
+    t, E.empty
+
+  | ConP (q, ps) ->
+    let pt = check_val_path env q in
+    let ts, env' = check_pats env ps in
+    let t = T.(infer Any) in
+    let t1' = List.fold_right (fun tI t -> T.Fun (tI, t)) ts t in
+    unify (T.inst pt) t1' q.at;
+    t, env'
+
+  | RefP p1 ->
+    let t1, env' = check_pat env p1 in
+    T.Ref t1, env'
+
+  | TupP ps ->
+    let ts, env' = check_pats env ps in
+    T.Tup ts, env'
+
+  | AnnotP (p1, t) ->
+    let t1, env' = check_pat env p1 in
+    let t2 = check_typ env t in
+    unify t1 t2 p1.at;
+    t2, env'
+
+and check_pats env = function
+  | [] -> [], E.empty
+  | p::ps ->
+    let t, env1 = check_pat env p in
+    let ts, env2 = check_pats env ps in
+    try t::ts, E.disjoint_union env1 env2 with E.Clash x ->
+      error p.at "duplicate variable `%s` in pattern" x
+
+
+(* Expressions *)
 
 let rec check_exp env e : T.typ =
   assert (e.et = None);
@@ -119,464 +216,415 @@ let rec check_exp env e : T.typ =
 
 and check_exp' env e : T.typ =
   match e.it with
-  | VarE x ->
-    check_var env x
+  | VarE q ->
+    T.inst (check_val_path env q)
 
   | LitE l ->
     check_lit env l
 
+  | ConE q ->
+    T.inst (check_val_path env q)
+
   | UnE (op, e1) ->
     let t1 = check_exp env e1 in
-    (match op, t1 with
-    | (PosOp | NegOp | InvOp), T.Int -> T.Int
-    | (PosOp | NegOp), T.Float -> T.Float
-    | NotOp, T.Bool -> T.Bool
-    | _ ->
-      error e.at "unary operator not defined for type %s"
-        (T.to_string t1)
-    )
+    (match op with
+    | PosOp | NegOp -> unify t1 T.(infer Num) e.at
+    | InvOp -> unify t1 T.Int e.at
+    | NotOp -> unify t1 T.Bool e.at
+    );
+    t1
 
   | BinE (e1, op, e2) ->
     let t1 = check_exp env e1 in
     let t2 = check_exp env e2 in
-    let t = try T.lub t1 t2 with Failure _ ->
-      error e.at "binary operator applied to incompatible types %s and %s"
-        (T.to_string t1) (T.to_string t2)
-    in
-    (match op, t with
-    | (AddOp | SubOp | MulOp | DivOp | ModOp), T.Int
-    | (AndOp | OrOp | XorOp | ShlOp | ShrOp), T.Int -> t
-    | (AddOp | SubOp | MulOp | DivOp), T.Float -> t
-    | AddOp, T.Text -> t
-    | _ ->
-      error e.at "binary operator not defined for types %s and %s"
-        (T.to_string t1) (T.to_string t2)
-    )
+    unify t1 t2 e.at;
+    (match op with
+    | AddOp | SubOp | MulOp | DivOp -> unify t1 T.(infer Num) e.at
+    | ModOp | AndOp | OrOp | XorOp | ShlOp | ShrOp -> unify t1 T.Int e.at
+    | CatOp -> unify t1 T.Text e.at
+    );
+    t1
 
   | RelE (e1, op, e2) ->
     let t1 = check_exp env e1 in
     let t2 = check_exp env e2 in
-    let t = try T.lub t1 t2 with Failure _ ->
-      error e.at "comparison operator applied to incompatible types %s and %s"
-        (T.to_string t1) (T.to_string t2)
-    in
-    (match op, t with
-    | (EqOp | NeOp),
-      (T.Null | T.Bool | T.Text | T.Obj | T.Box _ | T.Array _ | T.Inst _)
-    | (EqOp | NeOp | LtOp | GtOp | LeOp | GeOp), (T.Byte | T.Int | T.Float) ->
-      T.Bool
-    | _ ->
-      error e.at "comparison operator not defined for types %s and %s"
-        (T.to_string t1) (T.to_string t2)
-    )
+    unify t1 t2 e.at;
+    (match op with
+    | EqOp | NeOp -> unify t1 T.(infer Eq) e.at
+    | LtOp | GtOp | LeOp | GeOp -> unify t1 T.(infer Ord) e.at
+    );
+    T.Bool
 
   | LogE (e1, op, e2) ->
     let t1 = check_exp env e1 in
     let t2 = check_exp env e2 in
-    let t = try T.lub t1 t2 with Failure _ ->
-      error e.at "binary operator applied to incompatible types %s and %s"
-        (T.to_string t1) (T.to_string t2)
-    in
-    if t <> T.Bool then
-      error e.at "logical operator not defined for types %s and %s"
-        (T.to_string t1) (T.to_string t2);
+    unify t1 T.Bool e1.at;
+    unify t2 T.Bool e2.at;
+    T.Bool
+
+  | RefE e1 ->
+    let t1 = check_exp env e1 in
+    T.Ref t1
+
+  | DerefE e1 ->
+    let t1 = check_exp env e1 in
+    let t = T.(infer Any) in
+    unify t1 (T.Ref t) e1.at;
     t
 
-  | BoxE e1 ->
+  | AssignE (e1, e2) ->
     let t1 = check_exp env e1 in
-    T.Box t1
-
-  | UnboxE e1 ->
-    let t1 = check_exp env e1 in
-    (match t1 with
-    | T.Box t -> t
-    | _ -> error e.at "box type expected but got %s" (T.to_string t1)
-    )
+    let t2 = check_exp env e2 in
+    unify t1 (T.Ref t2) e1.at;
+    T.Tup []
 
   | TupE es ->
     let ts = List.map (check_exp env) es in
     T.Tup ts
 
-  | ProjE (e1, n) ->
-    let t1 = check_exp env e1 in
-    (match t1 with
-    | T.Tup ts when n < List.length ts -> List.nth ts n
-    | T.Tup _ -> error e.at "wrong number of tuple components"
-    | _ -> error e.at "tuple type expected but got %s" (T.to_string t1)
-    )
+  | FunE (p1, e2) ->
+    let t1, env' = check_pat env p1 in
+    let t2 = check_exp (E.adjoin env env') e2 in
+    T.Fun (t1, t2)
 
-  | ArrayE es ->
-    let ts = List.map (check_exp env) es in
-    let t =
-      try List.fold_left T.lub T.Bot ts with Failure _ ->
-        error e.at "array has inconsistent element types"
-    in
-    T.Array t
-
-  | LenE e1 ->
-    let t1 = check_exp env e1 in
-    (match t1 with
-    | T.Text | T.Array _ -> T.Int
-    | _ -> error e1.at "array or text type expected but got %s" (T.to_string t1)
-    )
-
-  | IdxE (e1, e2) ->
+  | AppE (e1, e2) ->
     let t1 = check_exp env e1 in
     let t2 = check_exp env e2 in
-    (match t1, t2 with
-    | T.Text, T.Int -> T.Byte
-    | T.Array t, T.Int -> t
-    | T.Array t, _ ->
-      error e2.at "integer type expected but got %s" (T.to_string t2)
-    | _ -> error e1.at "array or text type expected but got %s" (T.to_string t1)
-    )
-
-  | CallE (e1, ts, es) ->
-    let t1 = check_exp env e1 in
-    let ts' = List.map (check_typ_boxed env) ts in
-    (match t1 with
-    | T.Func (ys, ts1, t2) ->
-      if List.length ts' <> List.length ys then
-        error e1.at "wrong number of type arguments at function call";
-      if List.length es <> List.length ts1 then
-        error e1.at "wrong number of arguments at function call";
-      let s = T.typ_subst ys ts' in
-      let ts1' = List.map (T.subst s) ts1 in
-      let t2' = T.subst s t2 in
-      List.iter2 (fun eI tI ->
-        let tI' = check_exp env eI in
-        if not (T.sub tI' tI) then
-          error eI.at "function expects argument type %s but got %s"
-            (T.to_string tI) (T.to_string tI')
-      ) es ts1';
-      t2'
-    | _ -> error e1.at "function type expected but got %s" (T.to_string t1)
-    )
-
-  | NewE (x, ts, es) ->
-    let t1 = check_var env x in
-    let ts' = List.map (check_typ_boxed env) ts in
-    (match t1 with
-    | T.Class cls ->
-      if List.length ts' <> List.length cls.T.tparams then
-        error x.at "wrong number of type arguments at class instantiation";
-      if List.length es <> List.length cls.T.vparams then
-        error x.at "wrong number of arguments at class instantiation";
-      let s = T.typ_subst cls.T.tparams ts' in
-      let ts1' = List.map (T.subst s) cls.T.vparams in
-      List.iter2 (fun eI tI ->
-        let tI' = check_exp env eI in
-        if not (T.sub tI' tI) then
-          error eI.at "class expects argument type %s but got %s"
-            (T.to_string tI) (T.to_string tI')
-      ) es ts1';
-      T.Inst (cls, ts')
-    | _ -> error x.at "class type expected but got %s" (T.to_string t1)
-    )
-
-  | NewArrayE (t, e1, e2) ->
-    let t' = check_typ env t in
-    let t1 = check_exp env e1 in
-    let t2 = check_exp env e2 in
-    if not (T.sub t1 T.Int) then
-      error e1.at "integer type expected but got %s" (T.to_string t1);
-    if not (T.sub t2 t') then
-      error e2.at "array initialization expects argument type %s but got %s"
-        (T.to_string t') (T.to_string t2);
-    T.Array t'
-
-  | DotE (e1, x) ->
-    let t1 = check_exp env e1 in
-    (match t1 with
-    | T.Inst (cls, ts) ->
-      (match List.assoc_opt x.it cls.T.def with
-      | Some (s, t) ->
-        T.subst (T.typ_subst cls.T.tparams ts) t
-      | None -> error e1.at "unknown field `%s`" x.it
-      )
-    | _ -> error e1.at "object type expected but got %s" (T.to_string t1)
-    )
-
-  | AssignE (e1, e2) ->
-    let t1 = check_exp_ref env e1 in
-    let t2 = check_exp env e2 in
-    if not (T.sub t2 t1) then
-      error e1.at "assigment expects type %s but got %s"
-        (T.to_string t1) (T.to_string t2);
-    T.Tup []
+    let t = T.(infer Any) in
+    unify t1 (T.Fun (t2, t)) e1.at;
+    t
 
   | AnnotE (e1, t) ->
     let t1 = check_exp env e1 in
     let t2 = check_typ env t in
-    if not (T.sub t1 t2) then
-      error e1.at "annotation expects type %s but got %s"
-        (T.to_string t2) (T.to_string t1);
+    unify t1 t2 e1.at;
     t2
-
-  | CastE (e1, t) ->
-    let t1 = check_exp env e1 in
-    let t2 = check_typ env t in
-    if not (T.sub t1 T.Obj) then
-      error e1.at "object type expected but got %s" (T.to_string t1);
-    if not (T.sub t2 T.Obj) then
-      error t.at "object type expected as cast target";
-    t2
-
-  | AssertE e1 ->
-    let t1 = check_exp env e1 in
-    if not (T.sub t1 T.Bool) then
-      error e1.at "boolean type expected but got %s" (T.to_string t1);
-    T.Tup []
 
   | IfE (e1, e2, e3) ->
     let t1 = check_exp env e1 in
     let t2 = check_exp env e2 in
     let t3 = check_exp env e3 in
-    if not (T.sub t1 T.Bool) then
-      error e1.at "boolean type expected but got %s" (T.to_string t1);
-    let t = try T.lub t2 t3 with Failure _ ->
-      error e.at "coniditional branches have incompatible types %s and %s"
-        (T.to_string t2) (T.to_string t3)
-    in t
+    unify t1 T.Bool e1.at;
+    unify t2 t3 e.at;
+    t2
 
-  | WhileE (e1, e2) ->
+  | CaseE (e1, pes) ->
     let t1 = check_exp env e1 in
-    let _t2 = check_exp env e2 in
-    if not (T.sub t1 T.Bool) then
-      error e1.at "boolean type expected but got %s" (T.to_string t1);
-    T.Tup []
+    let t = T.(infer Any) in
+    List.iter (fun (pI, eI) ->
+      let tI1, envI' = check_pat env pI in
+      unify t1 tI1 pI.at;
+      let tI2 = check_exp (E.adjoin env envI') eI in
+      unify t tI2 eI.at;
+    ) pes;
+    t
 
-  | RetE e ->
-    let t = check_exp env e in
-    (match E.find_opt_val ("return" @@ no_region) env with
-    | None -> error e.at "misplaced return"
-    | Some st ->
-      let (_, t') = st.it in
-      if not (T.sub t t') then
-        error e.at "return expects type %s but got %s"
-          (T.to_string t') (T.to_string t);
-    );
-    T.Bot
-
-  | BlockE ds ->
-    let t, env' = check_block Full env ds in
-    let escape = E.Set.inter (T.free t) (E.dom_typ env') in
-    Option.iter (fun y ->
-      error (E.find_typ (y @@ no_region) env').at
-        "class type `%s` escapes scope of its definition in block type %s"
-        y (T.to_string t)
+  | LetE (ds, e1) ->
+    let bs, env' = check_scope env ds in
+    let t = check_exp (E.adjoin env env') e1 in
+    let escape = E.Set.inter (T.free t) (E.Set.of_list bs) in
+    Option.iter (fun b ->
+      error e.at "type `%s` escapes scope of its definition in type %s"
+        b (T.string_of_typ t)
     ) (E.Set.min_elt_opt escape);
     t
 
 
-and check_exp_ref env e : T.typ =
-  let t = check_exp env e in
-  (match e.it with
-  | VarE x ->
-    let s, _ = check_var_sort env x in
-    if s <> T.VarS then
-      error e.at "mutable variable expected"
-
-  | IdxE (e1, _) ->
-    (match e1.et with
-    | Some (T.Array _) -> ()
-    | _ -> error e.at "mutable array expected"
-    )
-
-  | DotE (e1, x) ->
-    (match e1.et with
-    | Some (T.Inst (cls, _)) ->
-      let s, _ = List.assoc x.it cls.T.def in
-      if s <> T.VarS then
-        error x.at "mutable field expected"
-    | _ -> error x.at "mutable field expected"
-    )
-
-  | _ -> error e.at "invalid assignment target"
-  );
-  t
-
-
 (* Declarations *)
 
-and check_dec pass env d : T.typ * env =
-  assert (d.et = None || fst (Option.get d.et) = T.Tup []);
-  let t, ts, env' = check_dec' pass env d in
-  d.et <- Some (t, ts);
-  t, env'
+and is_pure e =
+  match e.it with
+  | VarE _ | LitE _ | ConE _ | FunE _ -> true
+  | UnE _ | BinE _ | RelE _ | LogE _ -> true
+  | RefE _ | DerefE _ | AssignE _ -> false
+  | TupE es -> List.for_all is_pure es
+  | AppE (e1, e2) -> is_pure_con e1 && is_pure e2
+  | AnnotE (e1, _) -> is_pure e1
+  | IfE (e1, e2, e3) -> is_pure e1 && is_pure e2 && is_pure e3
+  | CaseE (e1, pes) -> is_pure e1 && List.for_all (fun (_, eI) -> is_pure eI) pes
+  | LetE _ -> false
 
-and check_dec' pass env d : T.typ * T.typ list * env =
+and is_pure_con e =
+  match e.it with
+  | ConE _ -> true
+  | AppE (e1, e2) -> is_pure_con e1 && is_pure e2
+  | _ -> false
+
+
+and check_dec pass env d : T.typ * T.var list * env =
+  assert (d.et = None);
+  let t, bs, env' = check_dec' pass env d in
+  if pass = Full then d.et <- Some (t, env');
+  t, bs, env'
+
+and check_dec' pass env d : T.typ * T.var list * env =
   match d.it with
   | ExpD e ->
-    let t = if pass = Pre then T.Tup [] else check_exp env e in
+    let t = check_exp env e in
     t, [], E.empty
 
-  | LetD (x, e) ->
-    let t = if pass = Post then Option.get e.et else check_exp env e in
-    T.Tup [], [t], E.singleton_val x (T.LetS, t)
+  | AssertD e ->
+    let t = check_exp env e in
+    unify t T.Bool e.at;
+    T.Tup [], [], E.empty
 
-  | VarD (x, t, e) ->
-    let t' = check_typ env t in
-    if pass <> Pre then begin
-      let t'' = check_exp env e in
-      if not (T.sub t'' t') then
-        error e.at "variable declaration expects type %s but got %s"
-          (T.to_string t') (T.to_string t'')
-    end;
-    T.Tup [], [t'], E.singleton_val x (T.VarS, t')
+  | ValD (p, e) when pass = RecPre ->
+    let _, env' = check_pat env p in
+    T.Tup [], [], env'
+
+  | ValD (p, e) when pass = Rec ->
+    let t1, env' = check_pat env p in
+    let t2 = check_exp env e in
+    unify t1 t2 d.at;
+    E.iter_vals (fun x t ->
+      T.unify (T.inst t.it) (T.inst (E.find_val (x @@ t.at) env).it)
+    ) env';
+    T.Tup [], [], env'
+
+  | ValD (p, e) ->
+    let t1, env' = check_pat env p in
+    let t2 = check_exp env e in
+    unify t1 t2 d.at;
+    let env'' =
+      if not (is_pure e) then env' else
+      E.map_vals (T.generalize (T.free_str env)) env'
+    in
+    T.Tup [], [], env''
 
   | TypD (y, ys, t) ->
-    let ys' = List.map it ys in
-    let env' = E.extend_typs_abs env ys in
-    let t' = check_typ env' t in
-    let con ts = T.subst (T.typ_subst ys' ts) t' in
-    T.Tup [], [], E.singleton_typ y (List.length ys, con)
+    let t' = check_typ (E.extend_typs_var env ys) t in
+    T.Tup [], [], E.singleton_typ y (T.Lambda (List.map it ys, t'))
 
-  | FuncD (x, ys, xts, t, e) ->
-    let ys' = List.map it ys in
-    let env' = E.extend_typs_abs env ys in
-    let ts1 = List.map (check_typ env') (List.map snd xts) in
-    let t2 = check_typ env' t in
-    let t = T.Func (ys', ts1, t2) in
-    if pass <> Pre then begin
-      let env'' = E.extend_val env' x (T.FuncS, t) in
-      let env'' = E.extend_vals_let env'' (List.map fst xts) ts1 in
-      let env'' = E.extend_val_let env'' ("return" @@ d.at) t2 in
-      let t' = check_exp env'' e in
-      if not (T.sub t' t2) then
-        error e.at "function expects return type %s but got %s"
-          (T.to_string t2) (T.to_string t')
-    end;
-    T.Tup [], [t], E.singleton_val x (T.FuncS, t)
-
-  | ClassD (x, ys, xts, sup_opt, ds) ->
-    let k = List.length ys in
-    let ys' = List.map it ys in
-    let cls =
-      if pass <> Post then T.gen_cls d x.it ys' else
-      match check_exp env (DotE (VarE ("this" @@ d.at) @@ d.at, x) @@ d.at) with
-      | T.Class cls -> cls
-      | _ -> assert false
+  | DatD (y, ys, xtss) ->
+    let b = y.it in
+    let bs = List.map it ys in
+    let t = T.Var (b, List.map T.var bs) in
+    let env1 =
+      if pass = Rec then E.empty else
+      E.singleton_typ y (T.Lambda (bs, t))
     in
-    let con ts = T.Inst (cls, ts) in
-    let env' = E.extend_typ env x (k, con) in
-    let env' = E.extend_typs_abs env' ys in
-    let ts1 = List.map (check_typ env') (List.map snd xts) in
-    cls.T.vparams <- ts1;
-    Option.iter (fun {it = (x2, ts2, _); _} ->
-      cls.T.sup <- check_typ env' (VarT (x2, ts2) @@ x2.at)) sup_opt;
-    let t = T.Class cls in
-    if pass <> Pre then begin
-      let t_inst = con (List.map T.var ys') in
-      let xs1 = List.map fst xts in
-      let env'' = E.extend_val env' x (T.ClassS, t) in
-      let env'' = E.extend_vals_let env'' xs1 ts1 in
-      let env'' = E.extend_val env'' ("this" @@ x.at) (T.ProhibitedS, t_inst) in
-      let sup_obj, env''' =
-        match sup_opt with
-        | None -> [], env''
-        | Some sup ->
-          let (x2, ts2, es2) = sup.it in
-          match check_exp env'' (NewE (x2, ts2, es2) @@ sup.at) with
-          | T.Inst (cls, _) ->
-            sup.et <- Some cls;
-            cls.T.def,
-            List.fold_left (fun env'' (x, (s, t)) ->
-              let s' = if s = T.LetS then s else T.ProhibitedS in
-              E.extend_val env'' (x @@ x2.at) (s', t)
-            ) env'' cls.T.def
-          | _ -> assert false
-      in
-      (* Rebind local vars to shadow parent fields *)
-      let env''' = E.extend_val env''' x (T.ClassS, t) in
-      let env''' = E.extend_vals_let env''' xs1 ts1 in
-      let env''' = E.extend_val env''' ("this" @@ x.at) (T.ProhibitedS, t_inst) in
-      let _, oenv = check_block Pre env''' ds in
-      E.iter_vals (fun x {it = (s, t); at; _} ->
-        (match List.assoc_opt x sup_obj with
-        | None -> ()
-        | Some (s', t') ->
-          if s' <> T.FuncS then
-            error at "overriding superclass member `%s` that is not a function" x;
-          if s <> T.FuncS then
-            error at "overriding superclass function `%s` with a non-function" x;
-          if not (T.sub t t') then
-            error at "overriding superclass function `%s` of type %s with incompatible type %s"
-              x (T.to_string t') (T.to_string t)
-        )
-      ) oenv;
-      let obj = List.map (fun (x, st) -> (x, st.it)) (E.sorted_vals oenv) in
-      cls.T.def <- sup_obj @ obj;
-      (* Rebind unprohibited *)
-      let env'''' = List.fold_left (fun env (x, (s, t)) ->
-        E.extend_val env
-          (x @@ (E.Map.find x env'''.E.vals).at) (s, t)) env''' sup_obj in
-      (* Rebind local vars to shadow parent fields *)
-      let env'''' = E.extend_val env'''' x (T.ClassS, t) in
-      let env'''' = E.extend_vals_let env'''' xs1 ts1 in
-      let env'''' = E.extend_val env'''' ("this" @@ x.at) (T.LetS, t_inst) in
-      ignore (check_block Post env'''' ds);
-      E.iter_vals (fun x {it = (_, t); _} ->
-        let escape = E.Set.inter (T.free t) (E.dom_typ oenv) in
-        Option.iter (fun y ->
-          error (E.find_typ (y @@ no_region) oenv).at
-            "class type `%s` escapes scope of its definition with field %s : %s"
-            y x (T.to_string t)
-        ) (E.Set.min_elt_opt escape)
-      ) oenv
-    end;
-    T.Tup [], [t],
-    E.adjoin (E.singleton_typ x (k, con)) (E.singleton_val x (T.ClassS, t))
+    let env' = E.extend_typs_var (E.adjoin env env1) ys in
+    let env2 =
+      if pass = RecPre then E.empty else
+      List.fold_left (fun env2 (x, ts) ->
+        let ts' = List.map (check_typ env') ts in
+        let t' = List.fold_right (fun tI t' -> T.Fun (tI, t')) ts' t in
+        E.extend_val env2 x (T.Forall (bs, t'))
+      ) E.empty xtss
+    in
+    T.Tup [], [b], E.adjoin env1 env2
 
+  | ModD (x, m) ->
+    let bs, s = T.unpack x.it (check_mod env m) in
+    T.Tup [], bs, E.singleton_mod x s
 
-and check_decs pass env ds t : T.typ * env =
+  | SigD (y, s) ->
+    let s' = check_sig env s in
+    T.Tup [], [], E.singleton_sig y s'
+
+  | RecD ds ->
+    let _, bs, env' = check_decs RecPre env ds (T.Tup []) in
+    let _, _, env'' = check_decs Rec (E.adjoin env env') ds (T.Tup []) in
+    let env''' =
+      if E.is_empty_vals env'' then env'' else
+      let _, t = E.choose_val env'' in
+      let T.Forall (bs, t') = T.generalize (T.free_str env) t.it in
+      if bs = [] then env'' else
+      E.map_vals (fun (T.Forall (bs', t)) -> T.Forall (bs, t)) env''
+    in
+    T.Tup [], bs, env'''
+
+  | InclD m ->
+    let s = check_mod env m in
+    match s with
+    | T.Str (bs, env') -> T.Tup [], bs, env'
+    | _ -> error m.at "structure expected, but got %s" (T.string_of_sig s)
+
+and check_decs pass env ds t : T.typ * T.var list * env =
   match ds with
-  | [] -> t, E.empty
+  | [] -> t, [], E.empty
   | d::ds' ->
-    let t', env1 = check_dec pass env d in
-    let env' =
-      if pass <> Pre then env1 else
-      E.map_vals (fun (s, t) -> (if s = T.LetS then s else T.ProhibitedS), t) env1
-    in
-    let t'', env2 = check_decs pass (E.adjoin env env') ds' t' in
-    try t'', E.disjoint_union env1 env2 with E.Clash x ->
+    let t', bs1, env1 = check_dec pass env d in
+    let t'', bs2, env2 = check_decs pass (E.adjoin env env1) ds' t' in
+    try t'', bs1 @ bs2, E.disjoint_union env1 env2 with E.Clash x ->
       error d.at "duplicate definition for `%s`" x
 
-and check_block pass env ds : T.typ * env =
-  (* TODO: enable recursion among functions and among classes *)
-  check_decs pass env ds (T.Tup [])
-*)
+and check_scope env ds : T.var list * env =
+  let _t, bs, env' = check_decs Full env ds (T.Tup []) in
+  bs, env'
+
+
+(* Signatures *)
+
+and check_spec pass env s : T.var list * env =
+  assert (s.et = None);
+  let bs, env' = check_spec' pass env s in
+  if pass = Full then s.et <- Some env';
+  bs, env'
+
+and check_spec' pass env s : T.var list * env =
+  match s.it with
+  | ValS (x, ys, t) ->
+    let t' = check_typ (E.extend_typs_var env ys) t in
+    [], E.singleton_val x (T.Forall (List.map it ys, t'))
+
+  | TypS (y, ys, Some t) ->
+    let t' = check_typ (E.extend_typs_var env ys) t in
+    [], E.singleton_typ y (T.Lambda (List.map it ys, t'))
+
+  | TypS (y, ys, None) ->
+    let b = y.it in
+    let bs = List.map it ys in
+    [b], E.singleton_typ y (T.Lambda (bs, T.Var (b, List.map T.var bs)))
+
+  | DatS (y, ys, xtss) ->
+    let b = y.it in
+    let bs = List.map it ys in
+    let t = T.Var (b, List.map T.var bs) in
+    let env1 = E.singleton_typ y (T.Lambda (bs, t)) in
+    let env' = E.extend_typs_var (E.adjoin env env1) ys in
+    let env2 =
+      if pass = RecPre then E.empty else
+      List.fold_left (fun env2 (x, ts) ->
+        let ts' = List.map (check_typ env') ts in
+        let t' = List.fold_right (fun tI t' -> T.Fun (tI, t')) ts' t in
+        E.extend_val env2 x (T.Forall (bs, t'))
+      ) E.empty xtss
+    in
+    [b], E.adjoin env1 env2
+
+  | ModS (x, s) ->
+    let bs, s' = T.unpack x.it (check_sig env s) in
+    bs, E.singleton_mod x s'
+
+  | SigS (y, s) ->
+    let s' = check_sig env s in
+    [], E.singleton_sig y s'
+
+  | RecS ss ->
+    let bs, env' = check_specs RecPre env ss in
+    let _, env'' = check_specs Rec (E.adjoin env env') ss in
+    bs, env''
+
+  | InclS s ->
+    let s' = check_sig env s in
+    match s' with
+    | T.Str (bs, env') -> bs, env'
+    | _ ->
+      error s.at "structure signature expected, but got %s" (T.string_of_sig s')
+
+and check_specs pass env ss : T.var list * env =
+  match ss with
+  | [] -> [], E.empty
+  | s::ss' ->
+    let bs1, env1 = check_spec pass env s in
+    let bs2, env2 = check_specs pass (E.adjoin env env1) ss' in
+    try bs1 @ bs2, E.disjoint_union env1 env2 with E.Clash x ->
+      error s.at "duplicate specification for `%s`" x
+
+
+and check_sig env s : T.sig_ =
+  assert (s.et = None);
+  let s' = check_sig' env s in
+  s.et <- Some s';
+  s'
+
+and check_sig' env s : T.sig_ =
+  match s.it with
+  | ConS q ->
+    check_sig_path env q
+
+  | StrS ss ->
+    let bs, env' = check_specs Full env ss in
+    T.Str (bs, env')
+
+  | FunS (x, s1, s2) ->
+    let bs1, s1' = T.unpack x.it (check_sig env s1) in
+    let s2 = check_sig (E.extend_mod env x s1') s2 in
+    T.Fct (bs1, s1', s2)
+
+  | WithS (s1, q, ys, t) ->
+    let s1' = check_sig env s1 in
+    let t' = check_typ (E.extend_typs_var env ys) t in
+    match s1' with
+    | T.Str (bs1, str1) ->
+      (match check_typ_path str1 q with
+      | T.Lambda (bs2, T.Var (b, ts2))
+        when List.mem b bs1 && ts2 = List.map T.var bs2 ->
+        if List.length ys <> List.length bs2 then
+          error q.at "refinement type has incompatible arity";
+        let c = T.Lambda (List.map it ys, t') in
+        T.Str (List.filter ((<>) b) bs1, T.subst_str (T.con_subst [b] [c]) str1)
+      | _ -> error q.at "refined type is not abstract in signature"
+      )
+    | _ ->
+      error s1.at "structure signature expected, but got %s"
+        (T.string_of_sig s1')
+
+
+(* Modules *)
+
+and check_mod env m : T.sig_ =
+  assert (m.et = None);
+  let s = check_mod' env m in
+  m.et <- Some s;
+  s
+
+and check_mod' env m : T.sig_ =
+  match m.it with
+  | VarM q ->
+    check_mod_path env q
+
+  | StrM ds ->
+    let bs, env' = check_scope env ds in
+    T.Str (bs, env')
+
+  | FunM (x, s, m) ->
+    let bs, s1 = T.unpack x.it (check_sig env s) in
+    let s2 = check_mod (E.extend_mod env x s1) m in
+    T.Fct (bs, s1, s2)
+
+  | AppM (m1, m2) ->
+    let s1 = check_mod env m1 in
+    let s2 = check_mod env m2 in
+    (match s1 with
+    | T.Fct (bs, s2', s) ->
+      let su = try T.sub s2 (T.pack bs s2') with T.Mismatch s ->
+        error m.at "module does not match functor parameter signature, %s" s
+      in
+      T.subst_sig su s  (* TODO: fresh names *)
+    | _ -> error m1.at "functor expected but got %s" (T.string_of_sig s1)
+    )
+
+  | AnnotM (m1, s) ->
+    let s1 = check_mod env m1 in
+    let s2 = check_sig env s in
+    (try ignore (T.sub s1 s2) with T.Mismatch s ->
+      error m.at "module does not match annotation, %s" s
+    );
+    s2  (* TODO: fresh names *)
+
+  | LetM (ds, m) ->
+    let bs, env' = check_scope env ds in
+    let s = check_mod (E.adjoin env env') m in
+    let escape = E.Set.inter (T.free_sig s) (E.Set.of_list bs) in
+    Option.iter (fun b ->
+      error m.at "type `%s` escapes scope of its definition in signature %s"
+        b (T.string_of_sig s)
+    ) (E.Set.min_elt_opt escape);
+    s
+
 
 (* Programs *)
 
-let get_env = ref (fun _at _url -> failwith "get_env")
+let get_env = ref (fun _at _url -> failwith "get_sig")
 
-(*
-let check_imp env env' d : env =
-  let ImpD (xo, xs, url) = d.it in
-  let menv = !get_env d.at url in
-  let x = (match xo with None -> "" | Some x -> x.it ^ "_") in
-  let env', stos =
-    List.fold_left (fun (env', stos) xI ->
-      if not (E.mem_val xI menv || E.mem_typ xI menv) then
-        error xI.at "unknown export `%s` in \"%s\"" xI.it url;
-      let x' = (x ^ xI.it) @@ xI.at in
-      (* TODO: technically, we have to selfify any class names here *)
-      let env', sto =
-        match E.find_opt_val xI menv with
-        | None -> env', None
-        | Some st -> E.extend_val env' x' st.it, Some st.it
-      in
-      let env' =
-        match E.find_opt_typ xI menv with
-        | None -> env'
-        | Some kc -> E.extend_typ env' x' kc.it
-      in
-      env', sto::stos
-    ) (env', []) xs
-  in
-  d.et <- Some (List.rev stos);
-  env'
+let check_imp env (bs', env') d : T.var list * env =
+  let ImpD (x, url) = d.it in
+  let bs, str = !get_env d.at url in
+  d.et <- Some str;
+  let bs', s = T.unpack ("\"" ^ url ^ "\"") (T.Str (bs, str)) in
+  bs' @ bs, E.extend_mod env' x s
 
 let env0 =
   let at = Prelude.region in
@@ -585,17 +633,18 @@ let env0 =
       E.extend_typ_gnd env (y @@ at) (check_typ env (t @@ at))
     ) Prelude.typs
   |> List.fold_right (fun (x, l) env ->
-      E.extend_val_let env (x @@ at) (check_lit env l)
+      E.extend_val_mono env (x @@ at) (check_lit env l)
     ) Prelude.vals
-*)
+  |> List.fold_right (fun (x, t) env ->
+      E.extend_val_mono env (x @@ at) (check_typ env (t @@ at))
+    ) Prelude.cons
 
-let check_prog env p : T.typ * env =
+let check_prog env p : T.typ * T.var list * env =
   assert (p.et = None);
   let Prog (is, ds) = p.it in
-(*
   let env' = E.adjoin env0 env in
-  let env1 = List.fold_left (check_imp env') E.empty is in
-  let t, env2 = check_block Full (E.adjoin env' env1) ds in
-  p.et <- Some t;
-  t, Env.adjoin env1 env2
-*) T.Tup [], E.empty
+  let bs1, env1 = List.fold_left (check_imp env') ([], E.empty) is in
+  let t, bs2, env2 = check_decs Full (E.adjoin env' env1) ds (T.Tup []) in
+  let env'' = E.adjoin env1 env2 in
+  p.et <- Some (t, env'');
+  t, bs2, env''

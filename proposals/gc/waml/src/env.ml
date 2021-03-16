@@ -17,6 +17,7 @@ struct
 
   let dom m = List.fold_left (fun s (x, _) -> Set.add x s) Set.empty (bindings m)
   let keys m = List.map fst (bindings m)
+  let values m = List.map snd (bindings m)
   let from_list xvs = List.fold_left (fun m (x, v) -> add x v m) empty xvs
   let from_list2 xs vs = List.fold_left2 (fun m x v -> add x v m) empty xs vs
   let adjoin m1 m2 = union (fun _ y1 y2 -> Some y2) m1 m2
@@ -44,13 +45,6 @@ let adjoin env1 env2 =
     typs = Map.adjoin env1.typs env2.typs;
     mods = Map.adjoin env1.mods env2.mods;
     sigs = Map.adjoin env1.sigs env2.sigs;
-  }
-
-let union f g env1 env2 =
-  { vals = Map.union f env1.vals env2.vals;
-    typs = Map.union g env1.typs env2.typs;
-    mods = Map.union g env1.mods env2.mods;
-    sigs = Map.union g env1.sigs env2.sigs;
   }
 
 let disjoint_union env1 env2 =
@@ -83,6 +77,9 @@ let singleton_val x v = extend_val empty x v
 let singleton_typ y t = extend_typ empty y t
 let singleton_mod x m = extend_mod empty x m
 let singleton_sig y s = extend_sig empty y s
+
+let is_empty_vals env = Map.is_empty env.vals
+let choose_val env = Map.choose env.vals
 
 let not_found x =
   Printf.printf "[find `%s` @@ %s]\n%!" x.it (string_of_region x.at);

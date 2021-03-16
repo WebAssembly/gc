@@ -18,7 +18,7 @@ let opt f xo = list f (Option.to_list xo)
 let var x = Atom x.it
 
 let rec path p = match p.it with
-  | PlainP x -> "PathP" $$ [var x]
+  | PlainP x -> "PlainP" $$ [var x]
   | QualP (p, x) -> "QualP" $$ [path p; var x]
 
 
@@ -32,6 +32,7 @@ let rec typ t = match t.it with
   | IntT -> Atom "IntT"
   | FloatT -> Atom "FloatT"
   | TextT -> Atom "TextT"
+  | RefT t1 -> "RefT" $$ [typ t1]
   | TupT ts -> "TupT" $$ list typ ts
   | FunT (t1, t2) -> "FunT" $$ [typ t1; typ t2]
 
@@ -44,10 +45,11 @@ let lit = function
   | TextL t -> "TextL" $$ [Atom (string t)]
 
 let rec pat p = match p.it with
-  | WildP -> "WildP" $$ []
+  | WildP -> Atom "WildP"
   | VarP x -> "VarP" $$ [var x]
   | LitP l -> "LitP" $$ [lit l]
   | ConP (q, ps) -> "ConP" $$ [path q] @ list pat ps
+  | RefP p1 -> "RefP" $$ [pat p1]
   | TupP ps -> "TupP" $$ list pat ps
   | AnnotP (p1, t) -> "AnnotP" $$ [pat p1; typ t]
 
@@ -89,7 +91,7 @@ let logop = function
 let rec exp e = match e.it with
   | VarE q -> "VarE" $$ [path q]
   | LitE l -> "LitE" $$ [lit l]
-  | ConE (q, es) -> "ConE" $$ [path q] @ list exp es
+  | ConE q -> "ConE" $$ [path q]
   | UnE (op, e1) -> "UnE" $$ [Atom (unop op); exp e1]
   | BinE (e1, op, e2) -> "BinE" $$ [exp e1; Atom (binop op); exp e2]
   | RelE (e1, op, e2) -> "RelE" $$ [exp e1; Atom (relop op); exp e2]
@@ -98,7 +100,6 @@ let rec exp e = match e.it with
   | DerefE e1 -> "DerefE" $$ [exp e1]
   | AssignE (e1, e2) -> "AssignE" $$ [exp e1; exp e2]
   | TupE es -> "TupE" $$ list exp es
-  | ProjE (e1, i) -> "ProjE" $$ [exp e1; Atom (string_of_int i)]
   | FunE (p1, e2) -> "FunE" $$ [pat p1; exp e2]
   | AppE (e1, e2) -> "AppE" $$ [exp e1; exp e2]
   | AnnotE (e1, t) -> "AnnotE"  $$ [exp e1; typ t]
@@ -127,7 +128,7 @@ and dec d = match d.it with
 (* Signatures *)
 
 and spec s = match s.it with
-  | ValS (x, t) -> "ValS" $$ [var x; typ t]
+  | ValS (x, ys, t) -> "ValS" $$ list var ys @ [var x; typ t]
   | TypS (y, ys, to_) -> "TypS" $$ [var y] @ list var ys @ opt typ to_
   | DatS (y, ys, xtss) ->
     "DatS" $$ [var y] @ list var ys @

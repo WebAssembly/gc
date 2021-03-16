@@ -17,6 +17,6 @@ let vals =
   ]
 
 let cons =
-  [ "True", 0;
-    "False", 0;
+  [ "True", BoolT;
+    "False", BoolT;
   ]

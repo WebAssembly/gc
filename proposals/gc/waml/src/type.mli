@@ -1,85 +1,92 @@
 (* Types *)
 
 type var = string
-type kind = int
-type sort = LetS | VarS | FuncS | ClassS | ProhibitedS
+type pred = Any | Eq | Ord | Num
 
 type typ =
   | Var of var * typ list
-  | Bot
-  | Null
   | Bool
   | Byte
   | Int
   | Float
   | Text
-  | Obj
-  | Boxed
-  | Box of typ
+  | Ref of typ
   | Tup of typ list
-  | Array of typ
-  | Func of var list * typ list * typ
-  | Inst of cls * typ list
-  | Class of cls
+  | Fun of typ * typ
+  | Infer of infer ref
 
-and cls =
-  { name : var;
-    id : int;
-    tparams : var list;
-    mutable vparams : typ list;
-    mutable sup : typ;
-    mutable def : (var * (sort * typ)) list;
-  }
+and infer =
+  | Unres of string * pred
+  | Res of typ
 
 
-(* Constructors and accessors *)
+type poly = Forall of var list * typ
+type con = Lambda of var list * typ
+
+type sig_ =
+  | Str of var list * str
+  | Fct of var list * sig_ * sig_
+
+and str = (poly, con, sig_, sig_) Env.env
+
+
+(* Constructors and Accessors *)
 
 val var : var -> typ
 
-val is_var : typ -> bool
-val is_inst : typ -> bool
-
 val as_tup : typ -> typ list
-val as_array : typ -> typ
-val as_func : typ -> var list * typ list * typ
-val as_inst : typ -> cls * typ list
-val as_class : typ -> cls
-
-
-(* Operations *)
-
-val eq : typ -> typ -> bool
-val sub : typ -> typ -> bool
-val lub : typ -> typ -> typ (* raises Failure *)
-
-val free : typ -> Env.Set.t
-
-val to_string : typ -> string
-
-
-(* Classes *)
-
-val gen_cls : 'id -> var -> var list -> cls
-val eq_cls : cls -> cls -> bool
-
-val cls_depth : cls -> int
+val as_fun : typ -> typ * typ
 
 
 (* Substitutions *)
 
-module Subst = Env.Map
-
-type con = typ list -> typ
-type subst = con Subst.t
+type subst
 
 val subst : subst -> typ -> typ
+val subst_sig : subst -> sig_ -> sig_
+val subst_str : subst -> str -> str
 
+val is_empty_subst : subst -> bool
 val empty_subst : subst
 val adjoin_subst : subst -> subst -> subst
 
 val lookup_subst : subst -> var -> con option
 val extend_subst : subst -> var -> con -> subst
 val extend_subst_typ : subst -> var -> typ -> subst
-val extend_subst_abs : subst -> var -> subst
 
+val con_subst : var list -> con list -> subst
 val typ_subst : var list -> typ list -> subst
+val var_subst : var list -> var list -> subst
+
+
+(* Operations *)
+
+exception Unify of typ * typ
+exception Mismatch of string
+
+val eq : typ -> typ -> bool
+val eq_con : con -> con -> bool
+val unify : typ -> typ -> unit (* raises Unify *)
+val infer : pred -> typ
+
+val inst : poly -> typ
+val generalize : Env.Set.t -> poly -> poly
+
+val default_sig : sig_ -> unit
+val default_str : str -> unit
+
+val fresh_for : Env.Set.t -> string -> var
+
+val free : typ -> Env.Set.t
+val free_poly : poly -> Env.Set.t
+val free_sig : sig_ -> Env.Set.t
+val free_str : str -> Env.Set.t
+
+val string_of_typ : typ -> string
+val string_of_sig : sig_ -> string
+val string_of_str : str -> string
+
+val pack : var list -> sig_ -> sig_
+val unpack : var -> sig_ -> var list * sig_
+
+val sub : sig_ -> sig_ -> subst (* raises Mismatch *)

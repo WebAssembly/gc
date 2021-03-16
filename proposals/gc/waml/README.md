@@ -129,7 +129,6 @@ exp ::=
   exp '!'                                  dereference
   exp ':=' exp                             assignment
   '(' exp,* ')'                            tuple
-  exp '.' nat                              tuple access
   exp '::' exp                             list cons (shorthand)
   '[' exp,* ']'                            list (shorthand)
   'fun' pat+ '=>' exp                      function
@@ -144,6 +143,7 @@ pat :
   lit                                      literal
   lid                                      variable
   upath pat*                               constructor
+  'ref' pat                                reference
   '(' pat,* ')'                            tuple
   pat '::' pat                             list cons (shorthand)
   '[' pat,* ']'                            list (shorthand)

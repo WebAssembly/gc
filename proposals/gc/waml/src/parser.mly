@@ -32,12 +32,6 @@ let ati i =
 
 (* Literals *)
 
-let nat s at =
-  try
-    let n = int_of_string s in
-    if n >= 0 then n else raise (Failure "")
-  with Failure _ -> error at "integer constant out of range"
-
 let int s at =
   try Int32.of_string s with Failure _ -> error at "int constant out of range"
 
@@ -55,7 +49,7 @@ let float s at =
 %token ANDTHENOP ORELSEOP NOTOP
 %token FUN IF THEN ELSE CASE OF LET IN
 %token ASSERT VAL TYPE DATA MODULE SIGNATURE WITH REC AND INCLUDE IMPORT FROM
-%token<string> NAT FLOAT TEXT LID UID DOT_NUM
+%token<string> NAT FLOAT TEXT LID UID
 
 %nonassoc IF_NO_ELSE
 %nonassoc ELSE
@@ -119,19 +113,20 @@ tvar_seq :
 
 typ_simple :
   | tvar { VarT $1 @@ at () }
+  | tpath { ConT ($1, []) @@ at () }
   | LPAR typ_list RPAR { match $2 with [t] -> t | ts -> TupT ts @@ at () }
 
 typ_post :
   | typ_simple { $1 }
-  | tpath typ_simple_seq { ConT ($1, $2) @@ at () }
+  | tpath typ_simple_seq1 { ConT ($1, $2) @@ at () }
 
 typ :
   | typ_post { $1 }
   | typ ARROW typ { FunT ($1, $3) @@ at () }
 
-typ_simple_seq :
-  | /* empty */ { [] }
-  | typ_simple typ_simple_seq { $1 :: $2 }
+typ_simple_seq1 :
+  | typ_simple { [$1] }
+  | typ_simple typ_simple_seq1 { $1 :: $2 }
 
 typ_list :
   | /* empty */ { [] }
@@ -150,6 +145,7 @@ pat_simple :
   | WILD { WildP @@ at () }
   | lit { LitP $1 @@ at () }
   | vvar { VarP $1 @@ at () }
+  | cpath { ConP ($1, []) @@ at () }
   | LPAR pat_list RPAR { match $2 with [p] -> p | ps -> TupP ps @@ at () }
   | LBRACK pat_list RBRACK {
       List.fold_right (fun p1 p2 ->
@@ -159,7 +155,8 @@ pat_simple :
 
 pat_post :
   | pat_simple { $1 }
-  | cpath pat_simple_seq { ConP ($1, $2) @@ at () }
+  | cpath pat_simple_seq1 { ConP ($1, $2) @@ at () }
+  | REF pat_simple { RefP $2 @@ at () }
 
 pat_un :
   | pat_post { $1 }
@@ -174,9 +171,9 @@ pat_bin :
 pat :
   | pat_bin { $1 }
 
-pat_simple_seq :
-  | /* empty */ { [] }
-  | pat_simple pat_simple_seq { $1 :: $2 }
+pat_simple_seq1 :
+  | pat_simple { [$1] }
+  | pat_simple pat_simple_seq1 { $1 :: $2 }
 
 pat_list :
   | /* empty */ { [] }
@@ -189,23 +186,24 @@ pat_list :
 exp_simple :
   | lit { LitE $1 @@ at () }
   | vpath { VarE $1 @@ at () }
-  | cpath { ConE ($1, []) @@ at () }
+  | cpath { ConE $1 @@ at () }
   | LPAR exp_list RPAR { match $2 with [e] -> e | es -> TupE es @@ at () }
   | LBRACK exp_list RBRACK {
       List.fold_right (fun e1 e2 ->
-        ConE (PlainP ("Cons" @@ ati 1) @@ ati 1, [e1; e2]) @@ span e1.at e2.at
-      ) $2 (ConE (PlainP ("Nil" @@ ati 3) @@ ati 3, []) @@ ati 3)
+        AppE (
+          AppE (
+            ConE (PlainP ("Cons" @@ ati 1) @@ ati 1) @@ ati 1,
+            e1
+          ) @@ e1.at,
+          e2
+        ) @@ span e1.at e2.at
+      ) $2 (ConE (PlainP ("Nil" @@ ati 3) @@ ati 3) @@ ati 3)
     }
 
 exp_post :
   | exp_simple { $1 }
-  | exp_post DOT_NUM { ProjE ($1, nat $2 (ati 2)) @@ at () }
   | exp_post DEREF { DerefE $1 @@ at () }
-  | exp_post exp_simple {
-      match $1.it with
-      | ConE (q, es) -> ConE (q, es @ [$2]) @@ at ()
-      | _ -> AppE ($1, $2) @@ at ()
-    }
+  | exp_post exp_simple { AppE ($1, $2) @@ at () }
 
 exp_un :
   | exp_post { $1 }
@@ -237,17 +235,23 @@ exp_bin :
   | exp_bin ANDTHENOP exp_bin { LogE ($1, AndThenOp, $3) @@ at () }
   | exp_bin ORELSEOP  exp_bin { LogE ($1, OrElseOp,  $3) @@ at () }
   | exp_bin CONS exp_bin {
-      ConE (PlainP ("Cons" @@ ati 2) @@ ati 2, [$1; $3]) @@ span $1.at $3.at
+      AppE (
+        AppE (
+          ConE (PlainP ("Cons" @@ ati 2) @@ ati 2) @@ ati 2,
+          $1
+        ) @@ span $1.at (ati 2),
+        $3
+      ) @@ span $1.at $3.at
     }
   | exp_bin ASSIGN exp_bin { AssignE ($1, $3) @@ at () }
   | exp_bin COLON typ { AnnotE ($1, $3) @@ at () }
 
 exp :
   | exp_bin { $1 }
-  | FUN pat_simple pat_simple_seq DARROW exp {
+  | FUN pat_simple_seq1 DARROW exp {
       List.fold_right (fun p1 e2 ->
         FunE (p1, e2) @@ span p1.at e2.at
-      ) ($2::$3) $5
+      ) $2 $4
     }
   | IF exp THEN exp ELSE exp { IfE ($2, $4, $6) @@ at () }
   | IF exp THEN exp %prec IF_NO_ELSE {
@@ -272,7 +276,8 @@ case_list :
 /* Declarations */
 
 con :
-  | vcon typ_simple_seq { ($1, $2) }
+  | vcon { ($1, []) }
+  | vcon typ_simple_seq1 { ($1, $2) }
 
 con_list :
   | con { [$1] }
@@ -287,20 +292,20 @@ param_seq :
 
 bind :
   | VAL pat EQ exp { ValD ($2, $4) @@ at () }
-  | VAL vvar pat_simple pat_simple_seq EQ exp {
+  | VAL vvar pat_simple_seq1 EQ exp {
       ValD (
         VarP $2 @@ ati 1,
         List.fold_right (fun p1 e2 ->
           FunE (p1, e2) @@ span p1.at e2.at
-        ) ($3::$4) $6
+        ) $3 $5
       ) @@ at ()
     }
-  | VAL vvar pat_simple pat_simple_seq COLON typ EQ exp {
+  | VAL vvar pat_simple_seq1 COLON typ EQ exp {
       ValD (
         VarP $2 @@ ati 1,
         List.fold_right (fun p1 e2 ->
           FunE (p1, e2) @@ span p1.at e2.at
-        ) ($3::$4) (AnnotE ($8, $6) @@ span $6.at $8.at)
+        ) $3 (AnnotE ($7, $5) @@ span $5.at $7.at)
       ) @@ at ()
     }
   | TYPE tcon tvar_seq EQ typ { TypD ($2, $3, $5) @@ at () }
@@ -332,7 +337,17 @@ dec :
   | exp { ExpD $1 @@ at () }
   | ASSERT exp { AssertD $2 @@ at () }
   | bind { $1 }
-  | REC bind_list { RecD $2 @@ at () }
+  | REC bind_list {
+      ignore (List.fold_left (fun sofar d ->
+        match d.it with
+        | ValD (_, {it = FunE _; _}) when sofar <> `Dat -> `Val
+        | DatD _ when sofar <> `Val -> `Dat
+        | ValD _ | DatD _ ->
+          error d.at "inconsistent declaration inside recursive group"
+        | _ -> error d.at "invalid declaration inside recursive group"
+      ) `Neither $2);
+      RecD $2 @@ at ()
+    }
 
 dec_list :
   | /* empty */ { [] }
@@ -349,7 +364,8 @@ dec_list_noeol :
 /* Signatures */
 
 desc :
-  | VAL vvar COLON typ { ValS ($2, $4) @@ at () }
+  | VAL vvar COLON tvar_seq DOT typ { ValS ($2, $4, $6) @@ at () }
+  | VAL vvar COLON typ { ValS ($2, [], $4) @@ at () }
   | TYPE tcon tvar_seq EQ typ { TypS ($2, $3, Some $5) @@ at () }
   | TYPE tcon tvar_seq { TypS ($2, $3, None) @@ at () }
   | DATA tcon tvar_seq EQ con_list { DatS ($2, $3, $5) @@ at () }
@@ -363,7 +379,14 @@ desc_list :
 
 spec :
   | desc { $1 }
-  | REC desc_list { RecS $2 @@ at () }
+  | REC desc_list {
+      List.iter (fun s ->
+        match s.it with
+        | DatS _ -> ()
+        | _ -> error s.at "invalid declaration inside recursive group"
+      ) $2;
+      RecS $2 @@ at ()
+    }
 
 spec_list :
   | /* empty */ { [] }

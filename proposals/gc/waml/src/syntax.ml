@@ -24,6 +24,7 @@ and typ' =
   | IntT
   | FloatT
   | TextT
+  | RefT of typ
   | TupT of typ list
   | FunT of typ * typ
 
@@ -41,6 +42,7 @@ and pat' =
   | VarP of var
   | LitP of lit
   | ConP of path * pat list
+  | RefP of pat
   | TupP of pat list
   | AnnotP of pat * typ
 
@@ -58,7 +60,7 @@ type exp = (exp', T.typ) Source.phrase
 and exp' =
   | VarE of path
   | LitE of lit
-  | ConE of path * exp list
+  | ConE of path
   | UnE of unop * exp
   | BinE of exp * binop * exp
   | RelE of exp * relop * exp
@@ -67,7 +69,6 @@ and exp' =
   | DerefE of exp
   | AssignE of exp * exp
   | TupE of exp list
-  | ProjE of exp * int
   | FunE of pat * exp
   | AppE of exp * exp
   | AnnotE of exp * typ
@@ -78,7 +79,7 @@ and exp' =
 
 (* Declarations *)
 
-and dec = (dec', T.typ * T.typ list) Source.phrase
+and dec = (dec', T.typ * T.str) Source.phrase
 and dec' =
   | ExpD of exp
   | AssertD of exp
@@ -93,9 +94,9 @@ and dec' =
 
 (* Signatures *)
 
-and spec = (spec', T.typ * T.typ list) Source.phrase
+and spec = (spec', T.str) Source.phrase
 and spec' =
-  | ValS of var * typ
+  | ValS of var * var list * typ
   | TypS of var * var list * typ option
   | DatS of var * var list * (var * typ list) list
   | ModS of var * sig_
@@ -103,7 +104,7 @@ and spec' =
   | RecS of spec list
   | InclS of sig_
 
-and sig_ = (sig', T.typ * T.typ list) Source.phrase
+and sig_ = (sig', T.sig_) Source.phrase
 and sig' =
   | ConS of path
   | StrS of spec list
@@ -113,7 +114,7 @@ and sig' =
 
 (* Modules *)
 
-and mod_ = (mod', T.typ * T.typ list) Source.phrase
+and mod_ = (mod', T.sig_) Source.phrase
 and mod' =
   | VarM of path
   | StrM of dec list
@@ -125,10 +126,10 @@ and mod' =
 
 (* Programs *)
 
-type imp = (imp', T.typ) Source.phrase
+type imp = (imp', T.str) Source.phrase
 and imp' =
   | ImpD of var * string
 
-type prog = (prog', T.typ) Source.phrase
+type prog = (prog', T.typ * T.str) Source.phrase
 and prog' =
   | Prog of imp list * dec list

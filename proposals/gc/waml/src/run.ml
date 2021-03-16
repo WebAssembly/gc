@@ -83,7 +83,7 @@ let input_stdin f =
     print_endline "";
     trace "Bye."
 
-let read_binary_file file =
+let read_binary_file file : Wasm.Ast.module_ * (Type.var list * Typing.env) =
   let file' = Filename.chop_extension file ^ ".wasm" in
   trace ("Reading (" ^ file ^ ")...");
   let bin = with_in_file open_in_bin file'
@@ -119,14 +119,15 @@ let with_out_file open_out_mode file f =
     f oc; close_out oc
   with exn -> close_out oc; raise exn
 
-let write_binary_file file m (senv : Typing.env) =
+let write_binary_file file
+    (m : Wasm.Ast.module_) (stat : Type.var list * Typing.env) =
   let file' = file ^ ".wasm" in
   trace "Encoding...";
   let s1 = Wasm.Encode.encode m in
   let custom =
     Marshal.to_string marshal_tag [] ^
     Marshal.to_string (!Flags.boxed, !Flags.parametric) [] ^
-    Marshal.to_string senv [Marshal.Closures]
+    Marshal.to_string stat []
   in
   let s2 = Wasm.Encode.encode_custom (Wasm.Utf8.decode "waml-sig") custom in
   trace ("Writing (" ^ file' ^ ")...");
@@ -140,12 +141,12 @@ let write_textual_file file m =
   trace ("Writing (" ^ file' ^ ")...");
   with_out_file open_out file' (fun oc -> Wasm.Print.module_ oc !Flags.width m)
 
-let write_file file m senv =
+let write_file file m stat =
   let file' = Filename.chop_extension file in
   if !Flags.textual then
     write_textual_file file' m
   else
-    write_binary_file file' m senv
+    write_binary_file file' m stat
 
 let write_stdout m =
   trace "Printing Wasm...";
@@ -154,14 +155,14 @@ let write_stdout m =
 
 (* Compilation pipeline *)
 
-let frontend name lexbuf start env : Syntax.prog * (Type.typ * Typing.env) =
+let frontend name lexbuf start env : Syntax.prog * (Type.typ * Type.var list * Typing.env) =
   trace "Parsing...";
   let prog = Parse.parse name lexbuf start in
   if !Flags.print_ast then begin
     trace "Abstract syntax:";
     Wasm.Sexpr.print !Flags.width (Arrange.prog prog);
   end;
-  if !Flags.unchecked then prog, (Type.Bot, Env.empty) else begin
+  if !Flags.unchecked then prog, (Type.Tup [], [], Env.empty) else begin
     trace "Checking...";
     prog, Typing.check_prog env prog
   end
@@ -181,7 +182,7 @@ let backend prog : Wasm.Ast.module_ =
 let eval env prog =
   trace "Running...";
   let v, env' = Eval.eval_prog env prog in
-  Printf.printf "%s" (Value.to_string v);
+  Printf.printf "%s" (Value.string_of_value v);
   env'
 
 let exec wasm f =
@@ -199,7 +200,7 @@ let exec wasm f =
 module Reg = Env.Map
 
 type entry =
-  { stat : Typing.env;
+  { stat : Type.var list * Typing.env;
     dyn : Eval.env;
     inst : Wasm.Instance.module_inst option;
   }
@@ -221,12 +222,11 @@ let inject_env senv prog =
   let open Source in
   let open Syntax in
   let Prog (imps, decs) = prog.it in
-  let _senv' = Env.fold_vals (fun x st senv' ->
-    Env.remove_typ (x @@ st.at) senv') senv senv in
   let imp = ImpD (env_name @@ prog.at, env_name) @@ prog.at in
   let dec = InclD (VarM (PlainP (env_name @@ prog.at) @@ prog.at) @@ prog.at) @@ prog.at in
   let prog' = Prog (imp :: imps, dec :: decs) @@ prog.at in
-  imp.et <- Some (T.Tup []);
+  imp.et <- Some senv;
+  dec.et <- Some (T.Tup [], senv);
   prog'.et <- prog.et;
   prog'
 
@@ -236,7 +236,7 @@ let inject_env senv prog =
 let run name lexbuf start =
   handle (fun () ->
     let (senv, denv) = !env in
-    let prog, (t, senv') = frontend name lexbuf start senv in
+    let prog, (t, bs, senv') = frontend name lexbuf start senv in
     let denv' =
       if not !Flags.compile then
         eval denv prog
@@ -244,27 +244,17 @@ let run name lexbuf start =
         let wasm = backend (inject_env senv prog) in
         if !Flags.textual then write_stdout wasm;
         if not !Flags.dry then
-          exec wasm (fun inst -> register env_name senv' Env.empty (Some inst));
+          exec wasm (fun inst ->
+            register env_name (bs, senv') Env.empty (Some inst));
         Env.empty
       end
     in
     env := (Env.adjoin senv senv', Env.adjoin denv denv');
     let open Printf in
     if not !Flags.unchecked then begin
-      printf "%s%s\n" (if !Flags.dry then "" else " : ") (Type.to_string t);
-      if !Flags.print_sig then begin
-        Env.iter_typs (fun x kc ->
-          let (k, c) = kc.Source.it in
-          let a = Char.code 'A' in
-          let ys = List.init k (fun i -> String.make 1 (Char.chr (a + i))) in
-          printf "type %s" x;
-          if k > 0 then printf "<%s>" (String.concat ", " ys);
-          printf " = %s\n" (Type.to_string (c (List.map Type.var ys)))
-        ) senv';
-        Env.iter_vals (fun x t ->
-          printf "%s : %s\n" x (Type.to_string (t.Source.it))
-        ) senv'
-      end
+      printf "%s%s\n" (if !Flags.dry then "" else " : ") (Type.string_of_typ t);
+      if !Flags.print_sig && senv' <> Env.empty then
+        printf "%s\n" (Type.string_of_str senv')
     end
     else if not !Flags.dry then
       printf "\n"
@@ -284,9 +274,10 @@ let run_stdin () =
 
 let compile name file lexbuf start =
   handle (fun () ->
-    let prog, (_, stat) = frontend name lexbuf start Env.empty in
+    let prog, (_, bs, str) = frontend name lexbuf start Env.empty in
+    Type.default_str str;
     if !Flags.compile then
-      write_file file (backend prog) stat
+      write_file file (backend prog) (bs, str)
   )
 
 let compile_file file : bool =
@@ -313,7 +304,9 @@ let load_file url at : entry =
       end
       else begin
         input_file src_file (fun lexbuf ->
-          let prog, (_, stat) = frontend src_file lexbuf Parse.Prog Env.empty in
+          let prog, (_, bs, senv) =
+            frontend src_file lexbuf Parse.Prog Env.empty in
+          Type.default_str senv;
           let dyn, inst =
             if not !Flags.compile then
               snd (Eval.eval_prog Env.empty prog), None
@@ -322,9 +315,9 @@ let load_file url at : entry =
               if !Flags.dry then None else
               let wasm = backend prog in
               if not !Flags.prompt then
-                write_file wasm_file wasm stat;
+                write_file wasm_file wasm (bs, senv);
               Some (Link.link wasm)
-          in {stat; dyn; inst}
+          in {stat = (bs, senv); dyn; inst}
         )
       end
     in

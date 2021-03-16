@@ -1,4 +1,11 @@
+open Source
+
+module S = Env
+
+
 (* Types *)
+
+type var = string
 
 type value =
   | Byte of char
@@ -6,13 +13,15 @@ type value =
   | Float of float
   | Text of string
   | Tup of value list
-  | Con of string * value list
+  | Con of var * value list
   | Ref of value ref
-  | Fun of ((string * value) list -> value -> value)
+  | Fun of ((var * value) list -> value -> value)
 
 type module_ =
-  | Str of (string * value) list * (string * module_) list
+  | Str of str
   | Fct of (module_ -> module_)
+
+and str = (value, unit, module_, unit) S.env
 
 
 (* Conversion *)
@@ -39,8 +48,9 @@ let con x n =
 
 (* Recursive closure *)
 
-let close xvs = function
+let fix xvs = function
   | Fun f -> Fun (fun _ -> f xvs)
+  | Con _ as v -> v
   | _ -> assert false
 
 
@@ -58,16 +68,30 @@ let rec eq v1 v2 =
 
 (* Printing *)
 
-let seq f xs = String.concat " " (List.map f xs)
-let list f xs = String.concat ", " (List.map f xs)
+let list sep f xs = String.concat sep (List.map f xs)
 
-let rec to_string = function
+let rec string_of_value = function
+  | Con (x, vs) when vs <> [] -> x ^ " " ^ list " " string_of_value_simple vs
+  | Ref r -> "ref " ^ string_of_value_simple !r
+  | v -> string_of_value_simple v
+
+and string_of_value_simple = function
   | Byte c -> Printf.sprintf "0x%02x" (Char.code c)
   | Int i -> Int32.to_string i
   | Float z -> string_of_float z
   | Text t -> "\"" ^ String.escaped t ^ "\""
-  | Tup vs -> "(" ^ list to_string vs ^ ")"
+  | Tup vs -> "(" ^ list ", " string_of_value vs ^ ")"
   | Con (x, []) -> x
-  | Con (x, vs) -> "(" ^ x ^ " " ^ seq to_string vs ^ ")"
-  | Ref r -> "(ref " ^ to_string !r ^ ")"
-  | Fun _ -> "fun"
+  | Fun _ -> "(fun)"
+  | v -> "(" ^ string_of_value v ^ ")"
+
+let rec string_of_module = function
+  | Str s ->
+    let vs = List.map string_of_val (S.vals s) in
+    let ms = List.map string_of_mod (S.mods s) in
+    let xs = List.sort compare_by_region (ms @ vs) in
+    "{" ^ String.concat "; " (List.map it xs) ^ "}"
+  | Fct _ -> "fct"
+
+and string_of_val (x, v) = ("val " ^ x ^ " = " ^ string_of_value v.it) @@ v.at
+and string_of_mod (x, m) = ("module " ^ x ^ " = " ^ string_of_module m.it) @@ m.at
