@@ -72,7 +72,7 @@ and exp' =
 
 (* Declarations *)
 
-and dec = (dec', T.typ * T.typ list) Source.phrase
+and dec = (dec', T.typ * T.typ) Source.phrase
 and dec' =
   | ExpD of exp
   | LetD of var * exp
