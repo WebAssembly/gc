@@ -74,8 +74,8 @@ let find_opt_typ y env = Map.find_opt y.it env.typs
 
 let map_vals f env = {env with vals = Map.map (map_it f) env.vals}
 let map_typs f env = {env with typs = Map.map (map_it f) env.typs}
-let mapi_vals f env = {env with vals = Map.mapi f env.vals}
-let mapi_typs f env = {env with typs = Map.mapi f env.typs}
+let mapi_vals f env = {env with vals = Map.mapi (fun x -> map_it (f x)) env.vals}
+let mapi_typs f env = {env with typs = Map.mapi (fun x -> map_it (f x)) env.typs}
 let fold_vals f env a = Map.fold f env.vals a
 let fold_typs f env a = Map.fold f env.typs a
 let iter_vals f env = Map.iter f env.vals
