@@ -1,0 +1,29 @@
+;; Global pattern bindings
+
+val _ = 5;
+val n = 6;
+val 6 : Int = n;
+val t = (5, n, 7);
+val u = ();
+val () = u;
+val (x, y : Int, z) : (Int, Int, Int) = t;
+val r = ref 5;
+val ref m = r;
+
+val (a, b) = ((), ());
+val ref c = ref ();
+val () = ();
+val ((), ()) = ((), ());
+val ref () = ref ();
+
+val (5.6, "", _, (), (5, q), ()) = (5.6, "", x, (), (5, 6), ());
+
+(;
+data List a = Nil | Cons a (List a)
+
+val Nil = [];
+val [] = Nil;
+val Cons 5 [] = [5];
+val l = [6, 7, 8];
+val [6, _, 7] = 
+;)

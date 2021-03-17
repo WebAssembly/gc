@@ -275,7 +275,6 @@ let run_stdin () =
 let compile name file lexbuf start =
   handle (fun () ->
     let prog, (_, bs, str) = frontend name lexbuf start Env.empty in
-    Type.default_str str;
     if !Flags.compile then
       write_file file (backend prog) (bs, str)
   )
@@ -306,7 +305,6 @@ let load_file url at : entry =
         input_file src_file (fun lexbuf ->
           let prog, (_, bs, senv) =
             frontend src_file lexbuf Parse.Prog Env.empty in
-          Type.default_str senv;
           let dyn, inst =
             if not !Flags.compile then
               snd (Eval.eval_prog Env.empty prog), None

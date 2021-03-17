@@ -45,7 +45,7 @@ struct
     |> fold_sigs (fun y s env -> extend_sig env (y @@ s.at) s.it) env2
 end
 
-type pass = Full | RecPre | Rec
+type pass = FullPass | RecPrePass | RecPass
 
 
 (* Paths *)
@@ -354,7 +354,7 @@ and is_pure_con e =
 and check_dec pass env d : T.typ * T.var list * env =
   assert (d.et = None);
   let t, bs, env' = check_dec' pass env d in
-  if pass = Full then d.et <- Some (t, env');
+  if pass = FullPass then d.et <- Some (t, env');
   t, bs, env'
 
 and check_dec' pass env d : T.typ * T.var list * env =
@@ -368,11 +368,11 @@ and check_dec' pass env d : T.typ * T.var list * env =
     unify t T.Bool e.at;
     T.Tup [], [], E.empty
 
-  | ValD (p, e) when pass = RecPre ->
+  | ValD (p, e) when pass = RecPrePass ->
     let _, env' = check_pat env p in
     T.Tup [], [], env'
 
-  | ValD (p, e) when pass = Rec ->
+  | ValD (p, e) when pass = RecPass ->
     let t1, env' = check_pat env p in
     let t2 = check_exp env e in
     unify t1 t2 d.at;
@@ -400,12 +400,12 @@ and check_dec' pass env d : T.typ * T.var list * env =
     let bs = List.map it ys in
     let t = T.Var (b, List.map T.var bs) in
     let env1 =
-      if pass = Rec then E.empty else
+      if pass = RecPass then E.empty else
       E.singleton_typ y (T.Lambda (bs, t))
     in
     let env' = E.extend_typs_var (E.adjoin env env1) ys in
     let env2 =
-      if pass = RecPre then E.empty else
+      if pass = RecPrePass then E.empty else
       List.fold_left (fun env2 (x, ts) ->
         let ts' = List.map (check_typ env') ts in
         let t' = List.fold_right (fun tI t' -> T.Fun (tI, t')) ts' t in
@@ -423,8 +423,8 @@ and check_dec' pass env d : T.typ * T.var list * env =
     T.Tup [], [], E.singleton_sig y s'
 
   | RecD ds ->
-    let _, bs, env' = check_decs RecPre env ds (T.Tup []) in
-    let _, _, env'' = check_decs Rec (E.adjoin env env') ds (T.Tup []) in
+    let _, bs, env' = check_decs RecPrePass env ds (T.Tup []) in
+    let _, _, env'' = check_decs RecPass (E.adjoin env env') ds (T.Tup []) in
     let env''' =
       if E.is_empty_vals env'' then env'' else
       let _, t = E.choose_val env'' in
@@ -450,7 +450,7 @@ and check_decs pass env ds t : T.typ * T.var list * env =
       error d.at "duplicate definition for `%s`" x
 
 and check_scope env ds : T.var list * env =
-  let _t, bs, env' = check_decs Full env ds (T.Tup []) in
+  let _t, bs, env' = check_decs FullPass env ds (T.Tup []) in
   bs, env'
 
 
@@ -459,7 +459,7 @@ and check_scope env ds : T.var list * env =
 and check_spec pass env s : T.var list * env =
   assert (s.et = None);
   let bs, env' = check_spec' pass env s in
-  if pass = Full then s.et <- Some env';
+  if pass = FullPass then s.et <- Some env';
   bs, env'
 
 and check_spec' pass env s : T.var list * env =
@@ -484,7 +484,7 @@ and check_spec' pass env s : T.var list * env =
     let env1 = E.singleton_typ y (T.Lambda (bs, t)) in
     let env' = E.extend_typs_var (E.adjoin env env1) ys in
     let env2 =
-      if pass = RecPre then E.empty else
+      if pass = RecPrePass then E.empty else
       List.fold_left (fun env2 (x, ts) ->
         let ts' = List.map (check_typ env') ts in
         let t' = List.fold_right (fun tI t' -> T.Fun (tI, t')) ts' t in
@@ -502,8 +502,8 @@ and check_spec' pass env s : T.var list * env =
     [], E.singleton_sig y s'
 
   | RecS ss ->
-    let bs, env' = check_specs RecPre env ss in
-    let _, env'' = check_specs Rec (E.adjoin env env') ss in
+    let bs, env' = check_specs RecPrePass env ss in
+    let _, env'' = check_specs RecPass (E.adjoin env env') ss in
     bs, env''
 
   | InclS s ->
@@ -535,7 +535,7 @@ and check_sig' env s : T.sig_ =
     check_sig_path env q
 
   | StrS ss ->
-    let bs, env' = check_specs Full env ss in
+    let bs, env' = check_specs FullPass env ss in
     T.Str (bs, env')
 
   | FunS (x, s1, s2) ->
@@ -644,7 +644,8 @@ let check_prog env p : T.typ * T.var list * env =
   let Prog (is, ds) = p.it in
   let env' = E.adjoin env0 env in
   let bs1, env1 = List.fold_left (check_imp env') ([], E.empty) is in
-  let t, bs2, env2 = check_decs Full (E.adjoin env' env1) ds (T.Tup []) in
+  let t, bs2, env2 = check_decs FullPass (E.adjoin env' env1) ds (T.Tup []) in
   let env'' = E.adjoin env1 env2 in
+  T.default_str env2;
   p.et <- Some (t, env'');
   t, bs2, env''

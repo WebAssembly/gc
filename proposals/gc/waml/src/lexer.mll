@@ -119,7 +119,6 @@ rule token = parse
   | ";" { SEMICOLON }
   | ";\n" { Lexing.new_line lexbuf; SEMICOLON_EOL }
   | "," { COMMA }
-  | "|" { BAR }
   | ":" { COLON }
   | "." { DOT }
 
@@ -138,11 +137,10 @@ rule token = parse
   | "&" { ANDOP }
   | "|" { OROP }
   | "^" { XOROP }
-  | "#" { CATOP }
-  | "~" { NOTOP }
+  | "<<" { SHLOP }
+  | ">>" { SHROP }
 
-  | "/\\" { ANDTHENOP }
-  | "\\/" { ORELSEOP }
+  | "#" { CATOP }
 
   | "==" { EQOP }
   | "<>" { NEOP }
@@ -150,6 +148,10 @@ rule token = parse
   | ">" { GTOP }
   | "<=" { LEOP }
   | ">=" { GEOP }
+
+  | "~" { NOTOP }
+  | "/\\" { ANDTHENOP }
+  | "\\/" { ORELSEOP }
 
   | nat as s { NAT s }
   | float as s { FLOAT s }

@@ -21,6 +21,7 @@ and str = (value, unit, module_, unit) Env.env
 
 (* Operations *)
 
+val int : int32 -> value
 val fix : (var * value) list -> value -> value
 
 val eq : value -> value -> bool

@@ -329,6 +329,10 @@ let rec unify t1 t2 =
   | t1, Infer {contents = Unres _} -> unify t2 t1
   | _ -> raise (Unify (t1, t2))
 
+let rec norm = function
+  | Infer {contents = Res t} -> norm t
+  | t -> t
+
 
 let sub_poly (Forall (bs1, t1) as pt1) (Forall (bs2, t2)) =
   let bs2' = List.map (fresh_for (free t1)) bs2 in

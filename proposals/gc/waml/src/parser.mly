@@ -43,7 +43,7 @@ let float s at =
 %token EOF
 
 %token LPAR RPAR LBRACK RBRACK LCURLY RCURLY COMMA SEMICOLON SEMICOLON_EOL
-%token COLON EQ ARROW DARROW BAR REF DEREF ASSIGN DOT WILD
+%token COLON EQ ARROW DARROW REF DEREF ASSIGN DOT WILD
 %token EQOP NEOP LEOP LTOP GTOP GEOP
 %token ADDOP SUBOP MULOP DIVOP MODOP ANDOP OROP XOROP SHLOP SHROP CATOP CONS
 %token ANDTHENOP ORELSEOP NOTOP
@@ -257,7 +257,8 @@ exp :
   | IF exp THEN exp %prec IF_NO_ELSE {
       IfE ($2, $4, TupE [] @@ at ()) @@ at ()
     }
-  | CASE exp OF case_list { CaseE ($2, $4) @@ at () }
+  | CASE exp OF LCURLY case_list RCURLY { CaseE ($2, $5) @@ at () }
+  | CASE exp OF case { CaseE ($2, [$4]) @@ at () }
   | LET dec_list IN exp { LetE ($2, $4) @@ at () }
 
 exp_list :
@@ -269,8 +270,10 @@ case :
   | pat DARROW exp { ($1, $3) }
 
 case_list :
+  | /* empty */ { [] }
   | case { [$1] }
-  | case_list BAR case { $1 @ [$3] }
+  | case SEMICOLON case_list { $1 :: $3 }
+  | case SEMICOLON_EOL case_list { $1 :: $3 }
 
 
 /* Declarations */
@@ -281,7 +284,7 @@ con :
 
 con_list :
   | con { [$1] }
-  | con_list BAR con { $1 @ [$3] }
+  | con_list OROP con { $1 @ [$3] }
 
 param :
   | LPAR mvar COLON sig_ RPAR { ($2, $4) }

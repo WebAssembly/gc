@@ -68,6 +68,7 @@ val eq : typ -> typ -> bool
 val eq_con : con -> con -> bool
 val unify : typ -> typ -> unit (* raises Unify *)
 val infer : pred -> typ
+val norm : typ -> typ
 
 val inst : poly -> typ
 val generalize : Env.Set.t -> poly -> poly

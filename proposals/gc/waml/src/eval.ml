@@ -75,7 +75,7 @@ let eval_con_path env q : string =
 
 let eval_lit _env lit : V.value =
   match lit with
-  | IntL i -> V.Int i
+  | IntL i -> V.int i
   | FloatL z -> V.Float z
   | TextL t -> V.Text t
 
@@ -137,11 +137,11 @@ let rec eval_exp env e : V.value =
   | UnE (op, e1) ->
     let v1 = eval_exp env e1 in
     (match op, v1 with
-    | PosOp, V.Int i -> V.Int i
+    | PosOp, V.Int i -> V.int i
     | PosOp, V.Float z -> V.Float z
-    | NegOp, V.Int i -> V.Int (Int32.neg i)
+    | NegOp, V.Int i -> V.int (Int32.neg i)
     | NegOp, V.Float z -> V.Float (-.z)
-    | InvOp, V.Int i -> V.Int (Int32.lognot i)
+    | InvOp, V.Int i -> V.int (Int32.lognot i)
     | NotOp, v1 when V.is_bool v1 -> V.of_bool (not (V.to_bool v1))
     | _ -> crash e.at "runtime type error at unary operator"
     )
@@ -150,22 +150,22 @@ let rec eval_exp env e : V.value =
     let v1 = eval_exp env e1 in
     let v2 = eval_exp env e2 in
     (match op, v1, v2 with
-    | AddOp, V.Int i1, V.Int i2 -> V.Int (Int32.add i1 i2)
-    | SubOp, V.Int i1, V.Int i2 -> V.Int (Int32.sub i1 i2)
-    | MulOp, V.Int i1, V.Int i2 -> V.Int (Int32.mul i1 i2)
+    | AddOp, V.Int i1, V.Int i2 -> V.int (Int32.add i1 i2)
+    | SubOp, V.Int i1, V.Int i2 -> V.int (Int32.sub i1 i2)
+    | MulOp, V.Int i1, V.Int i2 -> V.int (Int32.mul i1 i2)
     | DivOp, V.Int i1, V.Int i2 ->
       if i2 = 0l then trap e.at "division by zero" else
-      V.Int (Int32.div i1 i2)
+      V.int (Int32.div i1 i2)
     | ModOp, V.Int i1, V.Int i2 ->
       if i2 = 0l then trap e.at "modulo by zero" else
-      V.Int (Int32.rem i1 i2)
-    | AndOp, V.Int i1, V.Int i2 -> V.Int (Int32.logand i1 i2)
-    | OrOp,  V.Int i1, V.Int i2 -> V.Int (Int32.logor i1 i2)
-    | XorOp, V.Int i1, V.Int i2 -> V.Int (Int32.logxor i1 i2)
+      V.int (Int32.rem i1 i2)
+    | AndOp, V.Int i1, V.Int i2 -> V.int (Int32.logand i1 i2)
+    | OrOp,  V.Int i1, V.Int i2 -> V.int (Int32.logor i1 i2)
+    | XorOp, V.Int i1, V.Int i2 -> V.int (Int32.logxor i1 i2)
     | ShlOp, V.Int i1, V.Int i2 ->
-      V.Int Int32.(shift_left i1 (to_int i2 land 0x1f))
+      V.int Int32.(shift_left i1 (to_int i2 land 0x1f))
     | ShrOp, V.Int i1, V.Int i2 ->
-      V.Int Int32.(shift_right i1 (to_int i2 land 0x1f))
+      V.int Int32.(shift_right i1 (to_int i2 land 0x1f))
     | AddOp, V.Float z1, V.Float z2 -> V.Float (z1 +. z2)
     | SubOp, V.Float z1, V.Float z2 -> V.Float (z1 -. z2)
     | MulOp, V.Float z1, V.Float z2 -> V.Float (z1 *. z2)

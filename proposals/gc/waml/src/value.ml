@@ -26,6 +26,8 @@ and str = (value, unit, module_, unit) S.env
 
 (* Conversion *)
 
+let int i = Int Int32.(shift_right (shift_left i 1) 1)
+
 let is_bool = function
   | Con (("True" | "False"), []) -> true
   | _ -> false
