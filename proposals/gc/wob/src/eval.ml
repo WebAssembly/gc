@@ -420,8 +420,8 @@ and eval_decs pass env ds v : V.value * env =
       if pass <> Post then env1 else
       match !(snd (E.find_val ("this" @@ no_region) env).it) with
       | V.Obj (_, obj) ->
-        E.mapi_vals (fun x sv ->
-          let s, v' = E.Map.find x !obj in v' := !(snd sv.it); (s, v') @@ sv.at
+        E.mapi_vals (fun x (s, v) ->
+          let s, v' = E.Map.find x !obj in v' := !v; (s, v')
         ) env1
       | _ -> assert false
     in

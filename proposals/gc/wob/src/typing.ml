@@ -61,7 +61,7 @@ and check_typ env t : T.typ =
   t.et <- Some t';
   t'
 
-and check_typ' (env : env) t : T.typ =
+and check_typ' env t : T.typ =
   match t.it with
   | VarT (y, ts) ->
     let k, c = check_typ_var env y in
@@ -396,19 +396,19 @@ and check_exp_ref env e : T.typ =
 
 and check_dec pass env d : T.typ * env =
   assert (d.et = None || fst (Option.get d.et) = T.Tup []);
-  let t, ts, env' = check_dec' pass env d in
-  d.et <- Some (t, ts);
-  t, env'
+  let t_res, t_bind, env' = check_dec' pass env d in
+  d.et <- Some (t_res, t_bind);
+  t_res, env'
 
-and check_dec' pass env d : T.typ * T.typ list * env =
+and check_dec' pass env d : T.typ * T.typ * env =
   match d.it with
   | ExpD e ->
     let t = if pass = Pre then T.Tup [] else check_exp env e in
-    t, [], E.empty
+    t, T.Bot, E.empty
 
   | LetD (x, e) ->
     let t = if pass = Post then Option.get e.et else check_exp env e in
-    T.Tup [], [t], E.singleton_val x (T.LetS, t)
+    T.Tup [], t, E.singleton_val x (T.LetS, t)
 
   | VarD (x, t, e) ->
     let t' = check_typ env t in
@@ -418,14 +418,14 @@ and check_dec' pass env d : T.typ * T.typ list * env =
         error e.at "variable declaration expects type %s but got %s"
           (T.to_string t') (T.to_string t'')
     end;
-    T.Tup [], [t'], E.singleton_val x (T.VarS, t')
+    T.Tup [], t', E.singleton_val x (T.VarS, t')
 
   | TypD (y, ys, t) ->
     let ys' = List.map it ys in
     let env' = E.extend_typs_abs env ys in
     let t' = check_typ env' t in
     let con ts = T.subst (T.typ_subst ys' ts) t' in
-    T.Tup [], [], E.singleton_typ y (List.length ys, con)
+    T.Tup [], T.Bot, E.singleton_typ y (List.length ys, con)
 
   | FuncD (x, ys, xts, t, e) ->
     let ys' = List.map it ys in
@@ -442,7 +442,7 @@ and check_dec' pass env d : T.typ * T.typ list * env =
         error e.at "function expects return type %s but got %s"
           (T.to_string t2) (T.to_string t')
     end;
-    T.Tup [], [t], E.singleton_val x (T.FuncS, t)
+    T.Tup [], t, E.singleton_val x (T.FuncS, t)
 
   | ClassD (x, ys, xts, sup_opt, ds) ->
     let k = List.length ys in
@@ -520,7 +520,7 @@ and check_dec' pass env d : T.typ * T.typ list * env =
         ) (E.Set.min_elt_opt escape)
       ) oenv
     end;
-    T.Tup [], [t],
+    T.Tup [], t,
     E.adjoin (E.singleton_typ x (k, con)) (E.singleton_val x (T.ClassS, t))
 
 
