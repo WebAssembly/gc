@@ -135,8 +135,12 @@ exp ::=
   exp exp                                  function call
   exp ':' typ                              type annotation
   'if' exp 'then' exp ('else' exp)?        conditional
-  'case' exp 'of' (pat '=>' exp)|*         case
+  'case' exp 'of' '{' case;* '}'           case
+  'case' exp 'of' case;                    case (shorthand)
   'let' dec;* 'in' exp                     local declaration
+
+case :
+  pat '=>' exp
 
 pat :
   '_'                                      wildcard

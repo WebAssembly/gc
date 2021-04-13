@@ -409,7 +409,7 @@ let rec compile_exp ctxt e dst =
     | _ -> ()
     );
     compile_exp ctxt e1 UnboxedLaxRep;
-    (match op, Source.et e with
+    (match op, T.norm (Source.et e) with
     | PosOp, T.Int -> ()
     | PosOp, T.Float -> ()
     | NegOp, T.Int -> emit ctxt W.[i32_sub]
@@ -428,7 +428,7 @@ let rec compile_exp ctxt e dst =
     in
     compile_exp ctxt e1 src;
     compile_exp ctxt e2 src;
-    (match op, Source.et e with
+    (match op, T.norm (Source.et e) with
     | AddOp, T.Int -> emit ctxt W.[i32_add]
     | SubOp, T.Int -> emit ctxt W.[i32_sub]
     | MulOp, T.Int -> emit ctxt W.[i32_mul]
@@ -452,7 +452,7 @@ let rec compile_exp ctxt e dst =
   | RelE (e1, op, e2) ->
     compile_exp ctxt e1 UnboxedRigidRep;
     compile_exp ctxt e2 UnboxedRigidRep;
-    (match op, Source.et e1 with
+    (match op, T.norm (Source.et e1) with
     | EqOp, (T.Int | T.Byte | T.Bool) -> emit ctxt W.[i32_eq]
     | NeOp, (T.Int | T.Byte | T.Bool) -> emit ctxt W.[i32_ne]
     | LtOp, (T.Int | T.Byte | T.Bool) -> emit ctxt W.[i32_lt_s]
@@ -654,7 +654,43 @@ let rec compile_exp ctxt e dst =
     )
 
   | CaseE (e1, pes) ->
-    nyi e.at "case expressions"
+    let t1 = Source.et e1 in
+    let tmp = emit_local ctxt e1.at (lower_value_type ctxt e1.at t1 pat_rep) in
+    compile_exp ctxt e1 (if pes = [] then DropRep else pat_rep);
+    if pes = [] then
+      emit ctxt W.[unreachable]
+    else begin
+      emit ctxt W.[local_set (tmp @@ e1.at)];
+      let bt = lower_block_type ctxt e.at (Source.et e) dst in
+      emit_block ctxt e.at W.block bt (fun ctxt ->
+        let ends_with_partial =
+          List.fold_left (fun _ (pI, eI) ->
+            match classify_pat pI with
+            | IrrelevantPat ->
+              compile_exp ctxt eI dst;
+              emit ctxt W.[br (0l @@ eI.at)];
+              false
+            | TotalPat ->
+              let ctxt = enter_scope ctxt LocalScope in
+              emit ctxt W.[local_get (tmp @@ pI.at)];
+              compile_pat ctxt (-1l) pI;
+              compile_exp ctxt eI dst;
+              emit ctxt W.[br (0l @@ eI.at)];
+              false
+            | PartialPat ->
+              let ctxt = enter_scope ctxt LocalScope in
+              emit_block ctxt pI.at W.block W.voidbt (fun ctxt ->
+                emit ctxt W.[local_get (tmp @@ pI.at)];
+                compile_pat ctxt 0l pI;
+                compile_exp ctxt eI dst;
+                emit ctxt W.[br (1l @@ eI.at)];
+              );
+              true
+          ) true pes
+        in
+        if ends_with_partial then emit ctxt W.[unreachable]
+      )
+    end
 
   | LetE (ds, e1) ->
     nyi e.at "let expressions"
