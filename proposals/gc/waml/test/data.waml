@@ -7,3 +7,18 @@ val b = B;
 
 val A = a;
 val B = b;
+
+
+data U = X | Y Int | Z Float Int;
+
+val ux = X;
+val uy = Y 1;
+val uz = Z 2.1 12;
+
+val X = ux;
+val Y y = uy;
+val Z z1 z2 = uz;
+
+assert y == 1;
+assert z1 == 2.1;
+assert z2 == 12;

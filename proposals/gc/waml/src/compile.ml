@@ -27,7 +27,7 @@ let nyi at s = raise (NYI (at, s))
 type loc =
   | DirectLoc of int32
 
-type data_con = {tag : int32; typeidx : int32; flds : W.field_type list}
+type data_con = {tag : int32; typeidx : int32; flds : T.typ list}
 type data = (string * data_con) list
 type env = (loc, data, loc, unit) E.env
 type scope = PreScope | LocalScope | GlobalScope | ModuleScope
@@ -74,6 +74,17 @@ let emit_let ctxt at bt ts f =
   )
 *)
 
+let rec find_typ_var ctxt y envs : data =
+  match envs with
+  | [] ->
+    Printf.printf "[find_typ_var `%s` @@ %s]\n%!" y.it
+      (Source.string_of_region y.at);
+    assert false
+  | (_, env)::envs' ->
+    match E.find_opt_typ y !env with
+    | None -> find_typ_var ctxt y envs'
+    | Some {it = data; _} -> data
+
 
 (* Debug printing *)
 
@@ -114,8 +125,8 @@ let is_boxed_rep = function
   | BlockRep | BoxedRep -> true
   | _ -> false
 
-let rec lower_value_type ctxt at t rep : W.value_type =
-  if is_boxed_rep rep then W.(RefType (Nullable, AnyHeapType)) else
+let rec lower_value_type ctxt at rep t : W.value_type =
+  if is_boxed_rep rep then W.(RefType (Nullable, EqHeapType)) else
   match T.norm t with
   | T.Bool | T.Byte | T.Int -> W.(NumType I32Type)
   | T.Float -> W.(NumType F64Type)
@@ -123,9 +134,9 @@ let rec lower_value_type ctxt at t rep : W.value_type =
 
 and lower_heap_type ctxt at t : W.heap_type =
   match T.norm t with
-  | T.Var _ -> W.AnyHeapType
+  | T.Var _ -> W.EqHeapType
   | T.Bool | T.Byte | T.Int -> W.I31HeapType
-  | T.Tup [] -> W.AnyHeapType
+  | T.Tup [] -> W.EqHeapType
   | t -> W.(DefHeapType (SynVar (lower_var_type ctxt at t)))
 
 and lower_var_type ctxt at t : int32 =
@@ -137,24 +148,24 @@ and lower_var_type ctxt at t : int32 =
     let ft = W.(FieldType (PackedStorageType Pack8, Mutable)) in
     emit_type ctxt at W.(ArrayDefType (ArrayType ft))
   | T.Tup ts ->
-    let fts = List.map (lower_field_type ctxt at W.Immutable) ts in
+    let fts = List.map (lower_field_type ctxt at W.Immutable BoxedRep) ts in
     emit_type ctxt at W.(StructDefType (StructType fts))
   | T.Ref t1 ->
-    let ft = lower_field_type ctxt at W.Mutable t1 in
+    let ft = lower_field_type ctxt at W.Mutable BoxedRep t1 in
     emit_type ctxt at W.(StructDefType (StructType [ft]))
   | T.Fun _ -> nyi at "function types"
   | _ -> Printf.printf "%s\n%!" (T.string_of_typ t); assert false
 
-and lower_storage_type ctxt at t : W.storage_type =
-  W.(ValueStorageType (RefType (Nullable, AnyHeapType)))
+and lower_storage_type ctxt at rep t : W.storage_type =
+  W.(ValueStorageType (lower_value_type ctxt at rep t))
 
-and lower_field_type ctxt at mut t : W.field_type =
-  W.(FieldType (lower_storage_type ctxt at t, mut))
+and lower_field_type ctxt at mut rep t : W.field_type =
+  W.(FieldType (lower_storage_type ctxt at rep t, mut))
 
-and lower_block_type ctxt at t rep : W.block_type =
+and lower_block_type ctxt at rep t : W.block_type =
   match t with
   | T.Tup [] when rep = BlockRep -> W.ValBlockType None
-  | t -> W.ValBlockType (Some (lower_value_type ctxt at t rep))
+  | t -> W.ValBlockType (Some (lower_value_type ctxt at rep t))
 
 (*
 and lower_stack_type ctxt at t : W.value_type list =
@@ -181,7 +192,7 @@ and lower_func_type ctxt at t : W.func_type =
 
 (* Coercions *)
 
-let default_exp ctxt at t rep : W.instr' list =
+let default_exp ctxt at rep t : W.instr' list =
   if is_boxed_rep rep then W.[ref_null (lower_heap_type ctxt at t)] else
   match T.norm t with
   | T.Bool | T.Byte | T.Int -> W.[i32_const (0l @@ at)]
@@ -190,8 +201,8 @@ let default_exp ctxt at t rep : W.instr' list =
     W.[ref_null (lower_heap_type ctxt at t)]
   | T.Infer _ -> assert false
 
-let default_const ctxt at t rep : W.const =
-  List.map (fun instr' -> instr' @@ at) (default_exp ctxt at t rep) @@ at
+let default_const ctxt at rep t : W.const =
+  List.map (fun instr' -> instr' @@ at) (default_exp ctxt at rep t) @@ at
 
 
 let compile_coerce ctxt src dst t at =
@@ -248,20 +259,6 @@ let compile_coerce ctxt src dst t at =
     | _ -> ()
     )
   | _ -> assert false
-
-
-(* Types *)
-
-let rec find_typ_var ctxt y envs : data =
-  match envs with
-  | [] ->
-    Printf.printf "[find_typ_var `%s` @@ %s]\n%!" y.it
-      (Source.string_of_region y.at);
-    assert false
-  | (_, env)::envs' ->
-    match E.find_opt_typ y !env with
-    | None -> find_typ_var ctxt y envs'
-    | Some {it = data; _} -> data
 
 
 (* Variables and Paths *)
@@ -339,7 +336,7 @@ let rec classify_pat p =
 
 let rec compile_pat ctxt fail p =
   let t = Source.et p in
-  let t' = lower_value_type ctxt p.at t pat_rep in
+  let t' = lower_value_type ctxt p.at pat_rep t in
   let emit ctxt = List.iter (emit_instr ctxt p.at) in
   match p.it with
   | WildP ->
@@ -358,7 +355,7 @@ let rec compile_pat ctxt fail p =
         DirectLoc idx
 
       | GlobalScope ->
-        let const = default_const ctxt x.at t (scope_rep scope) in
+        let const = default_const ctxt x.at (scope_rep scope) t in
         let idx = emit_global ctxt x.at W.Mutable t' const in
         emit ctxt W.[global_set (idx @@ p.at)];
         DirectLoc idx
@@ -381,26 +378,59 @@ let rec compile_pat ctxt fail p =
   | ConP (q, ps) ->
     (match T.norm (Source.et p) with
     | T.Var (y, _) ->
-      let data = find_typ_var ctxt Source.(y @@ q.at) ctxt.ext.envs in
-      let con = List.assoc (name_of_path q).it data in
-      assert (List.length ps = List.length con.flds);
       if ps = [] then begin
-        let bt = W.(VarBlockType (SynVar (emit_type ctxt p.at
-          (FuncDefType (FuncType ([anyreft], [i31reft])))))) in
-        emit_block ctxt p.at W.block bt (fun ctxt ->
-          emit ctxt W.[
-            br_on_i31 (0l @@ p.at);
-            br ((fail +% 1l) @@ p.at);
-          ]
-        );
+        compile_path ctxt q (Source.et p) BoxedRep;
         emit ctxt W.[
-          i31_get_u;
-          i32_const (con.tag @@ q.at);
-          i32_ne;
+          ref_eq;
+          i32_eqz;
           br_if (fail @@ p.at);
         ]
       end else begin
-        nyi p.at "constructor arguments"
+        let data = find_typ_var ctxt Source.(y @@ q.at) ctxt.ext.envs in
+        let con = List.assoc (name_of_path q).it data in
+        assert (List.length ps = List.length con.flds);
+        let bt1 = W.(VarBlockType (SynVar (emit_type ctxt p.at
+          (FuncDefType (FuncType ([eqreft], [datareft])))))) in
+        emit_block ctxt p.at W.block bt1 (fun ctxt ->
+          emit ctxt W.[
+            br_on_data (0l @@ p.at);
+            br ((fail +% 1l) @@ p.at);
+          ]
+        );
+(*
+        let tagt = W.(FieldType (ValueStorageType i32t, Immutable)) in
+        let stypeidx = emit_type ctxt q.at W.(StructDefType (StructType [tagt])) in
+        emit ctxt W.[
+          rtt_canon (stypeidx @@ q.at);
+          ref_cast;
+          struct_get (stypeidx @@ q.at) (0l @@ q.at);
+        ];
+*)
+        let ht = W.(defht (SynVar con.typeidx)) in
+        let bt2 = W.(VarBlockType (SynVar (emit_type ctxt p.at
+          (FuncDefType (FuncType ([datareft], [reft nonull ht])))))) in
+        emit_block ctxt p.at W.block bt2 (fun ctxt ->
+          compile_path ctxt q (Source.et p) BoxedRep;
+          emit ctxt W.[
+            br_on_cast (0l @@ p.at);
+            br ((fail +% 1l) @@ p.at);
+          ]
+        );
+        let tmp = emit_local ctxt p.at W.(reft null ht) in
+        emit ctxt W.[local_set (tmp @@ p.at)];
+        List.iteri (fun i pI ->
+          if classify_pat pI > IrrelevantPat then begin
+            emit ctxt W.[
+              local_get (tmp @@ p.at);
+              ref_as_non_null;
+              struct_get (con.typeidx @@ pI.at) (i32 (i + 1) @@ pI.at);
+            ];
+            let tI = List.nth con.flds i in
+            compile_coerce ctxt UnboxedRigidRep pat_rep tI p.at;
+            compile_pat ctxt fail pI;
+            compile_coerce ctxt BoxedRep pat_rep t p.at
+          end
+        ) ps
       end
     | _ -> assert false
     )
@@ -418,12 +448,12 @@ let rec compile_pat ctxt fail p =
   | TupP ps ->
     let typeidx = lower_var_type ctxt p.at t in
     let tmp = emit_local ctxt p.at
-      (lower_value_type ctxt p.at t UnboxedRigidRep) in
+      (lower_value_type ctxt p.at UnboxedRigidRep t) in
     compile_coerce ctxt pat_rep UnboxedRigidRep t p.at;
-    emit ctxt W.[local_tee (tmp @@ p.at)];
+    emit ctxt W.[local_set (tmp @@ p.at)];
     List.iteri (fun i pI ->
       if classify_pat pI > IrrelevantPat then begin
-        if i > 0 then emit ctxt W.[local_get (tmp @@ p.at)];
+        emit ctxt W.[local_get (tmp @@ p.at)];
         emit ctxt W.[struct_get (typeidx @@ pI.at) (i32 i @@ pI.at)];
         compile_pat ctxt fail pI;
         compile_coerce ctxt BoxedRep pat_rep t p.at
@@ -449,13 +479,7 @@ let rec compile_exp ctxt e dst =
   | ConE q ->
     (match T.norm (Source.et e) with
     | T.Var (y, _) ->
-      let data = find_typ_var ctxt Source.(y @@ q.at) ctxt.ext.envs in
-      let con = List.assoc (name_of_path q).it data in
-      assert (con.flds = []);
-      emit ctxt W.[
-        i32_const (con.tag @@ q.at);
-        i31_new;
-      ]
+      compile_path ctxt q (Source.et e) dst
     | T.Fun _ ->
       nyi e.at "partial constructor application"
     | _ ->
@@ -639,7 +663,35 @@ let rec compile_exp ctxt e dst =
 *)
 
   | AppE (e1, e2) ->
-    nyi e.at "function application"
+    let rec flat e1 es =
+      match e1.it with
+      | AppE (e1', e2') ->
+        flat e1' (e2'::es)
+
+      | ConE q ->
+        (match T.norm (Source.et e) with
+        | T.Var (y, _) ->
+          let data = find_typ_var ctxt Source.(y @@ q.at) ctxt.ext.envs in
+          let con = List.assoc (name_of_path q).it data in
+          assert (List.length es = List.length con.flds);
+          emit ctxt W.[i32_const (con.tag @@ q.at)];
+          List.iter (fun eI -> compile_exp ctxt eI UnboxedRigidRep) es;
+          compile_path ctxt q (Source.et e1) BoxedRep;
+          emit ctxt W.[
+            ref_as_non_null;
+            struct_new (con.typeidx @@ e1.at);
+          ];
+
+        | T.Fun _ ->
+          nyi e.at "partial constructor application"
+
+        | _ ->
+          assert false
+        )
+
+      | ef ->
+        nyi e.at "function application"
+    in flat e1 [e2]
 (*
     if ts <> [] && not !Flags.parametric then nyi e.at "generic function calls";
     let t1 =
@@ -702,7 +754,7 @@ let rec compile_exp ctxt e dst =
     compile_exp ctxt e1 dst
 
   | IfE (e1, e2, e3) ->
-    let bt = lower_block_type ctxt e.at (Source.et e) dst in
+    let bt = lower_block_type ctxt e.at dst (Source.et e) in
     emit_block ctxt e.at W.block bt (fun ctxt ->
       emit_block ctxt e.at W.block W.voidbt (fun ctxt ->
         compile_exp ctxt e1 UnboxedRigidRep;
@@ -715,13 +767,13 @@ let rec compile_exp ctxt e dst =
 
   | CaseE (e1, pes) ->
     let t1 = Source.et e1 in
-    let tmp = emit_local ctxt e1.at (lower_value_type ctxt e1.at t1 pat_rep) in
+    let tmp = emit_local ctxt e1.at (lower_value_type ctxt e1.at pat_rep t1) in
     compile_exp ctxt e1 (if pes = [] then DropRep else pat_rep);
     if pes = [] then
       emit ctxt W.[unreachable]
     else begin
       emit ctxt W.[local_set (tmp @@ e1.at)];
-      let bt = lower_block_type ctxt e.at (Source.et e) dst in
+      let bt = lower_block_type ctxt e.at dst (Source.et e) in
       emit_block ctxt e.at W.block bt (fun ctxt ->
         let ends_with_partial =
           List.fold_left (fun _ (pI, eI) ->
@@ -825,10 +877,60 @@ and compile_dec pass ctxt d dst =
     ()
 
   | DatD (y, _ys, xtss) ->
-    let _, env = List.hd ctxt.ext.envs in
-    let data = List.mapi (fun i (x, ts) ->
-        if ts <> [] then nyi d.at "constructor parameters";
-        (x.it, {tag = i32 i; typeidx = -1l; flds = []})
+    let scope, env = List.hd ctxt.ext.envs in
+    let tagt = W.(FieldType (ValueStorageType i32t, Immutable)) in
+    let stypeidx = emit_type ctxt y.at W.(StructDefType (StructType [tagt])) in
+    let rtttmp =
+      if List.for_all (fun (_, ts) -> ts = []) xtss then -1l else
+      let rtt = W.(RefType (Nullable, RttHeapType (SynVar stypeidx, Some 0l))) in
+      let tmp = emit_local ctxt y.at rtt in
+      emit ctxt W.[
+        rtt_canon (stypeidx @@ y.at);
+        local_set (tmp @@ y.at);
+      ];
+      tmp
+    in
+    let data =
+      List.mapi (fun i (x, ts) ->
+        let flds = List.map Source.et ts in
+        let fts = List.map
+          (lower_field_type ctxt x.at W.Immutable UnboxedRigidRep) flds in
+        let ht, typeidx =
+          if ts = [] then begin
+            emit ctxt W.[
+              i32_const (i32 i @@ x.at);
+              i31_new;
+            ];
+            W.I31HeapType, -1l
+          end else begin
+            let typeidx =
+              emit_type ctxt x.at W.(StructDefType (StructType (tagt::fts))) in
+            emit ctxt W.[
+              local_get (rtttmp @@ x.at);
+              ref_as_non_null;
+              rtt_sub (typeidx @@ x.at);
+            ];
+            W.RttHeapType (W.SynVar typeidx, Some 1l), typeidx
+          end
+        in
+        let t = W.(RefType (Nullable, ht)) in
+        let loc =
+          match scope with
+          | PreScope -> assert false
+
+          | LocalScope | ModuleScope ->
+            let idx = emit_local ctxt x.at t in
+            emit ctxt W.[local_set (idx @@ x.at)];
+            DirectLoc idx
+
+          | GlobalScope ->
+            let const = [W.ref_null ht @@ x.at] @@ x.at in
+            let idx = emit_global ctxt x.at W.Mutable t const in
+            emit ctxt W.[global_set (idx @@ x.at)];
+            DirectLoc idx
+        in
+        env := E.extend_val !env x loc;
+        (x.it, {tag = i32 i; typeidx; flds})
       ) (List.sort compare xtss)
     in env := E.extend_typ !env y data
 
@@ -897,8 +999,8 @@ let compile_prog p : W.module_ =
 *)
   let t, _ = Source.et p in
   let rep = scope_rep GlobalScope in
-  let vt = lower_value_type ctxt p.at t rep in
-  let const = default_const ctxt p.at t rep in
+  let vt = lower_value_type ctxt p.at rep t in
+  let const = default_const ctxt p.at rep t in
   let result_idx = emit_global ctxt p.at W.Mutable vt const in
   let start_idx =
     emit_func ctxt p.at [] [] (fun ctxt _ ->

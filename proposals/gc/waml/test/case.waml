@@ -20,12 +20,16 @@ assert (case (A, B) of { (A, A) => 1; (B, _) => 2; _ => 3 }) == 3;
 assert (case (B, B) of { (A, A) => 1; (B, _) => 2; _ => 3 }) == 2;
 assert (case (A, A) of { (A, A) => 1; (B, _) => 2; _ => 3 }) == 1;
 
-(; TODO
-data List a = Nil | Cons a (List a)
+data U = X | Y Int | Z Int Int;
+assert (case X of { X => 1; Y n => n; Z i j => i + j }) == 1;
+assert (case Y 2 of { X => 1; Y n => n; Z i j => i + j }) == 2;
+assert (case Z 4 5 of { X => 1; Y n => n; Z i j => i + j }) == 9;
 
+(; TODO
+data List a = Nil | Cons a (List a);
 val Nil = [];
 val [] = Nil;
 val Cons 5 [] = [5];
 val l = [6, 7, 8];
-val [6, _, 7] = 
+val [6, _, 7] = l;
 ;)
