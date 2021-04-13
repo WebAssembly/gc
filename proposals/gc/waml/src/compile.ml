@@ -375,63 +375,53 @@ let rec compile_pat ctxt fail p =
     );
     emit ctxt W.[br_if (fail @@ p.at)]
 
+  | ConP (q, []) ->
+    compile_path ctxt q (Source.et p) BoxedRep;
+    emit ctxt W.[
+      ref_eq;
+      i32_eqz;
+      br_if (fail @@ p.at);
+    ]
+
   | ConP (q, ps) ->
     (match T.norm (Source.et p) with
     | T.Var (y, _) ->
-      if ps = [] then begin
+      let data = find_typ_var ctxt Source.(y @@ q.at) ctxt.ext.envs in
+      let con = List.assoc (name_of_path q).it data in
+      assert (List.length ps = List.length con.flds);
+      let bt1 = W.(VarBlockType (SynVar (emit_type ctxt p.at
+        (FuncDefType (FuncType ([eqreft], [datareft])))))) in
+      emit_block ctxt p.at W.block bt1 (fun ctxt ->
+        emit ctxt W.[
+          br_on_data (0l @@ p.at);
+          br ((fail +% 1l) @@ p.at);
+        ]
+      );
+      let ht = W.(defht (SynVar con.typeidx)) in
+      let bt2 = W.(VarBlockType (SynVar (emit_type ctxt p.at
+        (FuncDefType (FuncType ([datareft], [reft nonull ht])))))) in
+      emit_block ctxt p.at W.block bt2 (fun ctxt ->
         compile_path ctxt q (Source.et p) BoxedRep;
         emit ctxt W.[
-          ref_eq;
-          i32_eqz;
-          br_if (fail @@ p.at);
+          br_on_cast (0l @@ p.at);
+          br ((fail +% 1l) @@ p.at);
         ]
-      end else begin
-        let data = find_typ_var ctxt Source.(y @@ q.at) ctxt.ext.envs in
-        let con = List.assoc (name_of_path q).it data in
-        assert (List.length ps = List.length con.flds);
-        let bt1 = W.(VarBlockType (SynVar (emit_type ctxt p.at
-          (FuncDefType (FuncType ([eqreft], [datareft])))))) in
-        emit_block ctxt p.at W.block bt1 (fun ctxt ->
+      );
+      let tmp = emit_local ctxt p.at W.(reft null ht) in
+      emit ctxt W.[local_set (tmp @@ p.at)];
+      List.iteri (fun i pI ->
+        if classify_pat pI > IrrelevantPat then begin
           emit ctxt W.[
-            br_on_data (0l @@ p.at);
-            br ((fail +% 1l) @@ p.at);
-          ]
-        );
-(*
-        let tagt = W.(FieldType (ValueStorageType i32t, Immutable)) in
-        let stypeidx = emit_type ctxt q.at W.(StructDefType (StructType [tagt])) in
-        emit ctxt W.[
-          rtt_canon (stypeidx @@ q.at);
-          ref_cast;
-          struct_get (stypeidx @@ q.at) (0l @@ q.at);
-        ];
-*)
-        let ht = W.(defht (SynVar con.typeidx)) in
-        let bt2 = W.(VarBlockType (SynVar (emit_type ctxt p.at
-          (FuncDefType (FuncType ([datareft], [reft nonull ht])))))) in
-        emit_block ctxt p.at W.block bt2 (fun ctxt ->
-          compile_path ctxt q (Source.et p) BoxedRep;
-          emit ctxt W.[
-            br_on_cast (0l @@ p.at);
-            br ((fail +% 1l) @@ p.at);
-          ]
-        );
-        let tmp = emit_local ctxt p.at W.(reft null ht) in
-        emit ctxt W.[local_set (tmp @@ p.at)];
-        List.iteri (fun i pI ->
-          if classify_pat pI > IrrelevantPat then begin
-            emit ctxt W.[
-              local_get (tmp @@ p.at);
-              ref_as_non_null;
-              struct_get (con.typeidx @@ pI.at) (i32 (i + 1) @@ pI.at);
-            ];
-            let tI = List.nth con.flds i in
-            compile_coerce ctxt UnboxedRigidRep pat_rep tI p.at;
-            compile_pat ctxt fail pI;
-            compile_coerce ctxt BoxedRep pat_rep t p.at
-          end
-        ) ps
-      end
+            local_get (tmp @@ p.at);
+            ref_as_non_null;
+            struct_get (con.typeidx @@ pI.at) (i32 (i + 1) @@ pI.at);
+          ];
+          let tI = List.nth con.flds i in
+          compile_coerce ctxt UnboxedRigidRep pat_rep tI p.at;
+          compile_pat ctxt fail pI;
+          compile_coerce ctxt BoxedRep pat_rep t p.at
+        end
+      ) ps
     | _ -> assert false
     )
 
@@ -675,7 +665,13 @@ let rec compile_exp ctxt e dst =
           let con = List.assoc (name_of_path q).it data in
           assert (List.length es = List.length con.flds);
           emit ctxt W.[i32_const (con.tag @@ q.at)];
-          List.iter (fun eI -> compile_exp ctxt eI UnboxedRigidRep) es;
+          List.iteri (fun i eI ->
+            let rep =
+              match T.norm (List.nth con.flds i) with
+              | T.Var _ -> BoxedRep
+              | _ -> UnboxedRigidRep
+            in compile_exp ctxt eI rep
+          ) es;
           compile_path ctxt q (Source.et e1) BoxedRep;
           emit ctxt W.[
             ref_as_non_null;

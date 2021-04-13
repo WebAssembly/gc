@@ -18,12 +18,11 @@ val ref () = ref ();
 
 val (5.6, "", _, (), (5, q), ()) = (5.6, "", x, (), (5, 6), ());
 
-(; TODO
-data List a = Nil | Cons a (List a)
+
+data List a = Nil | Cons a (List a);
 
 val Nil = [];
 val [] = Nil;
 val Cons 5 [] = [5];
 val l = [6, 7, 8];
-val [6, _, 7] = 
-;)
+val [6, _, 8] = l;
