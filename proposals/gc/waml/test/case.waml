@@ -1,0 +1,26 @@
+;; Case pattern bindings
+
+assert (case 5 of _ => 1) == 1;
+assert (case 6 of n => n) == 6;
+assert (case 7 of n : Int => n) == 7;
+assert (case () of () => 1) == 1;
+assert (case (3, 4, 5) of (x, y : Int, z) : (Int, Int, Int) => x + y + z) == 12;
+assert (case ref 5 of ref m => m) == 5;
+
+assert (case (5.6, "", 2, (), (5, 6), ()) of (5.6, "", p, (), (5, q), ()) => p + q) == 8;
+
+assert (case 5 of { 1 => 2; 3 => 4; 5 => 6; _ => 0 }) == 6;
+assert (case 5 of { 1 => 2; 3 => 4; 6 => 7; _ => 0; 5 => 1; }) == 0;
+assert (case (5, 6) of { (4, 6) => 1; (5, 7) => 2; (x, 5) => x; _ => 3 }) == 3;
+assert (case (5, 6) of { (4, 6) => 1; (5, 7) => 2; (x, 6) => x; _ => 3 }) == 5;
+assert (case (5, 6) of { (4, 6) => 1; (5, 7) => 2; (y, 5) => y; (x, y) => x+y }) == 11;
+
+(; TODO
+data List a = Nil | Cons a (List a)
+
+val Nil = [];
+val [] = Nil;
+val Cons 5 [] = [5];
+val l = [6, 7, 8];
+val [6, _, 7] = 
+;)

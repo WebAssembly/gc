@@ -1,0 +1,3 @@
+;; @FAIL-WASM
+
+val f x = x + x;
