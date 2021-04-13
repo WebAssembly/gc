@@ -12,6 +12,7 @@ module W = Emit.W
 let (@@) = W.Source.(@@)
 
 let i32 = W.I32.of_int_s
+let (+%) = Int32.add
 
 
 (* Failure *)
@@ -26,7 +27,9 @@ let nyi at s = raise (NYI (at, s))
 type loc =
   | DirectLoc of int32
 
-type env = (loc, unit, loc, unit) E.env
+type data_con = {tag : int32; typeidx : int32; flds : W.field_type list}
+type data = (string * data_con) list
+type env = (loc, data, loc, unit) E.env
 type scope = PreScope | LocalScope | GlobalScope | ModuleScope
 
 
@@ -46,12 +49,13 @@ type ctxt_ext = {envs : (scope * env ref) list}
 type ctxt = ctxt_ext Emit.ctxt
 
 let make_ext_ctxt () : ctxt_ext = {envs = [(PreScope, make_env ())]}
-let make_ctxt () : ctxt = Emit.make_ctxt (make_ext_ctxt ())
+let make_ctxt () : ctxt =
+  Emit.make_ctxt (make_ext_ctxt ())
 
 let enter_scope ctxt scope : ctxt =
   {ctxt with ext = {envs = (scope, ref E.empty) :: ctxt.ext.envs}}
 
-let current_scope ctxt : scope* env ref =
+let current_scope ctxt : scope * env ref =
   List.hd ctxt.ext.envs
 
 (*
@@ -246,6 +250,20 @@ let compile_coerce ctxt src dst t at =
   | _ -> assert false
 
 
+(* Types *)
+
+let rec find_typ_var ctxt y envs : data =
+  match envs with
+  | [] ->
+    Printf.printf "[find_typ_var `%s` @@ %s]\n%!" y.it
+      (Source.string_of_region y.at);
+    assert false
+  | (_, env)::envs' ->
+    match E.find_opt_typ y !env with
+    | None -> find_typ_var ctxt y envs'
+    | Some {it = data; _} -> data
+
+
 (* Variables and Paths *)
 
 let compile_lit ctxt l at =
@@ -299,6 +317,11 @@ let compile_path ctxt q t dst =
   match q.it with
   | PlainP x -> compile_var ctxt x t dst
   | QualP _ -> nyi q.at "qualified paths"
+
+let name_of_path q =
+  match q.it with
+  | PlainP x -> x
+  | QualP (_, x) -> x
 
 
 (* Patterns *)
@@ -356,7 +379,31 @@ let rec compile_pat ctxt fail p =
     emit ctxt W.[br_if (fail @@ p.at)]
 
   | ConP (q, ps) ->
-    nyi p.at "constructor patterns"
+    (match T.norm (Source.et p) with
+    | T.Var (y, _) ->
+      let data = find_typ_var ctxt Source.(y @@ q.at) ctxt.ext.envs in
+      let con = List.assoc (name_of_path q).it data in
+      assert (List.length ps = List.length con.flds);
+      if ps = [] then begin
+        let bt = W.(VarBlockType (SynVar (emit_type ctxt p.at
+          (FuncDefType (FuncType ([anyreft], [i31reft])))))) in
+        emit_block ctxt p.at W.block bt (fun ctxt ->
+          emit ctxt W.[
+            br_on_i31 (0l @@ p.at);
+            br ((fail +% 1l) @@ p.at);
+          ]
+        );
+        emit ctxt W.[
+          i31_get_u;
+          i32_const (con.tag @@ q.at);
+          i32_ne;
+          br_if (fail @@ p.at);
+        ]
+      end else begin
+        nyi p.at "constructor arguments"
+      end
+    | _ -> assert false
+    )
 
   | RefP p1 ->
     let typeidx = lower_var_type ctxt p.at t in
@@ -400,7 +447,20 @@ let rec compile_exp ctxt e dst =
     compile_coerce ctxt UnboxedRigidRep dst (Source.et e) e.at
 
   | ConE q ->
-    nyi e.at "constructor expressions"
+    (match T.norm (Source.et e) with
+    | T.Var (y, _) ->
+      let data = find_typ_var ctxt Source.(y @@ q.at) ctxt.ext.envs in
+      let con = List.assoc (name_of_path q).it data in
+      assert (con.flds = []);
+      emit ctxt W.[
+        i32_const (con.tag @@ q.at);
+        i31_new;
+      ]
+    | T.Fun _ ->
+      nyi e.at "partial constructor application"
+    | _ ->
+      assert false
+    )
 
   | UnE (op, e1) ->
     (match op, Source.et e with
@@ -764,8 +824,13 @@ and compile_dec pass ctxt d dst =
   | TypD _ ->
     ()
 
-  | DatD _ ->
-    nyi d.at "data type definitions"
+  | DatD (y, _ys, xtss) ->
+    let _, env = List.hd ctxt.ext.envs in
+    let data = List.mapi (fun i (x, ts) ->
+        if ts <> [] then nyi d.at "constructor parameters";
+        (x.it, {tag = i32 i; typeidx = -1l; flds = []})
+      ) (List.sort compare xtss)
+    in env := E.extend_typ !env y data
 
   | ModD _ ->
     nyi d.at "module definitions"

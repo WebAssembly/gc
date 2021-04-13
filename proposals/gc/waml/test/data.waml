@@ -1,0 +1,9 @@
+;; Data types
+
+data T = A | B;
+
+val a = A;
+val b = B;
+
+val A = a;
+val B = b;

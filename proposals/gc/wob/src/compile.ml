@@ -120,7 +120,7 @@ let make_ctxt () : ctxt =
 let enter_scope ctxt scope : ctxt =
   {ctxt with ext = {ctxt.ext with envs = (scope, ref E.empty) :: ctxt.ext.envs}}
 
-let current_scope ctxt : scope* env ref =
+let current_scope ctxt : scope * env ref =
   List.hd ctxt.ext.envs
 
 

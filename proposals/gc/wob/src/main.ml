@@ -39,8 +39,6 @@ let argspec = Arg.align
     " output textual Wasm";
   "-w", Arg.Int (fun n -> Flags.width := n),
     " configure output width (default is 80)";
-  "-v", Arg.Unit banner,
-    " show version";
   "-t", Arg.Set Flags.trace,
     " trace execution";
   "-h", Arg.Unit (fun () -> !help ()),
