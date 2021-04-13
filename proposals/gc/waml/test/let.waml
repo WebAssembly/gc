@@ -1,0 +1,36 @@
+;; Let expressions
+
+val x =
+  let val x = 1 in
+  let val y = x in
+  let val z = y in
+  x + y + z;
+
+assert x == 3;
+
+val y =
+  let val x = 1 in
+  let val x = x+1 in
+  let val x = x in
+  x;
+
+assert y == 2;
+
+val z =
+  let val x = 1; val y = 2 in
+  let val (x, y) = (y, x) in
+  x - y;
+
+assert z == 1;
+
+val (a1, a2, a3, a4) =
+  let val x = 1 in
+  let val (y1, y2, y3) = let val a = x; val x = 2; val b = x in (a, x, b) in
+  (x, y1, y2, y3);
+
+assert a1 == 1;
+assert a2 == 1;
+assert a3 == 2;
+assert a4 == 2;
+
+assert (let type T = Int in 4 : T) == 4;

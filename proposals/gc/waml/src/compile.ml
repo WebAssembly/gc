@@ -693,7 +693,9 @@ let rec compile_exp ctxt e dst =
     end
 
   | LetE (ds, e1) ->
-    nyi e.at "let expressions"
+    let ctxt = enter_scope ctxt LocalScope in
+    compile_decs FullPass ctxt ds;
+    compile_exp ctxt e1 dst
 
 
 (* Declarations *)
