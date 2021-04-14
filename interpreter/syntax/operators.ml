@@ -15,6 +15,11 @@ let f32t = NumType F32Type
 let f64t = NumType F64Type
 
 let reft n ht = RefType (n, ht)
+let anyreft = reft null AnyHeapType
+let eqreft = reft null EqHeapType
+let i31reft = reft nonull I31HeapType
+let datareft = reft nonull DataHeapType
+let funcreft = reft nonull FuncHeapType
 
 let anyht = AnyHeapType
 let eqht = EqHeapType
