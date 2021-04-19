@@ -37,47 +37,47 @@ struct
 
   (* Generic values *)
 
-  let u8 i = put s (Char.chr (i land 0xff))
-  let u16 i = u8 (i land 0xff); u8 (i lsr 8)
-  let u32 i =
-    Int32.(u16 (to_int (logand i 0xffffl));
-           u16 (to_int (shift_right i 16)))
-  let u64 i =
-    Int64.(u32 (to_int32 (logand i 0xffffffffL));
-           u32 (to_int32 (shift_right i 32)))
+  let int8 i = put s (Char.chr (i land 0xff))
+  let int16 i = int8 (i land 0xff); int8 (i lsr 8)
+  let int32 i =
+    Int32.(int16 (to_int (logand i 0xffffl));
+           int16 (to_int (shift_right i 16)))
+  let int64 i =
+    Int64.(int32 (to_int32 (logand i 0xffffffffL));
+           int32 (to_int32 (shift_right i 32)))
 
-  let rec vu64 i =
+  let rec u64 i =
     let b = Int64.(to_int (logand i 0x7fL)) in
-    if 0L <= i && i < 128L then u8 b
-    else (u8 (b lor 0x80); vu64 (Int64.shift_right_logical i 7))
+    if 0L <= i && i < 128L then int8 b
+    else (int8 (b lor 0x80); u64 (Int64.shift_right_logical i 7))
 
-  let rec vs64 i =
+  let rec s64 i =
     let b = Int64.(to_int (logand i 0x7fL)) in
-    if -64L <= i && i < 64L then u8 b
-    else (u8 (b lor 0x80); vs64 (Int64.shift_right i 7))
+    if -64L <= i && i < 64L then int8 b
+    else (int8 (b lor 0x80); s64 (Int64.shift_right i 7))
 
-  let vu1 i = vu64 Int64.(logand (of_int i) 1L)
-  let vu32 i = vu64 Int64.(logand (of_int32 i) 0xffffffffL)
-  let vs7 i = vs64 (Int64.of_int i)
-  let vs32 i = vs64 (Int64.of_int32 i)
-  let vs33 i = vs64 (I64_convert.extend_i32_s i)
-  let f32 x = u32 (F32.to_bits x)
-  let f64 x = u64 (F64.to_bits x)
+  let u1 i = u64 Int64.(logand (of_int i) 1L)
+  let u32 i = u64 Int64.(logand (of_int32 i) 0xffffffffL)
+  let s7 i = s64 (Int64.of_int i)
+  let s32 i = s64 (Int64.of_int32 i)
+  let s33 i = s64 (I64_convert.extend_i32_s i)
+  let f32 x = int32 (F32.to_bits x)
+  let f64 x = int64 (F64.to_bits x)
 
   let len i =
     if Int32.to_int (Int32.of_int i) <> i then
       Code.error Source.no_region
         "cannot encode length with more than 32 bit";
-    vu32 (Int32.of_int i)
+    u32 (Int32.of_int i)
 
-  let bool b = vu1 (if b then 1 else 0)
+  let bool b = u1 (if b then 1 else 0)
   let string bs = len (String.length bs); put_string s bs
   let name n = string (Utf8.encode n)
   let list f xs = List.iter f xs
   let opt f xo = Lib.Option.app f xo
   let vec f xs = len (List.length xs); list f xs
 
-  let gap32 () = let p = pos s in u32 0l; u8 0; p
+  let gap32 () = let p = pos s in int32 0l; int8 0; p
   let patch_gap32 p n =
     assert (n <= 0x0fff_ffff); (* Strings cannot excess 2G anyway *)
     let lsb i = Char.chr (i land 0xff) in
@@ -92,36 +92,36 @@ struct
   open Types
 
   let mutability = function
-    | Immutable -> u8 0
-    | Mutable -> u8 1
+    | Immutable -> int8 0
+    | Mutable -> int8 1
 
   let var_type = function
-    | SynVar x -> vs33 x
+    | SynVar x -> s33 x
     | SemVar _ -> assert false
 
   let num_type = function
-    | I32Type -> vs7 (-0x01)
-    | I64Type -> vs7 (-0x02)
-    | F32Type -> vs7 (-0x03)
-    | F64Type -> vs7 (-0x04)
+    | I32Type -> s7 (-0x01)
+    | I64Type -> s7 (-0x02)
+    | F32Type -> s7 (-0x03)
+    | F64Type -> s7 (-0x04)
 
   let heap_type = function
-    | AnyHeapType -> vs7 (-0x12)
-    | EqHeapType -> vs7 (-0x13)
-    | I31HeapType -> vs7 (-0x16)
-    | DataHeapType -> vs7 (-0x19)
-    | FuncHeapType -> vs7 (-0x10)
-    | ExternHeapType -> vs7 (-0x11)
+    | AnyHeapType -> s7 (-0x12)
+    | EqHeapType -> s7 (-0x13)
+    | I31HeapType -> s7 (-0x16)
+    | DataHeapType -> s7 (-0x19)
+    | FuncHeapType -> s7 (-0x10)
+    | ExternHeapType -> s7 (-0x11)
     | DefHeapType x -> var_type x
-    | RttHeapType (x, None) -> vs7 (-0x18); var_type x
-    | RttHeapType (x, Some n) -> vs7 (-0x17); vs32 n; var_type x
+    | RttHeapType (x, None) -> s7 (-0x18); var_type x
+    | RttHeapType (x, Some n) -> s7 (-0x17); s32 n; var_type x
     | BotHeapType -> assert false
 
   let ref_type = function
-    | (Nullable, FuncHeapType) -> vs32 (-0x10l)
-    | (Nullable, ExternHeapType) -> vs32 (-0x11l)
-    | (Nullable, t) -> vs33 (-0x14l); heap_type t
-    | (NonNullable, t) -> vs33 (-0x15l); heap_type t
+    | (Nullable, FuncHeapType) -> s32 (-0x10l)
+    | (Nullable, ExternHeapType) -> s32 (-0x11l)
+    | (Nullable, t) -> s33 (-0x14l); heap_type t
+    | (NonNullable, t) -> s33 (-0x15l); heap_type t
 
   let value_type = function
     | NumType t -> num_type t
@@ -129,8 +129,8 @@ struct
     | BotType -> assert false
 
   let packed_type = function
-    | Pack8 -> vs7 (-0x06)
-    | Pack16 -> vs7 (-0x07)
+    | Pack8 -> s7 (-0x06)
+    | Pack16 -> s7 (-0x07)
     | Pack32 -> assert false
 
   let storage_type = function
@@ -150,18 +150,18 @@ struct
     | FuncType (ts1, ts2) -> vec value_type ts1; vec value_type ts2
 
   let def_type = function
-    | StructDefType st -> vs7 (-0x21); struct_type st
-    | ArrayDefType at -> vs7 (-0x22); array_type at
-    | FuncDefType ft -> vs7 (-0x20); func_type ft
+    | StructDefType st -> s7 (-0x21); struct_type st
+    | ArrayDefType at -> s7 (-0x22); array_type at
+    | FuncDefType ft -> s7 (-0x20); func_type ft
 
-  let limits vu {min; max} =
-    bool (max <> None); vu min; opt vu max
+  let limits uN {min; max} =
+    bool (max <> None); uN min; opt uN max
 
   let table_type = function
-    | TableType (lim, t) -> ref_type t; limits vu32 lim
+    | TableType (lim, t) -> ref_type t; limits u32 lim
 
   let memory_type = function
-    | MemoryType lim -> limits vu32 lim
+    | MemoryType lim -> limits u32 lim
 
   let global_type = function
     | GlobalType (t, mut) -> value_type t; mutability mut
@@ -173,17 +173,17 @@ struct
   open Ast
   open Value
 
-  let op n = u8 n
+  let op n = int8 n
   let end_ () = op 0x0b
 
-  let memop {align; offset; _} = vu32 (Int32.of_int align); vu32 offset
+  let memop {align; offset; _} = u32 (Int32.of_int align); u32 offset
 
-  let var x = vu32 x.it
+  let var x = u32 x.it
 
   let block_type = function
-    | ValBlockType None -> vs33 (-0x40l)
+    | ValBlockType None -> s33 (-0x40l)
     | ValBlockType (Some t) -> value_type t
-    | VarBlockType (SynVar x) -> vs33 x
+    | VarBlockType (SynVar x) -> s33 x
     | VarBlockType (SemVar _) -> assert false
 
   let local (t, n) = len n; value_type t.it
@@ -235,12 +235,12 @@ struct
 
     | TableGet x -> op 0x25; var x
     | TableSet x -> op 0x26; var x
-    | TableSize x -> op 0xfc; vu32 0x10l; var x
-    | TableGrow x -> op 0xfc; vu32 0x0fl; var x
-    | TableFill x -> op 0xfc; vu32 0x11l; var x
-    | TableCopy (x, y) -> op 0xfc; vu32 0x0el; var x; var y
-    | TableInit (x, y) -> op 0xfc; vu32 0x0cl; var y; var x
-    | ElemDrop x -> op 0xfc; vu32 0x0dl; var x
+    | TableSize x -> op 0xfc; u32 0x10l; var x
+    | TableGrow x -> op 0xfc; u32 0x0fl; var x
+    | TableFill x -> op 0xfc; u32 0x11l; var x
+    | TableCopy (x, y) -> op 0xfc; u32 0x0el; var x; var y
+    | TableInit (x, y) -> op 0xfc; u32 0x0cl; var y; var x
+    | ElemDrop x -> op 0xfc; u32 0x0dl; var x
 
     | Load ({ty = I32Type; sz = None; _} as mo) -> op 0x28; memop mo
     | Load ({ty = I64Type; sz = None; _} as mo) -> op 0x29; memop mo
@@ -283,12 +283,12 @@ struct
     | Store ({ty = I64Type; sz = Some Pack32; _} as mo) -> op 0x3e; memop mo
     | Store {ty = F32Type | F64Type; sz = Some _; _} -> assert false
 
-    | MemorySize -> op 0x3f; u8 0x00
-    | MemoryGrow -> op 0x40; u8 0x00
-    | MemoryFill -> op 0xfc; vu32 0x0bl; u8 0x00
-    | MemoryCopy -> op 0xfc; vu32 0x0al; u8 0x00; u8 0x00
-    | MemoryInit x -> op 0xfc; vu32 0x08l; var x; u8 0x00
-    | DataDrop x -> op 0xfc; vu32 0x09l; var x
+    | MemorySize -> op 0x3f; int8 0x00
+    | MemoryGrow -> op 0x40; int8 0x00
+    | MemoryFill -> op 0xfc; u32 0x0bl; int8 0x00
+    | MemoryCopy -> op 0xfc; u32 0x0al; int8 0x00; int8 0x00
+    | MemoryInit x -> op 0xfc; u32 0x08l; var x; int8 0x00
+    | DataDrop x -> op 0xfc; u32 0x09l; var x
 
     | RefNull t -> op 0xd0; heap_type t
     | RefFunc x -> op 0xd2; var x
@@ -329,8 +329,8 @@ struct
     | RttCanon x -> op 0xfb; op 0x30; var x
     | RttSub x -> op 0xfb; op 0x31; var x
 
-    | Const {it = I32 c; _} -> op 0x41; vs32 c
-    | Const {it = I64 c; _} -> op 0x42; vs64 c
+    | Const {it = I32 c; _} -> op 0x41; s32 c
+    | Const {it = I64 c; _} -> op 0x42; s64 c
     | Const {it = F32 c; _} -> op 0x43; f32 c
     | Const {it = F64 c; _} -> op 0x44; f64 c
 
@@ -460,10 +460,10 @@ struct
     | Convert (I32 I32Op.TruncUF32) -> op 0xa9
     | Convert (I32 I32Op.TruncSF64) -> op 0xaa
     | Convert (I32 I32Op.TruncUF64) -> op 0xab
-    | Convert (I32 I32Op.TruncSatSF32) -> op 0xfc; vu32 0x00l
-    | Convert (I32 I32Op.TruncSatUF32) -> op 0xfc; vu32 0x01l
-    | Convert (I32 I32Op.TruncSatSF64) -> op 0xfc; vu32 0x02l
-    | Convert (I32 I32Op.TruncSatUF64) -> op 0xfc; vu32 0x03l
+    | Convert (I32 I32Op.TruncSatSF32) -> op 0xfc; u32 0x00l
+    | Convert (I32 I32Op.TruncSatUF32) -> op 0xfc; u32 0x01l
+    | Convert (I32 I32Op.TruncSatSF64) -> op 0xfc; u32 0x02l
+    | Convert (I32 I32Op.TruncSatUF64) -> op 0xfc; u32 0x03l
     | Convert (I32 I32Op.ReinterpretFloat) -> op 0xbc
 
     | Convert (I64 I64Op.ExtendSI32) -> op 0xac
@@ -473,10 +473,10 @@ struct
     | Convert (I64 I64Op.TruncUF32) -> op 0xaf
     | Convert (I64 I64Op.TruncSF64) -> op 0xb0
     | Convert (I64 I64Op.TruncUF64) -> op 0xb1
-    | Convert (I64 I64Op.TruncSatSF32) -> op 0xfc; vu32 0x04l
-    | Convert (I64 I64Op.TruncSatUF32) -> op 0xfc; vu32 0x05l
-    | Convert (I64 I64Op.TruncSatSF64) -> op 0xfc; vu32 0x06l
-    | Convert (I64 I64Op.TruncSatUF64) -> op 0xfc; vu32 0x07l
+    | Convert (I64 I64Op.TruncSatSF32) -> op 0xfc; u32 0x04l
+    | Convert (I64 I64Op.TruncSatUF32) -> op 0xfc; u32 0x05l
+    | Convert (I64 I64Op.TruncSatSF64) -> op 0xfc; u32 0x06l
+    | Convert (I64 I64Op.TruncSatUF64) -> op 0xfc; u32 0x07l
     | Convert (I64 I64Op.ReinterpretFloat) -> op 0xbd
 
     | Convert (F32 F32Op.ConvertSI32) -> op 0xb2
@@ -502,7 +502,7 @@ struct
 
   let section id f x needed =
     if needed then begin
-      u8 id;
+      int8 id;
       let g = gap32 () in
       let p = pos s in
       f x;
@@ -518,10 +518,10 @@ struct
   (* Import section *)
   let import_desc d =
     match d.it with
-    | FuncImport x -> u8 0x00; var x
-    | TableImport t -> u8 0x01; table_type t
-    | MemoryImport t -> u8 0x02; memory_type t
-    | GlobalImport t -> u8 0x03; global_type t
+    | FuncImport x -> int8 0x00; var x
+    | TableImport t -> int8 0x01; table_type t
+    | MemoryImport t -> int8 0x02; memory_type t
+    | GlobalImport t -> int8 0x03; global_type t
 
   let import im =
     let {module_name; item_name; idesc} = im.it in
@@ -563,10 +563,10 @@ struct
   (* Export section *)
   let export_desc d =
     match d.it with
-    | FuncExport x -> u8 0; var x
-    | TableExport x -> u8 1; var x
-    | MemoryExport x -> u8 2; var x
-    | GlobalExport x -> u8 3; var x
+    | FuncExport x -> int8 0; var x
+    | TableExport x -> int8 1; var x
+    | MemoryExport x -> int8 2; var x
+    | GlobalExport x -> int8 3; var x
 
   let export ex =
     let {name = n; edesc} = ex.it in
@@ -598,7 +598,7 @@ struct
     | _ -> false
 
   let elem_kind = function
-    | (NonNullable, FuncHeapType) -> u8 0x00
+    | (NonNullable, FuncHeapType) -> int8 0x00
     | _ -> assert false
 
   let is_elem_index e =
@@ -616,24 +616,24 @@ struct
     if is_elem_kind etype && List.for_all is_elem_index einit then
       match emode.it with
       | Passive ->
-        vu32 0x01l; elem_kind etype; vec elem_index einit
+        u32 0x01l; elem_kind etype; vec elem_index einit
       | Active {index; offset} when index.it = 0l ->
-        vu32 0x00l; const offset; vec elem_index einit
+        u32 0x00l; const offset; vec elem_index einit
       | Active {index; offset} ->
-        vu32 0x02l;
+        u32 0x02l;
         var index; const offset; elem_kind etype; vec elem_index einit
       | Declarative ->
-        vu32 0x03l; elem_kind etype; vec elem_index einit
+        u32 0x03l; elem_kind etype; vec elem_index einit
     else
       match emode.it with
       | Passive ->
-        vu32 0x05l; ref_type etype; vec const einit
+        u32 0x05l; ref_type etype; vec const einit
       | Active {index; offset} when index.it = 0l && is_elem_kind etype ->
-        vu32 0x04l; const offset; vec const einit
+        u32 0x04l; const offset; vec const einit
       | Active {index; offset} ->
-        vu32 0x06l; var index; const offset; ref_type etype; vec const einit
+        u32 0x06l; var index; const offset; ref_type etype; vec const einit
       | Declarative ->
-        vu32 0x07l; ref_type etype; vec const einit
+        u32 0x07l; ref_type etype; vec const einit
 
   let elem_section elems =
     section 9 (vec elem) elems (elems <> [])
@@ -643,11 +643,11 @@ struct
     let {dinit; dmode} = seg.it in
     match dmode.it with
     | Passive ->
-      vu32 0x01l; string dinit
+      u32 0x01l; string dinit
     | Active {index; offset} when index.it = 0l ->
-      vu32 0x00l; const offset; string dinit
+      u32 0x00l; const offset; string dinit
     | Active {index; offset} ->
-      vu32 0x02l; var index; const offset; string dinit
+      u32 0x02l; var index; const offset; string dinit
     | Declarative ->
       assert false
 
@@ -668,8 +668,8 @@ struct
 
   (* Module *)
   let module_ m =
-    u32 0x6d736100l;
-    u32 version;
+    int32 0x6d736100l;
+    int32 version;
     type_section m.it.types;
     import_section m.it.imports;
     func_section m.it.funcs;

@@ -25,7 +25,7 @@ val lookup_param_type : 'a ctxt -> int32 -> int -> W.value_type
 val lookup_field_type : 'a ctxt -> int32 -> int32 -> W.value_type
 val lookup_ref_field_type : 'a ctxt -> int32 -> int32 -> int32
 
-val lookup_intrinsic : 'a ctxt -> string -> (unit -> int32) -> int32
+val lookup_intrinsic : 'a ctxt -> string -> ((int32 -> unit) -> int32) -> int32
 
 
 (* Emitter *)

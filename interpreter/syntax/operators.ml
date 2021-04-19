@@ -6,53 +6,54 @@ open Ast
 
 (* Types *)
 
-let nonull = NonNullable
-let null = Nullable
+let i32 = NumType I32Type
+let i64 = NumType I64Type
+let f32 = NumType F32Type
+let f64 = NumType F64Type
 
-let i32t = NumType I32Type
-let i64t = NumType I64Type
-let f32t = NumType F32Type
-let f64t = NumType F64Type
+let any = AnyHeapType
+let eq = EqHeapType
+let i31 = I31HeapType
+let data = DataHeapType
+let func = FuncHeapType
+let extern = ExternHeapType
+let type_ x = DefHeapType (SynVar x)
+let rtt x = RttHeapType (SynVar x, None)
+let rtt_n x n = RttHeapType (SynVar x, Some n)
 
-let reft n ht = RefType (n, ht)
-let anyreft = reft null AnyHeapType
-let eqreft = reft null EqHeapType
-let i31reft = reft nonull I31HeapType
-let datareft = reft nonull DataHeapType
-let funcreft = reft nonull FuncHeapType
+let ref_heap ht = RefType (NonNullable, ht)
+let ref_null_heap ht = RefType (Nullable, ht)
+let ref_ x = ref_heap (type_ x)
+let ref_null_ x = ref_null_heap (type_ x)
+let anyref = ref_null_heap any
+let eqref = ref_null_heap eq
+let i31ref = ref_null_heap i31
+let dataref = ref_null_heap data
+let funcref = ref_null_heap func
+let rttref x = ref_heap (rtt x)
+let rttref_n x n = ref_heap (rtt_n x n)
 
-let anyht = AnyHeapType
-let eqht = EqHeapType
-let i31ht = I31HeapType
-let dataht = DataHeapType
-let funcht = FuncHeapType
-let externht = ExternHeapType
-let defht x = DefHeapType x
-let rttht x no = RttHeapType (x, no)
+let i8 = Pack8
+let i16 = Pack16
+let field t = FieldType (ValueStorageType t, Immutable)
+let field_mut t = FieldType (ValueStorageType t, Mutable)
+let field_pack t = FieldType (PackedStorageType t, Immutable)
+let field_mut_pack t = FieldType (PackedStorageType t, Mutable)
 
-let i8st = PackedStorageType Pack8
-let i16st = PackedStorageType Pack16
-let valst t = ValueStorageType t
-let i32st = valst i32t
-let i64st = valst i64t
-let f32st = valst f32t
-let f64st = valst f64t
-let const st = FieldType (st, Immutable)
-let var st = FieldType (st, Mutable)
+let type_struct fts = StructDefType (StructType fts)
+let type_array ft = ArrayDefType (ArrayType ft)
+let type_func ts1 ts2 = FuncDefType (FuncType (ts1, ts2))
 
-let structt fts = StructDefType (StructType fts)
-let arrayt ft = ArrayDefType (ArrayType ft)
-let funct ts1 ts2 = FuncDefType (FuncType (ts1, ts2))
+let void = ValBlockType None
+let result t = ValBlockType (Some t)
+let typeuse x = VarBlockType (SynVar x)
 
-let voidbt = ValBlockType None
-let valbt t = ValBlockType (Some t)
-let varbt x = VarBlockType (SynVar x)
-
-let lim x y = {min = x; max = y}
-let tablet lim rt = TableType (lim, rt)
-let memoryt lim = MemoryType lim
-let globalt t = GlobalType (t, Immutable)
-let globalt_mut t = GlobalType (t, Mutable)
+let lim n m = {min = n; max = Some m}
+let lim_inf n = {min = n; max = None}
+let table_type lim rt = TableType (lim, rt)
+let memory_type lim = MemoryType lim
+let global_type t = GlobalType (t, Immutable)
+let global_type_mut t = GlobalType (t, Mutable)
 
 
 (* Instructions *)

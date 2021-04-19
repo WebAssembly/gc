@@ -1,15 +1,18 @@
+open Ast
+open Operators
+
 (* Decoding stream *)
 
 type stream =
 {
-  name : string;
+  sname : string;
   bytes : string;
   pos : int ref;
 }
 
 exception EOS
 
-let stream name bs = {name; bytes = bs; pos = ref 0}
+let stream sname bs = {sname; bytes = bs; pos = ref 0}
 
 let len s = String.length s.bytes
 let pos s = !(s.pos)
@@ -33,7 +36,7 @@ exception Code = Code.Error
 let string_of_byte b = Printf.sprintf "%02x" b
 let string_of_multi n = Printf.sprintf "%02lx" n
 
-let position s pos = Source.({file = s.name; line = -1; column = pos})
+let position s pos = Source.({file = s.sname; line = -1; column = pos})
 let region s left right =
   Source.({left = position s left; right = position s right})
 
@@ -62,58 +65,58 @@ let at f s =
 
 (* Generic values *)
 
-let u8 s =
+let int8 s =
   get s
 
-let u16 s =
-  let lo = u8 s in
-  let hi = u8 s in
+let int16 s =
+  let lo = int8 s in
+  let hi = int8 s in
   hi lsl 8 + lo
 
-let u32 s =
-  let lo = Int32.of_int (u16 s) in
-  let hi = Int32.of_int (u16 s) in
+let int32 s =
+  let lo = Int32.of_int (int16 s) in
+  let hi = Int32.of_int (int16 s) in
   Int32.(add lo (shift_left hi 16))
 
-let u64 s =
-  let lo = I64_convert.extend_i32_u (u32 s) in
-  let hi = I64_convert.extend_i32_u (u32 s) in
+let int64 s =
+  let lo = I64_convert.extend_i32_u (int32 s) in
+  let hi = I64_convert.extend_i32_u (int32 s) in
   Int64.(add lo (shift_left hi 32))
 
-let rec vuN n s =
+let rec uN n s =
   require (n > 0) s (pos s) "integer representation too long";
-  let b = u8 s in
+  let b = int8 s in
   require (n >= 7 || b land 0x7f < 1 lsl n) s (pos s - 1) "integer too large";
   let x = Int64.of_int (b land 0x7f) in
-  if b land 0x80 = 0 then x else Int64.(logor x (shift_left (vuN (n - 7) s) 7))
+  if b land 0x80 = 0 then x else Int64.(logor x (shift_left (uN (n - 7) s) 7))
 
-let rec vsN n s =
+let rec sN n s =
   require (n > 0) s (pos s) "integer representation too long";
-  let b = u8 s in
+  let b = int8 s in
   let mask = (-1 lsl (n - 1)) land 0x7f in
   require (n >= 7 || b land mask = 0 || b land mask = mask) s (pos s - 1)
     "integer too large";
   let x = Int64.of_int (b land 0x7f) in
   if b land 0x80 = 0
   then (if b land 0x40 = 0 then x else Int64.(logor x (logxor (-1L) 0x7fL)))
-  else Int64.(logor x (shift_left (vsN (n - 7) s) 7))
+  else Int64.(logor x (shift_left (sN (n - 7) s) 7))
 
-let vu1 s = Int64.to_int (vuN 1 s)
-let vu32 s = Int64.to_int32 (vuN 32 s)
-let vs7 s = Int64.to_int (vsN 7 s)
-let vs32 s = Int64.to_int32 (vsN 32 s)
-let vs33 s = I32_convert.wrap_i64 (vsN 33 s)
-let vs64 s = vsN 64 s
-let f32 s = F32.of_bits (u32 s)
-let f64 s = F64.of_bits (u64 s)
+let u1 s = Int64.to_int (uN 1 s)
+let u32 s = Int64.to_int32 (uN 32 s)
+let s7 s = Int64.to_int (sN 7 s)
+let s32 s = Int64.to_int32 (sN 32 s)
+let s33 s = I32_convert.wrap_i64 (sN 33 s)
+let s64 s = sN 64 s
+let f32 s = F32.of_bits (int32 s)
+let f64 s = F64.of_bits (int64 s)
 
 let len32 s =
   let pos = pos s in
-  let n = vu32 s in
+  let n = u32 s in
   if I32.le_u n (Int32.of_int (len s)) then Int32.to_int n else
     error s pos "length out of bounds"
 
-let bool s = (vu1 s = 1)
+let bool s = (u1 s = 1)
 let string s = let n = len32 s in get_string n s
 let rec list f n s = if n = 0 then [] else let x = f s in x :: list f (n - 1) s
 let opt f b s = if b then Some (f s) else None
@@ -139,13 +142,13 @@ let sized f s =
 open Types
 
 let mutability s =
-  match u8 s with
+  match int8 s with
   | 0 -> Immutable
   | 1 -> Mutable
   | _ -> error s (pos s - 1) "malformed mutability"
 
 let num_type s =
-  match vs7 s with
+  match s7 s with
   | -0x01 -> I32Type
   | -0x02 -> I64Type
   | -0x03 -> F32Type
@@ -154,21 +157,21 @@ let num_type s =
 
 let heap_type s =
   let pos = pos s in
-  match vs33 s with
+  match s33 s with
   | -0x10l -> FuncHeapType
   | -0x11l -> ExternHeapType
   | -0x12l -> AnyHeapType
   | -0x13l -> EqHeapType
   | -0x16l -> I31HeapType
-  | -0x17l -> let n = vu32 s in RttHeapType (SynVar (vs33 s), Some n)
-  | -0x18l -> RttHeapType (SynVar (vs33 s), None)
+  | -0x17l -> let n = u32 s in RttHeapType (SynVar (s33 s), Some n)
+  | -0x18l -> RttHeapType (SynVar (s33 s), None)
   | -0x19l -> DataHeapType
   | i when i >= 0l -> DefHeapType (SynVar i)
   | _ -> error s pos "malformed heap type"
 
 let ref_type s =
   let pos = pos s in
-  match vs33 s with
+  match s33 s with
   | -0x10l -> (Nullable, FuncHeapType)
   | -0x11l -> (Nullable, ExternHeapType)
   | -0x12l -> (Nullable, AnyHeapType)
@@ -186,7 +189,7 @@ let result_type s = vec value_type s
 
 let packed_type s =
   let pos = pos s in
-  match vs33 s with
+  match s33 s with
   | -0x06l -> Pack8
   | -0x07l -> Pack16
   | _ -> error s pos "malformed storage type"
@@ -212,25 +215,25 @@ let func_type s =
   FuncType (ins, out)
 
 let def_type s =
-  match vs7 s with
+  match s7 s with
   | -0x20 -> FuncDefType (func_type s)
   | -0x21 -> StructDefType (struct_type s)
   | -0x22 -> ArrayDefType (array_type s)
   | _ -> error s (pos s - 1) "malformed definition type"
 
-let limits vu s =
+let limits uN s =
   let has_max = bool s in
-  let min = vu s in
-  let max = opt vu has_max s in
+  let min = uN s in
+  let max = opt uN has_max s in
   {min; max}
 
 let table_type s =
   let t = ref_type s in
-  let lim = limits vu32 s in
+  let lim = limits u32 s in
   TableType (lim, t)
 
 let memory_type s =
-  let lim = limits vu32 s in
+  let lim = limits u32 s in
   MemoryType lim
 
 let global_type s =
@@ -241,29 +244,26 @@ let global_type s =
 
 (* Decode instructions *)
 
-open Ast
-open Operators
+let var s = u32 s
 
-let var s = vu32 s
-
-let op s = u8 s
+let op s = int8 s
 let end_ s = expect 0x0b s "END opcode expected"
 let zero s = expect 0x00 s "zero byte expected"
 
 let memop s =
-  let align = vu32 s in
+  let align = u32 s in
   require (I32.le_u align 32l) s (pos s - 1) "malformed memop flags";
-  let offset = vu32 s in
+  let offset = u32 s in
   Int32.to_int align, offset
 
 let block_type s =
   match peek s with
   | Some 0x40 -> skip 1 s; ValBlockType None
   | Some b when b land 0xc0 = 0x40 -> ValBlockType (Some (value_type s))
-  | _ -> VarBlockType (SynVar (vs33 s))
+  | _ -> VarBlockType (SynVar (s33 s))
 
 let local s =
-  let n = vu32 s in
+  let n = u32 s in
   let t = at value_type s in
   n, t
 
@@ -381,8 +381,8 @@ let rec instr s =
   | 0x3f -> zero s; memory_size
   | 0x40 -> zero s; memory_grow
 
-  | 0x41 -> i32_const (at vs32 s)
-  | 0x42 -> i64_const (at vs64 s)
+  | 0x41 -> i32_const (at s32 s)
+  | 0x42 -> i64_const (at s64 s)
   | 0x43 -> f32_const (at f32 s)
   | 0x44 -> f64_const (at f64 s)
 
@@ -536,7 +536,7 @@ let rec instr s =
   | 0xd5 -> ref_eq
 
   | 0xfb as b ->
-    (match vu32 s with
+    (match u32 s with
     | 0x01l -> struct_new (at var s)
     | 0x02l -> struct_new_default (at var s)
     | 0x03l -> let x = at var s in let y = at var s in struct_get x y
@@ -578,7 +578,7 @@ let rec instr s =
     )
 
   | 0xfc as b ->
-    (match vu32 s with
+    (match u32 s with
     | 0x00l -> i32_trunc_sat_f32_s
     | 0x01l -> i32_trunc_sat_f32_u
     | 0x02l -> i32_trunc_sat_f64_s
@@ -670,7 +670,7 @@ let type_section s =
 (* Import section *)
 
 let import_desc s =
-  match u8 s with
+  match int8 s with
   | 0x00 -> FuncImport (at var s)
   | 0x01 -> TableImport (table_type s)
   | 0x02 -> MemoryImport (memory_type s)
@@ -727,7 +727,7 @@ let global_section s =
 (* Export section *)
 
 let export_desc s =
-  match u8 s with
+  match int8 s with
   | 0x00 -> FuncExport (at var s)
   | 0x01 -> TableExport (at var s)
   | 0x02 -> MemoryExport (at var s)
@@ -784,12 +784,12 @@ let elem_index s =
   [Source.(ref_func x @@ x.at)]
 
 let elem_kind s =
-  match u8 s with
+  match int8 s with
   | 0x00 -> (NonNullable, FuncHeapType)
   | _ -> error s (pos s - 1) "malformed element kind"
 
 let elem s =
-  match vu32 s with
+  match u32 s with
   | 0x00l ->
     let emode = at active_zero s in
     let einit = vec (at elem_index) s in
@@ -837,7 +837,7 @@ let elem_section s =
 (* Data section *)
 
 let data s =
-  match vu32 s with
+  match u32 s with
   | 0x00l ->
     let dmode = at active_zero s in
     let dinit = string s in
@@ -859,7 +859,7 @@ let data_section s =
 (* DataCount section *)
 
 let data_count s =
-  Some (vu32 s)
+  Some (u32 s)
 
 let data_count_section s =
   section `DataCountSection data_count None s
@@ -889,9 +889,9 @@ let rec iterate f s = if f s <> None then iterate f s
 let magic = 0x6d736100l
 
 let module_ s =
-  let header = u32 s in
+  let header = int32 s in
   require (header = magic) s 0 "magic header not detected";
-  let version = u32 s in
+  let version = int32 s in
   require (version = Encode.version) s 4 "unknown binary version";
   iterate custom_section s;
   let types = type_section s in
@@ -935,9 +935,9 @@ let module_ s =
 let decode name bs = at module_ (stream name bs)
 
 let all_custom tag s =
-  let header = u32 s in
+  let header = int32 s in
   require (header = magic) s 0 "magic header not detected";
-  let version = u32 s in
+  let version = int32 s in
   require (version = Encode.version) s 4 "unknown binary version";
   let rec collect () =
     iterate non_custom_section s;

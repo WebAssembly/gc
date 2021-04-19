@@ -119,8 +119,18 @@ let lookup_intrinsic ctxt name f : int32 =
   match Intrinsics.find_opt name !(ctxt.int.intrinsics) with
   | Some idx -> idx
   | None ->
-    let idx = f () in
-    ctxt.int.intrinsics := Intrinsics.add name idx !(ctxt.int.intrinsics);
+    let fwd = ref (-1l) in
+    let idx = f (fun idx ->
+Printf.printf "[intrinsic %s = $%ld]\n%!" name idx;
+        ctxt.int.intrinsics := Intrinsics.add name idx !(ctxt.int.intrinsics);
+        fwd := idx
+      )
+    in
+    assert (!fwd = -1l || !fwd = idx);
+    if !fwd = -1l then
+(Printf.printf "[intrinsic %s = $%ld]\n%!" name idx;
+      ctxt.int.intrinsics := Intrinsics.add name idx !(ctxt.int.intrinsics);
+);
     idx
 
 

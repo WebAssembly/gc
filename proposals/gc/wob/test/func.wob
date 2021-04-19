@@ -7,7 +7,7 @@ func get_v() : Int { v };
 assert get_x() == 3;
 assert get_v() == 4;
 
-/*
+/* TODO
 {
   let a = 3;
   {
