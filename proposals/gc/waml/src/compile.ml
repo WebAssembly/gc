@@ -174,28 +174,6 @@ and lower_block_type ctxt at rep t : W.block_type =
   | T.Tup [] when rep = BlockRep -> W.void
   | t -> W.result (lower_value_type ctxt at rep t)
 
-(*
-and lower_stack_type ctxt at t : W.value_type list =
-  Option.to_list (lower_block_value_type ctxt at t)
-
-and lower_func_type ctxt at t : W.func_type =
-  match t with
-  | T.Func (ys, ts1, t2) ->
-    if ys <> [] && not !Flags.parametric then nyi at "generic functions";
-    W.FuncType (
-      List.map (lower_value_type ctxt at) ts1,
-      lower_stack_type ctxt at t2
-    )
-  | T.Class tcls ->
-    if tcls.T.tparams <> [] && not !Flags.parametric then
-      nyi at "generic classes";
-    W.FuncType (
-      List.map (lower_value_type ctxt at) tcls.T.vparams,
-      [lower_value_type ctxt at (T.Inst (tcls, List.map T.var tcls.T.tparams))]
-    )
-  | _ -> assert false
-*)
-
 
 (* Coercions *)
 
@@ -859,13 +837,58 @@ and compile_exp_func_opt ctxt dst e : func_loc option =
   | ConE q ->
     (match T.norm (Source.et e) with
     | T.Var (y, _) ->
-      compile_path ctxt q (Source.et e) dst
-    | T.Fun _ ->
-      nyi e.at "partial constructor application"
+      compile_path ctxt q (Source.et e) dst;
+      None
+
+    | T.Fun _ as t ->
+      (* TODO: refactor to avoid duplicating this code *)
+      let rec eta t =
+        match T.norm t with
+        | T.Var (y, _) ->
+          let data = find_typ_var ctxt Source.(y @@ q.at) ctxt.ext.envs in
+          let con = List.assoc (name_of_path q).it data in
+          let arity = List.length con.flds in
+          let _code, clos = lower_func_type ctxt e.at arity in
+          let argts, argv_opt = lower_param_types ctxt e.at arity in
+          let fn = emit_func ctxt e.at W.(ref_ clos :: argts) W.[eqref]
+            (fun ctxt _ ->
+              let ctxt = enter_scope ctxt FuncScope in
+              let _clos = emit_param ctxt e.at in
+              let args = List.map (fun _ -> emit_param ctxt e.at) argts in
+              let arg0 = List.hd args in
+              emit ctxt W.[
+                i32_const (con.tag @@ q.at);
+              ];
+              List.iteri (fun i _ ->
+                let tI = T.norm (List.nth con.flds i) in
+                compile_load_arg ctxt e.at arg0 i argv_opt;
+                compile_coerce ctxt BoxedRep UnboxedRigidRep tI e.at;
+              ) con.flds;
+              compile_path ctxt q (Source.et e) BoxedRep;
+              emit ctxt W.[
+                ref_as_non_null;
+                struct_new (con.typeidx @@ e.at);
+              ]
+            )
+          in
+          emit_func_ref ctxt e.at fn;
+          emit ctxt W.[
+            i32_const (int32 arity @@ e.at);
+            ref_func (fn @@ e.at);
+            rtt_canon (lower_anyclos_type ctxt e.at @@ e.at);
+            rtt_sub (clos @@ e.at);
+            struct_new (clos @@ e.at);
+          ];
+          Some {funcidx = fn; arity}
+
+        | T.Fun (_, t') -> eta t'
+
+        | _ -> assert false
+      in eta t
+
     | _ ->
       assert false
-    );
-    None
+    )
 
   | UnE (op, e1) ->
     (match op, Source.et e with
@@ -1103,7 +1126,13 @@ and compile_exp_func_opt ctxt dst e : func_loc option =
           ];
 
         | T.Fun _ ->
-          nyi e.at "partial constructor application"
+          compile_exp ctxt UnboxedRigidRep e1;
+          compile_args ctxt e.at 0l (List.length es) (fun i ->
+            compile_exp ctxt BoxedRep (List.nth es i)
+          );
+          emit ctxt W.[
+            call (compile_apply ctxt e.at (List.length es) @@ e.at);
+          ]
 
         | _ ->
           assert false
