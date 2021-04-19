@@ -133,3 +133,93 @@ and imp' =
 type prog = (prog', T.typ * T.str) Source.phrase
 and prog' =
   | Prog of imp list * dec list
+
+
+(* Free variables *)
+
+module Vars = Env.Set
+
+type vars = {vals : Vars.t; mods : Vars.t}
+
+let empty = {vals = Vars.empty; mods = Vars.empty}
+let (++) f1 f2 =
+  Vars.{vals = union f1.vals f2.vals; mods = union f1.mods f2.mods}
+let (--) f1 f2 =
+  Vars.{vals = diff f1.vals f2.vals; mods = diff f1.mods f2.mods}
+
+let list f xs = List.fold_left (++) empty (List.map f xs)
+
+let val_var x = {empty with vals = Vars.singleton x.Source.it}
+let mod_var x = {empty with mods = Vars.singleton x.Source.it}
+
+
+let rec bound_pat p =
+  match p.Source.it with
+  | WildP | LitP _ -> empty
+  | VarP x -> val_var x
+  | ConP (_, ps) | TupP ps -> list bound_pat ps
+  | RefP p1 | AnnotP (p1, _) -> bound_pat p1
+
+let rec bound_dec d =
+  match d.Source.it with
+  | ExpD _ | AssertD _ | TypD _ | SigD _ | InclD _ -> empty
+  | ValD (p, _) -> bound_pat p
+  | DatD (_, _, xtts) -> list (fun (x, _) -> val_var x) xtts
+  | ModD (x, m) -> mod_var x
+  | RecD ds -> list bound_dec ds
+
+
+let rec free_mod_path q =
+  match q.Source.it with
+  | PlainP x -> mod_var x
+  | QualP (q', _) -> free_mod_path q'
+
+let free_val_path q =
+  match q.Source.it with
+  | PlainP x -> val_var x
+  | QualP (q', _) -> free_mod_path q'
+
+let rec free_pat p =
+  match p.Source.it with
+  | WildP | LitP _ | VarP _ -> empty
+  | ConP (q, ps) -> free_val_path q ++ list free_pat ps
+  | TupP ps -> list free_pat ps
+  | RefP p1 | AnnotP (p1, _) -> free_pat p1
+
+let rec free_exp e =
+  match e.Source.it with
+  | LitE _ -> empty
+  | VarE q | ConE q -> free_val_path q
+  | UnE (_, e1) | RefE e1 | DerefE e1 | AnnotE (e1, _) -> free_exp e1
+  | BinE (e1, _, e2) | RelE (e1, _, e2) | LogE (e1, _, e2)
+  | AssignE (e1, e2) | AppE (e1, e2) -> free_exp e1 ++ free_exp e2
+  | TupE es -> list free_exp es
+  | FunE (p1, e2) -> free_case (p1, e2)
+  | IfE (e1, e2, e3) -> free_exp e1 ++ free_exp e2 ++ free_exp e3
+  | CaseE (e1, pes) -> free_exp e1 ++ list free_case pes
+  | LetE (ds, e1) -> free_exp e1 -- list bound_dec ds ++ free_decs ds
+
+and free_case (p, e) =
+  free_exp e -- bound_pat p ++ free_pat p
+
+and free_dec d =
+  match d.Source.it with
+  | ExpD e | AssertD e -> free_exp e
+  | ValD (p, e) -> free_case (p, e)
+  | TypD _ | DatD _ | SigD _ -> empty
+  | ModD (x, m) -> free_mod m -- mod_var x
+  | RecD ds -> list free_dec ds -- list bound_dec ds
+  | InclD m -> free_mod m
+
+and free_decs = function
+  | [] -> empty
+  | d::ds -> free_decs ds -- bound_dec d ++ free_dec d
+
+and free_mod m =
+  match m.Source.it with
+  | VarM q -> free_mod_path q
+  | StrM ds -> list free_dec ds
+  | FunM (x, _, m) -> free_mod m -- mod_var x
+  | AppM (m1, m2) -> free_mod m1 ++ free_mod m2
+  | AnnotM (m1, _) -> free_mod m1
+  | LetM (ds, m1) -> free_mod m1 -- list bound_dec ds ++ free_decs ds

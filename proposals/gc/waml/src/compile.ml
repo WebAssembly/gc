@@ -26,20 +26,23 @@ let nyi at s = raise (NYI (at, s))
 (* Environment *)
 
 type loc =
-  | DirectLoc of int32
+  | PreLoc of int32
+  | LocalLoc of int32
+  | GlobalLoc of int32
+  | ClosureLoc of int32 * int32 * int32 (* fldidx, localidx, typeidx *)
 
 type func_loc = {funcidx : int32; arity : int}
 
 type data_con = {tag : int32; typeidx : int32; flds : T.typ list}
 type data = (string * data_con) list
-type env = (loc * func_loc option, data, loc, unit) E.env
+type env = (loc * func_loc option, data, loc * func_loc option, unit) E.env
 type scope = PreScope | LocalScope | FuncScope | GlobalScope | ModuleScope
 
 let make_env () =
   let env = ref Env.empty in
   List.iteri (fun i (x, _) ->
     env := E.extend_val !env Source.(x @@ Prelude.region)
-      (DirectLoc (int32 i), None)
+      (PreLoc (int32 i), None)
   ) Prelude.vals;
   env
 
@@ -51,7 +54,7 @@ type pass = FullPass | RecPrePass | RecPass
 type ctxt_ext = { envs : (scope * env ref) list }
 type ctxt = ctxt_ext Emit.ctxt
 
-let make_ext_ctxt () : ctxt_ext = {envs = [(PreScope, make_env ())]}
+let make_ext_ctxt () : ctxt_ext = { envs = [(PreScope, make_env ())] }
 let make_ctxt () : ctxt = Emit.make_ctxt (make_ext_ctxt ())
 
 let enter_scope ctxt scope : ctxt =
@@ -76,7 +79,10 @@ let rec find_typ_var ctxt y envs : data =
 
 (*
 let string_of_loc = function
-  | DirectLoc i -> Int32.to_string i
+  | PreLoc i -> "prelude" ^ Int32.to_string i
+  | LocalLoc i -> "local" ^ Int32.to_string i
+  | GlobalLoc i -> "global" ^ Int32.to_string i
+  | ClosureLoc (i, _, _) -> "closure" ^ Int32.to_string i
 
 let print_env env =
   E.iter_vals (fun x sl -> let s, l = sl.it in
@@ -101,17 +107,18 @@ type rep =
   | UnboxedLaxRep   (* like UnboxedRigid, but Int may have junk high bit *)
   | UnboxedRigidRep (* representation with unboxed type or concrete ref types *)
 
+(* TODO: used UnboxedRigid for locals, closures, patterns *)
 let pat_rep = BoxedRep
 
-let max_func_arity = 5
-
-let scope_rep = function
-  | PreScope -> UnboxedRigidRep
-  | LocalScope | FuncScope | ModuleScope | GlobalScope -> BoxedRep
+let loc_rep = function
+  | PreLoc _ -> UnboxedRigidRep
+  | GlobalLoc _ | LocalLoc _ | ClosureLoc _ -> BoxedRep
 
 let is_boxed_rep = function
   | BlockRep | BoxedRep -> true
   | _ -> false
+
+let max_func_arity = 5
 
 let rec lower_value_type ctxt at rep t : W.value_type =
   if is_boxed_rep rep then W.(RefType (Nullable, EqHeapType)) else
@@ -155,12 +162,12 @@ and lower_func_type ctxt at arity : int32 * int32 =
   def_code codedt;
   code, clos
 
-and lower_clos_type ctxt at arity envts : int32 * int32 =
-  let code, _ = lower_func_type ctxt at arity in
+and lower_clos_type ctxt at arity envts : int32 * int32 * int32 =
+  let code, clos = lower_func_type ctxt at arity in
   let closdt =
     W.(type_struct (field i32 :: field (ref_ code) :: List.map field envts)) in
-  let clos = emit_type ctxt at closdt in
-  code, clos
+  let clos_env = emit_type ctxt at closdt in
+  code, clos, clos_env
 
 and lower_param_types ctxt at arity : W.value_type list * int32 option =
   if arity <= max_func_arity then
@@ -418,8 +425,8 @@ let rec compile_apply ctxt at arity =
       );
       (* Dispatching here when closure arity > apply arity *)
       (* Create curried closure *)
-      let _, clos1 = lower_clos_type ctxt at 1 [] in
-      let _, curriedN = lower_clos_type ctxt at 1 W.(ref_ anyclos :: argts) in
+      let _, clos1, curriedN =
+        lower_clos_type ctxt at 1 W.(ref_ anyclos :: argts) in
       emit ctxt W.[
         i32_const (1l @@ at);
         ref_func (compile_curry ctxt at arity @@ at);
@@ -441,9 +448,9 @@ and compile_curry ctxt at arity =
   Emit.lookup_intrinsic ctxt ("curry" ^ arity_string) (fun def_fwd ->
     let emit ctxt = List.iter (emit_instr ctxt at) in
     let anyclos = lower_anyclos_type ctxt at in
-    let _, clos1 = lower_clos_type ctxt at 1 [] in
     let argts, argv_opt = lower_param_types ctxt at arity in
-    let _, curriedN = lower_clos_type ctxt at 1 W.(ref_ anyclos :: argts) in
+    let _, clos1, curriedN =
+      lower_clos_type ctxt at 1 W.(ref_ anyclos :: argts) in
     (* curryN = fun xN => apply_N+1 x0 ... xN-1 xN *)
     emit_func ctxt at W.[ref_ clos1; eqref] W.[eqref] (fun ctxt fn ->
       def_fwd fn;
@@ -542,7 +549,7 @@ and compile_curry ctxt at arity =
             )
           );
           emit_block ctxt at W.block W.void (fun ctxt ->
-            let _, closNP = lower_clos_type ctxt at (arity + 1) [] in
+            let _, closNP = lower_func_type ctxt at (arity + 1) in
             emit ctxt W.[
               (* Load source arity *)
               local_get (len +% 1l @@ at);
@@ -615,36 +622,34 @@ let compile_lit ctxt l at =
     ]
 
 
-let rec find_var ctxt x envs : scope * (loc * func_loc option) =
+let rec find_var f ctxt x envs : loc * func_loc option =
   match envs with
   | [] ->
     Printf.printf "[find_var `%s` @@ %s]\n%!" x.it (Source.string_of_region x.at);
     assert false
   | (scope, env)::envs' ->
-    match E.find_opt_val x !env with
-    | None ->
-      let (scope', _) as result = find_var ctxt x envs' in
-      (match scope', scope with
-      | (PreScope | GlobalScope), _
-      | (LocalScope | FuncScope | ModuleScope), LocalScope -> ()
-      | _ -> nyi x.at "outer scope variable access"
-      );
-      result
-    | Some {it = l; _} ->
-      scope, l
+    match f x !env with
+    | Some {it = locs; _} -> locs
+    | None -> find_var f ctxt x envs'
+
+let find_val_var = find_var E.find_opt_val
+let find_mod_var = find_var E.find_opt_mod
 
 let compile_var ctxt x t dst =
-  let scope, (loc, _) = find_var ctxt x ctxt.ext.envs in
-  (match scope, loc with
-  | PreScope, DirectLoc idx ->
+  let loc, _ = find_val_var ctxt x ctxt.ext.envs in
+  (match loc with
+  | PreLoc idx ->
     let _, l = List.nth Prelude.vals (Int32.to_int idx) in
     compile_lit ctxt l x.at
-  | (LocalScope | FuncScope | ModuleScope), DirectLoc idx ->
+  | LocalLoc idx ->
     emit_instr ctxt x.at W.(local_get (idx @@ x.at));
-  | GlobalScope, DirectLoc idx ->
+  | GlobalLoc idx ->
     emit_instr ctxt x.at W.(global_get (idx @@ x.at));
+  | ClosureLoc (idx, localidx, typeidx) ->
+    emit_instr ctxt x.at W.(local_get (localidx @@ x.at));
+    emit_instr ctxt x.at W.(struct_get (typeidx @@ x.at) (idx @@ x.at));
   );
-  compile_coerce ctxt (scope_rep scope) dst t x.at
+  compile_coerce ctxt (loc_rep loc) dst t x.at
 
 let compile_path ctxt q t dst =
   match q.it with
@@ -703,22 +708,21 @@ let rec compile_pat pass ctxt fail p =
       match scope with
       | PreScope -> assert false
       | LocalScope | FuncScope | ModuleScope ->
-        DirectLoc (emit_local ctxt x.at t')
+        LocalLoc (emit_local ctxt x.at t')
       | GlobalScope ->
-        let const = default_const ctxt x.at (scope_rep scope) t in
-        DirectLoc (emit_global ctxt x.at W.Mutable t' const)
+        let const = default_const ctxt x.at (loc_rep (GlobalLoc 0l)) t in
+        GlobalLoc (emit_global ctxt x.at W.Mutable t' const)
     in
     env := E.extend_val !env x (loc, None)
 
   | VarP x when pass = RecPass ->
-    let scope, env = current_scope ctxt in
-    compile_coerce ctxt pat_rep (scope_rep scope) t x.at;
-    (match scope, (E.find_val x !env).it with
-    | PreScope, _ -> assert false
-    | (LocalScope | FuncScope | ModuleScope), (DirectLoc idx, _) ->
-      emit ctxt W.[local_set (idx @@ p.at)]
-    | GlobalScope, (DirectLoc idx, _) ->
-      emit ctxt W.[global_set (idx @@ p.at)]
+    let _, env = current_scope ctxt in
+    let loc, _ = (E.find_val x !env).it in
+    compile_coerce ctxt pat_rep (loc_rep loc) t x.at;
+    (match loc  with
+    | PreLoc _ | ClosureLoc _ -> assert false
+    | LocalLoc idx -> emit ctxt W.[local_set (idx @@ p.at)]
+    | GlobalLoc idx -> emit ctxt W.[global_set (idx @@ p.at)]
     )
 
   | VarP x ->
@@ -822,7 +826,7 @@ and compile_exp_func_opt ctxt dst e : func_loc option =
   match e.it with
   | VarE {it = PlainP x; _} ->
     compile_var ctxt x (Source.et e) dst;
-    let _, (_, func_loc_opt) = find_var ctxt x ctxt.ext.envs in
+    let _, func_loc_opt = find_val_var ctxt x ctxt.ext.envs in
     func_loc_opt
 
   | VarE q ->
@@ -1045,17 +1049,64 @@ and compile_exp_func_opt ctxt dst e : func_loc option =
       match e2.it with
       | FunE (p, e22) -> flat (p::ps) e22
       | _ ->
+        let vars = free_exp e in
+        let free_vals =
+          List.filter_map (fun x ->
+            let x' = Source.(x @@ e2.at) in
+            let locs = find_val_var ctxt x' ctxt.ext.envs in
+            match fst locs with
+            | PreLoc _ | GlobalLoc _ -> None
+            | LocalLoc _ | ClosureLoc _ -> Some (x', locs)
+          ) (Vars.elements vars.vals)
+        in
+        let free_mods =
+          List.filter_map (fun x ->
+            let x' = Source.(x @@ e2.at) in
+            let locs = find_mod_var ctxt x' ctxt.ext.envs in
+            match fst locs with
+            | PreLoc _ | GlobalLoc _ -> None
+            | LocalLoc _ | ClosureLoc _ -> Some (x', locs)
+          ) (Vars.elements vars.mods)
+        in
+        let envts = List.map (fun _ -> W.eqref) (free_vals @ free_mods) in
         let ps = List.rev ps in
         let arity = List.length ps in
         let anyclos = lower_anyclos_type ctxt e.at in
-        let _code, clos = lower_func_type ctxt e.at arity in
+        let _code, closN, closNenv = lower_clos_type ctxt e.at arity envts in
         let argts, argv_opt = lower_param_types ctxt e.at arity in
-        let fn = emit_func ctxt e.at W.(ref_ clos :: argts) W.[eqref]
+        let fn = emit_func ctxt e.at W.(ref_ closN :: argts) W.[eqref]
           (fun ctxt _ ->
             let ctxt = enter_scope ctxt FuncScope in
-            let _clos = emit_param ctxt e2.at in
+            let clos = emit_param ctxt e2.at in
             let args = List.map (fun _ -> emit_param ctxt e2.at) argts in
             let arg0 = List.hd args in
+
+            let envlocal =
+              if envts = [] then 0l else
+              let envlocal = emit_local ctxt e2.at W.(ref_null_ closNenv) in
+              emit ctxt W.[
+                local_get (clos @@ e2.at);
+                rtt_canon (anyclos @@ e2.at);
+                rtt_sub (closN @@ e2.at);
+                rtt_sub (closNenv @@ e2.at);
+                ref_cast;
+                local_set (envlocal @@ e2.at);
+              ];
+              envlocal
+            in
+            let _, env = current_scope ctxt in
+            List.iteri (fun i (x, (loc, func_loc_opt)) ->
+              let idx = clos_env_idx +% int32 i in
+              env := E.extend_val !env x
+                (ClosureLoc (idx, envlocal, closNenv), func_loc_opt)
+            ) free_vals;
+            let clos_mod_env_idx = clos_env_idx +% int32 (List.length free_vals) in
+            List.iteri (fun i (x, (loc, func_loc_opt)) ->
+              let idx = clos_mod_env_idx +% int32 i in
+              env := E.extend_mod !env x
+                (ClosureLoc (idx, envlocal, closNenv), func_loc_opt)
+            ) free_mods;
+
             let partial = List.exists (fun p -> classify_pat p = PartialPat) ps in
             if not partial then
               List.iteri (fun i pI ->
@@ -1090,9 +1141,25 @@ and compile_exp_func_opt ctxt dst e : func_loc option =
         emit ctxt W.[
           i32_const (int32 (List.length ps) @@ e.at);
           ref_func (fn @@ e.at);
+        ];
+        List.iteri (fun i (x, _) ->
+(*TODO*)
+          compile_var ctxt x (T.Tup []) (loc_rep (ClosureLoc (0l, 0l, 0l)));
+        ) free_vals;
+        List.iteri (fun i (x, _) ->
+          nyi x.at "closing over non-global modules"
+          (*compile_mod_var ctxt x t clos_rep;*)
+        ) free_mods;
+        emit ctxt W.[
           rtt_canon (anyclos @@ e.at);
-          rtt_sub (clos @@ e.at);
-          struct_new (clos @@ e.at);
+          rtt_sub (closN @@ e.at);
+        ];
+        if envts <> [] then
+          emit ctxt W.[
+            rtt_sub (closNenv @@ e.at);
+          ];
+        emit ctxt W.[
+          struct_new (closNenv @@ e.at);
         ];
         Some {funcidx = fn; arity = List.length ps}
     in flat [p1] e2
@@ -1142,7 +1209,7 @@ and compile_exp_func_opt ctxt dst e : func_loc option =
         (match compile_exp_func_opt ctxt UnboxedRigidRep e1 with
         | Some {funcidx; arity} when arity = List.length es ->
           let anyclos = lower_anyclos_type ctxt e1.at in
-          let _, closN = lower_clos_type ctxt e1.at arity [] in
+          let _, closN = lower_func_type ctxt e1.at arity in
           emit ctxt W.[
             rtt_canon (anyclos @@ e1.at);
             rtt_sub (closN @@ e1.at);
@@ -1336,13 +1403,13 @@ and compile_dec pass ctxt d dst =
           | LocalScope | FuncScope | ModuleScope ->
             let idx = emit_local ctxt x.at t in
             emit ctxt W.[local_set (idx @@ x.at)];
-            DirectLoc idx
+            LocalLoc idx
 
           | GlobalScope ->
             let const = [W.ref_null ht @@ x.at] @@ x.at in
             let idx = emit_global ctxt x.at W.Mutable t const in
             emit ctxt W.[global_set (idx @@ x.at)];
-            DirectLoc idx
+            GlobalLoc idx
         in
         env := E.extend_val !env x (loc, None);
         (x.it, {tag = int32 i; typeidx; flds})
@@ -1406,7 +1473,7 @@ let compile_imp ctxt d =
           emit_global_import ctxt xI.at url xI.it W.Mutable
             (lower_value_type ctxt xI.at t)
         | T.ProhibitedS -> assert false
-      in env := E.extend_val !env x' (sort, DirectLoc idx)
+      in env := E.extend_val !env x' (sort, LocalLoc idx)
   ) xs (Source.et d)
 *)
 
@@ -1417,7 +1484,7 @@ let compile_prog p : W.module_ =
   List.iter (compile_imp ctxt) is;
 *)
   let t, _ = Source.et p in
-  let rep = scope_rep GlobalScope in
+  let rep = loc_rep (GlobalLoc 0l) in
   let vt = lower_value_type ctxt p.at rep t in
   let const = default_const ctxt p.at rep t in
   let result_idx = emit_global ctxt p.at W.Mutable vt const in
