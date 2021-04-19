@@ -1,0 +1,118 @@
+val id f = f;
+
+val caller1 f = f 1;
+val caller2 f = f 1 2;
+val caller3 f = f 1 2 3;
+val caller4 f = f 1 2 3 4;
+val caller5 f = f 1 2 3 4 5;
+val caller6 f = f 1 2 3 4 5 6;
+val caller7 f = f 1 2 3 4 5 6 7;
+val caller8 f = f 1 2 3 4 5 6 7 8;
+val caller9 f = f 1 2 3 4 5 6 7 8 9;
+val caller10 f = f 1 2 3 4 5 6 7 8 9 10;
+val caller11 f = f 1 2 3 4 5 6 7 8 9 10 11;
+val caller12 f = f 1 2 3 4 5 6 7 8 9 10 11 12;
+
+val add1 a = a;
+val add2 a b = a + b;
+val add3 a b c = a + b + c;
+val add4 a b c d = a + b + c + d;
+val add5 a b c d e = a + b + c + d + e;
+val add6 a b c d e f = a + b + c + d + e + f;
+val add7 a b c d e f g = a + b + c + d + e + f + g;
+val add8 a b c d e f g h = a + b + c + d + e + f + g + h;
+val add9 a b c d e f g h i = a + b + c + d + e + f + g + h + i;
+val add10 a b c d e f g h i j = a + b + c + d + e + f + g + h + i + j;
+val add11 a b c d e f g h i j k = a + b + c + d + e + f + g + h + i + j + k;
+val add12 a b c d e f g h i j k l = a + b + c + d + e + f + g + h + i + j + k + l;
+
+assert caller1 add1 == 1;
+assert caller1 add2 2 == 3;
+assert caller1 add3 2 3 == 6;
+assert caller1 add4 2 3 4 == 10;
+assert caller1 add5 2 3 4 5 == 15;
+assert caller1 add6 2 3 4 5 6 == 21;
+assert caller1 add7 2 3 4 5 6 7 == 28;
+assert caller1 add8 2 3 4 5 6 7 8 == 36;
+assert caller1 add9 2 3 4 5 6 7 8 9 == 45;
+assert caller1 add10 2 3 4 5 6 7 8 9 10 == 55;
+assert caller1 add11 2 3 4 5 6 7 8 9 10 11 == 66;
+assert caller1 add12 2 3 4 5 6 7 8 9 10 11 12 == 78;
+
+assert caller2 (fun a => id (fun b => 0 + b)) == 2;
+assert caller2 add2 == 3;
+assert caller2 add3 3 == 6;
+assert caller2 add4 3 4 == 10;
+assert caller2 add5 3 4 5 == 15;
+assert caller2 add6 3 4 5 6 == 21;
+assert caller2 add7 3 4 5 6 7 == 28;
+assert caller2 add8 3 4 5 6 7 8 == 36;
+assert caller2 add9 3 4 5 6 7 8 9 == 45;
+assert caller2 add10 3 4 5 6 7 8 9 10 == 55;
+assert caller2 add11 3 4 5 6 7 8 9 10 11 == 66;
+assert caller2 add12 3 4 5 6 7 8 9 10 11 12 == 78;
+
+assert caller3 add3 == 6;
+assert caller3 add4 4 == 10;
+assert caller3 add5 4 5 == 15;
+assert caller3 add6 4 5 6 == 21;
+assert caller3 add7 4 5 6 7 == 28;
+assert caller3 add8 4 5 6 7 8 == 36;
+assert caller3 add9 4 5 6 7 8 9 == 45;
+assert caller3 add10 4 5 6 7 8 9 10 == 55;
+assert caller3 add11 4 5 6 7 8 9 10 11 == 66;
+assert caller3 add12 4 5 6 7 8 9 10 11 12 == 78;
+
+assert caller4 add4 == 10;
+assert caller4 add5 5 == 15;
+assert caller4 add6 5 6 == 21;
+assert caller4 add7 5 6 7 == 28;
+assert caller4 add8 5 6 7 8 == 36;
+assert caller4 add9 5 6 7 8 9 == 45;
+assert caller4 add10 5 6 7 8 9 10 == 55;
+assert caller4 add11 5 6 7 8 9 10 11 == 66;
+assert caller4 add12 5 6 7 8 9 10 11 12 == 78;
+
+assert caller5 add5 == 15;
+assert caller5 add6 6 == 21;
+assert caller5 add7 6 7 == 28;
+assert caller5 add8 6 7 8 == 36;
+assert caller5 add9 6 7 8 9 == 45;
+assert caller5 add10 6 7 8 9 10 == 55;
+assert caller5 add11 6 7 8 9 10 11 == 66;
+assert caller5 add12 6 7 8 9 10 11 12 == 78;
+
+assert caller6 add6 == 21;
+assert caller6 add7 7 == 28;
+assert caller6 add8 7 8 == 36;
+assert caller6 add9 7 8 9 == 45;
+assert caller6 add10 7 8 9 10 == 55;
+assert caller6 add11 7 8 9 10 11 == 66;
+assert caller6 add12 7 8 9 10 11 12 == 78;
+
+assert caller7 add7 == 28;
+assert caller7 add8 8 == 36;
+assert caller7 add9 8 9 == 45;
+assert caller7 add10 8 9 10 == 55;
+assert caller7 add11 8 9 10 11 == 66;
+assert caller7 add12 8 9 10 11 12 == 78;
+
+assert caller8 add8 == 36;
+assert caller8 add9 9 == 45;
+assert caller8 add10 9 10 == 55;
+assert caller8 add11 9 10 11 == 66;
+assert caller8 add12 9 10 11 12 == 78;
+
+assert caller9 add9 == 45;
+assert caller9 add10 10 == 55;
+assert caller9 add11 10 11 == 66;
+assert caller9 add12 10 11 12 == 78;
+
+assert caller10 add10 == 55;
+assert caller10 add11 11 == 66;
+assert caller10 add12 11 12 == 78;
+
+assert caller11 add11 == 66;
+assert caller11 add12 12 == 78;
+
+assert caller12 add12 == 78;
