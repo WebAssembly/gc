@@ -16,6 +16,8 @@ let rec handle f =
   | Typing.Error (at, msg) -> error at "type error" msg
   | Eval.Trap (at, msg) -> error at "runtime error" msg
   | Eval.Crash (at, msg) -> error at "crash" msg
+  | Compile.NYI (at, msg) ->
+    error at "compilation error" (msg ^ " not yet implemented")
   | Link.Error (at, msg) -> error at "linking error" msg
   | Wasm.Valid.Invalid (at, msg) ->
     error at "validation error (compilation bug)" msg
@@ -220,10 +222,15 @@ let inject_env senv prog =
   let open Source in
   let open Syntax in
   let Prog (imps, decs) = prog.it in
+  if senv = Env.empty then prog else
   let imp = ImpD (env_name @@ prog.at, env_name) @@ prog.at in
-  let dec = InclD (VarM (PlainP (env_name @@ prog.at) @@ prog.at) @@ prog.at) @@ prog.at in
+  let var = PlainP (env_name @@ prog.at) @@ prog.at in
+  let mod_ = VarM var @@ prog.at in
+  let dec = InclD mod_ @@ prog.at in
   let prog' = Prog (imp :: imps, dec :: decs) @@ prog.at in
   imp.et <- Some senv;
+  var.et <- Some (T.Str ([], senv));
+  mod_.et <- Some (T.Str ([], senv));
   dec.et <- Some (T.Tup [], senv);
   prog'.et <- prog.et;
   prog'

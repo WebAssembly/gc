@@ -168,11 +168,14 @@ let rec bound_pat p =
 
 let rec bound_dec d =
   match d.Source.it with
-  | ExpD _ | AssertD _ | TypD _ | SigD _ | InclD _ -> empty
+  | ExpD _ | AssertD _ | TypD _ | SigD _ -> empty
   | ValD (p, _) -> bound_pat p
   | DatD (_, _, xtts) -> list (fun (x, _) -> val_var x) xtts
   | ModD (x, m) -> mod_var x
   | RecD ds -> list bound_dec ds
+  | InclD m ->
+    let _, str = T.as_str (Source.et m) in
+    { vals = Env.dom_val str; mods = Env.dom_mod str }
 
 
 let rec free_mod_path q =

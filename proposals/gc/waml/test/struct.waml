@@ -14,3 +14,12 @@ module M =
 
 assert M.x == 1;
 assert M.f M.x == 2;
+
+module MM =
+{
+  include M;
+  val y = x + 1;
+};
+
+assert MM.x == 1;
+assert MM.y == 2;

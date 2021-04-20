@@ -26,11 +26,14 @@ type rep =
 
 (* TODO: used UnboxedRigid for locals, closures, patterns *)
 let pat_rep = BoxedRep
-let str_rep = BoxedRep
+let local_rep = BoxedRep
+let global_rep = BoxedRep
+let struct_rep = BoxedRep
 
 let loc_rep = function
   | PreLoc _ -> UnboxedRigidRep
-  | GlobalLoc _ | LocalLoc _ | ClosureLoc _ -> BoxedRep
+  | GlobalLoc _ -> global_rep
+  | LocalLoc _ | ClosureLoc _ -> local_rep
 
 let is_boxed_rep = function
   | BlockRep | BoxedRep -> true
