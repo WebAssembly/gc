@@ -1,0 +1,16 @@
+;; Structures
+
+module Empty = {};
+
+module M =
+{
+  type T = Int;
+  data U = A | B T;
+  val x = 1;
+  val f x = x + 1;
+  assert x == 1;
+  assert f x == 2;
+};
+
+assert M.x == 1;
+assert M.f M.x == 2;

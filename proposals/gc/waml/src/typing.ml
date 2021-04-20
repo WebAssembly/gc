@@ -77,36 +77,44 @@ let rec check_str_path env q : T.str =
   | _ -> error q.at "structure expected"
 
 and check_val_path env q : T.poly =
-  match q.it with
-  | PlainP x -> check_val_var env x
-  | QualP (q1, x) ->
-    match E.find_opt_val x (check_str_path env q1) with
-    | Some t -> t.it
-    | None -> error x.at "unknown value component `%s`" x.it
+  let t =
+    match q.it with
+    | PlainP x -> check_val_var env x
+    | QualP (q1, x) ->
+      match E.find_opt_val x (check_str_path env q1) with
+      | Some t -> t.it
+      | None -> error x.at "unknown value component `%s`" x.it
+  in q.et <- Some t; t
 
 and check_typ_path env q : T.con =
-  match q.it with
-  | PlainP y -> check_typ_con env y
-  | QualP (q1, y) ->
-    match E.find_opt_typ y (check_str_path env q1) with
-    | Some c -> c.it
-    | None -> error y.at "unknown type component `%s`" y.it
+  let t =
+    match q.it with
+    | PlainP y -> check_typ_con env y
+    | QualP (q1, y) ->
+      match E.find_opt_typ y (check_str_path env q1) with
+      | Some c -> c.it
+      | None -> error y.at "unknown type component `%s`" y.it
+  in q.et <- Some t; t
 
 and check_mod_path env q : T.sig_ =
-  match q.it with
-  | PlainP x -> check_mod_var env x
-  | QualP (q1, x) ->
-    match E.find_opt_mod x (check_str_path env q1) with
-    | Some s -> s.it
-    | None -> error x.at "unknown module component `%s`" x.it
+  let s =
+    match q.it with
+    | PlainP x -> check_mod_var env x
+    | QualP (q1, x) ->
+      match E.find_opt_mod x (check_str_path env q1) with
+      | Some s -> s.it
+      | None -> error x.at "unknown module component `%s`" x.it
+  in q.et <- Some s; s
 
 and check_sig_path env q : T.sig_ =
-  match q.it with
-  | PlainP y -> check_sig_con env y
-  | QualP (q1, y) ->
-    match E.find_opt_sig y (check_str_path env q1) with
-    | Some s -> s.it
-    | None -> error y.at "unknown signature component `%s`" y.it
+  let s =
+    match q.it with
+    | PlainP y -> check_sig_con env y
+    | QualP (q1, y) ->
+      match E.find_opt_sig y (check_str_path env q1) with
+      | Some s -> s.it
+      | None -> error y.at "unknown signature component `%s`" y.it
+  in q.et <- Some s; s
 
 
 (* Types *)

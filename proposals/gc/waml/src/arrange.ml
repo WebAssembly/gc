@@ -17,7 +17,8 @@ let opt f xo = list f (Option.to_list xo)
 
 let var x = Atom x.it
 
-let rec path p = match p.it with
+let rec path : 'a. 'a path -> sexpr =
+  fun p -> match p.it with
   | PlainP x -> "PlainP" $$ [var x]
   | QualP (p, x) -> "QualP" $$ [path p; var x]
 

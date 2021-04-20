@@ -7,10 +7,15 @@ exception Error of Source.region * string
 
 type var = (string, unit) Source.phrase
 
-type path = (path', T.typ) Source.phrase
+type 'a path = (path', 'a) Source.phrase
 and path' =
   | PlainP of var
-  | QualP of path * var
+  | QualP of mod_path * var
+
+and val_path = T.poly path
+and typ_path = T.con path
+and mod_path = T.sig_ path
+and sig_path = T.sig_ path
 
 
 (* Types *)
@@ -18,7 +23,7 @@ and path' =
 type typ = (typ', T.typ) Source.phrase
 and typ' =
   | VarT of var
-  | ConT of path * typ list
+  | ConT of typ_path * typ list
   | BoolT
   | ByteT
   | IntT
@@ -41,7 +46,7 @@ and pat' =
   | WildP
   | VarP of var
   | LitP of lit
-  | ConP of path * pat list
+  | ConP of val_path * pat list
   | RefP of pat
   | TupP of pat list
   | AnnotP of pat * typ
@@ -58,9 +63,9 @@ type logop = AndThenOp | OrElseOp
 
 type exp = (exp', T.typ) Source.phrase
 and exp' =
-  | VarE of path
+  | VarE of val_path
   | LitE of lit
-  | ConE of path
+  | ConE of val_path
   | UnE of unop * exp
   | BinE of exp * binop * exp
   | RelE of exp * relop * exp
@@ -106,17 +111,17 @@ and spec' =
 
 and sig_ = (sig', T.sig_) Source.phrase
 and sig' =
-  | ConS of path
+  | ConS of sig_path
   | StrS of spec list
   | FunS of var * sig_ * sig_
-  | WithS of sig_ * path * var list * typ
+  | WithS of sig_ * typ_path * var list * typ
 
 
 (* Modules *)
 
 and mod_ = (mod', T.sig_) Source.phrase
 and mod' =
-  | VarM of path
+  | VarM of mod_path
   | StrM of dec list
   | FunM of var * sig_ * mod_
   | AppM of mod_ * mod_
@@ -141,11 +146,12 @@ module Vars = Env.Set
 
 type vars = {vals : Vars.t; mods : Vars.t}
 
+let cardinal s = Vars.cardinal s.vals + Vars.cardinal s.mods
 let empty = {vals = Vars.empty; mods = Vars.empty}
-let (++) f1 f2 =
-  Vars.{vals = union f1.vals f2.vals; mods = union f1.mods f2.mods}
-let (--) f1 f2 =
-  Vars.{vals = diff f1.vals f2.vals; mods = diff f1.mods f2.mods}
+let (++) s1 s2 =
+  Vars.{vals = union s1.vals s2.vals; mods = union s1.mods s2.mods}
+let (--) s1 s2 =
+  Vars.{vals = diff s1.vals s2.vals; mods = diff s1.mods s2.mods}
 
 let list f xs = List.fold_left (++) empty (List.map f xs)
 
@@ -205,9 +211,9 @@ and free_case (p, e) =
 and free_dec d =
   match d.Source.it with
   | ExpD e | AssertD e -> free_exp e
-  | ValD (p, e) -> free_case (p, e)
+  | ValD (p, e) -> free_exp e
   | TypD _ | DatD _ | SigD _ -> empty
-  | ModD (x, m) -> free_mod m -- mod_var x
+  | ModD (x, m) -> free_mod m
   | RecD ds -> list free_dec ds -- list bound_dec ds
   | InclD m -> free_mod m
 
@@ -218,7 +224,7 @@ and free_decs = function
 and free_mod m =
   match m.Source.it with
   | VarM q -> free_mod_path q
-  | StrM ds -> list free_dec ds
+  | StrM ds -> free_decs ds
   | FunM (x, _, m) -> free_mod m -- mod_var x
   | AppM (m1, m2) -> free_mod m1 ++ free_mod m2
   | AnnotM (m1, _) -> free_mod m1

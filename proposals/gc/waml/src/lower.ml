@@ -26,6 +26,7 @@ type rep =
 
 (* TODO: used UnboxedRigid for locals, closures, patterns *)
 let pat_rep = BoxedRep
+let str_rep = BoxedRep
 
 let loc_rep = function
   | PreLoc _ -> UnboxedRigidRep
@@ -44,8 +45,11 @@ let clos_env_idx = 2l  (* first environment entry *)
 
 (* Lowering types *)
 
+let boxed = W.eq
+let boxedref = W.(ref_null_heap boxed)
+
 let rec lower_value_type ctxt at rep t : W.value_type =
-  if is_boxed_rep rep then W.(RefType (Nullable, EqHeapType)) else
+  if is_boxed_rep rep then boxedref else
   match T.norm t with
   | T.Bool | T.Byte | T.Int -> W.i32
   | T.Float -> W.f64
@@ -82,7 +86,7 @@ and lower_func_type ctxt at arity : int32 * int32 =
   let closdt = W.(type_struct [field i32; field (ref_ code)]) in
   let clos = emit_type ctxt at closdt in
   let argts, _ = lower_param_types ctxt at arity in
-  let codedt = W.(type_func (ref_ clos :: argts) [eqref]) in
+  let codedt = W.(type_func (ref_ clos :: argts) [boxedref]) in
   def_code codedt;
   code, clos
 
@@ -95,12 +99,46 @@ and lower_clos_type ctxt at arity envts : int32 * int32 * int32 =
 
 and lower_param_types ctxt at arity : W.value_type list * int32 option =
   if arity <= max_func_arity then
-    List.init arity (fun _ -> W.eqref), None
+    List.init arity (fun _ -> boxedref), None
   else
-    let argv = emit_type ctxt at W.(type_array (field_mut eqref)) in
+    let argv = emit_type ctxt at W.(type_array (field_mut boxedref)) in
     W.[ref_ argv], Some argv
 
 and lower_block_type ctxt at rep t : W.block_type =
   match t with
   | T.Tup [] when rep = BlockRep -> W.void
   | t -> W.result (lower_value_type ctxt at rep t)
+
+
+(* Lowering signatures *)
+
+let rec lower_sig_type ctxt at s : W.value_type * int32 =
+  match s with
+  | T.Str (_, str) -> lower_str_type ctxt at str
+  | T.Fct (_, s1, s2) ->
+    let _, clos = lower_fct_type ctxt at s1 s2 in
+    W.ref_ clos, clos
+
+and lower_str_type ctxt at str : W.value_type * int32 =
+  let mod_ts = List.map (fun (_, s) ->
+    fst (lower_sig_type ctxt at s.Source.it)) (Env.mods str) in
+  let val_ts = List.init (Env.cardinal_vals str) (fun _ -> boxedref) in
+  let x = emit_type ctxt at W.(type_struct (List.map field (mod_ts @ val_ts))) in
+  W.ref_ x, x
+
+and lower_fct_type ctxt at s1 s2 : int32 * int32 =
+  let t1, _ = lower_sig_type ctxt at s1 in
+  let t2, _ = lower_sig_type ctxt at s2 in
+  let code, def_code = emit_type_deferred ctxt at in
+  let closdt = W.(type_struct [field i32; field (ref_ code)]) in
+  let clos = emit_type ctxt at closdt in
+  let codedt = W.(type_func [ref_ clos; t1] [t2]) in
+  def_code codedt;
+  code, clos
+
+let lower_fct_clos_type ctxt at s1 s2 envts : int32 * int32 * int32 =
+  let code, clos = lower_fct_type ctxt at s1 s2 in
+  let closdt =
+    W.(type_struct (field i32 :: field (ref_ code) :: List.map field envts)) in
+  let clos_env = emit_type ctxt at closdt in
+  code, clos, clos_env

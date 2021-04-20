@@ -83,12 +83,12 @@ uvar :
   | UID { $1 @@ at () }
 
 lpath :
-  | lvar { PlainP $1 @@ at () }
-  | mpath DOT lvar { QualP ($1, $3) @@ at () }
+  | lvar { PlainP $1 }
+  | mpath DOT lvar { QualP ($1, $3) }
 
 upath :
-  | uvar { PlainP $1 @@ at () }
-  | mpath DOT uvar { QualP ($1, $3) @@ at () }
+  | uvar { PlainP $1 }
+  | mpath DOT uvar { QualP ($1, $3) }
 
 vvar : lvar { $1 }
 tvar : lvar { $1 }
@@ -98,11 +98,11 @@ vcon : uvar { $1 }
 tcon : uvar { $1 }
 scon : uvar { $1 }
 
-vpath : lpath { $1 }
-cpath : upath { $1 }
-tpath : upath { $1 }
-mpath : upath { $1 }
-spath : upath { $1 }
+vpath : lpath { $1 @@ at () }
+cpath : upath { $1 @@ at () }
+tpath : upath { $1 @@ at () }
+mpath : upath { $1 @@ at () }
+spath : upath { $1 @@ at () }
 
 tvar_seq :
   | /* empty */ { [] }

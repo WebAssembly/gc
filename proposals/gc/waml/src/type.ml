@@ -42,6 +42,9 @@ let var b = Var (b, [])
 let as_tup = function Tup ts -> ts | _ -> assert false
 let as_fun = function Fun (t1, t2) -> t1, t2 | _ -> assert false
 
+let as_str = function Str (ys, s) -> ys, s | _ -> assert false
+let as_fct = function Fct (ys, s1, s2) -> ys, s1, s2 | _ -> assert false
+
 
 (* Printing *)
 

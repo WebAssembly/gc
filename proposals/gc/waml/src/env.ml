@@ -78,7 +78,12 @@ let singleton_typ y t = extend_typ empty y t
 let singleton_mod x m = extend_mod empty x m
 let singleton_sig y s = extend_sig empty y s
 
+let cardinal_vals env = Map.cardinal env.vals
+let cardinal_mods env = Map.cardinal env.mods
+
 let is_empty_vals env = Map.is_empty env.vals
+let is_empty_mods env = Map.is_empty env.vals
+
 let choose_val env = Map.choose env.vals
 
 let not_found x =

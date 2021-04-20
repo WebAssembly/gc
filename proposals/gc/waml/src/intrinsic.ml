@@ -238,7 +238,7 @@ let rec compile_apply ctxt arity =
     let emit ctxt = List.iter (emit_instr ctxt at) in
     let anyclos = lower_anyclos_type ctxt at in
     let argts, argv_opt = lower_param_types ctxt at arity in
-    emit_func ctxt at W.(ref_ anyclos :: argts) W.[eqref] (fun ctxt fn ->
+    emit_func ctxt at W.(ref_ anyclos :: argts) [boxedref] (fun ctxt fn ->
       def_fwd fn;
       let clos = emit_param ctxt at in
       let args = List.map (fun _ -> emit_param ctxt at) argts in
@@ -346,7 +346,7 @@ and compile_curry ctxt arity =
     let _, clos1, curriedN =
       lower_clos_type ctxt at 1 W.(ref_ anyclos :: argts) in
     (* curryN = fun xN => apply_N+1 x0 ... xN-1 xN *)
-    emit_func ctxt at W.[ref_ clos1; eqref] W.[eqref] (fun ctxt fn ->
+    emit_func ctxt at W.[ref_ clos1; boxedref] [boxedref] (fun ctxt fn ->
       def_fwd fn;
       let clos = emit_param ctxt at in
       let arg0 = emit_param ctxt at in
@@ -360,7 +360,7 @@ and compile_curry ctxt arity =
         ref_cast;
       ];
       (* Bind result to local *)
-      emit_let ctxt at W.(result eqref) W.[ref_ curriedN] (fun ctxt ->
+      emit_let ctxt at W.(result boxedref) W.[ref_ curriedN] (fun ctxt ->
         (* Load arguments *)
         if arity <= max_func_arity then begin
           (* Load target function *)
