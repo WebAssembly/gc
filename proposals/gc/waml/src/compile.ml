@@ -1,6 +1,7 @@
 open Source
 open Syntax
 open Emit
+open Lower
 
 module T = Type
 module E = Env
@@ -24,14 +25,6 @@ let nyi at s = raise (NYI (at, s))
 
 
 (* Environment *)
-
-type loc =
-  | PreLoc of int32
-  | LocalLoc of int32
-  | GlobalLoc of int32
-  | ClosureLoc of int32 * int32 * int32 (* fldidx, localidx, typeidx *)
-
-type func_loc = {funcidx : int32; arity : int}
 
 type data_con = {tag : int32; typeidx : int32; flds : T.typ list}
 type data = (string * data_con) list
@@ -96,90 +89,6 @@ let string_of_field_type ctxt idx i =
   let idx' = Emit.lookup_ref_field_type ctxt idx i in
   Int32.to_string idx' ^ " = " ^ string_of_type ctxt idx'
 *)
-
-
-(* Lowering types *)
-
-type rep =
-  | DropRep         (* value never used *)
-  | BlockRep        (* like Boxed, but empty tuples are suppressed *)
-  | BoxedRep        (* representation that is compatible with anyref *)
-  | UnboxedLaxRep   (* like UnboxedRigid, but Int may have junk high bit *)
-  | UnboxedRigidRep (* representation with unboxed type or concrete ref types *)
-
-(* TODO: used UnboxedRigid for locals, closures, patterns *)
-let pat_rep = BoxedRep
-
-let loc_rep = function
-  | PreLoc _ -> UnboxedRigidRep
-  | GlobalLoc _ | LocalLoc _ | ClosureLoc _ -> BoxedRep
-
-let is_boxed_rep = function
-  | BlockRep | BoxedRep -> true
-  | _ -> false
-
-let max_func_arity = 5
-
-let rec lower_value_type ctxt at rep t : W.value_type =
-  if is_boxed_rep rep then W.(RefType (Nullable, EqHeapType)) else
-  match T.norm t with
-  | T.Bool | T.Byte | T.Int -> W.i32
-  | T.Float -> W.f64
-  | t -> W.(ref_null_heap (lower_heap_type ctxt at t))
-
-and lower_heap_type ctxt at t : W.heap_type =
-  match T.norm t with
-  | T.Var _ -> W.eq
-  | T.Bool | T.Byte | T.Int -> W.i31
-  | T.Tup [] -> W.eq
-  | t -> W.(type_ (lower_var_type ctxt at t))
-
-and lower_var_type ctxt at t : int32 =
-  match T.norm t with
-  | T.Float ->
-    emit_type ctxt at W.(type_struct [field f64])
-  | T.Text ->
-    emit_type ctxt at W.(type_array (field_mut_pack i8))
-  | T.Tup ts ->
-    let ts = List.map (lower_value_type ctxt at BoxedRep) ts in
-    emit_type ctxt at W.(type_struct (List.map W.field ts))
-  | T.Ref t1 ->
-    let t1' = lower_value_type ctxt at BoxedRep t1 in
-    emit_type ctxt at W.(type_struct [field_mut t1'])
-  | T.Fun _ ->
-    lower_anyclos_type ctxt at
-  | _ -> Printf.printf "%s\n%!" (T.string_of_typ t); assert false
-
-and lower_anyclos_type ctxt at : int32 =
-  emit_type ctxt at W.(type_struct [field i32])
-
-and lower_func_type ctxt at arity : int32 * int32 =
-  let code, def_code = emit_type_deferred ctxt at in
-  let closdt = W.(type_struct [field i32; field (ref_ code)]) in
-  let clos = emit_type ctxt at closdt in
-  let argts, _ = lower_param_types ctxt at arity in
-  let codedt = W.(type_func (ref_ clos :: argts) [eqref]) in
-  def_code codedt;
-  code, clos
-
-and lower_clos_type ctxt at arity envts : int32 * int32 * int32 =
-  let code, clos = lower_func_type ctxt at arity in
-  let closdt =
-    W.(type_struct (field i32 :: field (ref_ code) :: List.map field envts)) in
-  let clos_env = emit_type ctxt at closdt in
-  code, clos, clos_env
-
-and lower_param_types ctxt at arity : W.value_type list * int32 option =
-  if arity <= max_func_arity then
-    List.init arity (fun _ -> W.eqref), None
-  else
-    let argv = emit_type ctxt at W.(type_array (field_mut eqref)) in
-    W.[ref_ argv], Some argv
-
-and lower_block_type ctxt at rep t : W.block_type =
-  match t with
-  | T.Tup [] when rep = BlockRep -> W.void
-  | t -> W.result (lower_value_type ctxt at rep t)
 
 
 (* Coercions *)
@@ -277,326 +186,6 @@ let compile_coerce ctxt src dst t at =
     | _ -> ()
     )
   | _ -> assert false
-
-
-(* Application and combinators *)
-
-let clos_arity_idx = 0l
-let clos_code_idx = 1l
-let clos_env_idx = 2l  (* first environment entry *)
-let curry_fun_idx = clos_env_idx
-let curry_arg_idx = clos_env_idx +% 1l  (* first argument or argv *)
-
-let compile_args ctxt at shift n compile_eI =
-  let emit ctxt = List.iter (emit_instr ctxt at) in
-  match lower_param_types ctxt at n with
-  | _, None ->
-    for i = 0 to n - 1 do
-      compile_eI i
-    done
-  | _, Some argv ->
-    let tmp = emit_local ctxt at W.(ref_null_ argv) in
-    emit ctxt W.[
-      i32_const (int32 n @@ at);
-      rtt_canon (argv @@ at);
-      array_new_default (argv @@ at);
-      local_tee (tmp +% shift @@ at);
-      ref_as_non_null;
-    ];
-    for i = 0 to n - 1 do
-      emit ctxt W.[
-        local_get (tmp +% shift @@ at);
-        i32_const (int32 i @@ at);
-      ];
-      compile_eI i;
-      emit ctxt W.[
-        array_set (argv @@ at);
-      ]
-    done
-
-let compile_load_arg ctxt at arg0 i argv_opt =
-  let emit ctxt = List.iter (emit_instr ctxt at) in
-  match argv_opt with
-  | None ->
-    assert (i < max_func_arity);
-    emit ctxt W.[
-      local_get (arg0 +% int32 i @@ at);
-    ]
-  | Some argv ->
-    emit ctxt W.[
-      local_get (arg0 @@ at);
-      i32_const (int32 i @@ at);
-      array_get (argv @@ at);
-    ]
-
-let compile_load_args ctxt at shift arg0 i j src_argv_opt =
-  assert (j <= max_func_arity || src_argv_opt <> None);
-  if j - i > max_func_arity && i = 0 then
-    (* Reuse argv *)
-    emit_instr ctxt at W.(local_get (arg0 @@ at))
-  else
-    compile_args ctxt at shift (j - i) (fun k ->
-      compile_load_arg ctxt at arg0 (i + k) src_argv_opt
-    )
-
-let rec compile_apply ctxt at arity =
-  Emit.lookup_intrinsic ctxt ("apply" ^ string_of_int arity) (fun def_fwd->
-    let emit ctxt = List.iter (emit_instr ctxt at) in
-    let anyclos = lower_anyclos_type ctxt at in
-    let argts, argv_opt = lower_param_types ctxt at arity in
-    emit_func ctxt at W.(ref_ anyclos :: argts) W.[eqref] (fun ctxt fn ->
-      def_fwd fn;
-      let ctxt = enter_scope ctxt LocalScope in
-      let clos = emit_param ctxt at in
-      let args = List.map (fun _ -> emit_param ctxt at) argts in
-      let arg0 = List.hd args in
-      emit_block ctxt at W.block W.void (fun ctxt ->
-        emit_block ctxt at W.block W.void (fun ctxt ->
-          let rec over_apply ctxt = function
-            | 0 ->
-              (* Dispatch on closure arity *)
-              let labs = List.init (arity + 1) (fun i -> int32 (max 0 (i - 1)) @@ at) in
-              emit ctxt W.[
-                local_get (clos @@ at);
-                struct_get (anyclos @@ at) (clos_arity_idx @@ at);
-                br_table labs (int32 arity @@ at);
-              ]
-            | n ->
-              emit_block ctxt at W.block W.void (fun ctxt ->
-                over_apply ctxt (n - 1);
-              );
-              (* Dispatching here when closure arity n < apply arity *)
-              let _, closN = lower_func_type ctxt at n in
-              (* Downcast closure type *)
-              emit ctxt W.[
-                local_get (clos @@ at);
-                rtt_canon (anyclos @@ at);
-                rtt_sub (closN @@ at);
-                ref_cast;
-              ];
-              (* Bind result to local *)
-              emit_let ctxt at W.void W.[ref_ closN] (fun ctxt ->
-                (* Call target function with arguments it can handle *)
-                emit ctxt W.[
-                  local_get (0l @@ at);
-                ];
-                compile_load_args ctxt at 1l (arg0 +% 1l) 0 n argv_opt;
-                emit ctxt W.[
-                  local_get (0l @@ at);
-                  struct_get (closN @@ at) (clos_code_idx @@ at);
-                  call_ref;
-                  (* Downcast resulting closure *)
-                  ref_as_data;
-                  rtt_canon (anyclos @@ at);
-                  ref_cast;
-                ];
-                (* Apply result to remaining arguments *)
-                compile_load_args ctxt at 1l (arg0 +% 1l) n arity argv_opt;
-                emit ctxt W.[
-                  call (compile_apply ctxt at (arity - n) @@ at);
-                  return;  (* TODO: should be tail call *)
-                ];
-              )
-          in over_apply ctxt (arity - 1)
-        );
-        (* Dispatching here when closure arity n = apply arity *)
-        let _, closN = lower_func_type ctxt at arity in
-        (* Downcast closure type *)
-        emit ctxt W.[
-          local_get (clos @@ at);
-          rtt_canon (anyclos @@ at);
-          rtt_sub (closN @@ at);
-          ref_cast;
-        ];
-        (* Bind result to local *)
-        emit_let ctxt at W.void W.[ref_ closN] (fun ctxt ->
-          (* Call target function *)
-          emit ctxt W.[
-            local_get (0l @@ at);
-          ];
-          compile_load_args ctxt at 1l (arg0 +% 1l) 0 arity argv_opt;
-          emit ctxt W.[
-            local_get (0l @@ at);
-            struct_get (closN @@ at) (clos_code_idx @@ at);
-            call_ref;
-            return;  (* TODO: should be tail call *)
-          ]
-        )
-      );
-      (* Dispatching here when closure arity > apply arity *)
-      (* Create curried closure *)
-      let _, clos1, curriedN =
-        lower_clos_type ctxt at 1 W.(ref_ anyclos :: argts) in
-      emit ctxt W.[
-        i32_const (1l @@ at);
-        ref_func (compile_curry ctxt at arity @@ at);
-        local_get (clos @@ at);
-      ];
-      compile_load_args ctxt at 0l arg0 0 arity argv_opt;
-      emit ctxt W.[
-        rtt_canon (anyclos @@ at);
-        rtt_sub (clos1 @@ at);
-        rtt_sub (curriedN @@ at);
-        struct_new (curriedN @@ at);
-      ]
-    )
-  )
-
-and compile_curry ctxt at arity =
-  let arity_string =
-    if arity <= max_func_arity then string_of_int arity else "vec" in
-  Emit.lookup_intrinsic ctxt ("curry" ^ arity_string) (fun def_fwd ->
-    let emit ctxt = List.iter (emit_instr ctxt at) in
-    let anyclos = lower_anyclos_type ctxt at in
-    let argts, argv_opt = lower_param_types ctxt at arity in
-    let _, clos1, curriedN =
-      lower_clos_type ctxt at 1 W.(ref_ anyclos :: argts) in
-    (* curryN = fun xN => apply_N+1 x0 ... xN-1 xN *)
-    emit_func ctxt at W.[ref_ clos1; eqref] W.[eqref] (fun ctxt fn ->
-      def_fwd fn;
-      let ctxt = enter_scope ctxt LocalScope in
-      let clos = emit_param ctxt at in
-      let arg0 = emit_param ctxt at in
-      emit_func_ref ctxt at fn;
-      (* Downcast generic to specific closure type *)
-      emit ctxt W.[
-        local_get (clos @@ at);
-        rtt_canon (anyclos @@ at);
-        rtt_sub (clos1 @@ at);
-        rtt_sub (curriedN @@ at);
-        ref_cast;
-      ];
-      (* Bind result to local *)
-      emit_let ctxt at W.(result eqref) W.[ref_ curriedN] (fun ctxt ->
-        (* Load arguments *)
-        if arity <= max_func_arity then begin
-          (* Load target function *)
-          emit ctxt W.[
-            local_get (0l @@ at);
-            struct_get (curriedN @@ at) (curry_fun_idx @@ at);
-          ];
-          (* Target expects direct args, load them individually *)
-          compile_args ctxt at 1l (arity + 1) (fun i ->
-            if i < arity then
-              (* First arity args are loaded from closure environment *)
-              emit ctxt W.[
-                local_get (0l @@ at);
-                struct_get (curriedN @@ at) (curry_arg_idx +% int32 i @@ at);
-              ]
-            else
-              (* Last arg is the applied one *)
-              emit ctxt W.[
-                local_get (arg0 +% 1l @@ at);
-              ]
-          );
-          (* Call target *)
-          emit ctxt W.[
-            call (compile_apply ctxt at (arity + 1) @@ at);
-            return;  (* TODO: should be tail call *)
-          ]
-        end else begin
-          (* Target expects arg vector, copy to extended vector *)
-          (* This code is agnostic to static arity, hence works for any *)
-          let argv = Option.get argv_opt in
-          let src = emit_local ctxt at W.(ref_null_ argv) in
-          let dst = emit_local ctxt at W.(ref_null_ argv) in
-          let len = emit_local ctxt at W.i32 in
-          let i = emit_local ctxt at W.i32 in
-          emit ctxt W.[
-            (* Load source *)
-            local_get (0l @@ at);  (* curriedN *)
-            struct_get (curriedN @@ at) (curry_arg_idx @@ at);
-            local_tee (src +% 1l @@ at);
-            (* Load length *)
-            array_len (argv @@ at);
-            local_tee (i +% 1l @@ at);
-            (* Allocate destination *)
-            i32_const (1l @@ at);
-            i32_add;
-            local_tee (len +% 1l @@ at);
-            rtt_canon (argv @@ at);
-            array_new_default (argv @@ at);
-            local_tee (dst +% 1l @@ at);
-            (* Initialise applied argument *)
-            local_get (i +% 1l @@ at);
-            local_get (arg0 +% 1l @@ at);
-            array_set (argv @@ at);
-          ];
-          (* Copy closure arguments, from upper to lower *)
-          emit_block ctxt at W.block W.void (fun ctxt ->
-            emit_block ctxt at W.loop W.void (fun ctxt ->
-              emit ctxt W.[
-                (* Check termination condition *)
-                local_get (i +% 1l @@ at);
-                i32_eqz;
-                br_if (1l @@ at);
-                (* Load destination *)
-                local_get (dst +% 1l @@ at);
-                (* Compute next index *)
-                local_get (i +% 1l @@ at);
-                i32_const (1l @@ at);
-                i32_sub;
-                local_tee (i +% 1l @@ at);
-                (* Read arg value from source *)
-                local_get (src +% 1l @@ at);
-                local_get (i +% 1l @@ at);
-                array_get (argv @@ at);
-                (* Store arg value to destination *)
-                array_set (argv @@ at);
-                (* Iterate *)
-                br (0l @@ at);
-              ]
-            )
-          );
-          emit_block ctxt at W.block W.void (fun ctxt ->
-            let _, closNP = lower_func_type ctxt at (arity + 1) in
-            emit ctxt W.[
-              (* Load source arity *)
-              local_get (len +% 1l @@ at);
-              (* Load destination arity *)
-              local_get (0l @@ at);
-              struct_get (curriedN @@ at) (curry_fun_idx @@ at);
-              struct_get (anyclos @@ at) (clos_arity_idx @@ at);
-              (* Compare *)
-              i32_ne;
-              br_if (0l @@ at);
-              (* All arguments collected, perform call *)
-              local_get (0l @@ at);
-              struct_get (curriedN @@ at) (curry_fun_idx @@ at);
-              rtt_canon (anyclos @@ at);
-              rtt_sub (closNP @@ at);
-              ref_cast;
-            ];
-            (* Bind closure at specific type *)
-            emit_let ctxt at W.void W.[ref_ closNP] (fun ctxt ->
-              emit ctxt W.[
-                local_get (0l @@ at);
-                local_get (dst +% 2l @@ at);
-                ref_as_non_null;
-                local_get (0l @@ at);
-                struct_get (closNP @@ at) (clos_code_idx @@ at);
-                call_ref;
-                return;  (* TODO: should be tail call *)
-              ]
-            )
-          );
-          (* Still missing arguments, create new closure *)
-          emit ctxt W.[
-            i32_const (1l @@ at);
-            ref_func (compile_curry ctxt at arity @@ at);
-            local_get (0l @@ at);
-            struct_get (curriedN @@ at) (curry_fun_idx @@ at);
-            local_get (dst +% 1l @@ at);
-            ref_as_non_null;
-            rtt_canon (anyclos @@ at);
-            rtt_sub (clos1 @@ at);
-            rtt_sub (curriedN @@ at);
-            struct_new (curriedN @@ at);
-          ]
-        end
-      )
-    )
-  )
 
 
 (* Variables and Paths *)
@@ -865,7 +454,7 @@ and compile_exp_func_opt ctxt dst e : func_loc option =
               ];
               List.iteri (fun i _ ->
                 let tI = T.norm (List.nth con.flds i) in
-                compile_load_arg ctxt e.at arg0 i argv_opt;
+                Intrinsic.compile_load_arg ctxt e.at i arg0 argv_opt;
                 compile_coerce ctxt BoxedRep UnboxedRigidRep tI e.at;
               ) con.flds;
               compile_path ctxt q (Source.et e) BoxedRep;
@@ -1113,7 +702,7 @@ and compile_exp_func_opt ctxt dst e : func_loc option =
                 match classify_pat pI with
                 | IrrelevantPat -> ()
                 | TotalPat ->
-                  compile_load_arg ctxt pI.at arg0 i argv_opt;
+                  Intrinsic.compile_load_arg ctxt pI.at i arg0 argv_opt;
                   compile_pat FullPass ctxt (-1l) pI;
                 | PartialPat -> assert false
               ) ps
@@ -1124,10 +713,10 @@ and compile_exp_func_opt ctxt dst e : func_loc option =
                     match classify_pat pI with
                     | IrrelevantPat -> ()
                     | TotalPat ->
-                      compile_load_arg ctxt pI.at arg0 i argv_opt;
+                      Intrinsic.compile_load_arg ctxt pI.at i arg0 argv_opt;
                       compile_pat FullPass ctxt (-1l) pI;
                     | PartialPat ->
-                      compile_load_arg ctxt pI.at arg0 i argv_opt;
+                      Intrinsic.compile_load_arg ctxt pI.at i arg0 argv_opt;
                       compile_pat FullPass ctxt 0l pI;
                   ) ps;
                   emit ctxt W.[br (1l @@ e.at)];
@@ -1194,11 +783,11 @@ and compile_exp_func_opt ctxt dst e : func_loc option =
 
         | T.Fun _ ->
           compile_exp ctxt UnboxedRigidRep e1;
-          compile_args ctxt e.at 0l (List.length es) (fun i ->
+          Intrinsic.compile_push_args ctxt e.at (List.length es) 0l (fun i ->
             compile_exp ctxt BoxedRep (List.nth es i)
           );
           emit ctxt W.[
-            call (compile_apply ctxt e.at (List.length es) @@ e.at);
+            call (Intrinsic.compile_apply ctxt (List.length es) @@ e.at);
           ]
 
         | _ ->
@@ -1215,18 +804,18 @@ and compile_exp_func_opt ctxt dst e : func_loc option =
             rtt_sub (closN @@ e1.at);
             ref_cast;
           ];
-          compile_args ctxt e.at 0l (List.length es) (fun i ->
+          Intrinsic.compile_push_args ctxt e.at (List.length es) 0l (fun i ->
             compile_exp ctxt BoxedRep (List.nth es i)
           );
           emit ctxt W.[
             call (funcidx @@ e.at);
           ]
         | _ ->
-          compile_args ctxt e.at 0l (List.length es) (fun i ->
+          Intrinsic.compile_push_args ctxt e.at (List.length es) 0l (fun i ->
             compile_exp ctxt BoxedRep (List.nth es i)
           );
           emit ctxt W.[
-            call (compile_apply ctxt e.at (List.length es) @@ e.at);
+            call (Intrinsic.compile_apply ctxt (List.length es) @@ e.at);
           ]
         );
         compile_coerce ctxt BoxedRep dst (Source.et e) e.at
