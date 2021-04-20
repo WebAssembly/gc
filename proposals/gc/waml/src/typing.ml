@@ -403,7 +403,7 @@ and check_dec' pass env d : T.typ * T.var list * env =
     let t' = check_typ (E.extend_typs_var env ys) t in
     T.Tup [], [], E.singleton_typ y (T.Lambda (List.map it ys, t'))
 
-  | DatD (y, ys, xtss) ->
+  | DatD (y, ys, cs) ->
     let b = y.it in
     let bs = List.map it ys in
     let t = T.Var (b, List.map T.var bs) in
@@ -414,11 +414,13 @@ and check_dec' pass env d : T.typ * T.var list * env =
     let env' = E.extend_typs_var (E.adjoin env env1) ys in
     let env2 =
       if pass = RecPrePass then E.empty else
-      List.fold_left (fun env2 (x, ts) ->
+      List.fold_left (fun env2 c ->
+        let (x, ts) = c.it in
         let ts' = List.map (check_typ env') ts in
         let t' = List.fold_right (fun tI t' -> T.Fun (tI, t')) ts' t in
+        c.et <- Some t';
         E.extend_val env2 x (T.Forall (bs, t'))
-      ) E.empty xtss
+      ) E.empty cs
     in
     T.Tup [], [b], E.adjoin env1 env2
 
@@ -485,7 +487,7 @@ and check_spec' pass env s : T.var list * env =
     let bs = List.map it ys in
     [b], E.singleton_typ y (T.Lambda (bs, T.Var (b, List.map T.var bs)))
 
-  | DatS (y, ys, xtss) ->
+  | DatS (y, ys, cs) ->
     let b = y.it in
     let bs = List.map it ys in
     let t = T.Var (b, List.map T.var bs) in
@@ -493,11 +495,12 @@ and check_spec' pass env s : T.var list * env =
     let env' = E.extend_typs_var (E.adjoin env env1) ys in
     let env2 =
       if pass = RecPrePass then E.empty else
-      List.fold_left (fun env2 (x, ts) ->
+      List.fold_left (fun env2 c ->
+        let (x, ts) = c.it in
         let ts' = List.map (check_typ env') ts in
         let t' = List.fold_right (fun tI t' -> T.Fun (tI, t')) ts' t in
         E.extend_val env2 x (T.Forall (bs, t'))
-      ) E.empty xtss
+      ) E.empty cs
     in
     [b], E.adjoin env1 env2
 

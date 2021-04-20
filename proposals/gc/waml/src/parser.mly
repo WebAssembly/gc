@@ -286,8 +286,8 @@ case_list :
 /* Declarations */
 
 con :
-  | vcon { ($1, []) }
-  | vcon typ_simple_seq1 { ($1, $2) }
+  | vcon { ($1, []) @@ at () }
+  | vcon typ_simple_seq1 { ($1, $2) @@ at () }
 
 con_list :
   | con { [$1] }

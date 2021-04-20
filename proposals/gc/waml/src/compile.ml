@@ -352,7 +352,7 @@ let compile_mod_var_bind ctxt x s funcloc_opt =
 (* Closures *)
 
 let filter_loc ctxt find_var vals =
-  Vars.filter (fun x ->
+  Vars.filter (fun x _ ->
     match find_var ctxt Source.(x @@ no_region) ctxt.ext.envs with
     | (PreLoc _ | GlobalLoc _), _ -> false
     | (LocalLoc _ | ClosureLoc _), _ -> true
@@ -378,7 +378,7 @@ let compile_load_env ctxt clos closN closNenv vars at =
     ];
     let _, env = current_scope ctxt in
     let clos_mod_env_len =
-      Vars.fold (fun x i ->
+      Vars.fold (fun x _ i ->
         let idx = clos_env_idx +% i in
         let x' = Source.(@@) x at in
         let _, func_loc_opt = find_mod_var ctxt x' ctxt.ext.envs in
@@ -388,7 +388,7 @@ let compile_load_env ctxt clos closN closNenv vars at =
       ) vars.mods 0l
     in
     let _ =
-      Vars.fold (fun x i ->
+      Vars.fold (fun x _ i ->
         let idx = clos_env_idx +% i in
         let x' = Source.(@@) x at in
         let _, func_loc_opt = find_val_var ctxt x' ctxt.ext.envs in
@@ -407,12 +407,11 @@ let compile_alloc_clos ctxt fn arity vars closN closNenv at =
     i32_const (int32 arity @@ at);
     ref_func (fn @@ at);
   ];
-  Vars.iter (fun x ->
+  Vars.iter (fun x _ ->
     compile_mod_var ctxt (Source.(@@) x at)
   ) vars.mods;
-  Vars.iter (fun x ->
-    compile_val_var ctxt (Source.(@@) x at)
-      (T.Var ("", [])) (loc_rep (ClosureLoc (0l, 0l, 0l))) (* TODO *)
+  Vars.iter (fun x t ->
+    compile_val_var ctxt (Source.(@@) x at) t local_rep
   ) vars.vals;
   emit ctxt W.[
     rtt_canon (anyclos @@ at);
@@ -1001,12 +1000,11 @@ and compile_mod_func_opt ctxt m : func_loc option =
     compile_decs FullPass ctxt ds;
     let vars = Syntax.list bound_dec ds in
     let _, str = lower_sig_type ctxt m.at (Source.et m) in
-    Vars.iter (fun x ->
+    Vars.iter (fun x _ ->
       compile_mod_var ctxt Source.(x @@ m.at)
     ) vars.mods;
-    Vars.iter (fun x ->
-      compile_val_var ctxt Source.(x @@ m.at)
-        (T.Var ("", []) (*TODO*)) struct_rep
+    Vars.iter (fun x t ->
+      compile_val_var ctxt Source.(x @@ m.at) t struct_rep
     ) vars.vals;
     emit ctxt W.[
       rtt_canon (str @@ m.at);
@@ -1096,10 +1094,10 @@ and compile_coerce_mod ctxt s1 s2 at =
         compile_mod_proj ctxt str1 (Source.(@@) x at);
         compile_coerce_mod ctxt s1.it s2.it at;
       ) str2;
-      E.iter_vals (fun x _ ->
+      E.iter_vals (fun x t ->
         emit_instr ctxt at W.(local_get (tmp @@ at));
         compile_val_proj ctxt str1 (Source.(@@) x at)
-          (*TODO*) (T.Var ("", [])) struct_rep;
+          (snd (T.as_poly t.it)) struct_rep;
       ) str2;
       emit ctxt W.[
         rtt_canon (typeidx2 @@ at);
@@ -1221,10 +1219,10 @@ and compile_dec pass ctxt d dst =
   | DatD _ when pass = RecPrePass ->
     ()
 
-  | DatD (y, _ys, xtss) ->
+  | DatD (y, _ys, cs) ->
     let tagged = emit_type ctxt y.at W.(type_struct [field i32]) in
     let rtttmp =
-      if List.for_all (fun (_, ts) -> ts = []) xtss then -1l else
+      if List.for_all (fun c -> snd c.it = []) cs then -1l else
       let tmp = emit_local ctxt y.at W.(ref_null_heap (rtt_n tagged 0l)) in
       emit ctxt W.[
         rtt_canon (tagged @@ y.at);
@@ -1233,7 +1231,8 @@ and compile_dec pass ctxt d dst =
       tmp
     in
     let data =
-      List.mapi (fun i (x, ts) ->
+      List.mapi (fun i c ->
+        let (x, ts) = c.it in
         let flds = List.map Source.et ts in
         let ht, typeidx =
           if ts = [] then begin
@@ -1272,7 +1271,7 @@ and compile_dec pass ctxt d dst =
         in
         env := E.extend_val !env x (loc, None);
         (x.it, {tag = int32 i; typeidx; flds})
-      ) (List.sort compare xtss)
+      ) (List.sort (fun c1 c2 -> compare c1.it c2.it) cs)
     in env := E.extend_typ !env y data
 
   | ModD (x, m) ->
@@ -1347,15 +1346,11 @@ let compile_prog p : W.module_ =
   in
   emit_start ctxt p.at start_idx;
   emit_global_export ctxt p.at "return" result_idx;
-(*TODO
   let _, env = current_scope ctxt in
-  E.iter_vals (fun x sl ->
-    let sort, loc = sl.it in
-    let idx = as_direct_loc loc in
-    match sort with
-    | T.LetS | T.VarS | T.ClassS -> emit_global_export ctxt sl.at x idx
-    | T.FuncS -> emit_func_export ctxt sl.at x idx
-    | T.ProhibitedS -> assert false
+  E.iter_mods (fun x' locs ->
+    emit_global_export ctxt locs.at x' (as_global_loc (fst locs.it));
   ) !env;
-*)
+  E.iter_vals (fun x' locs ->
+    emit_global_export ctxt locs.at x' (as_global_loc (fst locs.it));
+  ) !env;
   Emit.gen_module ctxt p.at

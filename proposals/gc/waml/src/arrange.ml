@@ -117,13 +117,15 @@ and dec d = match d.it with
   | AssertD e -> "AssertD" $$ [exp e]
   | ValD (p, e) -> "ValD" $$ [pat p; exp e]
   | TypD (y, ys, t) -> "TypD" $$ [var y] @ list var ys @ [typ t]
-  | DatD (y, ys, xtss) ->
-    "DatD" $$ [var y] @ list var ys @
-      ["con" $$ flatlist (fun (x, ts) -> [var x] @ list typ ts) xtss]
+  | DatD (y, ys, cs) ->
+    "DatD" $$ [var y] @ list var ys @ ["con" $$ flatlist con cs]
   | ModD (x, m) -> "ModD" $$ [var x; mod_ m]
   | SigD (y, s) -> "SigD" $$ [var y; sig_ s]
   | RecD ds -> "RecD" $$ list dec ds
   | InclD m -> "InclD" $$ [mod_ m]
+
+and con c = match c.it with
+  | (x, ts) -> [var x] @ list typ ts
 
 
 (* Signatures *)
@@ -131,9 +133,8 @@ and dec d = match d.it with
 and spec s = match s.it with
   | ValS (x, ys, t) -> "ValS" $$ list var ys @ [var x; typ t]
   | TypS (y, ys, to_) -> "TypS" $$ [var y] @ list var ys @ opt typ to_
-  | DatS (y, ys, xtss) ->
-    "DatS" $$ [var y] @ list var ys @
-      ["con" $$ flatlist (fun (x, ts) -> [var x] @ list typ ts) xtss]
+  | DatS (y, ys, cs) ->
+    "DatS" $$ [var y] @ list var ys @ ["con" $$ flatlist con cs]
   | ModS (x, s) -> "ModS" $$ [var x; sig_ s]
   | SigS (y, s) -> "SigS" $$ [var y; sig_ s]
   | RecS ss -> "RecS" $$ list spec ss

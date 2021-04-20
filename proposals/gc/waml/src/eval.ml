@@ -326,11 +326,12 @@ and eval_dec env d : V.value * env =
   | TypD _ ->
     V.Tup [], E.empty
 
-  | DatD (_, _, xts) ->
+  | DatD (_, _, cs) ->
     let env' =
-      List.fold_left (fun env' (x, ts) ->
+      List.fold_left (fun env' c ->
+        let (x, ts) = c.it in
         E.extend_val env' x (V.con x.it (List.length ts))
-      ) E.empty xts
+      ) E.empty cs
     in V.Tup [], env'
 
   | ModD (x, m) ->

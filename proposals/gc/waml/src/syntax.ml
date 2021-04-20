@@ -90,12 +90,13 @@ and dec' =
   | AssertD of exp
   | ValD of pat * exp
   | TypD of var * var list * typ
-  | DatD of var * var list * (var * typ list) list
+  | DatD of var * var list * con list
   | ModD of var * mod_
   | SigD of var * sig_
   | RecD of dec list
   | InclD of mod_
 
+and con = (var * typ list, T.typ) Source.phrase
 
 (* Signatures *)
 
@@ -103,7 +104,7 @@ and spec = (spec', T.str) Source.phrase
 and spec' =
   | ValS of var * var list * typ
   | TypS of var * var list * typ option
-  | DatS of var * var list * (var * typ list) list
+  | DatS of var * var list * con list
   | ModS of var * sig_
   | SigS of var * sig_
   | RecS of spec list
@@ -142,50 +143,59 @@ and prog' =
 
 (* Free variables *)
 
-module Vars = Env.Set
+module Vars = Env.Map
 
-type vars = {vals : Vars.t; mods : Vars.t}
+type vars = {vals : T.typ Vars.t; mods : T.sig_ Vars.t}
 
 let cardinal s = Vars.cardinal s.vals + Vars.cardinal s.mods
 let empty = {vals = Vars.empty; mods = Vars.empty}
 let (++) s1 s2 =
-  Vars.{vals = union s1.vals s2.vals; mods = union s1.mods s2.mods}
+  Vars.{ vals = adjoin s1.vals s2.vals; mods = adjoin s1.mods s2.mods }
 let (--) s1 s2 =
-  Vars.{vals = diff s1.vals s2.vals; mods = diff s1.mods s2.mods}
+  Vars.{ vals = diff s1.vals s2.vals; mods = diff s1.mods s2.mods }
 
 let list f xs = List.fold_left (++) empty (List.map f xs)
 
-let val_var x = {empty with vals = Vars.singleton x.Source.it}
-let mod_var x = {empty with mods = Vars.singleton x.Source.it}
+let val_var x t = {empty with vals = Vars.singleton x.Source.it t}
+let mod_var x s = {empty with mods = Vars.singleton x.Source.it s}
 
 
 let rec bound_pat p =
   match p.Source.it with
   | WildP | LitP _ -> empty
-  | VarP x -> val_var x
+  | VarP x -> val_var x (Source.et p)
   | ConP (_, ps) | TupP ps -> list bound_pat ps
   | RefP p1 | AnnotP (p1, _) -> bound_pat p1
 
+let bound_con t c =
+  let (x, ts) = c.Source.it in
+  val_var x (Source.et c)
+
 let rec bound_dec d =
-  match d.Source.it with
+  let open Source in
+  match d.it with
   | ExpD _ | AssertD _ | TypD _ | SigD _ -> empty
   | ValD (p, _) -> bound_pat p
-  | DatD (_, _, xtts) -> list (fun (x, _) -> val_var x) xtts
-  | ModD (x, m) -> mod_var x
+  | DatD (y, ys, cs) ->
+    let t = T.Var (y.it, List.map T.var (List.map Source.it ys)) in
+    list (bound_con t) cs
+  | ModD (x, m) -> mod_var x (Source.et m)
   | RecD ds -> list bound_dec ds
   | InclD m ->
     let _, str = T.as_str (Source.et m) in
-    { vals = Env.dom_val str; mods = Env.dom_mod str }
+    { vals = Env.Map.map (fun pt -> snd (T.as_poly pt.it)) str.Env.vals;
+      mods = Env.Map.map Source.it str.Env.mods;
+    }
 
 
 let rec free_mod_path q =
   match q.Source.it with
-  | PlainP x -> mod_var x
+  | PlainP x -> mod_var x (Source.et q)
   | QualP (q', _) -> free_mod_path q'
 
 let free_val_path q =
   match q.Source.it with
-  | PlainP x -> val_var x
+  | PlainP x -> val_var x (snd (T.as_poly (Source.et q)))
   | QualP (q', _) -> free_mod_path q'
 
 let rec free_pat p =
@@ -228,7 +238,7 @@ and free_mod m =
   match m.Source.it with
   | VarM q -> free_mod_path q
   | StrM ds -> free_decs ds
-  | FunM (x, _, m) -> free_mod m -- mod_var x
+  | FunM (x, s, m) -> free_mod m -- mod_var x (Source.et s)
   | AppM (m1, m2) -> free_mod m1 ++ free_mod m2
   | AnnotM (m1, _) -> free_mod m1
   | LetM (ds, m1) -> free_mod m1 -- list bound_dec ds ++ free_decs ds

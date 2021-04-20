@@ -21,6 +21,7 @@ struct
   let from_list xvs = List.fold_left (fun m (x, v) -> add x v m) empty xvs
   let from_list2 xs vs = List.fold_left2 (fun m x v -> add x v m) empty xs vs
   let adjoin m1 m2 = union (fun _ y1 y2 -> Some y2) m1 m2
+  let diff m1 m2 = fold (fun x _ m1' -> remove x m1') m2 m1
   let disjoint_union m1 m2 = union (fun x _ _ -> raise (Clash x)) m1 m2
   let disjoint_add x v m = disjoint_union m (singleton x v)
 end

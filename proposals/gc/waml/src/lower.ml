@@ -39,6 +39,9 @@ let is_boxed_rep = function
   | BlockRep | BoxedRep -> true
   | _ -> false
 
+let as_local_loc = function LocalLoc idx -> idx | _ -> assert false
+let as_global_loc = function GlobalLoc idx -> idx | _ -> assert false
+
 let max_func_arity = 5
 
 let clos_arity_idx = 0l

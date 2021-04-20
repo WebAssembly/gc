@@ -37,6 +37,8 @@ val var : var -> typ
 val as_tup : typ -> typ list
 val as_fun : typ -> typ * typ
 
+val as_poly : poly -> var list * typ
+
 val as_str : sig_ -> var list * str
 val as_fct : sig_ -> var list * sig_ * sig_
 
