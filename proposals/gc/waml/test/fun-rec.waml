@@ -1,0 +1,14 @@
+;; Recursion
+
+rec val fac x = if x == 0 then 1 else x * fac (x-1);
+assert fac 5 == 120;
+
+rec val fib n = if n < 2 then n else fib (n-2) + fib (n-1);
+assert fib 0 == 0;
+assert fib 1 == 1;
+assert fib 10 == 55;
+
+rec val even x = x == 0 \/ odd (x - 1)
+and val odd x = x == 1 \/ even (x - 1);
+assert even 10;
+assert odd 7;

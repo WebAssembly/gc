@@ -30,16 +30,13 @@ val c = if 0 == 0 then () else ();
 v := ();
 v := u;
 
-(; TODO
+val f () = ();
+val g x = x;
 val h x (y : ()) z : Int = x + z;
-assert h(1, (), 2) == 3;
-assert h(1, u, 2) == 3;
-assert h(1, u2, 2) == 3;
-assert h(1, v!, 2) == 3;
-assert h(1, f(), 2) == 3;
-assert h(1, g(), 2) == 3;
-assert h(1, b, 2) == 3;
-assert h(1, b2, 2) == 3;
-assert h(1, c, 2) == 3;
-assert h(1, w, 2) == 3;
-;)
+assert h 1 () 2 == 3;
+assert h 1 u 2 == 3;
+assert h 1 u2 2 == 3;
+assert h 1 (v!) 2 == 3;
+assert h 1 (f ()) 2 == 3;
+assert h 1 (g ()) 2 == 3;
+assert h 1 c 2 == 3;

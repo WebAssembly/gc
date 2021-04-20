@@ -1,0 +1,59 @@
+// Polymorphic types
+
+data Data = A | B
+type Pair X Y = (Y, X);
+
+val p01 : Pair Text () = ((), "5");
+val p02 : Pair Int Data = (A, 6);
+val p03 : Pair Float (Int -> Int) = (fun x -> x, 3.14);
+
+val ((), "5") = p01;
+val (A, 6) = p02;
+val (p030, 3.14) = p03;
+assert p030 66 == 66;
+
+
+// Polymorphic functions
+
+val pair x y = (y, x);
+
+val fst p = let val (_, x) = p in x;
+val snd p = let val (y, _) = p in y;
+
+val p1 = pair "6" ();
+val x1 = fst p1;
+val y1 = snd p1;
+assert x1 == "6";
+val () = y1;
+
+val p2 = pair 6 (0 == 0);
+assert fst p2 == 6;
+assert snd p2;
+
+val p3 = pair 3.14 A;
+assert fst p3 == 3.14;
+val A = snd p3;
+
+
+data List a = Nil | Cons a (List a);
+rec val rev xs = rev' xs Nil
+and val rev' xs ys =
+  case xs of {
+    Nil => ys;
+    Cons x xs' => rev' xs' (Cons x ys);
+  };
+
+val a1 = [1, 2, 3, 4, 5];
+val [5, 4, 3, 2, 1] = rev a;
+
+let a2 = ["1", "2", "3"];
+let ["3", "2", "1"] = rev a2;
+
+let [[7], [], [5, 6]] = rev [[5, 6], [], [7]];
+
+
+data Opt A = None | Some A
+val none = None;
+
+val _ : Opt Int = none;
+val _ : Opt Text = none;

@@ -188,6 +188,7 @@ exp_simple :
   | vpath { VarE $1 @@ at () }
   | cpath { ConE $1 @@ at () }
   | LPAR exp_list RPAR { match $2 with [e] -> e | es -> TupE es @@ at () }
+  | LPAR dec_seq RPAR { LetE ($2, TupE [] @@ at ()) @@ at () }
   | LBRACK exp_list RBRACK {
       List.fold_right (fun e1 e2 ->
         AppE (
@@ -265,6 +266,12 @@ exp_list :
   | /* empty */ { [] }
   | exp { [$1] }
   | exp COMMA exp_list { $1 :: $3 }
+
+dec_seq :
+  | dec SEMICOLON dec { [$1; $3] }
+  | dec SEMICOLON_EOL dec { [$1; $3] }
+  | dec SEMICOLON dec_seq { $1 :: $3 }
+  | dec SEMICOLON_EOL dec_seq { $1 :: $3 }
 
 case :
   | pat DARROW exp { ($1, $3) }

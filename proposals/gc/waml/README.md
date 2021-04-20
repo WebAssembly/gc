@@ -138,6 +138,7 @@ exp ::=
   'case' exp 'of' '{' case;* '}'           case
   'case' exp 'of' case;                    case (shorthand)
   'let' dec;* 'in' exp                     local declaration
+  '(' dec;* ')'                            sequencing (shorthand)
 
 case :
   pat '=>' exp
@@ -169,7 +170,7 @@ dec ::=
   'data' uid lid* '=' (uid typ*)|*         algebraic data type
   'module' uid ('(' uid ':' sig ')')* (':' sig)? '=' mod     module
   'signature' uid '=' sig                  signature
-  'rec' dec ('and' dec)*                   recursion
+  'rec' dec (';' 'and' dec)*               recursion
   'include' mod                            inclusion
 ```
 Note:

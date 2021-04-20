@@ -1,0 +1,40 @@
+;; Closures
+
+let
+  val z = 5;
+  val w = ref 6;
+  val get_z () = z;
+  val get_w () = w!;
+  assert get_z () == 5;
+  assert get_w () == 6;
+in ();
+
+val h x =
+  let val y = x + 1 in
+  fun z => x + y + z;
+
+assert h 1 2 == 5;
+
+
+data List a = Nil | Cons a (List a);
+val a = [1, 2, 5, 6, -8];
+
+rec val foreach xs f =
+  case xs of {
+    Nil => ();
+    Cons x xs' => (f x; foreach xs' f);
+  };
+
+val sum = ref 0;
+foreach a (fun i => sum := sum! + i);
+assert sum! == 6;
+
+
+rec val foldl xs y f =
+  case xs of {
+    Nil => y;
+    Cons x xs' => foldl xs' (f x y) f;
+  };
+
+val sum2 = foldl a 0 (fun i sum => sum + i);
+assert sum2 == 6;
