@@ -17,13 +17,6 @@ let float64 = W.F64.of_float
 let (+%) = Int32.add
 
 
-(* Failure *)
-
-exception NYI of Source.region * string
-
-let nyi at s = raise (NYI (at, s))
-
-
 (* Environment *)
 
 type data_con = {tag : int32; typeidx : int32; flds : T.typ list}
@@ -249,40 +242,44 @@ let compile_mod_var ctxt x =
   | LocalLoc _ | GlobalLoc _ -> emit_instr ctxt x.at W.ref_as_non_null
   | _ -> ()
 
+let compile_mod_proj ctxt str x =
+  let _, typeidx = lower_str_type ctxt x.at str in
+  let i = ref 0 in
+  let found = ref false in
+  E.iter_mods (fun x' _ ->
+    if not !found then if x' = x.it then found := true else incr i
+  ) str;
+  emit_instr ctxt x.at W.(
+    struct_get (typeidx @@ x.at) (int32 !i @@ x.at)
+  )
+
 let rec compile_mod_path ctxt q =
   match q.it with
   | PlainP x -> compile_mod_var ctxt x
   | QualP (q', x) ->
-    let _, str = T.as_str (Source.et q') in
-    let _, typeidx = lower_str_type ctxt q'.at str in
-    let i = ref 0 in
-    let found = ref false in
-    E.iter_mods (fun x' _ ->
-      if not !found then if x' = x.it then found := true else incr i
-    ) str;
     compile_mod_path ctxt q';
-    emit_instr ctxt q.at W.(
-      struct_get (typeidx @@ q.at) (int32 !i @@ q.at)
-    )
+    compile_mod_proj ctxt (snd (T.as_str (Source.et q'))) x
+
+let compile_val_proj ctxt str x t dst =
+  let _, typeidx = lower_str_type ctxt x.at str in
+  let k = E.cardinal_mods str in
+  let i = ref 0 in
+  let found = ref false in
+  E.iter_vals (fun x' _ ->
+    if not !found then if x' = x.it then found := true else incr i
+  ) str;
+  emit_instr ctxt x.at W.(
+    struct_get (typeidx @@ x.at) (int32 (k + !i) @@ x.at)
+  );
+  compile_coerce ctxt str_rep dst t x.at
 
 let compile_val_path ctxt q t dst =
-  (match q.it with
+  match q.it with
   | PlainP x -> compile_val_var ctxt x t dst
   | QualP (q', x) ->
-    let _, str = T.as_str (Source.et q') in
-    let _, typeidx = lower_str_type ctxt q'.at str in
-    let k = E.cardinal_mods str in
-    let i = ref 0 in
-    let found = ref false in
-    E.iter_vals (fun x' _ ->
-      if not !found then if x' = x.it then found := true else incr i
-    ) str;
     compile_mod_path ctxt q';
-    emit_instr ctxt q.at W.(
-      struct_get (typeidx @@ q.at) (int32 (k + !i) @@ q.at)
-    );
-    compile_coerce ctxt str_rep dst t q.at
-  )
+    compile_val_proj ctxt (snd (T.as_str (Source.et q'))) x t dst
+
 
 let name_of_path q =
   match q.it with
@@ -1046,14 +1043,90 @@ and compile_mod_func_opt ctxt m : func_loc option =
 
 
 and compile_coerce_mod ctxt s1 s2 at =
+  if need_coerce_mod s1 s2 then begin
+    let emit ctxt = List.iter (emit_instr ctxt at) in
+    match s1, s2 with
+    | T.Str (_, str1), T.Str (_, str2) ->
+      let t1, tidx = lower_str_type ctxt at str1 in
+      let _, typeidx2 = lower_str_type ctxt at str2 in
+      let tmp = emit_local ctxt at W.(ref_null_ tidx) in
+      emit ctxt W.[
+        local_set (tmp @@ at);
+      ];
+      E.iter_mods (fun x s2 ->
+        let s1 = E.find_mod (Source.(@@) x at) str1 in
+        emit_instr ctxt at W.(local_get (tmp @@ at));
+        compile_mod_proj ctxt str1 (Source.(@@) x at);
+        compile_coerce_mod ctxt s1.it s2.it at;
+      ) str2;
+      E.iter_vals (fun x _ ->
+        emit_instr ctxt at W.(local_get (tmp @@ at));
+        compile_val_proj ctxt str1 (Source.(@@) x at)
+          (*TODO*) (T.Var ("", [])) str_rep;
+      ) str2;
+      emit ctxt W.[
+        rtt_canon (typeidx2 @@ at);
+        struct_new (typeidx2 @@ at);
+      ];
+
+    | T.Fct (_, s11, s12), T.Fct (_, s21, s22) ->
+      let ft, fidx = lower_sig_type ctxt at s1 in
+      let anyclos = lower_anyclos_type ctxt at in
+      let _code, clos1, closenv = lower_fct_clos_type ctxt at s12 s22 [ft] in
+      let vt21, _ = lower_sig_type ctxt at s21 in
+      let vt22, _ = lower_sig_type ctxt at s22 in
+      let fn = emit_func ctxt at W.(ref_ clos1 :: [vt21]) [vt22]
+        (fun ctxt _ ->
+          let clos = emit_param ctxt at in
+          let arg = emit_param ctxt at in
+          let tmp = emit_local ctxt at W.(ref_null_ fidx) in
+          emit ctxt W.[
+            local_get (clos @@ at);
+            rtt_canon (anyclos @@ at);
+            rtt_sub (clos1 @@ at);
+            rtt_sub (closenv @@ at);
+            ref_cast;
+            struct_get (closenv @@ at) (clos_env_idx @@ at);
+            local_tee (tmp @@ at);
+            ref_as_non_null;
+            local_get (arg @@ at);
+          ];
+          compile_coerce_mod ctxt s21 s11 at;
+          emit ctxt W.[
+            local_get (tmp @@ at);
+            struct_get (fidx @@ at) (clos_code_idx @@ at);
+            call_ref;
+          ];
+          compile_coerce_mod ctxt s12 s22 at;
+        )
+      in
+      let tmp = emit_local ctxt at W.(ref_null_ fidx) in
+      emit_func_ref ctxt at fn;
+      emit ctxt W.[
+        local_set (tmp @@ at);
+        i32_const (1l @@ at);
+        ref_func (fn @@ at);
+        local_get (tmp @@ at);
+        ref_as_non_null;
+        rtt_canon (anyclos @@ at);
+        rtt_sub (clos1 @@ at);
+        rtt_sub (closenv @@ at);
+        struct_new (closenv @@ at);
+      ]
+
+    | _ ->
+      assert false
+  end
+
+and need_coerce_mod s1 s2 =
   match s1, s2 with
   | T.Str (_, str1), T.Str (_, str2) ->
-    if E.cardinal_vals str1 <> E.cardinal_vals str2 || E.cardinal_mods str2 <> 0 then
-      nyi at "structure coercions"
+    E.cardinal_vals str1 > E.cardinal_vals str2 ||
+    E.cardinal_mods str1 > E.cardinal_mods str2 ||
+    List.exists2 (fun (x1, s1) (x2, s2) -> need_coerce_mod s1.it s2.it)
+      (E.mods str1) (E.mods str2)
   | T.Fct (_, s11, s12), T.Fct (_, s21, s22) ->
-    (* TODO: generate wrapper functor; for now just fail if it would be needed *)
-    compile_coerce_mod ctxt s21 s11 at;
-    compile_coerce_mod ctxt s12 s22 at;
+    need_coerce_mod s21 s11 || need_coerce_mod s12 s22
   | _ ->
     assert false
 
@@ -1062,9 +1135,7 @@ and compile_coerce_mod ctxt s1 s2 at =
 
 and compile_dec pass ctxt d dst =
   let emit ctxt = List.iter (emit_instr ctxt d.at) in
-(*
   let scope, env = current_scope ctxt in
-*)
   match d.it with
   | ExpD _ | AssertD _ when pass = RecPrePass ->
     ()
@@ -1084,7 +1155,6 @@ and compile_dec pass ctxt d dst =
     (* TODO: allocate funcidx to allow static calls in recursion *)
 
   | ValD ({it = VarP x; _} as p, e) ->
-    let scope, env = current_scope ctxt in
     let idx_opt = compile_exp_func_opt ctxt pat_rep e in
     compile_pat pass ctxt (-1l) p;
     let {it = (loc, _); _} = E.find_val x !env in
@@ -1115,7 +1185,6 @@ and compile_dec pass ctxt d dst =
     ()
 
   | DatD (y, _ys, xtss) ->
-    let scope, env = current_scope ctxt in
     let tagged = emit_type ctxt y.at W.(type_struct [field i32]) in
     let rtttmp =
       if List.for_all (fun (_, ts) -> ts = []) xtss then -1l else
@@ -1170,7 +1239,6 @@ and compile_dec pass ctxt d dst =
     in env := E.extend_typ !env y data
 
   | ModD (x, m) ->
-    let scope, env = current_scope ctxt in
     let idx_opt = compile_mod_func_opt ctxt m in
     let _vt, typeidx = lower_sig_type ctxt x.at (Source.et m) in
     let loc =

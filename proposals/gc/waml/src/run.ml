@@ -16,8 +16,6 @@ let rec handle f =
   | Typing.Error (at, msg) -> error at "type error" msg
   | Eval.Trap (at, msg) -> error at "runtime error" msg
   | Eval.Crash (at, msg) -> error at "crash" msg
-  | Compile.NYI (at, msg) ->
-    error at "compilation error" (msg ^ " not yet implemented")
   | Link.Error (at, msg) -> error at "linking error" msg
   | Wasm.Valid.Invalid (at, msg) ->
     error at "validation error (compilation bug)" msg
