@@ -98,23 +98,6 @@ let string_of_field_type ctxt idx i =
 
 (* Coercions *)
 
-let default_exp ctxt at rep t : W.instr' list =
-  if is_boxed_rep rep then
-    W.[ref_null (lower_heap_type ctxt at t)]
-  else
-    match T.norm t with
-    | T.Bool | T.Byte | T.Int ->
-      W.[i32_const (0l @@ at)]
-    | T.Float ->
-      W.[f64_const (float64 0.0 @@ at)]
-    | T.Var _ | T.Text | T.Tup _ | T.Ref _ | T.Fun _ ->
-      W.[ref_null (lower_heap_type ctxt at t)]
-    | T.Infer _ -> assert false
-
-let default_const ctxt at rep t : W.const =
-  List.map (fun instr' -> instr' @@ at) (default_exp ctxt at rep t) @@ at
-
-
 let compile_coerce ctxt src dst t at =
   if src <> dst then
   let emit ctxt = List.iter (emit_instr ctxt at) in
@@ -305,18 +288,16 @@ let name_of_path q =
 
 let rec compile_val_var_bind pass ctxt x t funcloc_opt =
   let scope, env = current_scope ctxt in
+  let lower rep = lower_val_type ctxt x.at rep t x.it in
   match pass with
   | RecPrePass ->
     let loc =
       match scope with
       | PreScope -> assert false
       | LocalScope | FuncScope | ModuleScope ->
-        let vt = lower_value_type ctxt x.at local_rep t in
-        LocalLoc (emit_local ctxt x.at vt)
+        LocalLoc (emit_local ctxt x.at (lower local_rep))
       | GlobalScope ->
-        let vt = lower_value_type ctxt x.at local_rep t in
-        let const = default_const ctxt x.at global_rep t in
-        GlobalLoc (emit_global ctxt x.at W.Mutable vt const)
+        GlobalLoc (emit_global ctxt x.at W.Mutable (lower global_rep) None)
     in
     env := E.extend_val !env x (loc, funcloc_opt)
 
@@ -345,8 +326,7 @@ let compile_mod_var_bind ctxt x s funcloc_opt =
       emit_instr ctxt x.at W.(local_set (idx @@ x.at));
       LocalLoc idx
     | GlobalScope ->
-      let const = W.[ref_null (type_ typeidx) @@ x.at] @@ x.at in
-      let idx = emit_global ctxt x.at W.Mutable W.(ref_null_ typeidx) const in
+      let idx = emit_global ctxt x.at W.Mutable W.(ref_null_ typeidx) None in
       emit_instr ctxt x.at W.(global_set (idx @@ x.at));
       GlobalLoc idx
   in
@@ -1101,7 +1081,7 @@ and compile_coerce_mod ctxt s1 s2 at =
       E.iter_vals (fun x t ->
         emit_instr ctxt at W.(local_get (tmp @@ at));
         compile_val_proj ctxt str1 (Source.(@@) x at)
-          (snd (T.as_poly t.it)) struct_rep;
+          (T.as_mono t.it) struct_rep;
       ) str2;
       emit ctxt W.[
         rtt_canon (typeidx2 @@ at);
@@ -1223,7 +1203,7 @@ and compile_dec pass ctxt d dst =
   | DatD _ when pass = RecPrePass ->
     ()
 
-  | DatD (y, _ys, cs) ->
+  | DatD (y, ys, cs) ->
     let tagged = emit_type ctxt y.at W.(type_struct [field i32]) in
     let rtttmp =
       if List.for_all (fun c -> snd c.it = []) cs then -1l else
@@ -1234,46 +1214,26 @@ and compile_dec pass ctxt d dst =
       ];
       tmp
     in
+    let t = T.Var (y.it, List.map T.var (List.map Source.it ys)) in
     let data =
       List.mapi (fun i c ->
         let (x, ts) = c.it in
         let flds = List.map Source.et ts in
-        let ht, typeidx =
-          if ts = [] then begin
-            emit ctxt W.[
-              i32_const (int32 i @@ x.at);
-              i31_new;
-            ];
-            W.i31, -1l
-          end else begin
-            let ts = List.map (lower_value_type ctxt x.at UnboxedRigidRep) flds in
-            let fts = List.map W.field ts in
-            let con = emit_type ctxt x.at W.(type_struct (field i32 :: fts)) in
-            emit ctxt W.[
-              local_get (rtttmp @@ x.at);
-              ref_as_non_null;
-              rtt_sub (con @@ x.at);
-            ];
-            W.rtt_n con 1l, con
-          end
-        in
-        let t = W.ref_null_heap ht in
-        let loc =
-          match scope with
-          | PreScope -> assert false
-
-          | LocalScope | FuncScope | ModuleScope ->
-            let idx = emit_local ctxt x.at t in
-            emit ctxt W.[local_set (idx @@ x.at)];
-            LocalLoc idx
-
-          | GlobalScope ->
-            let const = [W.ref_null ht @@ x.at] @@ x.at in
-            let idx = emit_global ctxt x.at W.Mutable t const in
-            emit ctxt W.[global_set (idx @@ x.at)];
-            GlobalLoc idx
-        in
-        env := E.extend_val !env x (loc, None);
+        let _ht, typeidx = lower_con_type ctxt x.at flds in
+        if ts = [] then begin
+          emit ctxt W.[
+            i32_const (int32 i @@ x.at);
+            i31_new;
+          ]
+        end else begin
+          emit ctxt W.[
+            local_get (rtttmp @@ x.at);
+            ref_as_non_null;
+            rtt_sub (typeidx @@ x.at);
+          ]
+        end;
+        let ts' = List.map Source.et ts in
+        compile_val_var_bind pass ctxt x (T.fun_flat ts' t) None;
         (x.it, {tag = int32 i; typeidx; flds})
       ) (List.sort (fun c1 c2 -> compare c1.it c2.it) cs)
     in env := E.extend_typ !env y data
@@ -1325,37 +1285,64 @@ and compile_decs pass ctxt ds =
 
 (* Programs *)
 
-let compile_imp ctxt d =
+let compile_imp_pre ctxt d =
   let ImpD (x, url) = d.it in
-  let vt, _ = lower_str_type ctxt x.at (Source.et d) in
-  let idx = emit_global_import ctxt x.at url x.it W.Immutable vt in
-  let _, env = current_scope ctxt in
-  env := E.extend_mod !env x (GlobalLoc idx, None)
+  let str = Source.et d in
+  E.iter_mods (fun x' s ->
+    let _, typeidx = lower_sig_type ctxt s.at s.it in
+    let vt = W.ref_null_ typeidx in
+    ignore (emit_global_import ctxt s.at url ("module " ^ x') W.Mutable vt)
+  ) str;
+  E.iter_vals (fun x' pt ->
+    let t = T.as_mono pt.it in
+    let vt = lower_val_type ctxt pt.at global_rep t x' in
+    ignore (emit_global_import ctxt pt.at url x' W.Mutable vt)
+  ) str
+
+let compile_imp ctxt idx d =
+  let ImpD (x, url) = d.it in
+  let str = Source.et d in
+  E.iter_mods (fun _ s ->
+    emit_instr ctxt s.at W.(global_get (int32 !idx @@ s.at)); incr idx;
+    emit_instr ctxt s.at W.(ref_as_non_null);
+  ) str;
+  E.iter_vals (fun _ pt ->
+    emit_instr ctxt pt.at W.(global_get (int32 !idx @@ pt.at)); incr idx
+  ) str;
+  let vt, typeidx = lower_str_type ctxt x.at str in
+  emit_instr ctxt d.at W.(rtt_canon (typeidx @@ d.at));
+  emit_instr ctxt d.at W.(struct_new (typeidx @@ d.at));
+  compile_mod_var_bind ctxt x (T.Str ([], str)) None
 
 let compile_prog p : W.module_ =
   let Prog (is, ds) = p.it in
   let ctxt = enter_scope (make_ctxt ()) GlobalScope in
-  List.iter (compile_imp ctxt) is;
   let t, _ = Source.et p in
   let rep = loc_rep (GlobalLoc 0l) in
   let vt = lower_value_type ctxt p.at rep t in
-  let const = default_const ctxt p.at rep t in
-  let result_idx = emit_global ctxt p.at W.Mutable vt const in
   let start_idx =
     emit_func ctxt p.at [] [] (fun ctxt _ ->
+      List.iter (compile_imp_pre ctxt) is;
+      List.iter (compile_imp ctxt (ref 0)) is;
       compile_decs FullPass ctxt ds;
       compile_coerce ctxt BlockRep rep t p.at;
+      let result_idx = emit_global ctxt p.at W.Mutable vt None in
       emit_instr ctxt p.at W.(global_set (result_idx @@ p.at));
+      emit_global_export ctxt p.at "return" result_idx;
     )
   in
   emit_start ctxt p.at start_idx;
-  emit_global_export ctxt p.at "return" result_idx;
   let _, env = current_scope ctxt in
   E.iter_mods (fun x' locs ->
-    emit_global_export ctxt locs.at ("module " ^ x')
-      (as_global_loc (fst locs.it));
+    let (loc, funcloc_opt) = locs.it in
+    emit_global_export ctxt locs.at ("module " ^ x') (as_global_loc loc);
+    Option.iter (fun {funcidx; _} ->
+      emit_func_export ctxt locs.at ("func module " ^ x') funcidx) funcloc_opt
   ) !env;
   E.iter_vals (fun x' locs ->
-    emit_global_export ctxt locs.at x' (as_global_loc (fst locs.it));
+    let (loc, funcloc_opt) = locs.it in
+    emit_global_export ctxt locs.at x' (as_global_loc loc);
+    Option.iter (fun {funcidx; _} ->
+      emit_func_export ctxt locs.at ("func " ^ x') funcidx) funcloc_opt
   ) !env;
   Emit.gen_module ctxt p.at

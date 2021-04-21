@@ -33,11 +33,14 @@ and str = (poly, con, sig_, sig_) Env.env
 (* Constructors and Accessors *)
 
 val var : var -> typ
+val fun_flat : typ list -> typ -> typ
 
 val as_tup : typ -> typ list
 val as_fun : typ -> typ * typ
+val as_fun_flat : typ -> typ list * typ
 
 val as_poly : poly -> var list * typ
+val as_mono : poly -> typ
 
 val as_str : sig_ -> var list * str
 val as_fct : sig_ -> var list * sig_ * sig_

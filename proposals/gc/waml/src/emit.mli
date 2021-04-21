@@ -44,7 +44,7 @@ val emit_global_export : 'a ctxt -> W.region -> string -> int32 -> unit
 val emit_param : 'a ctxt -> W.region -> int32
 val emit_local : 'a ctxt -> W.region -> W.value_type -> int32
 val emit_global :
-  'a ctxt -> W.region -> W.mutability -> W.value_type -> W.const -> int32
+  'a ctxt -> W.region -> W.mutability -> W.value_type -> W.const option -> int32
 
 val emit_data : 'a ctxt -> W.region -> string -> int32
 

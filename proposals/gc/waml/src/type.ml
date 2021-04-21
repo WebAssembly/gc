@@ -39,10 +39,22 @@ and str = (poly, con, sig_, sig_) Env.env
 
 let var b = Var (b, [])
 
+let rec fun_flat ts t =
+  match ts with
+  | [] -> t
+  | t'::ts' -> Fun (t', fun_flat ts' t)
+
 let as_tup = function Tup ts -> ts | _ -> assert false
 let as_fun = function Fun (t1, t2) -> t1, t2 | _ -> assert false
 
+let rec as_fun_flat t = as_fun_flat' [] t
+and as_fun_flat' ts = function
+  | Fun (t1, t2) -> as_fun_flat' (t1::ts) t2
+  | Infer {contents = Res t'} -> as_fun_flat' ts t'
+  | t -> List.rev ts, t
+
 let as_poly (Forall (bs, t)) = bs, t
+let as_mono (Forall (_, t)) = t
 
 let as_str = function Str (bs, s) -> bs, s | _ -> assert false
 let as_fct = function Fct (bs, s1, s2) -> bs, s1, s2 | _ -> assert false

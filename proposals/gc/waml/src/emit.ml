@@ -179,9 +179,20 @@ let emit_param ctxt at : int32 =
 let emit_local ctxt at t' : int32 =
   emit_entity ctxt.int.locals (t' @@ at)
 
-let emit_global ctxt at mut t' ginit : int32 =
+let emit_global ctxt at mut t' ginit_opt : int32 =
   let gtype = W.GlobalType (t', mut) in
-  emit_entity ctxt.int.globals (W.{gtype; ginit} @@ at)
+  let ginit =
+    match ginit_opt with
+    | Some ginit -> ginit
+    | None ->
+      match t' with
+      | W.(NumType I32Type) -> W.[i32_const (0l @@ at) @@ at] @@ at
+      | W.(NumType I64Type) -> W.[i64_const (0L @@ at) @@ at] @@ at
+      | W.(NumType F32Type) -> W.[f32_const (F32.of_float 0.0 @@ at) @@ at] @@ at
+      | W.(NumType F64Type) -> W.[f64_const (F64.of_float 0.0 @@ at) @@ at] @@ at
+      | W.(RefType (_, ht)) -> W.[ref_null ht @@ at] @@ at
+      | W.BotType -> assert false
+  in emit_entity ctxt.int.globals (W.{gtype; ginit} @@ at)
 
 let emit_data ctxt at s : int32 =
   let addr = !(ctxt.int.data_offset) in

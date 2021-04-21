@@ -111,9 +111,26 @@ and lower_param_types ctxt at arity : W.value_type list * int32 option =
     W.[ref_ argv], Some argv
 
 and lower_block_type ctxt at rep t : W.block_type =
-  match t with
-  | T.Tup [] when rep = BlockRep -> W.void
-  | t -> W.result (lower_value_type ctxt at rep t)
+  match t, rep with
+  | _, DropRep -> W.void
+  | T.Tup [], BlockRep -> W.void
+  | t, _ -> W.result (lower_value_type ctxt at rep t)
+
+let lower_con_type ctxt at ts : W.value_type * int32 =
+  if ts = [] then
+    W.i31ref, -1l
+  else begin
+    let vts = List.map (lower_value_type ctxt at UnboxedRigidRep) ts in
+    let fts = List.map W.field vts in
+    let con = emit_type ctxt at W.(type_struct (field i32 :: fts)) in
+    W.(ref_null_heap (rtt_n con 1l)), con
+  end
+
+let lower_val_type ctxt at rep t x : W.value_type =
+  if x.[0] = Char.lowercase_ascii x.[0] then
+    lower_value_type ctxt at global_rep t
+  else
+    fst (lower_con_type ctxt at (fst (T.as_fun_flat t)))
 
 
 (* Lowering signatures *)
@@ -128,7 +145,8 @@ let rec lower_sig_type ctxt at s : W.value_type * int32 =
 and lower_str_type ctxt at str : W.value_type * int32 =
   let mod_ts = List.map (fun (_, s) ->
     fst (lower_sig_type ctxt at s.Source.it)) (Env.mods str) in
-  let val_ts = List.init (Env.cardinal_vals str) (fun _ -> boxedref) in
+  let val_ts = List.map (fun (x, pt) ->
+    lower_val_type ctxt at struct_rep (T.as_mono pt.Source.it) x) (Env.vals str) in
   let x = emit_type ctxt at W.(type_struct (List.map field (mod_ts @ val_ts))) in
   W.ref_ x, x
 

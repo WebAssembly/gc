@@ -1,0 +1,5 @@
+;; More exports
+
+val q = (7, False);
+
+signature S' = {type T; val x : T};

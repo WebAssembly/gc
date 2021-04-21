@@ -1,0 +1,30 @@
+;; Transitive imports
+
+import I from "test/import";
+import E from "test/export";
+
+type U = I.Pair Bool Int;
+
+assert I.x == 9;
+assert I.v! == 2.7;
+I.v := 3.0;
+assert I.v! == 3.0;
+assert I.s == "text";
+val (ip0, ip1) = I.p;
+assert ip0 == 5;
+assert ip1;
+
+assert I.f () == 9;
+assert I.g () ! == 3.0;
+
+type X = I.X;
+val x = I.X;
+module X = I.X;
+signature X = I.X;
+
+
+;; Unique instantiation
+
+assert E.v! == 3.0;
+E.v := 0.0;
+assert E.v! == 0.0;
