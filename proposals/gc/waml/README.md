@@ -4,7 +4,7 @@ An experimental functional language and implementation for exploring and evaluat
 
 ## Overview
 
-Waml is a typed mini-FP language in the style of ML and friends. It is meant to be representative of the most relevant problems that arise when compiling such languages to Wasm with GC extensions. These arguably are:
+Waml is a typed FP language in the style of ML and friends. It is meant to be representative of the most relevant problems that arise when compiling such languages to Wasm with GC extensions. These arguably are:
 
 * currying
 * polymorphism
@@ -12,22 +12,22 @@ Waml is a typed mini-FP language in the style of ML and friends. It is meant to 
 * higher-order modules
 * separate compilation
 
-To that end, Waml features:
+To that end, Waml is a complete implementation of an ML dialect, providing all major features of the ML family of languages:
 
 * primitive data types
 * functions, closures, and currying
 * algebraic data types and pattern matching
 * references
 * polymorphic type inference
-* modules and functors
-* simple modules with separate compilation and client-side linking
+* higher-order modules and sealing
+* compilation units with separate compilation and client-side linking
 
 For simplicity, Waml omits various other common features, such as user-defined operators, records, type classes, or more sophisticated type system features, which are mostly independent from code generation and data representation problems.
 
 The `waml` implementation encompasses:
 
 * Interpreter
-* Compiler to Wasm (WIP)
+* Compiler to Wasm
 * A read-eval-print-loop that can run either interpreted or compiled code
 
 The compiler makes use of [most of the constructs](#under-the-hood) in the GC proposal's MVP.
