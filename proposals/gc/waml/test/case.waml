@@ -38,6 +38,4 @@ assert (case [1] of Cons n _ => n | _ => 0) == 1
 assert (case [1, 2] of Cons n _ => n | _ => 0) == 1
 assert (case [1, 2, 3] of [x, y, z] => x + y + z | _ => 0) == 6
 
-(; TODO
 assert (case 1 == 2 of True => 1 | False => 2) == 2
-;)

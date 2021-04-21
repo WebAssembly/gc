@@ -233,7 +233,7 @@ let compile_load_args ctxt at i j shift arg0 src_argv_opt =
     )
 
 let rec compile_apply ctxt arity =
-  Emit.lookup_intrinsic ctxt ("apply" ^ string_of_int arity) (fun def_fwd->
+  Emit.lookup_intrinsic ctxt ("apply" ^ string_of_int arity) (fun def_fwd ->
     let at = Prelude.region in
     let emit ctxt = List.iter (emit_instr ctxt at) in
     let anyclos = lower_anyclos_type ctxt at in

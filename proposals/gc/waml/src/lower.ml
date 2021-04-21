@@ -21,6 +21,7 @@ type rep =
   | DropRep         (* value never used *)
   | BlockRep        (* like Boxed, but empty tuples are suppressed *)
   | BoxedRep        (* representation that is compatible with anyref *)
+  | UnboxedNullRep  (* like UnboxedRigid, but allows null *)
   | UnboxedLaxRep   (* like UnboxedRigid, but Int may have junk high bit *)
   | UnboxedRigidRep (* representation with unboxed type or concrete ref types *)
 
@@ -59,7 +60,8 @@ let rec lower_value_type ctxt at rep t : W.value_type =
   match T.norm t with
   | T.Bool | T.Byte | T.Int -> W.i32
   | T.Float -> W.f64
-  | t -> W.(ref_null_heap (lower_heap_type ctxt at t))
+  | t when rep = UnboxedNullRep -> W.(ref_null_heap (lower_heap_type ctxt at t))
+  | t -> W.(ref_heap (lower_heap_type ctxt at t))
 
 and lower_heap_type ctxt at t : W.heap_type =
   match T.norm t with
@@ -120,7 +122,7 @@ let lower_con_type ctxt at ts : W.value_type * int32 =
   if ts = [] then
     W.i31ref, -1l
   else begin
-    let vts = List.map (lower_value_type ctxt at UnboxedRigidRep) ts in
+    let vts = List.map (lower_value_type ctxt at BoxedRep) ts in
     let fts = List.map W.field vts in
     let con = emit_type ctxt at W.(type_struct (field i32 :: fts)) in
     W.(ref_null_heap (rtt_n con 1l)), con
@@ -128,7 +130,7 @@ let lower_con_type ctxt at ts : W.value_type * int32 =
 
 let lower_val_type ctxt at rep t x : W.value_type =
   if x.[0] = Char.lowercase_ascii x.[0] then
-    lower_value_type ctxt at global_rep t
+    lower_value_type ctxt at rep t
   else
     fst (lower_con_type ctxt at (fst (T.as_fun_flat t)))
 
