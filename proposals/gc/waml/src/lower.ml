@@ -166,3 +166,16 @@ let lower_fct_clos_type ctxt at s1 s2 envts : int32 * int32 * int32 =
     W.(type_struct (field i32 :: field (ref_ code) :: List.map field envts)) in
   let clos_env = emit_type ctxt at closdt in
   code, clos, clos_env
+
+
+(* Closure environments *)
+
+let lower_clos_env ctxt at vars : W.value_type list =
+  let open Syntax in
+  List.map (fun (_, s) ->
+      fst (lower_sig_type ctxt at s)
+    ) (Vars.bindings vars.mods)
+  @
+  List.map (fun (x, t) ->
+      lower_val_type ctxt at struct_rep t x
+    ) (Vars.bindings vars.vals)

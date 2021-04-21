@@ -98,6 +98,7 @@ let quant sym = function
   | bs -> sym ^ list " " Fun.id bs ^ ". "
 
 let string_of_poly (Forall (bs, t)) = quant "" bs ^ string_of_typ t
+let string_of_con (Lambda (bs, t)) = quant "\\" bs ^ string_of_typ t
 
 let rec string_of_sig = function
   | Str (bs, str) ->
@@ -486,7 +487,8 @@ and sub_str p str1 str2 =
     | None -> raise (Mismatch ("missing value member " ^ path p'))
     | Some t1 ->
       if not (sub_poly t1.it t2.it) then
-        raise (Mismatch ("incompatible value member " ^ path p'))
+        raise (Mismatch ("incompatible value member " ^ path p' ^
+          ", " ^ string_of_poly t1.it ^ " vs " ^ string_of_poly t2.it))
   ) str2;
   S.iter_typs (fun y c2 ->
     let p' = p @ [y] in
@@ -494,7 +496,8 @@ and sub_str p str1 str2 =
     | None -> raise (Mismatch ("missing type member " ^ path p'))
     | Some c1 ->
       if not (eq_con c1.it c2.it) then
-        raise (Mismatch ("incompatible type member " ^ path p'))
+        raise (Mismatch ("incompatible type member " ^ path p' ^
+          ", " ^ string_of_con c1.it ^ " vs " ^ string_of_con c2.it))
   ) str2;
   S.iter_mods (fun x s2 ->
     let p' = p @ [x] in

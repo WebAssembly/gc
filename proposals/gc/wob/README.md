@@ -308,7 +308,7 @@ let e = new ECounter(8);
 ### Modules
 ```
 // Module "intpair"
-type Pair = (Int, Int);
+type IntPair = (Int, Int);
 
 func pair(x : Int, y : Int) : IntPair { (x, y) };
 func fst(p : IntPair) : Int { p.0 };
@@ -397,11 +397,12 @@ Wob bindings are compiled to Wasm as follows.
 
 | Wob declaration | in global scope | in func/block scope | in class scope |
 | --------------- | --------------- | ------------------- | -------------- |
-| `let`           | immutable `global` | `local`          | immutable field in instance struct |
+| `let`           | mutable `global`| `local`          | immutable field in instance struct |
 | `var`           | mutable `global`| `local`             | mutable field in instance struct |
 | `func`          | `func`          | not supported yet   | immutable field in dispatch struct |
 | `class`         | immutable `global`| not supported yet | not supported yet |
 
+Note that all global declarations have to be compiled into mutable globals, since they could not be initialised otherwise.
 
 ### Object and Class representation
 

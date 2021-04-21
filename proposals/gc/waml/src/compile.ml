@@ -21,7 +21,7 @@ let (+%) = Int32.add
 
 exception NYI of Source.region * string
 
-let _nyi at s = raise (NYI (at, s))
+let nyi at s = raise (NYI (at, s))
 
 
 (* Environment *)
@@ -510,7 +510,13 @@ let rec compile_pat pass ctxt fail p =
         ]
       );
       let tmp = emit_local ctxt p.at W.(ref_null_ con.typeidx) in
-      emit ctxt W.[local_set (tmp @@ p.at)];
+      emit ctxt W.[local_tee (tmp @@ p.at)];
+      emit ctxt W.[
+        struct_get (con.typeidx @@ p.at) (0l @@ p.at);
+        i32_const (con.tag @@ p.at);
+        i32_ne;
+        br_if (fail @@ p.at);
+      ];
       List.iteri (fun i pI ->
         if classify_pat pI > IrrelevantPat then begin
           emit ctxt W.[
@@ -775,7 +781,7 @@ and compile_exp_func_opt ctxt dst e : func_loc option =
       | FunE (p, e22) -> flat (p::ps) e22
       | _ ->
         let vars = filter_vars ctxt (free_exp e) in
-        let envts = List.init (cardinal vars) (fun _ -> boxedref) in
+        let envts = lower_clos_env ctxt e.at vars in
         let ps = List.rev ps in
         let arity = List.length ps in
         let _code, closN, closNenv = lower_clos_type ctxt e.at arity envts in
@@ -998,7 +1004,7 @@ and compile_mod_func_opt ctxt m : func_loc option =
 
   | FunM (x, _s, m2) ->
     let vars = filter_vars ctxt (free_mod m) in
-    let envts = List.init (cardinal vars) (fun _ -> boxedref) in
+    let envts = lower_clos_env ctxt m.at vars in
     let _, s1, s2 = T.as_fct (Source.et m) in
     let _code, closN, closNenv = lower_fct_clos_type ctxt m.at s1 s2 envts in
     let vt1, _ = lower_sig_type ctxt x.at s1 in
@@ -1170,6 +1176,7 @@ and compile_dec pass ctxt d dst =
     ]
 
   | ValD (p, _) when pass = RecPrePass ->
+    if scope <> GlobalScope then nyi d.at "recursive functions in local scope";
     compile_pat pass ctxt (-1l) p
     (* TODO: allocate funcidx to allow static calls in recursion *)
 

@@ -1,0 +1,17 @@
+;; A simple expression evaluator
+
+data Exp a =
+  Lit a |
+  Add (Exp a) (Exp a) |
+  Mul (Exp a) (Exp a);
+
+rec val eval (e : Exp Float) =
+  case e of
+  {
+    Lit x => x;
+    Add e1 e2 => eval e1 + eval e2;
+    Mul e1 e2 => eval e1 * eval e2;
+  };
+
+val exp = Add (Lit 3.1) (Mul (Add (Lit 1.2) (Lit 2.0)) (Lit (-3.0)));
+assert eval exp == 3.1 + (1.2 + 2.0) * (-3.0);

@@ -22,7 +22,7 @@ To that end, Waml features:
 * modules and functors
 * simple modules with separate compilation and client-side linking
 
-For simplicity, Waml omits various other common features, such as user-defined operators, records, type classes, or more sophisticated type system features, which are mostly independent from code generation and data representation problems. It also doesn't currently have interface types.
+For simplicity, Waml omits various other common features, such as user-defined operators, records, type classes, or more sophisticated type system features, which are mostly independent from code generation and data representation problems.
 
 The `waml` implementation encompasses:
 
@@ -30,7 +30,7 @@ The `waml` implementation encompasses:
 * Compiler to Wasm (WIP)
 * A read-eval-print-loop that can run either interpreted or compiled code
 
-TODO: The language is fully implemented in the interpreter, but the compiler does not yet support closures and casts. It does, however, implement garbage-collected objects, tuples, arrays, text strings, classes, and generics, making use of [most of the constructs](#under-the-hood) in the GC proposal's MVP.
+The compiler makes use of [most of the constructs](#under-the-hood) in the GC proposal's MVP.
 
 
 ## Usage
@@ -234,12 +234,12 @@ Notes:
 
 #### Types
 ```
-Bool  Byte  Int  Float  Text  List
+Bool  Byte  Int  Float  Text
 ```
 
 #### Values
 ```
-True  False  Nil  Cons  nan
+True  False  nan
 ```
 
 
@@ -247,88 +247,113 @@ True  False  Nil  Cons  nan
 
 ### Functions
 ```
-func fac(x : Int) : Int {
-  if x == 0 { return 1 };
-  x * fac(x - 1);
-};
+val sqr x = x*x;
 
-assert fac(5) == 120;
+assert sqr 5 == 25;
 ```
 ```
-func foreach(a : Int[], f : Int -> ()) {
-  var i : Int = 0;
-  while i < #a {
-    f(a[i]);
-    i := i + 1;
-  }
-};
+rec val fac x = if x == 0 then 1 else x * fac (x-1);
 
-let a = [1, 2, 5, 6, -8];
-var sum : Int = 0;
-foreach(a, func(k : Int) { sum := sum + k });
+assert fac 5 == 120;
+```
+
+### Pattern Matching
+```
+data Exp a =
+  Lit a |
+  Add (Exp a) (Exp a) |
+  Mul (Exp a) (Exp a);
+
+rec val eval (e : Exp Float) =
+  case e of
+  {
+    Lit x => x;
+    Add e1 e2 => eval e1 + eval e2;
+    Mul e1 e2 => eval e1 * eval e2;
+  };
+
+val exp = Add (Lit 3.1) (Mul (Add (Lit 1.2) (Lit 2.0)) (Lit (-3.0)));
+eval exp;
+```
+
+### Polymorphism
+```
+data List a = Nil | Cons a (List a);
+
+rec val foldl xs y f =
+  case xs of
+  {
+    Nil => y;
+    Cons x xs' => foldl xs' (f x y) f;
+  };
+
+val l = [1, 2, 5, 6, -8];
+val sum = foldl l 0 (fun i sum => sum + i);
 assert sum == 6;
 ```
 
-### Generics
+### Parameterised Modules
 ```
-func fold<T, R>(a : T[], x : R, f : (Int, T, R) -> R) : R {
-  var i : Int = 0;
-  var r : R = x;
-  while (i < #a) {
-    r := f(i, a[i], r);
-    i := i + 1;
-  };
-  return r;
-};
-```
-```
-func f<X>(x : X, f : <Y>(Y) -> Y) : (Int, X, Float) {
-  let t = (1, x, 1e100);
-  (f<Int$>(t.0$), f<X>(t.1), f<Float$>(t.2$));
+signature Set =
+{
+  type Elem;
+  type Set;
+  val empty : Set;
+  val add : Elem -> Set -> Set;
+  val mem : Elem -> Set -> Bool;
 };
 
-let t = f<Bool$>(false$, func<T>(x : T) : T { x });
-assert t.0 == 1;
-assert !t.1;
-assert t.2 == 1e100;
-```
-
-### Classes
-```
-class Counter(x : Int) {
-  var c : Int = x;
-  func get() : Int { return c };
-  func set(x : Int) { c := x };
-  func inc() { c := c + 1 };
+signature Ord =
+{
+  type T;
+  val lt : T -> T -> Bool;
 };
 
-class DCounter(x : Int) <: Counter(x) {
-  func dec() { c := c - 1 };
+module MakeSet (Elem : Ord) : Set with type Elem = Elem.T =
+{
+  type Elem = Elem.T;
+  data Set = Empty | Mem Elem Set Set;
+
+  val empty = Empty;
+
+  rec val add x s =
+    case s of
+    {
+      Empty => Mem x Empty Empty;
+      Mem y s1 s2 =>
+        if Elem.lt x y then Mem y (add x s1) s2
+        else if Elem.lt y x then Mem y s1 (add x s2)
+        else s
+    };
+
+  rec val mem x s =
+    case s of
+    {
+      Empty => False;
+      Mem y s1 s2 =>
+        if Elem.lt x y then mem x s1 else ~ Elem.lt y x \/ mem x s2
+    };
 };
 
-class ECounter(x : Int) <: DCounter(x*2) {
-  func inc() { c := c + 2 };
-  func dec() { c := c - 2 };
-};
-
-let e = new ECounter(8);
+module IS = MakeSet {type T = Int; val lt x y = x < y};
+val s = IS.add 3 (IS.add 1 (IS.add 3 (IS.add 5 IS.empty)));
 ```
 
-### Modules
+### Separate Compilation
 ```
-// Module "intpair"
-type Pair = (Int, Int);
+;; Module "pair"
+type Pair a b = (a, b);
 
-func pair(x : Int, y : Int) : IntPair { (x, y) };
-func fst(p : IntPair) : Int { p.0 };
-func snd(p : IntPair) : Int { p.1 };
+val pair x y = (x, y);
+val fst (x, _) = x;
+val snd (_, y) = y;
 ```
 A client:
 ```
-import IP {pair, fst} from "intpair";
+import Pair from "pair";
 
-let p = IP_pair(4, 5);
-assert IP_fst(p) == 4;
+let p = Pair.pair 4 5;
+assert Pair.fst p == 4;
 ```
 
 ## Under the Hood
@@ -350,106 +375,153 @@ struct  array
 ```
 ref.eq
 ref.is_null  ref.as_non_null  ref.as_i31  ref.as_data  ref.cast
+br_on_data  br_on_cast
 i31.new  i31.get_u
 struct.new  struct.get  struct.get_u  struct.set
 array.new  array.new_default  array.get  array.get_u  array.set  array.len
 rtt.canon  rtt.sub
 ```
 
-(Currently unused are the remaining `ref.is_*` and `ref.as_*` instructions, `ref.test`, the `br_on_*` instructions, the signed `*.get_s` instructions, and `struct.new_default`.)
+(Currently unused are the remaining `ref.is_*`, `ref.as_*`, and `br_on_*` instructions, `ref.test`, the signed `*.get_s` instructions, and `struct.new_default`.)
 
 
 ### Value representations
 
 Waml types are lowered to Wasm as shown in the following table.
 
-| Waml type | Wasm value type | Wasm field type |
-| -------- | --------------- | --------------- |
-| Bool     | i32             | i8              |
-| Byte     | i32             | i8              |
-| Int      | i32             | i32             |
-| Float    | f64             | f64             |
-| Bool$    | i31ref          | anyref          |
-| Byte$    | i31ref          | anyref          |
-| Int$     | ref (struct i32)| anyref          |
-| Float$   | ref (struct f64)| anyref          |
-| Text     | ref (array i8)  | anyref          |
-| Object   | ref (struct)    | anyref          |
-| (Float,Text)|ref (struct f64 anyref)| anyref |
-| Float[]  | ref (array f64) | anyref          |
-| Text[]   | ref (array anyref)| anyref        |
-| C        | ref (struct (ref $vt) ...)|anyref |
-| <T>      | anyref          | anyref          |
+| Waml type | Wasm unboxed type | Wasm boxed type | Wasm field type |
+| --------- | ----------------- | --------------- | --------------- |
+| Bool      | i32               | i31ref          | i8              |
+| Byte      | i32               | i31ref          | i8              |
+| Int       | i32               | i31ref          | i32             |
+| Float     | f64               | ref (struct f64)| f64             |
+| Text      | ref (array i8)    | same            | same            |
+| (Float,Text)|ref (struct anyref anyref)| same   | same            |
+| ref T     | ref (struct anyref) | same          | same            |
+| C (nullary) | i31ref          | i31ref          | i31ref          |
+| C (args)  | ref (struct i32 ...) | same         | same            |
+| a         | anyref            | anyref          | anyref          |
+| T1 -> T2  | ref (struct i32 ...) | same         | same            |
 
-Notably, all fields of boxed type have to be represented as `anyref`, in order to be compatible with [generics](#generics).
+Notably, all fields of tuples and the contents of type `ref` have to be represented as `anyref`, in order to be compatible with [polymorphism](#polymorphism).
 
 
-### Generics
+### Polymorphism
 
-Generics require boxed types and use `anyref` as a universal representation for any value of variable type.
+Polymorphism requires the use of `anyref` as a universal representation for any value of variable type.
 
 References returned from a generic function call are cast back to their concrete type when that type is known at the call site.
 
-Moreover, arrays and tuples likewise represent all fields of boxed type with `anyref`, i.e., they are treated like generic types as well. This is necessary to enable passing them to generic functions that abstract some of their types, for example:
+Moreover, tuples and `ref` likewise represent all fields with `anyref`, i.e., they are treated like polymorphic types as well. This is necessary to enable passing them to polymorphic functions that abstract some of their types, for example:
 ```
-func fst<X, Y>(p : (X, Y)) : X { p.0 };
+val f z (x, y) = x + y + z;
 
-let p = ("foo", "bar");
-fst<Text, Text>(p);
+let p = (3, 4);
+f 2 p;
 ```
-If `p` was not represented as `ref (struct anyref anyref)`, then the call to `fst` would produce invalid Wasm.
+If `p` was not represented as `ref (struct anyref anyref)`, then the call to `f` would produce invalid Wasm.
 
 
 ### Bindings
 
 Waml bindings are compiled to Wasm as follows.
 
-| Waml declaration | in global scope | in func/block scope | in class scope |
-| --------------- | --------------- | ------------------- | -------------- |
-| `let`           | immutable `global` | `local`          | immutable field in instance struct |
-| `var`           | mutable `global`| `local`             | mutable field in instance struct |
-| `func`          | `func`          | not supported yet   | immutable field in dispatch struct |
-| `class`         | immutable `global`| not supported yet | not supported yet |
+| Waml declaration | in global scope | in local scope | in struct scope |
+| ---------------- | --------------- | -------------- | --------------- |
+| `val`            | mutable `global`| `local`        | immutable field |
+| `module`         | mutable `global`| `local`        | immutable field |
+
+Note that all global declarations have to be compiled into mutable globals, since they could not be initialised otherwise.
 
 
-### Object and Class representation
+### Module representations
 
-Objects are represented in the obvious manner, as a struct whose first field is a reference to the dispatch table, while the rest of the fields represent the parameter, `let`, and `var` bindings of the class and its super classes, in definition order. Paremeter and `let` fields are immutable.
+Each Waml structure is compiled into a corresponding Wasm struct.
 
-Class declarations translate to a global binding a class _descriptor_, which is represented as a struct with the following fields:
+Parameterised modules are compiled to functions. Since they can be defined locally, they are actually represented as _closures_, in the same way as [core-level closures](#functions-and-closures).
+
+Signature subtyping is implemented by coercions. In the higher-order case, i.e., on parameterised modules, this requires generating suitable wrapper closures performing the coercions on argument and result upon application.
+
+
+### Functions and Closures
+
+Functions are represented as flat closures. In order to support currying, each closure also carries the function's defined arity. Hence, closures map to Wasm structs with the following layoug:
 
 | Index | Type | Description |
 | ----- | ---- | ----------- |
-| 0     | ref (struct ...) | Dispatch table |
-| 1     | rtt $C | Instance RTT |
-| 2     | ref (func ...) | Constructor function |
-| 3     | ref (func ...) | Pre-allocation |
-| 4     | ref (func ...) | Post-allocation |
-| 5     | ref $Super | Super class descriptor |
+| 0     | i32  | Arity       |
+| 1     | ref (func ...) | Code pointer |
+| 2     | ...  | 1st captured environment value |
+| 3     | ...  | 2nd captured environment value |
+| ...   | ...  | ... |
 
-Objects are allocated by a class'es constructor function with a 2-phase initialisation protocol:
+Code pointers are references to the actual function. In addition to its regular parameters, its first parameter is a reference to its a closure environment. However, in order to be compatible across call sites, this is typed without the environment fields, and hence has to be downcast in the function to access the environment.
 
-* The first phase evaluates constructor args and invokes the pre-alloc hook, which initialises parameter and `let` fields, after possibly invoking the pre-alloc hook of the super class to do the same; this returns the values of all immutable fields (including constructor parameters as hidden fields).
+For example, the Waml function `f` in the following example,
+```
+val a = 5;
+module M = {val b = 7};
 
-* With these values as initialisation values, the instance struct is allocated.
+val f x y = x + y + a + M.b;
+```
+has this Wasm representation:
+```
+;; Generic code and closure types for binary functions
+(type $code/2 (func (param (ref $clos/2) anyref anyref) (result anyref)))
+(type $clos/2 (struct (field i32 (ref $code/2))))
 
-* The second phase invokes the post-alloc hook, which evaluates expression declarations and `var` fields, after possibly invoking the post-alloc hook of the super class to do the same; this initialises var fields via mutation.
+;; Closure type for f
+(type $clos/f (struct (field i32 (ref $code/2) i31ref (ref $M))))
+(global $rtt-clos/f ...)
 
-* Finally, the instance struct is returned.
+(func $f (param $clos (ref $clos/2)) (param $x anyref) (param $y anyref) (result anyref)
+  (local.get $clos)
+  (global.get $rtt-clos/f)
+  (rtt.cast)
+  (let (local $clos/f)
+    ;; actual body
+  )
+)
+```
+
+### Currying
+
+The compiler implements the so-called _eval/apply_ technique for currying.
+
+When the function called is statically known at a call site, and applied to the appropriate number of parameters, it is compiled into a direct call.
+
+However, due to the combination of first-class functions, currying, and polymorphism in a functional language, the callen is not generally known, nor is its physical arity. A call may be both under-applying and over-applying. For example, consider:
+```
+val add1 x = let val f y = x + y in f;
+val add2 x y = x + y;
+val add3 x y z = x + y + z;
+
+val call f = f 1 2;  ;; call : (Int -> Int -> a) -> a has polymorphic result type
+
+call add1;    ;; => add1 1 2 over-applies
+call add2;    ;; => add2 1 2
+call add3 3;  ;; => add3 1 2 under-applies
+
+```
+To handle these different cases, it generally is necessary to perform two-dimensional dispatch on both the call and the callee arity. The former is known statically, but the latter isn't.
+
+To this end, a call to an unknown target is compiled to a call to an auxiliary`apply` combinator of the given arity. This function then dispatches on the actual arity of the callee (reading it off the closure). When the number of arguments matches, it just forwards the call. When over-applied, it splits the call into two consecutive calls, with the first one forwarding the expected number of arguments, and the second recursively passing the resulting closure to another `apply` combinator of respective lower arity. When under-applied, it allocates an internal closure binding the supplied arguments whose code recursively forwards a call to `apply` (this time of higher arity) once called with an extra argument.
+
+The `apply` combinators are part of the runtime. However, since these combinators mutually depend on those of both lower and higher arity, there has to be a maximum arity that is handled this way. Once reached, arguments are passed as an array instead. The apply combinator can handle the array case generically.
 
 
-### Modules
+### Compilation Units
 
-Each Waml module compiles into a Wasm module. The body of a Waml module is compiled into the Wasm start function.
+Each Waml file compiles into a Wasm module. The body of a Waml unit is compiled into the Wasm start function.
 
-All global definitions are automatically turned into exports, of their respective [binding form](#bindings) (for simplicity, there currently is no access control). In addition, an exported global named `"return"` is generated for the program block's result value.
+All global definitions from the source program are automatically turned into exports, of their respective [binding form](#bindings) (for simplicity, there currently is no access control). In addition, an exported global named `"return"` is generated for the program block's result value.
 
-Import declarations directly map to Wasm imports of the same name. No other imports are generated for a module.
+Import declarations compile to a list of imports for all all exports of the imported module. These are implcitly bundled into a structure at the import side. No other imports are generated for a compilation unit.
 
 
 #### Linking
 
-A Waml program can be executed by _linking_ its main module. Linking does not require any magic, it simply locates all imported modules (by appending `.wasm` to the URL, which is interpreted as file path), recursively links them (using a simple registry to share instantiations), and maps exports to imports by name.
+A Waml program can be executed by _linking_ its main unit. Linking does not require any magic, it simply locates all imported Wasm modules (by appending `.wasm` to the URL, which is interpreted as file path), recursively links them (using a simple registry to share instantiations), and maps exports to imports by name.
 
 
 #### Batch compilation
