@@ -1,23 +1,23 @@
 ;; Exports
 
-type Pair a b = (a, b);
-data List a = Nil | Cons a (List a);
+type Pair a b = (a, b)
+data List a = Nil | Cons a (List a)
 
-val x = 9;
-val v = ref 3.14;
-val s = "text";
-val p : Pair Int Bool = (5, 1==1);
-val l = [7, 8, 9];
+val x = 9
+val v = ref 3.14
+val s = "text"
+val p : Pair Int Bool = (5, 1==1)
+val l = [7, 8, 9]
 
-val f () = x;
-val g () = v;
+val f () = x
+val g () = v
 
-signature S = {type T; val x : T};
-module M : S = {type T = Int; val x = 42};
+signature S = {type T; val x : T}
+module M : S = {type T = Int; val x = 42}
 
 ;; Namespaces
 
-type X = Int;
-data D = X;
-module X = {};
-signature X = {};
+type X = Int
+data D = X
+module X = {}
+signature X = {}

@@ -1,34 +1,30 @@
 ;; A simple expression evaluator
 
 data Exp a =
-  Lit a |
-  Var Text |
-  Add (Exp a) (Exp a) |
-  Mul (Exp a) (Exp a);
+  | Lit a
+  | Var Text
+  | Add (Exp a) (Exp a)
+  | Mul (Exp a) (Exp a)
 
 rec val eval f (e : Exp Float) =
   case e of
-  {
-    Lit z => z;
-    Var x => f x;
-    Add e1 e2 => eval f e1 + eval f e2;
-    Mul e1 e2 => eval f e1 * eval f e2;
-  };
+  | Lit z => z
+  | Var x => f x
+  | Add e1 e2 => eval f e1 + eval f e2
+  | Mul e1 e2 => eval f e1 * eval f e2
 
-val exp = Add (Lit 3.0) (Mul (Add (Var "x") (Lit 2.0)) (Lit (-3.0)));
-assert eval (fun "x" => 4.0) exp == -15.0;
+val exp = Add (Lit 3.0) (Mul (Add (Var "x") (Lit 2.0)) (Lit (-3.0)))
+assert eval (fun "x" => 4.0) exp == -15.0
 
 
 ;; Symbolic derivatives
 
 rec val deriv x e =
   case e of
-  {
-    Lit _ => Lit 0.0;
-    Var y => Lit (if x == y then 1.0 else 0.0);
-    Add e1 e2 => Add (deriv x e1) (deriv x e2);
-    Mul e1 e2 => Add (Mul (deriv x e1) e2) (Mul e1 (deriv x e2));
-  };
+  | Lit _ => Lit 0.0
+  | Var y => Lit (if x == y then 1.0 else 0.0)
+  | Add e1 e2 => Add (deriv x e1) (deriv x e2)
+  | Mul e1 e2 => Add (Mul (deriv x e1) e2) (Mul e1 (deriv x e2))
 
-val exp' = deriv "x" exp;
-assert eval (fun "x" => 4.0) exp' == -3.0;
+val exp' = deriv "x" exp
+assert eval (fun "x" => 4.0) exp' == -3.0

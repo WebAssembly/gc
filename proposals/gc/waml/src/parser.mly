@@ -42,17 +42,18 @@ let float s at =
 
 %token EOF
 
-%token LPAR RPAR LBRACK RBRACK LCURLY RCURLY COMMA SEMICOLON SEMICOLON_EOL
+%token LPAR RPAR LBRACK RBRACK LCURLY RCURLY BAR COMMA SEMICOLON SEMICOLON_EOL
 %token COLON EQ ARROW DARROW REF DEREF ASSIGN DOT WILD
 %token EQOP NEOP LEOP LTOP GTOP GEOP
 %token ADDOP SUBOP MULOP DIVOP MODOP ANDOP OROP XOROP SHLOP SHROP CATOP CONS
 %token ANDTHENOP ORELSEOP NOTOP
 %token FUN IF THEN ELSE CASE OF LET IN
-%token ASSERT VAL TYPE DATA MODULE SIGNATURE WITH REC AND INCLUDE IMPORT FROM
+%token DO ASSERT VAL TYPE DATA MODULE SIGNATURE WITH REC AND INCLUDE IMPORT FROM
 %token<string> NAT FLOAT TEXT LID UID
 
 %nonassoc IF_NO_ELSE
 %nonassoc ELSE
+%right BAR
 
 %right ARROW
 %right ASSIGN
@@ -188,7 +189,7 @@ exp_simple :
   | vpath { VarE $1 @@ at () }
   | cpath { ConE $1 @@ at () }
   | LPAR exp_list RPAR { match $2 with [e] -> e | es -> TupE es @@ at () }
-  | LPAR dec_seq RPAR { LetE ($2, TupE [] @@ at ()) @@ at () }
+  | LPAR dec_list_nonempty RPAR { LetE ($2, TupE [] @@ at ()) @@ at () }
   | LBRACK exp_list RBRACK {
       List.fold_right (fun e1 e2 ->
         AppE (
@@ -258,8 +259,7 @@ exp :
   | IF exp THEN exp %prec IF_NO_ELSE {
       IfE ($2, $4, TupE [] @@ at ()) @@ at ()
     }
-  | CASE exp OF LCURLY case_list RCURLY { CaseE ($2, $5) @@ at () }
-  | CASE exp OF case { CaseE ($2, [$4]) @@ at () }
+  | CASE exp OF case_list %prec BAR { CaseE ($2, $4) @@ at () }
   | LET dec_list IN exp { LetE ($2, $4) @@ at () }
 
 exp_list :
@@ -267,20 +267,13 @@ exp_list :
   | exp { [$1] }
   | exp COMMA exp_list { $1 :: $3 }
 
-dec_seq :
-  | dec SEMICOLON dec { [$1; $3] }
-  | dec SEMICOLON_EOL dec { [$1; $3] }
-  | dec SEMICOLON dec_seq { $1 :: $3 }
-  | dec SEMICOLON_EOL dec_seq { $1 :: $3 }
-
 case :
   | pat DARROW exp { ($1, $3) }
 
 case_list :
-  | /* empty */ { [] }
   | case { [$1] }
-  | case SEMICOLON case_list { $1 :: $3 }
-  | case SEMICOLON_EOL case_list { $1 :: $3 }
+  | BAR case { [$2] }
+  | case_list BAR case { $1 @ [$3] }
 
 
 /* Declarations */
@@ -290,8 +283,9 @@ con :
   | vcon typ_simple_seq1 { ($1, $2) @@ at () }
 
 con_list :
+  | /* empty */ { [] }
   | con { [$1] }
-  | con_list OROP con { $1 @ [$3] }
+  | con_list BAR con { $1 @ [$3] }
 
 param :
   | LPAR mvar COLON sig_ RPAR { ($2, $4) }
@@ -343,8 +337,8 @@ bind_list :
   | bind { [$1] }
   | bind AND bind_list { $1 :: $3 }
 
-dec :
-  | exp { ExpD $1 @@ at () }
+dec_no_exp :
+  | DO exp { ExpD $2 @@ at () }
   | ASSERT exp { AssertD $2 @@ at () }
   | bind { $1 }
   | REC bind_list {
@@ -359,15 +353,35 @@ dec :
       RecD $2 @@ at ()
     }
 
+dec :
+  | dec_no_exp { $1 }
+  | exp { ExpD $1 @@ at () }
+
+dec_no_exp_list :
+  | /* empty */ { [] }
+  | dec_no_exp dec_no_exp_list { $1 :: $2 }
+  | dec_no_exp SEMICOLON dec_list { $1 :: $3 }
+  | dec_no_exp SEMICOLON_EOL dec_list { $1 :: $3 }
+
 dec_list :
   | /* empty */ { [] }
-  | dec { [$1] }
+  | dec dec_no_exp_list { $1 :: $2 }
   | dec SEMICOLON dec_list { $1 :: $3 }
   | dec SEMICOLON_EOL dec_list { $1 :: $3 }
 
+dec_list_nonempty :
+  | dec_no_exp dec_no_exp_list { $1 :: $2 }
+  | exp SEMICOLON dec_list { (ExpD $1 @@ ati 1) :: $3 }
+  | exp SEMICOLON_EOL dec_list { (ExpD $1 @@ ati 1) :: $3 }
+
+dec_no_exp_list_noeol :
+  | /* empty */ { [] }
+  | dec_no_exp dec_no_exp_list_noeol { $1 :: $2 }
+  | dec_no_exp SEMICOLON dec_list_noeol { $1 :: $3 }
+
 dec_list_noeol :
   | /* empty */ { [] }
-  | dec { [$1] }
+  | dec dec_no_exp_list_noeol { $1 :: $2 }
   | dec SEMICOLON dec_list_noeol { $1 :: $3 }
 
 
@@ -400,7 +414,7 @@ spec :
 
 spec_list :
   | /* empty */ { [] }
-  | spec { [$1] }
+  | spec spec_list { $1 :: $2 }
   | spec SEMICOLON spec_list { $1 :: $3 }
   | spec SEMICOLON_EOL spec_list { $1 :: $3 }
 
@@ -443,13 +457,13 @@ imp :
 
 imp_list :
   | /* empty */ { [] }
-  | imp { [$1] }
+  | imp imp_list { $1 :: $2 }
   | imp SEMICOLON imp_list { $1 :: $3 }
   | imp SEMICOLON_EOL imp_list { $1 :: $3 }
 
 imp_list_noeol :
   | /* empty */ { [] }
-  | imp { [$1] }
+  | imp imp_list_noeol { $1 :: $2 }
   | imp SEMICOLON imp_list_noeol { $1 :: $3 }
 
 prog :

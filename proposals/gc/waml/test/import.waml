@@ -1,40 +1,40 @@
 ;; Imports
 
-import E from "test/export";
-import E2 from "test/export2";
+import E from "test/export"
+import E2 from "test/export2"
 
-type U = E.Pair Bool Int;
+type U = E.Pair Bool Int
 
-assert E.x == 9;
-assert E.v! == 3.14;
-E.v := 2.7;
-assert E.v! == 2.7;
-assert E.s == "text";
-val (mp0, mp1) = E.p;
-assert mp0 == 5;
-assert mp1;
+assert E.x == 9
+assert E.v! == 3.14
+do E.v := 2.7
+assert E.v! == 2.7
+assert E.s == "text"
+val (mp0, mp1) = E.p
+assert mp0 == 5
+assert mp1
 
-assert E.f () == 9;
-assert E.g () ! == 2.7;
+assert E.f () == 9
+assert E.g () ! == 2.7
 
 
 ;; Namespaces
 
-type X' = E.X;
-val x' = E.X;
-module X' = E.X;
-signature X' = E.X;
+type X' = E.X
+val x' = E.X
+module X' = E.X
+signature X' = E.X
 
 
 ;; Type compatibility
 
-val _ : (Int, Bool) = if True then E.p else E2.q;
+val _ : (Int, Bool) = if True then E.p else E2.q
 
-module F (A : E2.S') = A : E.S;
-module M' : E2.S' = F E.M;
+module F (A : E2.S') = A : E.S
+module M' : E2.S' = F E.M
 
 
 ;; For transitivity
 
-include E;
-include E2;
+include E
+include E2

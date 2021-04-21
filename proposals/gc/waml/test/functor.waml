@@ -1,45 +1,45 @@
 ;; Functors
 
-signature S = {type T; val x : T};
+signature S = {type T; val x : T}
 
-module F (X : S) = {val y = X.x};
-module A = F {type T = Int; val x = 5};
+module F (X : S) = {val y = X.x}
+module A = F {type T = Int; val x = 5}
 
-assert A.y == 5;
+assert A.y == 5
 
 
 module H (G : (X : S) -> {val y : X.T}) : {val y : Float} =
-  G {type T = Float; val x = 3.14};
+  G {type T = Float; val x = 3.14}
 
-module B = H F;
-assert B.y == 3.14;
+module B = H F
+assert B.y == 3.14
 
 
 module H2 (G : (X : S) -> {val y : X.T}) : {val y : Float} =
   let module X = {type T = Float; val x = 3.14} in
   let module Y = G X in
-  Y;
+  Y
 
-module C = H2 F;
-assert C.y == 3.14;
+module C = H2 F
+assert C.y == 3.14
 
 
 module P (X : S) (Y : S with type T = X.T) =
   let module O = {type T = Text; val x = "foo"} in
-  { module P = O;
-    module Q (Z : S) = {val y = Z.x};
-    module R = H Q;
-    type T = O.T;
-    val f (x : T) : O.T = x;
-    val g (x : X.T) : Y.T = x;
-  };
+  { module P = O
+    module Q (Z : S) = {val y = Z.x}
+    module R = H Q
+    type T = O.T
+    val f (x : T) : O.T = x
+    val g (x : X.T) : Y.T = x
+  }
 
 module D =
   let module M = {type T = Int; val x = 66} in
-  P M M;
+  P M M
 
-assert D.f "bar" == "bar";
-assert D.g 7 == 7;
+assert D.f "bar" == "bar"
+assert D.g 7 == 7
 
-module DQ = D.Q {type T = (Int, Int); val x = (3, 4)};
-val (3, 4) = DQ.y;
+module DQ = D.Q {type T = (Int, Int); val x = (3, 4)}
+val (3, 4) = DQ.y

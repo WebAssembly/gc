@@ -1,27 +1,27 @@
 ;; Boolean operators
 
-assert True /\ True;
-assert ~ (True /\ False);
-assert ~ (False /\ True);
-assert ~ (False /\ False);
+assert True /\ True
+assert ~(True /\ False)
+assert ~(False /\ True)
+assert ~(False /\ False)
 
-assert True \/ True;
-assert True \/ False;
-assert False \/ True;
-assert ~ (False \/ False);
+assert True \/ True
+assert True \/ False
+assert False \/ True
+assert ~(False \/ False)
 
-assert 4 == 4 /\ 5 < 6;
-assert ~ (4 == 5 /\ 5 < 6);
-assert ~ (4 == 4 /\ 5 > 6);
-assert ~ (4 == 5 /\ 5 > 6);
+assert 4 == 4 /\ 5 < 6
+assert ~(4 == 5 /\ 5 < 6)
+assert ~(4 == 4 /\ 5 > 6)
+assert ~(4 == 5 /\ 5 > 6)
 
-assert 4 == 4 \/ 5 < 6;
-assert 4 == 5 \/ 5 < 6;
-assert 4 == 4 \/ 5 > 6;
-assert ~ (4 == 5 \/ 5 > 6);
+assert 4 == 4 \/ 5 < 6
+assert 4 == 5 \/ 5 < 6
+assert 4 == 4 \/ 5 > 6
+assert ~(4 == 5 \/ 5 > 6)
 
-assert (if 4 == 5 then 3 else 4) == 4;
-assert (if 4 == 4 then 3 else 4) == 3;
+assert (if 4 == 5 then 3 else 4) == 4
+assert (if 4 == 4 then 3 else 4) == 3
 
-assert (if 4 == 5 \/ 5 < 6 then 7 else 8) == 7;
-assert (if ~ (4 == 4 /\ 5 > 6 \/ True) then 7 else 8) == 8;
+assert (if 4 == 5 \/ 5 < 6 then 7 else 8) == 7
+assert (if ~(4 == 4 /\ 5 > 6 \/ True) then 7 else 8) == 8

@@ -1,43 +1,43 @@
 ;; Case expressions
 
-assert (case 5 of _ => 1) == 1;
-assert (case 6 of n => n) == 6;
-assert (case 7 of n : Int => n) == 7;
-assert (case () of () => 1) == 1;
-assert (case (3, 4, 5) of (x, y : Int, z) : (Int, Int, Int) => x + y + z) == 12;
-assert (case ref 5 of ref m => m) == 5;
+assert (case 5 of _ => 1) == 1
+assert (case 6 of n => n) == 6
+assert (case 7 of n : Int => n) == 7
+assert (case () of () => 1) == 1
+assert (case (3, 4, 5) of (x, y : Int, z) : (Int, Int, Int) => x + y + z) == 12
+assert (case ref 5 of ref m => m) == 5
 
-assert (case (5.6, "", 2, (), (5, 6), ()) of (5.6, "", p, (), (5, q), ()) => p + q) == 8;
+assert (case (5.6, "", 2, (), (5, 6), ()) of (5.6, "", p, (), (5, q), ()) => p + q) == 8
 
-assert (case 5 of { 1 => 2; 3 => 4; 5 => 6; _ => 0 }) == 6;
-assert (case 5 of { 1 => 2; 3 => 4; 6 => 7; _ => 0; 5 => 1; }) == 0;
-assert (case (5, 6) of { (4, 6) => 1; (5, 7) => 2; (x, 5) => x; _ => 3 }) == 3;
-assert (case (5, 6) of { (4, 6) => 1; (5, 7) => 2; (x, 6) => x; _ => 3 }) == 5;
-assert (case (5, 6) of { (4, 6) => 1; (5, 7) => 2; (y, 5) => y; (x, y) => x+y }) == 11;
+assert (case 5 of 1 => 2 | 3 => 4 | 5 => 6 | _ => 0) == 6
+assert (case 5 of 1 => 2 | 3 => 4 | 6 => 7 | _ => 0 | 5 => 1) == 0
+assert (case (5, 6) of (4, 6) => 1 | (5, 7) => 2 | (x, 5) => x | _ => 3) == 3
+assert (case (5, 6) of (4, 6) => 1 | (5, 7) => 2 | (x, 6) => x | _ => 3) == 5
+assert (case (5, 6) of (4, 6) => 1 | (5, 7) => 2 | (y, 5) => y | (x, y) => x+y) == 11
 
-data T = A | B;
-assert (case (A, B) of { (A, A) => 1; (B, _) => 2; _ => 3 }) == 3;
-assert (case (B, B) of { (A, A) => 1; (B, _) => 2; _ => 3 }) == 2;
-assert (case (A, A) of { (A, A) => 1; (B, _) => 2; _ => 3 }) == 1;
+data T = A | B
+assert (case (A, B) of (A, A) => 1 | (B, _) => 2 | _ => 3) == 3
+assert (case (B, B) of (A, A) => 1 | (B, _) => 2 | _ => 3) == 2
+assert (case (A, A) of (A, A) => 1 | (B, _) => 2 | _ => 3) == 1
 
-data U = X | Y Int | Z Int Int;
-assert (case X of { X => 1; Y n => n; Z i j => i + j }) == 1;
-assert (case Y 2 of { X => 1; Y n => n; Z i j => i + j }) == 2;
-assert (case Z 4 5 of { X => 1; Y n => n; Z i j => i + j }) == 9;
+data U = X | Y Int | Z Int Int
+assert (case X of X => 1 | Y n => n | Z i j => i + j) == 1
+assert (case Y 2 of X => 1 | Y n => n | Z i j => i + j) == 2
+assert (case Z 4 5 of X => 1 | Y n => n | Z i j => i + j) == 9
 
 
-data List a = Nil | Cons a (List a);
-assert (case Nil of { [] => 1; _ => 2 }) == 1;
-assert (case [] of { [] => 1; _ => 2 }) == 1;
-assert (case [] of { Nil => 1; _ => 2 }) == 1;
-assert (case [] of { [n] => n; _ => 0 }) == 0;
-assert (case [] of { Cons n _ => n; _ => 0 }) == 0;
-assert (case Nil of { Cons n _ => n; _ => 0 }) == 0;
-assert (case [1] of { [n] => n; _ => 0 }) == 1;
-assert (case [1] of { Cons n _ => n; _ => 0 }) == 1;
-assert (case [1, 2] of { Cons n _ => n; _ => 0 }) == 1;
-assert (case [1, 2, 3] of { [x, y, z] => x + y + z; _ => 0 }) == 6;
+data List a = Nil | Cons a (List a)
+assert (case Nil of [] => 1 | _ => 2) == 1
+assert (case [] of [] => 1 | _ => 2) == 1
+assert (case [] of Nil => 1 | _ => 2) == 1
+assert (case [] of [n] => n | _ => 0) == 0
+assert (case [] of Cons n _ => n | _ => 0) == 0
+assert (case Nil of Cons n _ => n | _ => 0) == 0
+assert (case [1] of [n] => n | _ => 0) == 1
+assert (case [1] of Cons n _ => n | _ => 0) == 1
+assert (case [1, 2] of Cons n _ => n | _ => 0) == 1
+assert (case [1, 2, 3] of [x, y, z] => x + y + z | _ => 0) == 6
 
 (; TODO
-assert (case 1 == 2 of { True => 1; False => 2}) == 2;
+assert (case 1 == 2 of True => 1 | False => 2) == 2
 ;)

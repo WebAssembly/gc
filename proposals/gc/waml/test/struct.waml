@@ -1,25 +1,25 @@
 ;; Structures
 
-module Empty = {};
+module Empty = {}
 
 module M =
 {
-  type T = Int;
-  data U = A | B T;
-  val x = 1;
-  val f x = x + 1;
-  assert x == 1;
-  assert f x == 2;
-};
+  type T = Int
+  data U = A | B T
+  val x = 1
+  val f x = x + 1
+  assert x == 1
+  assert f x == 2
+}
 
-assert M.x == 1;
-assert M.f M.x == 2;
+assert M.x == 1
+assert M.f M.x == 2
 
 module MM =
 {
-  include M;
-  val y = x + 1;
-};
+  include M
+  val y = x + 1
+}
 
-assert MM.x == 1;
-assert MM.y == 2;
+assert MM.x == 1
+assert MM.y == 2

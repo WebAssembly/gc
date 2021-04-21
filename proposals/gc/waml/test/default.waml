@@ -1,1 +1,1 @@
-val f x = x + x;
+val f x = x + x

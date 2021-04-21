@@ -1,81 +1,79 @@
 ;; Integers
 
-assert 1 == 1;
-assert 1 <> 2;
-assert 1 < 2;
-assert 2 > 1;
-assert 1 <= 2;
-assert 2 <= 2;
-assert 2 >= 1;
-assert 2 >= 2;
+assert 1 == 1
+assert 1 <> 2
+assert 1 < 2
+assert 2 > 1
+assert 1 <= 2
+assert 2 <= 2
+assert 2 >= 1
+assert 2 >= 2
 
-assert ~ (1 <> 1);
-assert ~ (1 == 2);
-assert ~ (2 < 1);
-assert ~ (1 > 2);
-assert ~ (2 <= 1);
-assert ~ (1 >= 2);
+assert ~(1 <> 1)
+assert ~(1 == 2)
+assert ~(2 < 1)
+assert ~(1 > 2)
+assert ~(2 <= 1)
+assert ~(1 >= 2)
 
-assert +7 == 7;
-assert -7 == 0-7;
-assert 7 + 8 == 15;
-assert 7 * 8 == 56;
-assert 3 * 5 == 15;
-assert 23 / 5 == 4;
-assert 23 % 5 == 3;
+assert +7 == 7
+assert -7 == 0-7
+assert 7 + 8 == 15
+assert 7 * 8 == 56
+assert 3 * 5 == 15
+assert 23 / 5 == 4
+assert 23 % 5 == 3
 
-assert ^0x0f == 0xffff_fff0;
-assert 0x0f0f & 0x00ff == 0x000f;
-assert 0x0f0f | 0x00ff == 0x0fff;
-assert 0x0f0f ^ 0x00ff == 0x0ff0;
-assert 0x00f0 << 0 == 0x00f0;
-assert 0x00f0 << 32 == 0x00f0;
-assert 0x00f0 << -32 == 0x00f0;
-assert 0x00f0 << 3 == 0x0780;
-assert 0x00f0 << 35 == 0x0780;
-assert 0x00f0 << -29 == 0x0780;
-assert 0x00f0 >> 0 == 0x00f0;
-assert 0x00f0 >> 32 == 0x00f0;
-assert 0x00f0 >> -32 == 0x00f0;
-assert 0x00f0 >> 3 == 0x001e;
-assert 0x00f0 >> 35 == 0x001e;
-assert 0x00f0 >> -29 == 0x001e;
-assert 0xffff_00f0 >> 0 == 0xffff_00f0;
-assert 0xffff_00f0 >> 64 == 0xffff_00f0;
-assert 0xffff_00f0 >> -128 == 0xffff_00f0;
-assert 0xffff_00f0 >> 3 == 0xffff_e01e;
-assert 0xffff_00f0 >> 67 == 0xffff_e01e;
-assert 0xffff_00f0 >> -125 == 0xffff_e01e;
+assert ^^0x0f == 0xffff_fff0
+assert 0x0f0f && 0x00ff == 0x000f
+assert 0x0f0f || 0x00ff == 0x0fff
+assert 0x0f0f ^^ 0x00ff == 0x0ff0
+assert 0x00f0 << 0 == 0x00f0
+assert 0x00f0 << 32 == 0x00f0
+assert 0x00f0 << -32 == 0x00f0
+assert 0x00f0 << 3 == 0x0780
+assert 0x00f0 << 35 == 0x0780
+assert 0x00f0 << -29 == 0x0780
+assert 0x00f0 >> 0 == 0x00f0
+assert 0x00f0 >> 32 == 0x00f0
+assert 0x00f0 >> -32 == 0x00f0
+assert 0x00f0 >> 3 == 0x001e
+assert 0x00f0 >> 35 == 0x001e
+assert 0x00f0 >> -29 == 0x001e
+assert 0xffff_00f0 >> 0 == 0xffff_00f0
+assert 0xffff_00f0 >> 64 == 0xffff_00f0
+assert 0xffff_00f0 >> -128 == 0xffff_00f0
+assert 0xffff_00f0 >> 3 == 0xffff_e01e
+assert 0xffff_00f0 >> 67 == 0xffff_e01e
+assert 0xffff_00f0 >> -125 == 0xffff_e01e
 
-assert 0x1 << 31 == 0;
-assert 0x7fff_ffff + 1 == 0;
-assert -0x4000_0000 == 0x4000_0000;
-assert 1_000_000 * 400 == 1_000_000 * 400 & 0x7fff_ffff;
+assert 0x1 << 31 == 0
+assert 0x7fff_ffff + 1 == 0
+assert -0x4000_0000 == 0x4000_0000
+assert 1_000_000 * 400 == 1_000_000 * 400 && 0x7fff_ffff
 
 
 ;; Floats
 
-assert 1.0 == 1.0;
-assert 1.0 <> 2.0;
-assert 1.0 < 2.0;
-assert 2.0 > 1.0;
-assert 1.0 <= 2.0;
-assert 2.0 <= 2.0;
-assert 2.0 >= 1.0;
-assert 2.0 >= 2.0;
+assert 1.0 == 1.0
+assert 1.0 <> 2.0
+assert 1.0 < 2.0
+assert 2.0 > 1.0
+assert 1.0 <= 2.0
+assert 2.0 <= 2.0
+assert 2.0 >= 1.0
+assert 2.0 >= 2.0
 
-assert ~ (1.0 <> 1.0);
-assert ~ (1.0 == 2.0);
-assert ~ (2.0 < 1.0);
-assert ~ (1.0 > 2.0);
-assert ~ (2.0 <= 1.0);
-assert ~ (1.0 >= 2.0);
+assert ~(1.0 <> 1.0)
+assert ~(1.0 == 2.0)
+assert ~(2.0 < 1.0)
+assert ~(1.0 > 2.0)
+assert ~(2.0 <= 1.0)
+assert ~(1.0 >= 2.0)
 
-assert +7.0 == 7.0;
-assert -7.0 == 0.0-7.0;
-assert 7.0 + 8.0 == 15.0;
-assert 7.5 * 8.0 == 60.0;
-assert 3.5 * 5.0 == 17.5;
-assert 24.0 / 5.0 == 4.8;
-
-4;
+assert +7.0 == 7.0
+assert -7.0 == 0.0-7.0
+assert 7.0 + 8.0 == 15.0
+assert 7.5 * 8.0 == 60.0
+assert 3.5 * 5.0 == 17.5
+assert 24.0 / 5.0 == 4.8

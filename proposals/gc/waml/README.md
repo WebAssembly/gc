@@ -108,7 +108,7 @@ Note:
 
 ```
 unop  ::= '+' | '-' | '^' | '~'
-binop ::= '+' | '-' | '*' | '/' | '%' | '&' | '|' | '^' | '<<' | '>>' | '#'
+binop ::= '+' | '-' | '*' | '/' | '%' | '&&' | '||' | '^^' | '<<' | '>>' | '#'
 relop ::= '==' | '<>' | '<' | '>' | '<=' | '>='
 logop ::= '/\' | '\/'
 
@@ -135,8 +135,7 @@ exp ::=
   exp exp                                  function call
   exp ':' typ                              type annotation
   'if' exp 'then' exp ('else' exp)?        conditional
-  'case' exp 'of' '{' case;* '}'           case
-  'case' exp 'of' case;                    case (shorthand)
+  'case' exp 'of' case|*                   case
   'let' dec;* 'in' exp                     local declaration
   '(' dec;* ')'                            sequencing (shorthand)
 
@@ -154,15 +153,18 @@ pat :
   '[' pat,* ']'                            list (shorthand)
   pat ':' typ                              type annotation
 ```
-Notes:
+Note:
 
-* An `assert` failure is indicated by executing an `unreachable` instruction in Wasm and thereby trapping.
+* The operators `&&`, `||`, and `^^` are bitwise integer operators, the boolean ones are spelled `/\`, `\/`, and `~`.
+
+* The semicolons between `dec` are optional.
 
 
 ### Declarations
 ```
 dec ::=
-  exp                                      expression
+  exp                                      expression (shorthand for `do`)
+  'do' exp                                 expression
   'assert' exp                             assertion
   'val' pat '=' exp                        pattern binding
   'val' lid pat+ (':' typ)? '=' exp        function (shorthand)
@@ -170,10 +172,14 @@ dec ::=
   'data' uid lid* '=' (uid typ*)|*         algebraic data type
   'module' uid ('(' uid ':' sig ')')* (':' sig)? '=' mod     module
   'signature' uid '=' sig                  signature
-  'rec' dec (';' 'and' dec)*               recursion
+  'rec' dec (and' dec)*                    recursion
   'include' mod                            inclusion
 ```
-Note:
+Notes:
+
+* The shorthand `exp` form without `do` is only allowed at the beginning of the program or after a semicolon.
+
+* An `assert` failure is indicated by executing an `unreachable` instruction in Wasm and thereby trapping.
 
 * The declarations inside a `rec` block must either be all function bindings or all data bindings.
 
@@ -196,7 +202,9 @@ sig ::=
   sig -> sig                                 functor (shorthand)
   sig 'with' 'type' upath '=' typ            refinement
 ```
-Note:
+Notes:
+
+* The semicolons between `spec` are optional.
 
 * The specifications inside a `rec` block must all be data bindings.
 
@@ -211,6 +219,10 @@ mod ::=
   mod ':' sig                                signature annotation
   'let' dec;* 'in' mod                       local declaration
 ```
+Note:
+
+* The semicolons between `dec` are optional.
+
 
 ### Programs
 ```
@@ -222,6 +234,8 @@ prog ::=
 ```
 
 Notes:
+
+* The semicolons between `imp` or `dec` are optional.
 
 * A program executes by executing all contained declarations in order.
 
@@ -247,113 +261,105 @@ True  False  nan
 
 ### Functions
 ```
-val sqr x = x*x;
+val sqr x = x*x
 
-assert sqr 5 == 25;
+assert sqr 5 == 25
 ```
 ```
-rec val fac x = if x == 0 then 1 else x * fac (x-1);
+rec val fac x = if x == 0 then 1 else x * fac (x-1)
 
-assert fac 5 == 120;
+assert fac 5 == 120
 ```
 
 ### Pattern Matching
 ```
 data Exp a =
-  Lit a |
-  Add (Exp a) (Exp a) |
-  Mul (Exp a) (Exp a);
+  | Lit a
+  | Add (Exp a) (Exp a)
+  | Mul (Exp a) (Exp a)
 
 rec val eval (e : Exp Float) =
   case e of
-  {
-    Lit x => x;
-    Add e1 e2 => eval e1 + eval e2;
-    Mul e1 e2 => eval e1 * eval e2;
-  };
+  | Lit x => x
+  | Add e1 e2 => eval e1 + eval e2
+  | Mul e1 e2 => eval e1 * eval e2
 
-val exp = Add (Lit 3.1) (Mul (Add (Lit 1.2) (Lit 2.0)) (Lit (-3.0)));
-eval exp;
+val exp = Add (Lit 3.1) (Mul (Add (Lit 1.2) (Lit 2.0)) (Lit (-3.0)))
+val x = eval exp
 ```
 
 ### Polymorphism
 ```
-data List a = Nil | Cons a (List a);
+data List a = Nil | Cons a (List a)
 
 rec val foldl xs y f =
   case xs of
-  {
-    Nil => y;
-    Cons x xs' => foldl xs' (f x y) f;
-  };
+  | Nil => y
+  | Cons x xs' => foldl xs' (f x y) f
 
-val l = [1, 2, 5, 6, -8];
-val sum = foldl l 0 (fun i sum => sum + i);
-assert sum == 6;
+val l = [1, 2, 5, 6, -8]
+val sum = foldl l 0 (fun i sum => sum + i)
+assert sum == 6
 ```
 
 ### Parameterised Modules
 ```
 signature Set =
 {
-  type Elem;
-  type Set;
-  val empty : Set;
-  val add : Elem -> Set -> Set;
-  val mem : Elem -> Set -> Bool;
-};
+  type Elem
+  type Set
+  val empty : Set
+  val add : Elem -> Set -> Set
+  val mem : Elem -> Set -> Bool
+}
 
 signature Ord =
 {
-  type T;
-  val lt : T -> T -> Bool;
-};
+  type T
+  val lt : T -> T -> Bool
+}
 
 module MakeSet (Elem : Ord) : Set with type Elem = Elem.T =
 {
-  type Elem = Elem.T;
-  data Set = Empty | Mem Elem Set Set;
+  type Elem = Elem.T
+  data Set = Empty | Mem Elem Set Set
 
-  val empty = Empty;
+  val empty = Empty
 
   rec val add x s =
     case s of
-    {
-      Empty => Mem x Empty Empty;
-      Mem y s1 s2 =>
-        if Elem.lt x y then Mem y (add x s1) s2
-        else if Elem.lt y x then Mem y s1 (add x s2)
-        else s
-    };
+    | Empty => Mem x Empty Empty
+    | Mem y s1 s2 =>
+      if Elem.lt x y then Mem y (add x s1) s2
+      else if Elem.lt y x then Mem y s1 (add x s2)
+      else s
 
   rec val mem x s =
     case s of
-    {
-      Empty => False;
-      Mem y s1 s2 =>
-        if Elem.lt x y then mem x s1 else ~ Elem.lt y x \/ mem x s2
-    };
-};
+    | Empty => False
+    | Mem y s1 s2 =>
+      if Elem.lt x y then mem x s1 else ~ Elem.lt y x \/ mem x s2
+}
 
-module IS = MakeSet {type T = Int; val lt x y = x < y};
-val s = IS.add 3 (IS.add 1 (IS.add 3 (IS.add 5 IS.empty)));
+module IS = MakeSet {type T = Int; val lt x y = x < y}
+val s = IS.add 3 (IS.add 1 (IS.add 3 (IS.add 5 IS.empty)))
 ```
 
 ### Separate Compilation
 ```
 ;; Module "pair"
-type Pair a b = (a, b);
+type Pair a b = (a, b)
 
-val pair x y = (x, y);
-val fst (x, _) = x;
-val snd (_, y) = y;
+val pair x y = (x, y)
+val fst (x, _) = x
+val snd (_, y) = y
 ```
 A client:
 ```
-import Pair from "pair";
+import Pair from "pair"
 
-let p = Pair.pair 4 5;
-assert Pair.fst p == 4;
+let p = Pair.pair 4 5
+assert Pair.fst p == 4
 ```
 
 ## Under the Hood
@@ -414,10 +420,10 @@ References returned from a generic function call are cast back to their concrete
 
 Moreover, tuples and `ref` likewise represent all fields with `anyref`, i.e., they are treated like polymorphic types as well. This is necessary to enable passing them to polymorphic functions that abstract some of their types, for example:
 ```
-val f z (x, y) = x + y + z;
+val f z (x, y) = x + y + z
 
-let p = (3, 4);
-f 2 p;
+val p = (3, 4)
+val _ = f 2 p
 ```
 If `p` was not represented as `ref (struct anyref anyref)`, then the call to `f` would produce invalid Wasm.
 
@@ -459,10 +465,10 @@ Code pointers are references to the actual function. In addition to its regular 
 
 For example, the Waml function `f` in the following example,
 ```
-val a = 5;
-module M = {val b = 7};
+val a = 5
+module M = {val b = 7}
 
-val f x y = x + y + a + M.b;
+val f x y = x + y + a + M.b
 ```
 has this Wasm representation:
 ```
@@ -492,15 +498,15 @@ When the function called is statically known at a call site, and applied to the 
 
 However, due to the combination of first-class functions, currying, and polymorphism in a functional language, the callen is not generally known, nor is its physical arity. A call may be both under-applying and over-applying. For example, consider:
 ```
-val add1 x = let val f y = x + y in f;
-val add2 x y = x + y;
-val add3 x y z = x + y + z;
+val add1 x = let val f y = x + y in f
+val add2 x y = x + y
+val add3 x y z = x + y + z
 
-val call f = f 1 2;  ;; call : (Int -> Int -> a) -> a has polymorphic result type
+val call f = f 1 2  ;; call : (Int -> Int -> a) -> a has polymorphic result type
 
-call add1;    ;; => add1 1 2 over-applies
-call add2;    ;; => add2 1 2
-call add3 3;  ;; => add3 1 2 under-applies
+do call add1    ;; => add1 1 2 over-applies
+do call add2    ;; => add2 1 2
+do call add3 3  ;; => add3 1 2 under-applies
 
 ```
 To handle these different cases, it generally is necessary to perform two-dimensional dispatch on both the call and the callee arity. The former is known statically, but the latter isn't.

@@ -2,32 +2,32 @@
 
 module A =
 {
-  type T = Int;
-  val x = 1;
-  val y = 2;
+  type T = Int
+  val x = 1
+  val y = 2
   module M = {
-    type U = Int;
-    val x = 3;
-    val y = 4;
-  };
-  module F (X : {val a : Int}) = {val c = X.a; val d = X.a + c};
-};
+    type U = Int
+    val x = 3
+    val y = 4
+  }
+  module F (X : {val a : Int}) = {val c = X.a; val d = X.a + c}
+}
 
-assert A.x == 1;
-assert A.y == 2;
-assert A.M.x == 3;
-assert A.M.y == 4;
+assert A.x == 1
+assert A.y == 2
+assert A.M.x == 3
+assert A.M.y == 4
 
 signature A' =
 {
-  val x : Int;
-  module M : { val y : Int };
-  module F : {val a : Int; val b : Int} -> {val d : Int};
-};
+  val x : Int
+  module M : { val y : Int }
+  module F : {val a : Int; val b : Int} -> {val d : Int}
+}
 
-module A' : A' = A;
-module B' = A'.F {val a = 1; val b = 3*a};
+module A' : A' = A
+module B' = A'.F {val a = 1; val b = 3*a}
 
-assert A'.x == 1;
-assert A'.M.y == 4;
-assert B'.d == 2;
+assert A'.x == 1
+assert A'.M.y == 4
+assert B'.d == 2

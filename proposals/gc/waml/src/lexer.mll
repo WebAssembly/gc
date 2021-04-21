@@ -116,6 +116,7 @@ rule token = parse
   | "]" { RBRACK }
   | "{" { LCURLY }
   | "}" { RCURLY }
+  | "|" { BAR }
   | ";" { SEMICOLON }
   | ";\n" { Lexing.new_line lexbuf; SEMICOLON_EOL }
   | "," { COMMA }
@@ -134,9 +135,9 @@ rule token = parse
   | "*" { MULOP }
   | "/" { DIVOP }
   | "%" { MODOP }
-  | "&" { ANDOP }
-  | "|" { OROP }
-  | "^" { XOROP }
+  | "&&" { ANDOP }
+  | "||" { OROP }
+  | "^^" { XOROP }
   | "<<" { SHLOP }
   | ">>" { SHROP }
 
@@ -168,6 +169,7 @@ rule token = parse
   | "assert" { ASSERT }
   | "case" { CASE }
   | "data" { DATA }
+  | "do" { DO }
   | "else" { ELSE }
   | "from" { FROM }
   | "fun" { FUN }

@@ -1,11 +1,11 @@
 ;; Accessing global scope
 
 val x = 3; 
-val y = ref 4;
-val get_x () = x;
-val get_y () = y!;
-assert get_x () == 3;
-assert get_y () == 4;
+val y = ref 4
+val get_x () = x
+val get_y () = y!
+assert get_x () == 3
+assert get_y () == 4
 
 
 ;; Locals
@@ -13,37 +13,37 @@ assert get_y () == 4;
 val f (x : Int) (a : Float) (b : Float) =
   let val y = 2*x + 1 in
   let assert a*b >= a \/ a*b < a in
-  x + y;
+  x + y
 
-assert f 0 1.0 1.4 == 1;
-assert f 1 0.0 1.0 == 4;
-assert f 10 0.5 2.4 == 31;
+assert f 0 1.0 1.4 == 1
+assert f 1 0.0 1.0 == 4
+assert f 10 0.5 2.4 == 31
 
 
 ;; Inner lets
 
 val g x a b =
   let
-    val y = 2*x;
-    val v = ref (y + 1);
+    val y = 2*x
+    val v = ref (y + 1)
     val _ =
       let
-        val y = 3;
-        val v = ref v!;
-        val _ = v := v! + 1;
+        val y = 3
+        val v = ref v!
+        val _ = v := v! + 1
         val _ =
           let
-            val y = 4;
-            assert y == 4;
-            assert a*b >= a;
-            assert v! == 2*x + 2;
-          in ();
-        assert y == 3;
-        assert a*b >= a;
-      in ();
-    assert y == 2*x;
-  in v! + x + y;
+            val y = 4
+            assert y == 4
+            assert a*b >= a
+            assert v! == 2*x + 2
+          in ()
+        assert y == 3
+        assert a*b >= a
+      in ()
+    assert y == 2*x
+  in v! + x + y
 
-assert g 0 1.0 1.4 == 1;
-assert g 1 0.0 1.0 == 6;
-assert g 10 0.5 2.4 == 51;
+assert g 0 1.0 1.4 == 1
+assert g 1 0.0 1.0 == 6
+assert g 10 0.5 2.4 == 51

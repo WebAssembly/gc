@@ -2,49 +2,49 @@
 
 signature Set =
 {
-  type Elem;
-  type Set;
-  val empty : Set;
-  val add : Elem -> Set -> Set;
-  val mem : Elem -> Set -> Bool;
-};
+  type Elem
+  type Set
+  val empty : Set
+  val add : Elem -> Set -> Set
+  val mem : Elem -> Set -> Bool
+}
 
 signature Ord =
 {
-  type T;
-  val lt : T -> T -> Bool;
-};
+  type T
+  val lt : T -> T -> Bool
+}
 
 module MakeSet (Elem : Ord) : Set with type Elem = Elem.T =
 {
-  type Elem = Elem.T;
-  data Set = Empty | Mem Elem Set Set;
+  type Elem = Elem.T
+  data Set = Empty | Mem Elem Set Set
 
-  val empty = Empty;
+  val empty = Empty
 
   rec val add x s =
     case s of
     {
-      Empty => Mem x Empty Empty;
+      Empty => Mem x Empty Empty
       Mem y s1 s2 =>
         if Elem.lt x y then Mem y (add x s1) s2
         else if Elem.lt y x then Mem y s1 (add x s2)
         else s
-    };
+    }
 
   rec val mem x s =
     case s of
     {
-      Empty => False;
+      Empty => False
       Mem y s1 s2 =>
         if Elem.lt x y then mem x s1 else ~ Elem.lt y x \/ mem x s2
-    };
-};
+    }
+}
 
 
-module IS = MakeSet {type T = Int; val lt x y = x < y};
+module IS = MakeSet {type T = Int; val lt x y = x < y}
 
-val s = IS.add 3 (IS.add 1 (IS.add 3 (IS.add 5 IS.empty)));
+val s = IS.add 3 (IS.add 1 (IS.add 3 (IS.add 5 IS.empty)))
 assert IS.mem 3 s;
 assert IS.mem 5 s;
 assert ~ IS.mem 2 s;
