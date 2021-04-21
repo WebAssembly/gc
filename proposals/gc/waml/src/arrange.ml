@@ -41,6 +41,7 @@ let rec typ t = match t.it with
 (* Patterns *)
 
 let lit = function
+  | BoolL b -> "BoolL" $$ [Atom (if b then "True" else "False")]
   | IntL i -> "IntL" $$ [Atom (Int32.to_string i)]
   | FloatL z -> "FloatL" $$ [Atom (string_of_float z)]
   | TextL t -> "TextL" $$ [Atom (string t)]

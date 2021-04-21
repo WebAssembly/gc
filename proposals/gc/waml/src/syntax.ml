@@ -37,6 +37,7 @@ and typ' =
 (* Patterns *)
 
 type lit =
+  | BoolL of bool
   | IntL of int32
   | FloatL of float
   | TextL of string

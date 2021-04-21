@@ -96,14 +96,19 @@ let mem_typ y env = Map.mem y.it env.typs
 let mem_mod x env = Map.mem x.it env.mods
 let mem_sig y env = Map.mem y.it env.sigs
 
-let find_val x env = try Map.find x.it env.vals with Not_found -> not_found x 
+let find_val x env = try Map.find x.it env.vals with Not_found -> not_found x
 let find_typ y env = try Map.find y.it env.typs with Not_found -> not_found y
-let find_mod x env = try Map.find x.it env.mods with Not_found -> not_found x 
+let find_mod x env = try Map.find x.it env.mods with Not_found -> not_found x
 let find_sig y env = try Map.find y.it env.sigs with Not_found -> not_found y
 let find_opt_val x env = Map.find_opt x.it env.vals
 let find_opt_typ y env = Map.find_opt y.it env.typs
 let find_opt_mod x env = Map.find_opt x.it env.mods
 let find_opt_sig y env = Map.find_opt y.it env.sigs
+
+let exists_val f env = Map.exists f env.vals
+let exists_typ f env = Map.exists f env.typs
+let exists_mod f env = Map.exists f env.mods
+let exists_sig f env = Map.exists f env.sigs
 
 let map_vals f env = {env with vals = Map.map (map_it f) env.vals}
 let map_typs f env = {env with typs = Map.map (map_it f) env.typs}

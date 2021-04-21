@@ -75,6 +75,7 @@ let eval_con_path env q : string =
 
 let eval_lit _env lit : V.value =
   match lit with
+  | BoolL b -> V.of_bool b
   | IntL i -> V.int i
   | FloatL z -> V.Float z
   | TextL t -> V.Text t
@@ -371,13 +372,9 @@ let eval_imp env env' d : env =
 
 let env0 =
   let at = Prelude.region in
-  E.empty
-  |> List.fold_right (fun (x, l) env ->
-      E.extend_val env (x @@ at) (eval_lit env l)
-    ) Prelude.vals
-  |> List.fold_right (fun (x, t) env ->
-      E.extend_val env (x @@ at) (V.con x 0)
-    ) Prelude.cons
+  List.fold_right (fun (x, l) env ->
+    E.extend_val env (x @@ at) (eval_lit env l)
+  ) Prelude.vals E.empty
 
 let eval_prog env p : V.value * env =
   let Prog (is, ds) = p.it in

@@ -76,7 +76,7 @@ val infer : pred -> typ
 val norm : typ -> typ
 
 val inst : poly -> typ
-val generalize : Env.Set.t -> poly -> poly
+val generalize : str -> poly -> poly
 
 val default_sig : sig_ -> unit
 val default_str : str -> unit
@@ -89,6 +89,7 @@ val free_sig : sig_ -> Env.Set.t
 val free_str : str -> Env.Set.t
 
 val string_of_typ : typ -> string
+val string_of_poly : poly -> string
 val string_of_sig : sig_ -> string
 val string_of_str : str -> string
 

@@ -161,6 +161,7 @@ let unify t1 t2 at =
 
 let check_lit _env lit : T.typ =
   match lit with
+  | BoolL _ -> T.Bool
   | IntL _ -> T.Int
   | FloatL _ -> T.Float
   | TextL _ -> T.Text
@@ -394,9 +395,7 @@ and check_dec' pass env d : T.typ * T.var list * env =
     let t2 = check_exp env e in
     unify t1 t2 d.at;
     let env'' =
-      if not (is_pure e) then env' else
-      E.map_vals (T.generalize (T.free_str env)) env'
-    in
+      if not (is_pure e) then env' else E.map_vals (T.generalize env) env' in
     T.Tup [], [], env''
 
   | TypD (y, ys, t) ->
@@ -438,7 +437,7 @@ and check_dec' pass env d : T.typ * T.var list * env =
     let env''' =
       if E.is_empty_vals env'' then env'' else
       let _, t = E.choose_val env'' in
-      let T.Forall (bs, t') = T.generalize (T.free_str env) t.it in
+      let T.Forall (bs, t') = T.generalize env t.it in
       if bs = [] then env'' else
       E.map_vals (fun (T.Forall (bs', t)) -> T.Forall (bs, t)) env''
     in
@@ -646,9 +645,6 @@ let env0 =
   |> List.fold_right (fun (x, l) env ->
       E.extend_val_mono env (x @@ at) (check_lit env l)
     ) Prelude.vals
-  |> List.fold_right (fun (x, t) env ->
-      E.extend_val_mono env (x @@ at) (check_typ env (t @@ at))
-    ) Prelude.cons
 
 let check_prog env p : T.typ * T.var list * env =
   assert (p.et = None);

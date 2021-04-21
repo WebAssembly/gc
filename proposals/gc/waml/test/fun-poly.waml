@@ -1,11 +1,11 @@
-// Polymorphic types
+;; Polymorphic types
 
-data Data = A | B
-type Pair X Y = (Y, X);
+data Data = A | B;
+type Pair a b = (b, a);
 
 val p01 : Pair Text () = ((), "5");
 val p02 : Pair Int Data = (A, 6);
-val p03 : Pair Float (Int -> Int) = (fun x -> x, 3.14);
+val p03 : Pair Float (Int -> Int) = (fun x => x, 3.14);
 
 val ((), "5") = p01;
 val (A, 6) = p02;
@@ -13,7 +13,7 @@ val (p030, 3.14) = p03;
 assert p030 66 == 66;
 
 
-// Polymorphic functions
+;; Polymorphic functions
 
 val pair x y = (y, x);
 
@@ -44,15 +44,15 @@ and val rev' xs ys =
   };
 
 val a1 = [1, 2, 3, 4, 5];
-val [5, 4, 3, 2, 1] = rev a;
+val [5, 4, 3, 2, 1] = rev a1;
 
-let a2 = ["1", "2", "3"];
-let ["3", "2", "1"] = rev a2;
+val a2 = ["1", "2", "3"];
+val ["3", "2", "1"] = rev a2;
 
-let [[7], [], [5, 6]] = rev [[5, 6], [], [7]];
+val [[7], [], [5, 6]] = rev [[5, 6], [], [7]];
 
 
-data Opt A = None | Some A
+data Opt a = None | Some a;
 val none = None;
 
 val _ : Opt Int = none;

@@ -85,6 +85,8 @@ let quant sym = function
   | [] -> ""
   | bs -> sym ^ list " " Fun.id bs ^ ". "
 
+let string_of_poly (Forall (bs, t)) = quant "" bs ^ string_of_typ t
+
 let rec string_of_sig = function
   | Str (bs, str) ->
     quant "?" bs ^ "{" ^ string_of_str' "; " str ^ "}"
@@ -99,8 +101,8 @@ and string_of_str' sep str =
   let xs = List.sort compare_by_region (ss @ ms @ ts @ vs) in
   String.concat sep (List.map it xs)
 
-and string_of_sval (x, {it = Forall (bs, t); at; _}) =
-  ("val " ^ x ^ " : " ^ quant "" bs ^ string_of_typ t) @@ at
+and string_of_sval (x, pt) =
+  ("val " ^ x ^ " : " ^ string_of_poly pt.it) @@ pt.at
 and string_of_styp (y, {it = Lambda (bs, t); at; _}) =
   ("type " ^ list " " Fun.id (y :: bs) ^ " = " ^ string_of_typ t) @@ at
 and string_of_smod (x, s) =
@@ -125,7 +127,7 @@ let rec free = function
   | Tup ts -> list free ts
   | Fun (t1, t2) -> free t1 ++ free t2
   | Infer {contents = Res t'} -> free t'
-  | Infer {contents = Unres (b, _)} -> Set.empty
+  | Infer _ -> Set.empty
 
 let free_poly (Forall (bs, t)) = Set.diff (free t) (Set.of_list bs)
 let free_con (Lambda (bs, t)) = Set.diff (free t) (Set.of_list bs)
@@ -140,6 +142,33 @@ and free_str str = Set.empty
   |> S.fold_typs (fun _ c set -> set ++ free_con c.it) str
   |> S.fold_mods (fun _ s set -> set ++ free_sig s.it) str
   |> S.fold_sigs (fun _ s set -> set ++ free_sig s.it) str
+
+
+(* Free inference variables *)
+
+let list f ts = List.concat_map f ts
+
+let rec free_infer = function
+  | Var (_, ts) -> list free_infer ts
+  | Bool | Byte | Int | Float | Text -> []
+  | Ref t -> free_infer t
+  | Tup ts -> list free_infer ts
+  | Fun (t1, t2) -> free_infer t1 @ free_infer t2
+  | Infer {contents = Res t'} -> free_infer t'
+  | Infer inf -> [inf]
+
+let free_infer_poly (Forall (_, t)) = free_infer t
+let free_infer_con (Lambda (_, t)) = free_infer t
+
+let rec free_infer_sig = function
+  | Str (_, str) -> free_infer_str str
+  | Fct (_, s1, s2) -> free_infer_sig s1 @ free_infer_sig s2
+
+and free_infer_str str = []
+  |> S.fold_vals (fun _ t set -> free_infer_poly t.it @ set) str
+  |> S.fold_typs (fun _ c set -> free_infer_con c.it @ set) str
+  |> S.fold_mods (fun _ s set -> free_infer_sig s.it @ set) str
+  |> S.fold_sigs (fun _ s set -> free_infer_sig s.it @ set) str
 
 
 (* Substitutions *)
@@ -266,17 +295,17 @@ let rec generalize' capt i s = function
     let set2 = generalize' capt i s t2 in
     set1 ++ set2
   | Infer {contents = Res t'} -> generalize' capt i s t'
-  | Infer {contents = Unres (b, p)} when p <> Any || Set.mem b capt -> Set.empty
-  | Infer ({contents = Unres (b, _)} as inf) ->
+  | Infer ({contents = Unres (b, p)} as inf) ->
+    if p <> Any || List.memq inf (Lazy.force capt) then Set.empty else
     let c = String.make 1 (Char.chr (Char.code 'a' + !i mod 26)) in
     let b = if !i < 26 then c else c ^ string_of_int (!i / 26) in
     incr i;
     inf := Res (var (fresh_for s b));
     Set.singleton b
 
-let generalize capt = function
+let generalize env = function
   | Forall ([], t) ->
-    let bs = generalize' capt (ref 0) (free t) t in
+    let bs = generalize' (lazy (free_infer_str env)) (ref 0) (free t) t in
     Forall (Set.elements bs, t)
   | t -> t
 
@@ -308,6 +337,7 @@ and default_str str =
 exception Unify of typ * typ
 exception Unsatisfiable
 
+(*
 let rec enforce p = function
   | Var _ | Fun _ when p = Any -> ()
   | Int | Float -> ()
@@ -315,6 +345,27 @@ let rec enforce p = function
   | Tup ts -> List.iter (enforce p) ts
   | Infer {contents = Res t'} -> enforce p t'
   | Infer ({contents = Unres (y, p')} as inf) -> inf := Unres (y, max p p')
+  | _ -> raise Unsatisfiable
+
+let rec occurs inf = function
+  | Var (_, ts) | Tup ts -> List.exists (f inf) ts
+  | Bool | Byte | Int | Float | Text -> false
+  | Ref t -> occurs inf t
+  | Fun (t1, t2) -> occurs inf t1 || occurs inf t2
+  | Infer {contents = Res t} -> occurs inf t
+  | Infer ({contents = Unres _} as inf') -> inf == inf'
+*)
+
+let rec enforce inf p = function
+  | Var (_, ts) when p = Any -> List.iter (enforce inf p) ts
+  | Int | Float -> ()
+  | Bool | Byte | Text when p <= Eq -> ()
+  | Ref t when p <= Eq -> enforce inf p t
+  | Tup ts -> List.iter (enforce inf p) ts
+  | Fun (t1, t2) when p = Any -> enforce inf p t1; enforce inf p t2
+  | Infer {contents = Res t'} -> enforce inf p t'
+  | Infer ({contents = Unres (y, p')} as inf') when inf' != inf ->
+    inf' := Unres (y, max p p')
   | _ -> raise Unsatisfiable
 
 let rec unify t1 t2 =
@@ -327,9 +378,10 @@ let rec unify t1 t2 =
   | Fun (t11, t12), Fun (t21, t22) -> unify t11 t21; unify t12 t22
   | Infer {contents = Res t1'}, t2 -> unify t1' t2
   | t1, Infer {contents = Res t2'} -> unify t1 t2'
+  | Infer ({contents = Unres _} as inf1), Infer ({contents = Unres _} as inf2)
+    when inf1 == inf2 -> ()
   | Infer ({contents = Unres (b, p)} as inf1), t2 ->
-    (try enforce p t2 with Unsatisfiable -> raise (Unify (t1, t2)));
-    if Set.mem b (free t2) then raise (Unify (t1, t2));
+    (try enforce inf1 p t2 with Unsatisfiable -> raise (Unify (t1, t2)));
     inf1 := Res t2
   | t1, Infer {contents = Unres _} -> unify t2 t1
   | _ -> raise (Unify (t1, t2))

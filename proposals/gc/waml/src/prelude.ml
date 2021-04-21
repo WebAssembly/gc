@@ -14,9 +14,6 @@ let typs =
 
 let vals =
   [ "nan", FloatL nan;
-  ]
-
-let cons =
-  [ "True", BoolT;
-    "False", BoolT;
+    "True", BoolL true;
+    "False", BoolL false;
   ]

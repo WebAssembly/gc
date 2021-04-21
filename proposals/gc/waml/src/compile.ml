@@ -198,6 +198,10 @@ let compile_coerce ctxt src dst t at =
 let compile_lit ctxt l at =
   let emit ctxt = List.iter (emit_instr ctxt at) in
   match l with
+  | BoolL b ->
+    emit ctxt W.[
+      i32_const ((if b then 1l else 0l) @@ at);
+    ]
   | IntL i ->
     let ext_i = W.I32.(shr_s (shl i 1l) 1l) in
     emit ctxt W.[
@@ -581,7 +585,7 @@ and compile_exp_func_opt ctxt dst e : func_loc option =
 
   | ConE q ->
     (match T.norm (Source.et e) with
-    | T.Var (y, _) ->
+    | T.Bool | T.Var _ ->
       compile_val_path ctxt q (Source.et e) dst;
       None
 
@@ -1348,7 +1352,8 @@ let compile_prog p : W.module_ =
   emit_global_export ctxt p.at "return" result_idx;
   let _, env = current_scope ctxt in
   E.iter_mods (fun x' locs ->
-    emit_global_export ctxt locs.at x' (as_global_loc (fst locs.it));
+    emit_global_export ctxt locs.at ("module " ^ x')
+      (as_global_loc (fst locs.it));
   ) !env;
   E.iter_vals (fun x' locs ->
     emit_global_export ctxt locs.at x' (as_global_loc (fst locs.it));

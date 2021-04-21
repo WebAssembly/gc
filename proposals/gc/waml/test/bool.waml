@@ -1,5 +1,3 @@
-;; @FAIL-WASM
-
 ;; Boolean operators
 
 assert True /\ True;
