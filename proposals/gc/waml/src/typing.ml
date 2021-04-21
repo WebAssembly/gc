@@ -386,7 +386,7 @@ and check_dec' pass env d : T.typ * T.var list * env =
     let t2 = check_exp env e in
     unify t1 t2 d.at;
     E.iter_vals (fun x t ->
-      T.unify (T.inst t.it) (T.inst (E.find_val (x @@ t.at) env).it)
+      unify (T.inst t.it) (T.inst (E.find_val (x @@ t.at) env).it) t.at
     ) env';
     T.Tup [], [], env'
 
