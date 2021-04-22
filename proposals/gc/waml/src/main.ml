@@ -31,10 +31,22 @@ let argspec = Arg.align
     " output abstract syntac";
   "-s", Arg.Set Flags.print_sig,
     " print type signature (default when interactive)";
-  "-b", Arg.Set Flags.boxed,
-    " universal generics, box everything";
-  "-p", Arg.Set Flags.parametric,
-    " parametric generics, disallows casts (currently implied by -c)";
+  "-blocals", Arg.Set Flags.box_locals,
+    " box locals (default)";
+  "-bglobals", Arg.Set Flags.box_globals,
+    " box globals (default)";
+  "-btemps", Arg.Set Flags.box_temps,
+    " box temporaries";
+  "-bscrut", Arg.Set Flags.box_scrut,
+    " box pattern scrutinees (default)";
+  "-ublocals", Arg.Clear Flags.box_locals,
+    " unbox locals";
+  "-ubglobals", Arg.Clear Flags.box_globals,
+    " unbox globals";
+  "-ubtemps", Arg.Clear Flags.box_temps,
+    " unbox temporaries";
+  "-ubscrut", Arg.Clear Flags.box_scrut,
+    " unbox pattern scrutinees";
   "-x", Arg.Set Flags.textual,
     " output textual Wasm";
   "-w", Arg.Int (fun n -> Flags.width := n),
@@ -56,7 +68,6 @@ let () =
     if !args = [] then Flags.prompt := true;
     if !Flags.prompt then Flags.interpret := true;  (* TODO: for now *)
     if !Flags.compile then Flags.unchecked := false;
-    if !Flags.compile then Flags.parametric := true;
     if !Flags.interpret then
     (
       List.iter (fun arg -> if not (Run.run_file arg) then exit 1) !args;

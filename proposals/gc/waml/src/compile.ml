@@ -76,10 +76,12 @@ let string_of_loc = function
   | ClosureLoc (i, _, _) -> "closure" ^ Int32.to_string i
 
 let print_env env =
-  E.iter_mods (fun x locs -> let l, _ = locs.it in
-    Printf.printf " val(%s)=%s" x (string_of_loc l)) env;
-  E.iter_vals (fun x locs -> let l, _ = locs.it in
-    Printf.printf " val(%s)=%s" x (string_of_loc l)) env;
+  E.iter_mods (fun x locs -> let l, flo = locs.it in
+    Printf.printf " %s(%s)=%s" (if flo = None then "val" else "fun") x
+      (string_of_loc l)) env;
+  E.iter_vals (fun x locs -> let l, flo = locs.it in
+    Printf.printf " %s(%s)=%s" (if flo = None then "val" else "fun") x
+      (string_of_loc l)) env;
   Printf.printf "\n"
 
 let print_envs envs =
@@ -448,7 +450,7 @@ let rec compile_pat_rec_post ctxt p =
   | AnnotP (p1, _) -> compile_pat_rec_post ctxt p1
   | LitP _ | TupP _ | ConP _ | RefP _ -> assert false
 
-let rec compile_pat ctxt fail p =
+let rec compile_pat ctxt fail funcloc_opt p =
   let t = Source.et p in
   let emit ctxt = List.iter (emit_instr ctxt p.at) in
   match p.it with
@@ -471,27 +473,25 @@ let rec compile_pat ctxt fail p =
     ]
 
   | VarP x ->
-    compile_val_var_bind ctxt x t pat_rep None
+    compile_val_var_bind ctxt x t pat_rep funcloc_opt
 
   | TupP ps ->
-    let tmp =
-      emit_local ctxt p.at (lower_value_type ctxt p.at tmp_rep t) in
-    compile_coerce ctxt pat_rep tmp_rep t p.at;
+    let typeidx = lower_var_type ctxt p.at t in
+    let tmp = emit_local ctxt p.at W.(ref_null_ typeidx) in
+    compile_coerce ctxt pat_rep rigid_rep t p.at;
     emit ctxt W.[
       local_set (tmp @@ p.at);
     ];
-    let typeidx = lower_var_type ctxt p.at t in
     List.iteri (fun i pI ->
       if classify_pat pI > IrrelevantPat then begin
         emit ctxt W.[
           local_get (tmp @@ p.at);
         ];
-        compile_coerce ctxt tmp_rep rigid_rep t p.at;
         emit ctxt W.[
           struct_get (typeidx @@ pI.at) (int32 i @@ pI.at);
         ];
         compile_coerce ctxt field_rep pat_rep (Source.et pI) pI.at;
-        compile_pat ctxt fail pI;
+        compile_pat ctxt fail None pI;
       end
     ) ps
 
@@ -505,7 +505,7 @@ let rec compile_pat ctxt fail p =
         br_if (fail @@ p.at);
       ]
     | _ ->
-      compile_val_path ctxt q (T.as_mono (Source.et q)) rigid_rep;
+      compile_val_path ctxt q (T.as_mono (Source.et q)) ref_rep;
       emit ctxt W.[
         ref_eq;
         i32_eqz;
@@ -551,7 +551,7 @@ let rec compile_pat ctxt fail p =
             struct_get (con.typeidx @@ pI.at) (int32 (i + 1) @@ pI.at);
           ];
           compile_coerce ctxt field_rep pat_rep (Source.et pI) pI.at;
-          compile_pat ctxt fail pI;
+          compile_pat ctxt fail None pI;
         end
       ) ps
     | _ -> assert false
@@ -564,10 +564,10 @@ let rec compile_pat ctxt fail p =
       struct_get (typeidx @@ p.at) (0l @@ p.at);
     ];
     compile_coerce ctxt field_rep pat_rep (Source.et p1) p1.at;
-    compile_pat ctxt fail p1
+    compile_pat ctxt fail None p1
 
   | AnnotP (p1, _) ->
-    compile_pat ctxt fail p1
+    compile_pat ctxt fail funcloc_opt p1
 
 
 (* Expressions *)
@@ -836,11 +836,12 @@ and compile_exp_func_opt ctxt e dst : func_loc option =
         )
 
       | _ ->
-        (match compile_exp_func_opt ctxt e1 rigid_rep with
+        (match compile_exp_func_opt ctxt e1 ref_rep with
         | Some {funcidx; arity} when arity = List.length es ->
           let anyclos = lower_anyclos_type ctxt e1.at in
           let _, closN = lower_func_type ctxt e1.at arity in
           emit ctxt W.[
+            ref_as_data;
             rtt_canon (anyclos @@ e1.at);
             rtt_sub (closN @@ e1.at);
             ref_cast;
@@ -852,6 +853,7 @@ and compile_exp_func_opt ctxt e dst : func_loc option =
             call (funcidx @@ e.at);
           ]
         | _ ->
+          compile_coerce ctxt ref_rep rigid_rep (Source.et e1) e1.at;
           Intrinsic.compile_push_args ctxt e.at (List.length es) 0l (fun i ->
             compile_exp ctxt (List.nth es i) arg_rep
           );
@@ -911,7 +913,7 @@ and compile_exp_func_opt ctxt e dst : func_loc option =
             let ctxt = enter_scope ctxt LocalScope in
             emit ctxt W.[local_get (tmp @@ pI.at)];
             compile_coerce ctxt tmp_rep pat_rep t1 e.at;
-            compile_pat ctxt (-1l) pI;
+            compile_pat ctxt (-1l) None pI;
             compile_exp ctxt eI dst;
             emit ctxt W.[br (0l @@ eI.at)];
             false
@@ -920,7 +922,7 @@ and compile_exp_func_opt ctxt e dst : func_loc option =
             emit_block ctxt pI.at W.block W.void (fun ctxt ->
               emit ctxt W.[local_get (tmp @@ pI.at)];
               compile_coerce ctxt tmp_rep pat_rep t1 e.at;
-              compile_pat ctxt 0l pI;
+              compile_pat ctxt 0l None pI;
               compile_exp ctxt eI dst;
               emit ctxt W.[br (1l @@ eI.at)];
             );
@@ -971,7 +973,7 @@ and compile_func_staged ctxt rec_xs f : func_loc * _ * _ =
               | TotalPat ->
                 Intrinsic.compile_load_arg ctxt pI.at i arg0 argv_opt;
                 compile_coerce ctxt arg_rep pat_rep (Source.et pI) f.at;
-                compile_pat ctxt (-1l) pI;
+                compile_pat ctxt (-1l) None pI;
               | PartialPat -> assert false
             ) ps
           else
@@ -983,11 +985,11 @@ and compile_func_staged ctxt rec_xs f : func_loc * _ * _ =
                   | TotalPat ->
                     Intrinsic.compile_load_arg ctxt pI.at i arg0 argv_opt;
                     compile_coerce ctxt arg_rep pat_rep (Source.et pI) f.at;
-                    compile_pat ctxt (-1l) pI;
+                    compile_pat ctxt (-1l) None pI;
                   | PartialPat ->
                     Intrinsic.compile_load_arg ctxt pI.at i arg0 argv_opt;
                     compile_coerce ctxt arg_rep pat_rep (Source.et pI) f.at;
-                    compile_pat ctxt 0l pI;
+                    compile_pat ctxt 0l None pI;
                 ) ps;
                 emit ctxt W.[br (1l @@ f.at)];
               );
@@ -1000,8 +1002,9 @@ and compile_func_staged ctxt rec_xs f : func_loc * _ * _ =
       let fixup ctxt self =
         if fixups <> [] then begin
           let tmp = emit_local ctxt f.at W.(ref_null_ closNenv) in
-          compile_val_var ctxt Source.(self @@ f.at) (Source.et f) rigid_rep;
+          compile_val_var ctxt Source.(self @@ f.at) (Source.et f) ref_rep;
           emit ctxt W.[
+            ref_as_data;
             rtt_canon (lower_anyclos_type ctxt f.at @@ f.at);
             rtt_sub (closN @@ f.at);
             rtt_sub (closNenv @@ f.at);
@@ -1258,13 +1261,13 @@ and compile_dec ctxt d dst =
     | IrrelevantPat ->
       compile_exp ctxt e DropRep;
     | TotalPat ->
-      compile_exp ctxt e pat_rep;
-      compile_pat ctxt (-1l) p;
+      let funcloc_opt = compile_exp_func_opt ctxt e pat_rep in
+      compile_pat ctxt (-1l) funcloc_opt p;
     | PartialPat ->
       emit_block ctxt e.at W.block W.void (fun ctxt ->
         emit_block ctxt e.at W.block W.void (fun ctxt ->
-          compile_exp ctxt e pat_rep;
-          compile_pat ctxt 0l p;
+          let funcloc_opt = compile_exp_func_opt ctxt e pat_rep in
+          compile_pat ctxt 0l funcloc_opt p;
           emit ctxt W.[br (1l @@ d.at)];
         );
         emit ctxt W.[unreachable]

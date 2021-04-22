@@ -33,6 +33,57 @@ The `waml` implementation encompasses:
 
 The compiler makes use of [most of the constructs](#under-the-hood) in the GC proposal's MVP.
 
+For example, here is a short transcript of a REPL session with [`wob -c -x`](#invocation):
+```
+proposals/gc/waml$ ./waml -x -c
+waml 0.1 interpreter
+> val f x = x + 7;  f 5;
+(module
+  (type $0 (func))
+  (type $1 (func (param (ref 2) (ref eq)) (result (ref eq))))
+  (type $2 (struct (field i32) (field (ref 1))))
+  (type $3 (struct (field i32)))
+  (type $4 (func (param (ref 5) (ref eq)) (result (ref eq))))
+  (type $5 (struct (field i32) (field (ref 4))))
+  (global $0 (mut (ref null eq)) (ref.null eq))
+  (global $1 (mut (ref null eq)) (ref.null eq))
+  (func $0 (type 0)
+    (i32.const 1)
+    (ref.func 1)
+    (rtt.canon 3)
+    (rtt.sub 2)
+    (struct.new 2)
+    (global.set 0)
+    (global.get 0)
+    (ref.as_data)
+    (rtt.canon 3)
+    (rtt.sub 5)
+    (ref.cast)
+    (i32.const 5)
+    (i31.new)
+    (call 1)
+    (global.set 1)
+  )
+  (func $1 (type 1)
+    (local.get 1)
+    (ref.as_i31)
+    (i31.get_s)
+    (i32.const 7)
+    (i32.add)
+    (i31.new)
+  )
+  (export "return" (global 1))
+  (export "f" (global 0))
+  (export "func f" (func 1))
+  (start 0)
+  (elem $0 declare func 1)
+)
+(i31 12) : Int
+val f : Int -> Int
+> 
+```
+See [below](#under-the-hood) for a brief explanation regarding the produced code.
+
 
 ## Usage
 
@@ -450,6 +501,8 @@ Waml bindings are compiled to Wasm as follows.
 | `module`         | mutable `global`| `local`        | immutable field |
 
 Note that all global declarations have to be compiled into mutable globals, since they could not be initialised otherwise.
+
+The compiler can be configured (independently form each other) to either box or unbox values stored in locals, globals, temporaries or for pattern scrutinees (run with `-h` for flags).
 
 
 ### Functions and Closures

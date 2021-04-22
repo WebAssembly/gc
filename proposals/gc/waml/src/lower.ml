@@ -26,12 +26,13 @@ type rep =
   | UnboxedLaxRep of null  (* like Unboxed, but Int may have junk high bit *)
 
 (* Configurable *)
-let local_rep = BoxedRep Null       (* values stored in locals *)
-let global_rep = BoxedRep Null      (* values stored in globals *)
-let tmp_rep = UnboxedRep Null       (* values stored in temps *)
-let pat_rep = BoxedRep Nonull       (* values fed into patterns *)
+let local_rep = if !Flags.box_locals then BoxedRep Null else UnboxedRep Null    (* values stored in locals *)
+let global_rep = if !Flags.box_globals then BoxedRep Null else UnboxedRep Null  (* values stored in globals *)
+let tmp_rep = if !Flags.box_temps then BoxedRep Null else UnboxedRep Null       (* values stored in temps *)
+let pat_rep = if !Flags.box_scrut then BoxedRep Null else UnboxedRep Null       (* values fed into patterns *)
 
 (* Non-configurable *)
+let ref_rep = BoxedRep Null         (* expecting a reference *)
 let rigid_rep = UnboxedRep Nonull   (* values produced or to be consumed *)
 let lax_rep = UnboxedLaxRep Nonull  (* lax ints produced or consumed *)
 let field_rep = BoxedRep Nonull     (* values stored in fields *)

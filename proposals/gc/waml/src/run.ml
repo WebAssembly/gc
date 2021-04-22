@@ -37,6 +37,7 @@ let rec handle f =
 
 (* Let's hope this is build-dependen enough *)
 let marshal_tag = Hashtbl.hash (Marshal.to_string handle [Marshal.Closures])
+let marshal_conf () = Flags.(!box_locals, !box_locals, !box_temps, !box_scrut)
 
 let with_in_file open_in_mode file f =
   let ic = open_in_mode file in
@@ -103,7 +104,7 @@ let read_binary_file file : Wasm.Ast.module_ * (Type.var list * Typing.env) =
       if Marshal.from_string s 0 <> marshal_tag then
         raise (WasmFormat (at, "wasm binary is from incompatible build"));
       let off1 = Marshal.total_size bs 0 in
-      if Marshal.from_string s off1 <> (!Flags.boxed, !Flags.parametric) then
+      if Marshal.from_string s off1 <> marshal_conf () then
         raise (WasmFormat (at, "wasm binary has incompatible language mode"));
       let off2 = off1 + Marshal.total_size bs off1 in
       m, Marshal.from_string s off2
@@ -126,7 +127,7 @@ let write_binary_file file
   let s1 = Wasm.Encode.encode m in
   let custom =
     Marshal.to_string marshal_tag [] ^
-    Marshal.to_string (!Flags.boxed, !Flags.parametric) [] ^
+    Marshal.to_string (marshal_conf ()) [] ^
     Marshal.to_string stat []
   in
   let s2 = Wasm.Encode.encode_custom (Wasm.Utf8.decode "waml-sig") custom in
