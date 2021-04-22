@@ -2,6 +2,7 @@
 
 An experimental functional language and implementation for exploring and evaluating the Wasm [GC proposal](https://github.com/WebAssembly/gc/#gc-proposal-for-webassembly).
 
+
 ## Overview
 
 Waml is a typed FP language in the style of ML and friends. It is meant to be representative of the most relevant problems that arise when compiling such languages to Wasm with GC extensions. These arguably are:
@@ -43,6 +44,7 @@ make
 ```
 in the `waml` directory should produce a binary `waml` in that directory.
 
+
 ### Invocation
 
 The `waml` binary is both compiler and REPL. For example:
@@ -63,6 +65,7 @@ Points of note:
 * That measn that there is no I/O. However, a program can communicate results via module exports or run assertions.
 
 * When batch-executing, all Wasm code is itself executed via the Wasm reference interpreter, so don't expect performance miracles.
+
 
 ### Test Suite
 
@@ -177,7 +180,7 @@ dec ::=
 ```
 Notes:
 
-* The shorthand `exp` form without `do` is only allowed at the beginning of the program or after a semicolon.
+* The shorthand `exp` form without `'do'` is only allowed at the beginning of the program or after a semicolon.
 
 * An `assert` failure is indicated by executing an `unreachable` instruction in Wasm and thereby trapping.
 
@@ -518,6 +521,13 @@ To this end, a call to an unknown target is compiled to a call to an auxiliary`a
 The `apply` combinators are part of the runtime. However, since these combinators mutually depend on those of both lower and higher arity, there has to be a maximum arity that is handled this way. Once reached, arguments are passed as an array instead. The apply combinator can handle the array case generically.
 
 
+### Type Inference
+
+The Waml compiler implements full Damas/Milner polymorphic type inference, with minor extension for dealing with overlading resolution for arithmetic operators. In addition, it implements module-level type checking using the "F-ing modules" approach.
+
+While certainly interesting, this is fairly standard and largely orthogonal to targetting Wasm, so we omit the details here.
+
+
 ### ML-style Modules
 
 Waml implements a complete ML-style module system, where a module is either a _structure_, encapsulating a set of definitions, or a _functor_, which is a module parameterised over another module. Both kinds of modules can both be nested into structures and passed to or returned from functors. In other words, modules are higher-order.
@@ -533,7 +543,7 @@ Signature subtyping is implemented by coercions. In the higher-order case, i.e.,
 
 Each Waml file compiles into a Wasm module. The body of a Waml unit is compiled into the Wasm start function.
 
-All global definitions from the source program are automatically turned into exports. All these exports are globals (mutable, in order to allow the complex initialisation necessary); for functions this global contains the respective closure. Functions defined in directly in the toplevel scope are additionally exported as Wasm function under the same name prefixed with `"func "`, so that they can be invoked directly (though for types to match up, this still requires passing them a dummy closure environment). In addition, an exported global named `"return"` is generated for the program block's result value.
+All global definitions from the source program are automatically turned into exports. All these exports are ([mutable](#bindings)) globals, which for functions contains the respective closure. Functions defined in directly in the toplevel scope are additionally exported as Wasm function under the same name prefixed with `"func "`, so that they can be invoked directly (though for types to match up, this still requires passing them a dummy closure environment). In addition, an exported global named `"return"` is generated for the program block's result value.
 
 ML Modules defined in a unit are likewise exported as globals. Their export name is prefixed by `"module "` to accompany for the name spacing separation.
 
