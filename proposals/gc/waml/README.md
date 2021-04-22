@@ -410,13 +410,24 @@ Waml types are lowered to Wasm as shown in the following table.
 Notably, all fields of tuples and the contents of type `ref` have to be represented as `anyref`, in order to be compatible with [polymorphism](#polymorphism).
 
 
+### Algebraic Data Types
+
+The constructors of each date type are assigned numeric tags in alphabetical order. Their values are represented as either a `i31ref`, if the constructor has no arguments, or as a struct whose first field is the tag as an `i32`, and the remainder are the argument values.
+
+The actual constructors have a first-class representation as well. For an argumentless constructor, it is the `i31ref` value itself, for others it is the cached RTT used for the value.
+
+Pattern matching against an argumentless constructor simply tests for reference equality. Matching against another constructor first tries downcast to its type and if successful, checks the tag field.
+
+When a constructor is applied to too few arguments, a [curried closure](#currying) is created.
+
+
 ### Polymorphism
 
-Polymorphism requires the use of `anyref` as a universal representation for any value of variable type.
+Polymorphism requires the use of `eqref` as a universal representation for any value of variable type. It use
 
 References returned from a generic function call are cast back to their concrete type when that type is known at the call site.
 
-Moreover, tuples and `ref` likewise represent all fields with `anyref`, i.e., they are treated like polymorphic types as well. This is necessary to enable passing them to polymorphic functions that abstract some of their types, for example:
+Moreover, tuples and `ref` likewise represent all fields with `eqref`, i.e., they are treated like polymorphic types as well. This is necessary to enable passing them to polymorphic functions that abstract some of their types, for example:
 ```
 val f z (x, y) = x + y + z
 
@@ -438,15 +449,6 @@ Waml bindings are compiled to Wasm as follows.
 Note that all global declarations have to be compiled into mutable globals, since they could not be initialised otherwise.
 
 
-### Module representations
-
-Each Waml structure is compiled into a corresponding Wasm struct.
-
-Parameterised modules are compiled to functions. Since they can be defined locally, they are actually represented as _closures_, in the same way as [core-level closures](#functions-and-closures).
-
-Signature subtyping is implemented by coercions. In the higher-order case, i.e., on parameterised modules, this requires generating suitable wrapper closures performing the coercions on argument and result upon application.
-
-
 ### Functions and Closures
 
 Functions are represented as flat closures. In order to support currying, each closure also carries the function's defined arity. Hence, closures map to Wasm structs with the following layoug:
@@ -459,7 +461,9 @@ Functions are represented as flat closures. In order to support currying, each c
 | 3     | ...  | 2nd captured environment value |
 | ...   | ...  | ... |
 
-Code pointers are references to the actual function. In addition to its regular parameters, its first parameter is a reference to its a closure environment. However, in order to be compatible across call sites, this is typed without the environment fields, and hence has to be downcast in the function to access the environment.
+All fields in a closure are immutable, with the only exception of environment fields for bindings within the same recursive declaration group. This is so that the necessary mutually recursive closures can be constructed, by fixing up the respective slots after all other closures in the group have been allocated.
+
+Code pointers are references to the actual Wasm function. In addition to its regular parameters, its first parameter is a reference to its a closure environment. However, in order to be compatible across call sites, the closure parameter's type does not include the function-specific environment fields. It hence has to be down-cast first inside the function to access the environment fields.
 
 For example, the Waml function `f` in the following example,
 ```
@@ -514,13 +518,26 @@ To this end, a call to an unknown target is compiled to a call to an auxiliary`a
 The `apply` combinators are part of the runtime. However, since these combinators mutually depend on those of both lower and higher arity, there has to be a maximum arity that is handled this way. Once reached, arguments are passed as an array instead. The apply combinator can handle the array case generically.
 
 
+### ML-style Modules
+
+Waml implements a complete ML-style module system, where a module is either a _structure_, encapsulating a set of definitions, or a _functor_, which is a module parameterised over another module. Both kinds of modules can both be nested into structures and passed to or returned from functors. In other words, modules are higher-order.
+
+Each Waml structure is compiled to a corresponding Wasm struct carrying the definition it exports. Because any type aspect of a module signature can be made abstract after the fact (using signature annotations), which provides a module-level form of [polymorphism](#polymorphism), all structure fields representing values also need to use `eqref` as a [universal representation](#polymorphism).
+
+Functors are compiled to functions. Since they can be defined in nested scopes, they have to be represented as _closures_, in the same way as [regular functions](#functions-and-closures).
+
+Signature subtyping is implemented by coercions. In the higher-order case, i.e., on functors, this requires generating suitable wrapper closures performing the coercions on argument and result upon application.
+
+
 ### Compilation Units
 
 Each Waml file compiles into a Wasm module. The body of a Waml unit is compiled into the Wasm start function.
 
-All global definitions from the source program are automatically turned into exports, of their respective [binding form](#bindings) (for simplicity, there currently is no access control). In addition, an exported global named `"return"` is generated for the program block's result value.
+All global definitions from the source program are automatically turned into exports. All these exports are globals (mutable, in order to allow the complex initialisation necessary); for functions this global contains the respective closure. Functions defined in directly in the toplevel scope are additionally exported as Wasm function under the same name prefixed with `"func "`, so that they can be invoked directly (though for types to match up, this still requires passing them a dummy closure environment). In addition, an exported global named `"return"` is generated for the program block's result value.
 
-Import declarations compile to a list of imports for all all exports of the imported module. These are implcitly bundled into a structure at the import side. No other imports are generated for a compilation unit.
+ML Modules defined in a unit are likewise exported as globals. Their export name is prefixed by `"module "` to accompany for the name spacing separation.
+
+Import declarations in a unit compile to a list of Wasm imports for all exports of the imported module. These are implcitly bundled into a structure module at the import side. No other imports are generated for a compilation unit.
 
 
 #### Linking
