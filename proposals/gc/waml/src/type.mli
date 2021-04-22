@@ -13,6 +13,7 @@ type typ =
   | Ref of typ
   | Tup of typ list
   | Fun of typ * typ
+  | Data of typ
   | Infer of infer ref
 
 and infer =
@@ -35,9 +36,12 @@ and str = (poly, con, sig_, sig_) Env.env
 val var : var -> typ
 val fun_flat : typ list -> typ -> typ
 
+val is_fun : typ -> bool
+
 val as_tup : typ -> typ list
 val as_fun : typ -> typ * typ
 val as_fun_flat : typ -> typ list * typ
+val as_data : typ -> typ
 
 val as_poly : poly -> var list * typ
 val as_mono : poly -> typ

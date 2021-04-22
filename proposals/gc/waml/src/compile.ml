@@ -101,43 +101,27 @@ let string_of_field_type ctxt idx i =
 let compile_coerce ctxt src dst t at =
   if src <> dst then
   let emit ctxt = List.iter (emit_instr ctxt at) in
+  let non_null n1 n2 =
+    if n1 = Null && n2 = Nonull then emit ctxt W.[ref_as_non_null] in
   match src, dst with
-  | BlockRep, DropRep when T.eq t (T.Tup []) ->
+  | BlockRep _, DropRep when T.eq t (T.Tup []) ->
     ()
   | _, DropRep ->
     emit ctxt W.[
       drop;
     ]
-  | _, BlockRep when T.eq t (T.Tup []) ->
+  | _, BlockRep _ when T.eq t (T.Tup []) ->
     emit ctxt W.[
       drop;
     ]
-  | BlockRep, _ when T.eq t (T.Tup []) ->
+  | BlockRep _, _ when T.eq t (T.Tup []) ->
     emit ctxt W.[
-      ref_null (lower_heap_type ctxt at (T.Tup []))
+      i32_const (0l @@ at);
+      i31_new;
     ]
-  | BoxedRep, BlockRep
-  | BlockRep, BoxedRep ->
-    ()
-  | UnboxedLaxRep, (UnboxedNullRep | UnboxedRigidRep) when T.eq t T.Int ->
-    emit ctxt W.[
-      i32_const (1l @@ at);
-      i32_shl;
-      i32_const (1l @@ at);
-      i32_shr_s;
-    ]
-  | UnboxedLaxRep, (UnboxedNullRep | UnboxedRigidRep)
-  | UnboxedRigidRep, (UnboxedNullRep | UnboxedLaxRep) ->
-    ()
-  | UnboxedNullRep, (UnboxedLaxRep | UnboxedRigidRep) ->
-    (match T.norm t with
-    | T.Bool | T.Byte | T.Int | T.Float -> ()
-    | t ->
-      emit ctxt W.[
-        ref_as_non_null;
-      ]
-    )
-  | (BoxedRep | BlockRep), (UnboxedNullRep | UnboxedLaxRep | UnboxedRigidRep) ->
+  | (BlockRep n1 | BoxedRep n1), (BlockRep n2 | BoxedRep n2) ->
+    non_null n1 n2
+  | (BlockRep n1 | BoxedRep n1), (UnboxedRep n2 | UnboxedLaxRep n2) ->
     (match T.norm t with
     | T.Bool | T.Byte ->
       emit ctxt W.[
@@ -157,17 +141,18 @@ let compile_coerce ctxt src dst t at =
         ref_cast;
         struct_get (boxedfloat @@ at) (0l @@ at);
       ]
-    | T.Tup [] | T.Var _ ->
-      ()
+    | T.Tup [] | T.Var _ | T.Data _ ->
+      non_null n1 n2
     | t ->
       let x = lower_var_type ctxt at t in
+      non_null n1 n2;
       emit ctxt W.[
         ref_as_data;
         rtt_canon (x @@ at);
         ref_cast;
       ]
     )
-  | (UnboxedNullRep | UnboxedLaxRep | UnboxedRigidRep), (BoxedRep | BlockRep) ->
+  | (UnboxedRep n1 | UnboxedLaxRep n1), (BlockRep n2 | BoxedRep n2) ->
     (match T.norm t with
     | T.Bool | T.Byte | T.Int ->
       emit ctxt W.[
@@ -179,9 +164,26 @@ let compile_coerce ctxt src dst t at =
         rtt_canon (boxedfloat @@ at);
         struct_new (boxedfloat @@ at);
       ]
-    | _ -> ()
+    | _ -> non_null n1 n2
     )
-  | _ -> assert false
+  | UnboxedLaxRep n1, UnboxedRep n2 ->
+    (match T.norm t with
+    | T.Int ->
+      emit ctxt W.[
+        i32_const (1l @@ at);
+        i32_shl;
+        i32_const (1l @@ at);
+        i32_shr_s;
+      ]
+    | T.Bool | T.Byte | T.Float -> ()
+    | t -> non_null n1 n2
+    )
+  | (UnboxedRep n1 | UnboxedLaxRep n1), (UnboxedRep n2 | UnboxedLaxRep n2) ->
+    (match T.norm t with
+    | T.Bool | T.Byte | T.Int | T.Float -> ()
+    | t -> non_null n1 n2
+    )
+  | DropRep, _ -> assert false
 
 
 (* Variables and Paths *)
@@ -296,7 +298,7 @@ let name_of_path q =
 
 let rec compile_val_var_bind pass ctxt x t src funcloc_opt =
   let scope, env = current_scope ctxt in
-  let lower rep = lower_val_type ctxt x.at rep t x.it in
+  let lower rep = lower_value_type ctxt x.at rep t in
   match pass with
   | RecPrePass ->
     let loc =
@@ -435,16 +437,14 @@ let rec compile_pat pass ctxt fail p =
   let t = Source.et p in
   let emit ctxt = List.iter (emit_instr ctxt p.at) in
   match p.it with
-  | WildP | LitP _ when pass = RecPrePass ->
+  | WildP | LitP _ | TupP [] when pass = RecPrePass ->
     ()
 
-  | WildP ->
-    emit ctxt W.[
-      drop;
-    ]
+  | WildP | TupP [] ->
+    compile_coerce ctxt pat_rep DropRep (Source.et p) p.at;
 
   | LitP l ->
-    compile_coerce ctxt pat_rep UnboxedRigidRep t p.at;
+    compile_coerce ctxt pat_rep rigid_rep t p.at;
     compile_lit ctxt l p.at;
     (match T.norm t with
     | T.Bool | T.Byte | T.Int -> emit ctxt W.[i32_ne]
@@ -464,45 +464,54 @@ let rec compile_pat pass ctxt fail p =
   | TupP ps | ConP (_, ps) when pass = RecPrePass ->
     List.iter (compile_pat pass ctxt fail) ps
 
-  | TupP [] ->
-    assert (pat_rep <> BlockRep);
-    emit ctxt W.[
-      drop;
-    ]
-
   | TupP ps ->
     let tmp =
-      emit_local ctxt p.at (lower_value_type ctxt p.at UnboxedNullRep t) in
-    compile_coerce ctxt pat_rep UnboxedNullRep t p.at;
+      emit_local ctxt p.at (lower_value_type ctxt p.at tmp_rep t) in
+    compile_coerce ctxt pat_rep tmp_rep t p.at;
     emit ctxt W.[
       local_set (tmp @@ p.at);
     ];
+    let typeidx = lower_var_type ctxt p.at t in
     List.iteri (fun i pI ->
       if classify_pat pI > IrrelevantPat then begin
         emit ctxt W.[
           local_get (tmp @@ p.at);
-          struct_get (lower_var_type ctxt p.at t @@ pI.at) (int32 i @@ pI.at);
         ];
+        compile_coerce ctxt tmp_rep rigid_rep t p.at;
+        emit ctxt W.[
+          struct_get (typeidx @@ pI.at) (int32 i @@ pI.at);
+        ];
+        compile_coerce ctxt field_rep pat_rep (Source.et pI) pI.at;
         compile_pat pass ctxt fail pI;
-        compile_coerce ctxt BoxedRep pat_rep t p.at
       end
     ) ps
 
   | ConP (q, []) ->
-    compile_val_path ctxt q (Source.et p) BoxedRep;
-    emit ctxt W.[
-      ref_eq;
-      i32_eqz;
-      br_if (fail @@ p.at);
-    ]
+    compile_coerce ctxt pat_rep rigid_rep t p.at;
+    (match T.norm t with
+    | T.Bool ->
+      compile_val_path ctxt q (T.as_mono (Source.et q)) rigid_rep;
+      emit ctxt W.[
+        i32_ne;
+        br_if (fail @@ p.at);
+      ]
+    | _ ->
+      compile_val_path ctxt q (T.as_mono (Source.et q)) rigid_rep;
+      emit ctxt W.[
+        ref_eq;
+        i32_eqz;
+        br_if (fail @@ p.at);
+      ]
+    )
 
   | ConP (q, ps) ->
-    (match T.norm (Source.et p) with
+    (match T.norm t with
     | T.Var (y, _) ->
       let data = find_typ_var ctxt Source.(y @@ q.at) ctxt.ext.envs in
       let con = List.assoc (name_of_path q).it data in
       assert (List.length ps = con.arity);
       let bt1 = emit_type ctxt p.at W.(type_func [boxedref] [dataref]) in
+      compile_coerce ctxt pat_rep rigid_rep t p.at;
       emit_block ctxt p.at W.block W.(typeuse bt1) (fun ctxt ->
         emit ctxt W.[
           br_on_data (0l @@ p.at);
@@ -511,7 +520,7 @@ let rec compile_pat pass ctxt fail p =
       );
       let bt2 = emit_type ctxt p.at W.(type_func [dataref] [ref_ con.typeidx]) in
       emit_block ctxt p.at W.block W.(typeuse bt2) (fun ctxt ->
-        compile_val_path ctxt q (Source.et p) BoxedRep;
+        compile_val_path ctxt q (Source.et p) rigid_rep;
         emit ctxt W.[
           br_on_cast (0l @@ p.at);
           br (fail +% 1l @@ p.at);
@@ -532,9 +541,8 @@ let rec compile_pat pass ctxt fail p =
             ref_as_non_null;
             struct_get (con.typeidx @@ pI.at) (int32 (i + 1) @@ pI.at);
           ];
-          compile_coerce ctxt BoxedRep pat_rep (Source.et pI) p.at;
+          compile_coerce ctxt field_rep pat_rep (Source.et pI) pI.at;
           compile_pat pass ctxt fail pI;
-          compile_coerce ctxt BoxedRep pat_rep t p.at
         end
       ) ps
     | _ -> assert false
@@ -545,10 +553,11 @@ let rec compile_pat pass ctxt fail p =
 
   | RefP p1 ->
     let typeidx = lower_var_type ctxt p.at t in
-    compile_coerce ctxt pat_rep UnboxedRigidRep t p.at;
+    compile_coerce ctxt pat_rep rigid_rep t p.at;
     emit ctxt W.[
       struct_get (typeidx @@ p.at) (0l @@ p.at);
     ];
+    compile_coerce ctxt field_rep pat_rep (Source.et p1) p1.at;
     compile_pat pass ctxt fail p1
 
   | AnnotP (p1, _) ->
@@ -557,9 +566,9 @@ let rec compile_pat pass ctxt fail p =
 
 (* Expressions *)
 
-let rec compile_exp ctxt dst e = ignore (compile_exp_func_opt ctxt dst e)
+let rec compile_exp ctxt e dst = ignore (compile_exp_func_opt ctxt e dst)
 
-and compile_exp_func_opt ctxt dst e : func_loc option =
+and compile_exp_func_opt ctxt e dst : func_loc option =
   let emit ctxt = List.iter (emit_instr ctxt e.at) in
   match e.it with
   | VarE {it = PlainP x; _} ->
@@ -573,7 +582,7 @@ and compile_exp_func_opt ctxt dst e : func_loc option =
 
   | LitE l ->
     compile_lit ctxt l e.at;
-    compile_coerce ctxt UnboxedRigidRep dst (Source.et e) e.at;
+    compile_coerce ctxt rigid_rep dst (Source.et e) e.at;
     None
 
   | ConE q ->
@@ -600,12 +609,14 @@ and compile_exp_func_opt ctxt dst e : func_loc option =
               emit ctxt W.[
                 i32_const (con.tag @@ q.at);
               ];
-              for i = 0 to con.arity - 1 do
-                Intrinsic.compile_load_arg ctxt e.at i arg0 argv_opt
-              done;
-              compile_val_path ctxt q (Source.et e) BoxedRep;
+              List.iteri (fun i _ ->
+                Intrinsic.compile_load_arg ctxt e.at i arg0 argv_opt;
+                (* TODO: coerce from local_rep to field_rep here?
+                compile_coerce ctxt lax_rep dst (Source.et e) e.at;
+                *)
+              ) argts;
+              compile_val_path ctxt q (T.as_mono (Source.et q)) rigid_rep;
               emit ctxt W.[
-                ref_as_non_null;
                 struct_new (con.typeidx @@ e.at);
               ]
             )
@@ -635,7 +646,7 @@ and compile_exp_func_opt ctxt dst e : func_loc option =
     | InvOp, T.Int -> emit ctxt W.[i32_const (-1l @@ e.at)]
     | _ -> ()
     );
-    compile_exp ctxt UnboxedLaxRep e1;
+    compile_exp ctxt e1 lax_rep;
     (match op, T.norm (Source.et e) with
     | PosOp, T.Int -> ()
     | PosOp, T.Float -> ()
@@ -645,17 +656,17 @@ and compile_exp_func_opt ctxt dst e : func_loc option =
     | NotOp, T.Bool -> emit ctxt W.[i32_eqz]
     | _ -> assert false
     );
-    compile_coerce ctxt UnboxedLaxRep dst (Source.et e) e.at;
+    compile_coerce ctxt lax_rep dst (Source.et e) e.at;
     None
 
   | BinE (e1, op, e2) ->
     let src =
       match op with
-      | DivOp | ModOp | ShrOp -> UnboxedRigidRep
-      | _ -> UnboxedLaxRep
+      | DivOp | ModOp | ShrOp -> rigid_rep
+      | _ -> lax_rep
     in
-    compile_exp ctxt src e1;
-    compile_exp ctxt src e2;
+    compile_exp ctxt e1 src;
+    compile_exp ctxt e2 src;
     (match op, T.norm (Source.et e) with
     | AddOp, T.Int -> emit ctxt W.[i32_add]
     | SubOp, T.Int -> emit ctxt W.[i32_sub]
@@ -675,12 +686,12 @@ and compile_exp_func_opt ctxt dst e : func_loc option =
       emit ctxt W.[call (Intrinsic.compile_text_cat ctxt @@ e.at)]
     | _ -> assert false
     );
-    compile_coerce ctxt UnboxedLaxRep dst (Source.et e) e.at;
+    compile_coerce ctxt lax_rep dst (Source.et e) e.at;
     None
 
   | RelE (e1, op, e2) ->
-    compile_exp ctxt UnboxedRigidRep e1;
-    compile_exp ctxt UnboxedRigidRep e2;
+    compile_exp ctxt e1 rigid_rep;
+    compile_exp ctxt e2 rigid_rep;
     (match op, T.norm (Source.et e1) with
     | EqOp, (T.Int | T.Byte | T.Bool) -> emit ctxt W.[i32_eq]
     | NeOp, (T.Int | T.Byte | T.Bool) -> emit ctxt W.[i32_ne]
@@ -702,7 +713,7 @@ and compile_exp_func_opt ctxt dst e : func_loc option =
       emit ctxt W.[call (Intrinsic.compile_text_eq ctxt @@ e.at); i32_eqz]
     | _ -> assert false
     );
-    compile_coerce ctxt UnboxedRigidRep dst (Source.et e) e.at;
+    compile_coerce ctxt rigid_rep dst (Source.et e) e.at;
     None
 
   | LogE (e1, AndThenOp, e2) ->
@@ -710,15 +721,15 @@ and compile_exp_func_opt ctxt dst e : func_loc option =
       emit ctxt W.[
         i32_const (0l @@ e1.at);
       ];
-      compile_exp ctxt UnboxedRigidRep e1;
+      compile_exp ctxt e1 rigid_rep;
       emit ctxt W.[
         i32_eqz;
         br_if (0l @@ e.at);
         drop;
       ];
-      compile_exp ctxt UnboxedRigidRep e2;
+      compile_exp ctxt e2 rigid_rep;
     );
-    compile_coerce ctxt UnboxedRigidRep dst (Source.et e) e.at;
+    compile_coerce ctxt rigid_rep dst (Source.et e) e.at;
     None
 
   | LogE (e1, OrElseOp, e2) ->
@@ -726,57 +737,57 @@ and compile_exp_func_opt ctxt dst e : func_loc option =
       emit ctxt W.[
         i32_const (1l @@ e1.at);
       ];
-      compile_exp ctxt UnboxedRigidRep e1;
+      compile_exp ctxt e1 rigid_rep;
       emit ctxt W.[
         br_if (0l @@ e.at);
         drop;
       ];
-      compile_exp ctxt UnboxedRigidRep e2;
+      compile_exp ctxt e2 rigid_rep;
     );
-    compile_coerce ctxt UnboxedRigidRep dst (Source.et e) e.at;
+    compile_coerce ctxt rigid_rep dst (Source.et e) e.at;
     None
 
   | RefE e1 ->
     let typeidx = lower_var_type ctxt e.at (Source.et e) in
-    compile_exp ctxt BoxedRep e1;
+    compile_exp ctxt e1 field_rep;
     emit ctxt W.[
       rtt_canon (typeidx @@ e.at);
       struct_new (typeidx @@ e.at);
     ];
-    compile_coerce ctxt BlockRep dst (Source.et e) e.at;
+    compile_coerce ctxt rigid_rep dst (Source.et e) e.at;
     None
 
   | DerefE e1 ->
     let typ = lower_var_type ctxt e.at (Source.et e1) in
-    compile_exp ctxt UnboxedRigidRep e1;
+    compile_exp ctxt e1 rigid_rep;
     emit ctxt W.[
       struct_get (typ @@ e.at) (0l @@ e.at);
     ];
-    compile_coerce ctxt BoxedRep dst (Source.et e) e.at;
+    compile_coerce ctxt field_rep dst (Source.et e) e.at;
     None
 
   | AssignE (e1, e2) ->
     let typ = lower_var_type ctxt e.at (Source.et e1) in
-    compile_exp ctxt UnboxedRigidRep e1;
-    compile_exp ctxt BoxedRep e2;
+    compile_exp ctxt e1 rigid_rep;
+    compile_exp ctxt e2 field_rep;
     emit ctxt W.[
       struct_set (typ @@ e.at) (0l @@ e.at);
     ];
-    compile_coerce ctxt BlockRep dst (Source.et e) e.at;
+    compile_coerce ctxt unit_rep dst (Source.et e) e.at;
     None
 
   | TupE [] ->
-    compile_coerce ctxt BlockRep dst (Source.et e) e.at;
+    compile_coerce ctxt unit_rep dst (Source.et e) e.at;
     None
 
   | TupE es ->
     let typ = lower_var_type ctxt e.at (Source.et e) in
-    List.iter (compile_exp ctxt BoxedRep) es;
+    List.iter (fun e -> compile_exp ctxt e field_rep) es;
     emit ctxt W.[
       rtt_canon (typ @@ e.at);
       struct_new (typ @@ e.at);
     ];
-    compile_coerce ctxt BoxedRep dst (Source.et e) e.at;
+    compile_coerce ctxt rigid_rep dst (Source.et e) e.at;
     None
 
   | FunE (p1, e2) ->
@@ -805,6 +816,7 @@ and compile_exp_func_opt ctxt dst e : func_loc option =
                 | IrrelevantPat -> ()
                 | TotalPat ->
                   Intrinsic.compile_load_arg ctxt pI.at i arg0 argv_opt;
+                  compile_coerce ctxt arg_rep pat_rep (Source.et pI) e.at;
                   compile_pat FullPass ctxt (-1l) pI;
                 | PartialPat -> assert false
               ) ps
@@ -816,16 +828,18 @@ and compile_exp_func_opt ctxt dst e : func_loc option =
                     | IrrelevantPat -> ()
                     | TotalPat ->
                       Intrinsic.compile_load_arg ctxt pI.at i arg0 argv_opt;
+                      compile_coerce ctxt arg_rep pat_rep (Source.et pI) e.at;
                       compile_pat FullPass ctxt (-1l) pI;
                     | PartialPat ->
                       Intrinsic.compile_load_arg ctxt pI.at i arg0 argv_opt;
+                      compile_coerce ctxt arg_rep pat_rep (Source.et pI) e.at;
                       compile_pat FullPass ctxt 0l pI;
                   ) ps;
                   emit ctxt W.[br (1l @@ e.at)];
                 );
                 emit ctxt W.[unreachable]
               );
-            compile_exp ctxt BoxedRep e2
+            compile_exp ctxt e2 arg_rep
           )
         in
         compile_alloc_clos ctxt fn (List.length ps) vars closN closNenv e.at;
@@ -847,28 +861,29 @@ and compile_exp_func_opt ctxt dst e : func_loc option =
           emit ctxt W.[
             i32_const (con.tag @@ q.at);
           ];
-          List.iter (compile_exp ctxt BoxedRep) es;
-          compile_val_path ctxt q (Source.et e1) BoxedRep;
+          List.iter (fun e -> compile_exp ctxt e field_rep) es;
+          compile_val_path ctxt q (T.as_mono (Source.et q)) rigid_rep;
           emit ctxt W.[
-            ref_as_non_null;
             struct_new (con.typeidx @@ e1.at);
           ];
+          compile_coerce ctxt rigid_rep dst (Source.et e) e.at;
 
         | T.Fun _ ->
-          compile_exp ctxt UnboxedRigidRep e1;
+          compile_exp ctxt e1 rigid_rep;
           Intrinsic.compile_push_args ctxt e.at (List.length es) 0l (fun i ->
-            compile_exp ctxt BoxedRep (List.nth es i)
+            compile_exp ctxt (List.nth es i) arg_rep
           );
           emit ctxt W.[
             call (Intrinsic.compile_apply ctxt (List.length es) @@ e.at);
-          ]
+          ];
+          compile_coerce ctxt arg_rep dst (Source.et e) e.at;
 
         | _ ->
           assert false
         )
 
       | _ ->
-        (match compile_exp_func_opt ctxt UnboxedRigidRep e1 with
+        (match compile_exp_func_opt ctxt e1 rigid_rep with
         | Some {funcidx; arity} when arity = List.length es ->
           let anyclos = lower_anyclos_type ctxt e1.at in
           let _, closN = lower_func_type ctxt e1.at arity in
@@ -878,46 +893,46 @@ and compile_exp_func_opt ctxt dst e : func_loc option =
             ref_cast;
           ];
           Intrinsic.compile_push_args ctxt e.at (List.length es) 0l (fun i ->
-            compile_exp ctxt BoxedRep (List.nth es i)
+            compile_exp ctxt (List.nth es i) arg_rep
           );
           emit ctxt W.[
             call (funcidx @@ e.at);
           ]
         | _ ->
           Intrinsic.compile_push_args ctxt e.at (List.length es) 0l (fun i ->
-            compile_exp ctxt BoxedRep (List.nth es i)
+            compile_exp ctxt (List.nth es i) arg_rep
           );
           emit ctxt W.[
             call (Intrinsic.compile_apply ctxt (List.length es) @@ e.at);
           ]
         );
-        compile_coerce ctxt BoxedRep dst (Source.et e) e.at
+        compile_coerce ctxt arg_rep dst (Source.et e) e.at
     in flat e1 [e2];
     None
 
   | AnnotE (e1, _t) ->
-    compile_exp_func_opt ctxt dst e1
+    compile_exp_func_opt ctxt e1 dst
 
   | IfE (e1, e2, e3) ->
     let bt = lower_block_type ctxt e.at dst (Source.et e) in
     emit_block ctxt e.at W.block bt (fun ctxt ->
       emit_block ctxt e.at W.block W.void (fun ctxt ->
-        compile_exp ctxt UnboxedRigidRep e1;
+        compile_exp ctxt e1 rigid_rep;
         emit ctxt W.[
           i32_eqz;
           br_if (0l @@ e.at);
         ];
-        compile_exp ctxt dst e2;
+        compile_exp ctxt e2 dst;
         emit ctxt W.[
           br (1l @@ e.at);
         ];
       );
-      compile_exp ctxt dst e3;
+      compile_exp ctxt e3 dst;
     );
     None
 
   | CaseE (e1, []) ->
-    compile_exp ctxt pat_rep e1;
+    compile_exp ctxt e1 pat_rep;
     emit ctxt W.[
       unreachable;
     ];
@@ -925,8 +940,8 @@ and compile_exp_func_opt ctxt dst e : func_loc option =
 
   | CaseE (e1, pes) ->
     let t1 = Source.et e1 in
-    let tmp = emit_local ctxt e1.at (lower_value_type ctxt e1.at pat_rep t1) in
-    compile_exp ctxt pat_rep e1;
+    let tmp = emit_local ctxt e1.at (lower_value_type ctxt e1.at tmp_rep t1) in
+    compile_exp ctxt e1 tmp_rep;
     emit ctxt W.[
       local_set (tmp @@ e1.at);
     ];
@@ -936,22 +951,24 @@ and compile_exp_func_opt ctxt dst e : func_loc option =
         List.fold_left (fun _ (pI, eI) ->
           match classify_pat pI with
           | IrrelevantPat ->
-            compile_exp ctxt dst eI;
+            compile_exp ctxt eI dst;
             emit ctxt W.[br (0l @@ eI.at)];
             false
           | TotalPat ->
             let ctxt = enter_scope ctxt LocalScope in
             emit ctxt W.[local_get (tmp @@ pI.at)];
+            compile_coerce ctxt tmp_rep pat_rep t1 e.at;
             compile_pat FullPass ctxt (-1l) pI;
-            compile_exp ctxt dst eI;
+            compile_exp ctxt eI dst;
             emit ctxt W.[br (0l @@ eI.at)];
             false
           | PartialPat ->
             let ctxt = enter_scope ctxt LocalScope in
             emit_block ctxt pI.at W.block W.void (fun ctxt ->
               emit ctxt W.[local_get (tmp @@ pI.at)];
+              compile_coerce ctxt tmp_rep pat_rep t1 e.at;
               compile_pat FullPass ctxt 0l pI;
-              compile_exp ctxt dst eI;
+              compile_exp ctxt eI dst;
               emit ctxt W.[br (1l @@ eI.at)];
             );
             true
@@ -963,8 +980,8 @@ and compile_exp_func_opt ctxt dst e : func_loc option =
 
   | LetE (ds, e1) ->
     let ctxt = enter_scope ctxt LocalScope in
-    compile_decs FullPass ctxt ds;
-    compile_exp_func_opt ctxt dst e1
+    compile_decs FullPass ctxt ds unit_rep;
+    compile_exp_func_opt ctxt e1 dst
 
 
 (* Modules *)
@@ -985,7 +1002,7 @@ and compile_mod_func_opt ctxt m : func_loc option =
 
   | StrM ds ->
     let ctxt = enter_scope ctxt LocalScope in
-    compile_decs FullPass ctxt ds;
+    compile_decs FullPass ctxt ds unit_rep;
     let vars = Syntax.list bound_dec ds in
     let _, str = lower_sig_type ctxt m.at (Source.et m) in
     Vars.iter (fun x _ ->
@@ -1061,7 +1078,7 @@ and compile_mod_func_opt ctxt m : func_loc option =
 
   | LetM (ds, m1) ->
     let ctxt = enter_scope ctxt LocalScope in
-    compile_decs FullPass ctxt ds;
+    compile_decs FullPass ctxt ds unit_rep;
     compile_mod_func_opt ctxt m1
 
 
@@ -1164,49 +1181,52 @@ and compile_dec pass ctxt d dst =
     ()
 
   | ExpD e ->
-    compile_exp ctxt dst e
+    compile_exp ctxt e dst
 
   | AssertD e ->
-    compile_exp ctxt UnboxedRigidRep e;
+    compile_exp ctxt e rigid_rep;
     emit ctxt W.[
       i32_eqz;
       if_ W.void [unreachable @@ d.at] [];
-    ]
+    ];
+    compile_coerce ctxt unit_rep dst (T.Tup []) d.at
 
   | ValD (p, _) when pass = RecPrePass ->
     if scope <> GlobalScope then nyi d.at "recursive functions in local scope";
-    compile_pat pass ctxt (-1l) p
+    compile_pat pass ctxt (-1l) p;
     (* TODO: allocate funcidx to allow static calls in recursion *)
 
   | ValD ({it = VarP x; _} as p, e) ->
-    let idx_opt = compile_exp_func_opt ctxt pat_rep e in
+    let idx_opt = compile_exp_func_opt ctxt e pat_rep in
     compile_pat pass ctxt (-1l) p;
     let {it = (loc, _); _} = E.find_val x !env in
-    env := E.extend_val !env x (loc, idx_opt)
+    env := E.extend_val !env x (loc, idx_opt);
+    compile_coerce ctxt unit_rep dst (T.Tup []) d.at
 
   | ValD (p, e) ->
     (match classify_pat p with
     | IrrelevantPat ->
-      compile_exp ctxt DropRep e;
+      compile_exp ctxt e DropRep;
     | TotalPat ->
-      compile_exp ctxt pat_rep e;
+      compile_exp ctxt e pat_rep;
       compile_pat pass ctxt (-1l) p;
     | PartialPat ->
       emit_block ctxt e.at W.block W.void (fun ctxt ->
         emit_block ctxt e.at W.block W.void (fun ctxt ->
-          compile_exp ctxt pat_rep e;
+          compile_exp ctxt e pat_rep;
           compile_pat pass ctxt 0l p;
           emit ctxt W.[br (1l @@ d.at)];
         );
         emit ctxt W.[unreachable]
       )
-    )
+    );
+    compile_coerce ctxt unit_rep dst (T.Tup []) d.at
+
+  | TypD _ | DatD _ when pass = RecPrePass ->
+    ()
 
   | TypD _ ->
-    ()
-
-  | DatD _ when pass = RecPrePass ->
-    ()
+    compile_coerce ctxt unit_rep dst (T.Tup []) d.at
 
   | DatD (y, ys, cs) ->
     let tagged = emit_type ctxt y.at W.(type_struct [field i32]) in
@@ -1224,7 +1244,7 @@ and compile_dec pass ctxt d dst =
       List.mapi (fun i c ->
         let (x, ts) = c.it in
         let ts' = List.map Source.et ts in
-        let _ht, typeidx = lower_con_type ctxt x.at ts' in
+        let typeidx = lower_con_type ctxt x.at ts' in
         if ts = [] then begin
           emit ctxt W.[
             i32_const (int32 i @@ x.at);
@@ -1237,24 +1257,28 @@ and compile_dec pass ctxt d dst =
             rtt_sub (typeidx @@ x.at);
           ]
         end;
-        compile_val_var_bind pass ctxt x (T.fun_flat ts' t) UnboxedRigidRep None;
+        let t_data = T.Data (T.fun_flat ts' t) in
+        compile_val_var_bind pass ctxt x t_data rigid_rep None;
         (x.it, {tag = int32 i; typeidx; arity = List.length ts})
       ) (List.sort (fun c1 c2 -> compare c1.it c2.it) cs)
-    in env := E.extend_typ !env y data
+    in env := E.extend_typ !env y data;
+    compile_coerce ctxt unit_rep dst (T.Tup []) d.at
 
   | ModD (x, m) ->
     let funcloc_opt = compile_mod_func_opt ctxt m in
-    compile_mod_var_bind ctxt x (Source.et m) funcloc_opt
+    compile_mod_var_bind ctxt x (Source.et m) funcloc_opt;
+    compile_coerce ctxt unit_rep dst (T.Tup []) d.at
 
   | SigD _ ->
-    ()
+    assert (pass <> RecPrePass);
+    compile_coerce ctxt unit_rep dst (T.Tup []) d.at
 
   | RecD ds when pass <> FullPass ->
-    compile_decs pass ctxt ds
+    compile_decs pass ctxt ds dst
 
   | RecD ds ->
-    compile_decs RecPrePass ctxt ds;
-    compile_decs RecPass ctxt ds
+    compile_decs RecPrePass ctxt ds dst;
+    compile_decs RecPass ctxt ds dst
 
   | InclD m ->
     let _, str = T.as_str (Source.et m) in
@@ -1276,15 +1300,18 @@ and compile_dec pass ctxt d dst =
       emit_instr ctxt m.at W.(local_get (tmp @@ m.at));
       compile_val_proj ctxt str x t struct_rep;
       compile_val_var_bind FullPass ctxt x t struct_rep None
-    ) str
+    ) str;
+    compile_coerce ctxt unit_rep dst (T.Tup []) d.at
 
-and compile_decs pass ctxt ds =
+and compile_decs pass ctxt ds dst =
   match ds with
-  | [] -> ()
-  | [d] -> compile_dec pass ctxt d BlockRep
+  | [] ->
+    compile_coerce ctxt unit_rep dst (T.Tup []) Source.no_region
+  | [d] ->
+    compile_dec pass ctxt d dst
   | d::ds' ->
     compile_dec pass ctxt d DropRep;
-    compile_decs pass ctxt ds'
+    compile_decs pass ctxt ds' dst
 
 
 (* Programs *)
@@ -1299,7 +1326,7 @@ let compile_imp_pre ctxt d =
   ) str;
   E.iter_vals (fun x' pt ->
     let t = T.as_mono pt.it in
-    let vt = lower_val_type ctxt pt.at global_rep t x' in
+    let vt = lower_value_type ctxt pt.at global_rep t in
     ignore (emit_global_import ctxt pt.at url x' W.Mutable vt)
   ) str
 
@@ -1311,7 +1338,8 @@ let compile_imp ctxt idx d =
     emit_instr ctxt s.at W.(ref_as_non_null);
   ) str;
   E.iter_vals (fun _ pt ->
-    emit_instr ctxt pt.at W.(global_get (int32 !idx @@ pt.at)); incr idx
+    emit_instr ctxt pt.at W.(global_get (int32 !idx @@ pt.at)); incr idx;
+    compile_coerce ctxt global_rep struct_rep (T.as_mono pt.it) pt.at
   ) str;
   let vt, typeidx = lower_str_type ctxt x.at str in
   emit_instr ctxt d.at W.(rtt_canon (typeidx @@ d.at));
@@ -1328,8 +1356,7 @@ let compile_prog p : W.module_ =
     emit_func ctxt p.at [] [] (fun ctxt _ ->
       List.iter (compile_imp_pre ctxt) is;
       List.iter (compile_imp ctxt (ref 0)) is;
-      compile_decs FullPass ctxt ds;
-      compile_coerce ctxt BlockRep rep t p.at;
+      compile_decs FullPass ctxt ds global_rep;
       let result_idx = emit_global ctxt p.at W.Mutable vt None in
       emit_instr ctxt p.at W.(global_set (result_idx @@ p.at));
       emit_global_export ctxt p.at "return" result_idx;

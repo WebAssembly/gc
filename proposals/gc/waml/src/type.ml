@@ -18,6 +18,7 @@ type typ =
   | Ref of typ
   | Tup of typ list
   | Fun of typ * typ
+  | Data of typ
   | Infer of infer ref
 
 and infer =
@@ -44,8 +45,11 @@ let rec fun_flat ts t =
   | [] -> t
   | t'::ts' -> Fun (t', fun_flat ts' t)
 
+let is_fun = function Fun _ -> true | _ -> false
+
 let as_tup = function Tup ts -> ts | _ -> assert false
 let as_fun = function Fun (t1, t2) -> t1, t2 | _ -> assert false
+let as_data = function Data t -> t | _ -> assert false
 
 let rec as_fun_flat t = as_fun_flat' [] t
 and as_fun_flat' ts = function
@@ -72,6 +76,7 @@ let string_of_pred = function
 
 let rec string_of_typ = function
   | Fun (t1, t2) -> string_of_typ_app t1 ^ " -> " ^ string_of_typ t2
+  | Data t -> "data " ^ string_of_typ t
   | t -> string_of_typ_app t
 
 and string_of_typ_app = function
@@ -136,7 +141,7 @@ let list f ts = List.fold_left (++) Set.empty (List.map f ts)
 let rec free = function
   | Var (b, ts) -> Set.singleton b ++ list free ts
   | Bool | Byte | Int | Float | Text -> Set.empty
-  | Ref t -> free t
+  | Ref t | Data t-> free t
   | Tup ts -> list free ts
   | Fun (t1, t2) -> free t1 ++ free t2
   | Infer {contents = Res t'} -> free t'
@@ -164,7 +169,7 @@ let list f ts = List.concat_map f ts
 let rec free_infer = function
   | Var (_, ts) -> list free_infer ts
   | Bool | Byte | Int | Float | Text -> []
-  | Ref t -> free_infer t
+  | Ref t | Data t -> free_infer t
   | Tup ts -> list free_infer ts
   | Fun (t1, t2) -> free_infer t1 @ free_infer t2
   | Infer {contents = Res t'} -> free_infer t'
@@ -234,9 +239,10 @@ let rec subst ((m, s) as su) t =
     )
   | Var (b, ts) -> Var (b, List.map (subst su) ts)
   | Bool | Byte | Int | Float | Text -> t
-  | Ref t -> Ref (subst su t)
+  | Ref t1 -> Ref (subst su t1)
   | Tup ts -> Tup (List.map (subst su) ts)
   | Fun (t1, t2) -> Fun (subst su t1, subst su t2)
+  | Data t1 -> Data (subst su t1)
   | Infer {contents = Res t'} -> subst su t'
   | Infer _ -> t
 
@@ -274,6 +280,7 @@ let rec eq t1 t2 =
   | Tup ts1, Tup ts2 ->
     List.length ts1 = List.length ts2 && List.for_all2 eq ts1 ts2
   | Fun (t11, t12), Fun (t21, t22) -> eq t11 t21 && eq t12 t22
+  | Data t1', Data t2' -> eq t1' t2'
   | Infer {contents = Res t1'}, t2 -> eq t1' t2
   | t1, Infer {contents = Res t2'} -> eq t1 t2'
   | t1, t2 -> t1 = t2
@@ -301,7 +308,7 @@ let list f capt i s ts =
 let rec generalize' capt i s = function
   | Var (b, ts) -> list generalize' capt i s ts
   | Bool | Byte | Int | Float | Text -> Set.empty
-  | Ref t -> generalize' capt i s t
+  | Ref t | Data t -> generalize' capt i s t
   | Tup ts -> list generalize' capt i s ts
   | Fun (t1, t2) ->
     let set1 = generalize' capt i s t1 in
@@ -328,7 +335,7 @@ let generalize env = function
 let rec default = function
   | Var (_, ts) -> List.iter default ts
   | Bool | Byte | Int | Float | Text -> ()
-  | Ref t -> default t
+  | Ref t | Data t -> default t
   | Tup ts -> List.iter default ts
   | Fun (t1, t2) -> default t1; default t2
   | Infer {contents = Res t} -> default t
@@ -376,6 +383,7 @@ let rec enforce inf p = function
   | Ref t when p <= Eq -> enforce inf p t
   | Tup ts -> List.iter (enforce inf p) ts
   | Fun (t1, t2) when p = Any -> enforce inf p t1; enforce inf p t2
+  | Data t when p = Any -> enforce inf p t
   | Infer {contents = Res t'} -> enforce inf p t'
   | Infer ({contents = Unres (y, p')} as inf') when inf' != inf ->
     inf' := Unres (y, max p p')
@@ -389,6 +397,7 @@ let rec unify t1 t2 =
   | Tup ts1, Tup ts2 when List.length ts1 = List.length ts2 ->
     List.iter2 unify ts1 ts2
   | Fun (t11, t12), Fun (t21, t22) -> unify t11 t21; unify t12 t22
+  | Data t1', Data t2' -> unify t1' t2'
   | Infer {contents = Res t1'}, t2 -> unify t1' t2
   | t1, Infer {contents = Res t2'} -> unify t1 t2'
   | Infer ({contents = Unres _} as inf1), Infer ({contents = Unres _} as inf2)

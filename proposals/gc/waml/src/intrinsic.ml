@@ -16,11 +16,12 @@ let compile_text_new ctxt : int32 =
   Emit.lookup_intrinsic ctxt "text_new" (fun _ ->
     let at = Prelude.region in
     let text = lower_text_type ctxt in
-    let textref = W.(ref_null_ text) in
+    let textref = W.(ref_ text) in
+    let textnullref = W.(ref_null_ text) in
     emit_func ctxt at W.[i32; i32] [textref] (fun ctxt _ ->
       let src = emit_param ctxt at in
       let len = emit_param ctxt at in
-      let dst = emit_local ctxt at textref in
+      let dst = emit_local ctxt at textnullref in
       List.iter (emit_instr ctxt at) W.[
         local_get (len @@ at);
         rtt_canon (text @@ at);
@@ -45,6 +46,7 @@ let compile_text_new ctxt : int32 =
           ])
         ]);
         local_get (dst @@ at);
+        ref_as_non_null;
       ]
     )
   )
@@ -53,7 +55,7 @@ let compile_text_cpy ctxt : int32 =
   Emit.lookup_intrinsic ctxt "text_cpy" (fun _ ->
     let at = Prelude.region in
     let text = lower_text_type ctxt in
-    let textref = W.(ref_null_ text) in
+    let textref = W.(ref_ text) in
     emit_func ctxt at W.[textref; i32; textref; i32; i32] [] (fun ctxt _ ->
       let dst = emit_param ctxt at in
       let dstk = emit_param ctxt at in
@@ -91,11 +93,12 @@ let compile_text_cat ctxt : int32 =
     let text_cpy = compile_text_cpy ctxt in
     let at = Prelude.region in
     let text = lower_text_type ctxt in
-    let textref = W.(ref_null_ text) in
+    let textref = W.(ref_ text) in
+    let textnullref = W.(ref_null_ text) in
     emit_func ctxt at [textref; textref] [textref] (fun ctxt _ ->
       let arg1 = emit_param ctxt at in
       let arg2 = emit_param ctxt at in
-      let tmp = emit_local ctxt at textref in
+      let tmp = emit_local ctxt at textnullref in
       List.iter (emit_instr ctxt at) W.[
         local_get (arg1 @@ at);
         array_len (text @@ at);
@@ -105,6 +108,7 @@ let compile_text_cat ctxt : int32 =
         rtt_canon (text @@ at);
         array_new_default (text @@ at);
         local_tee (tmp @@ at);
+        ref_as_non_null;
         i32_const (0l @@ at);
         local_get (arg1 @@ at);
         i32_const (0l @@ at);
@@ -112,6 +116,7 @@ let compile_text_cat ctxt : int32 =
         array_len (text @@ at);
         call (text_cpy @@ at);
         local_get (tmp @@ at);
+        ref_as_non_null;
         local_get (arg1 @@ at);
         array_len (text @@ at);
         local_get (arg2 @@ at);
@@ -120,6 +125,7 @@ let compile_text_cat ctxt : int32 =
         array_len (text @@ at);
         call (text_cpy @@ at);
         local_get (tmp @@ at);
+        ref_as_non_null;
       ]
     )
   )
@@ -128,7 +134,7 @@ let compile_text_eq ctxt : int32 =
   Emit.lookup_intrinsic ctxt "text_eq" (fun _ ->
     let at = Prelude.region in
     let text = lower_text_type ctxt in
-    let textref = W.(ref_null_ text) in
+    let textref = W.(ref_ text) in
     emit_func ctxt at [textref; textref] W.[i32] (fun ctxt _ ->
       let arg1 = emit_param ctxt at in
       let arg2 = emit_param ctxt at in
@@ -220,6 +226,7 @@ let compile_load_arg ctxt at i arg0 argv_opt =
       local_get (arg0 @@ at);
       i32_const (int32 i @@ at);
       array_get (argv @@ at);
+      ref_as_non_null;
     ]
 
 let compile_load_args ctxt at i j shift arg0 src_argv_opt =

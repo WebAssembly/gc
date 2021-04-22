@@ -161,7 +161,7 @@ let unify t1 t2 at =
 
 let check_lit _env lit : T.typ =
   match lit with
-  | BoolL _ -> T.Bool
+  | BoolL _ -> T.Data T.Bool
   | IntL _ -> T.Int
   | FloatL _ -> T.Float
   | TextL _ -> T.Text
@@ -189,7 +189,7 @@ and check_pat' env p : T.typ * env =
     let ts, env' = check_pats env ps in
     let t = T.(infer Any) in
     let t1' = List.fold_right (fun tI t -> T.Fun (tI, t)) ts t in
-    unify (T.inst pt) t1' q.at;
+    unify (T.inst pt) (T.Data t1') q.at;
     t, env'
 
   | RefP p1 ->
@@ -232,7 +232,10 @@ and check_exp' env e : T.typ =
     check_lit env l
 
   | ConE q ->
-    T.inst (check_val_path env q)
+    let t1 = T.inst (check_val_path env q) in
+    let t = T.(infer Any) in
+    unify t1 (T.Data t) e.at;
+    t
 
   | UnE (op, e1) ->
     let t1 = check_exp env e1 in
@@ -418,7 +421,7 @@ and check_dec' pass env d : T.typ * T.var list * env =
         let ts' = List.map (check_typ env') ts in
         let t' = List.fold_right (fun tI t' -> T.Fun (tI, t')) ts' t in
         c.et <- Some t';
-        E.extend_val env2 x (T.Forall (bs, t'))
+        E.extend_val env2 x (T.Forall (bs, T.Data t'))
       ) E.empty cs
     in
     T.Tup [], [b], E.adjoin env1 env2
@@ -498,7 +501,7 @@ and check_spec' pass env s : T.var list * env =
         let (x, ts) = c.it in
         let ts' = List.map (check_typ env') ts in
         let t' = List.fold_right (fun tI t' -> T.Fun (tI, t')) ts' t in
-        E.extend_val env2 x (T.Forall (bs, t'))
+        E.extend_val env2 x (T.Forall (bs, T.Data t'))
       ) E.empty cs
     in
     [b], E.adjoin env1 env2
