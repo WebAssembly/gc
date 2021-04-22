@@ -82,7 +82,7 @@ waml 0.1 interpreter
 val f : Int -> Int
 > 
 ```
-See [below](#under-the-hood) for a brief explanation regarding the produced code.
+See [below](#under-the-hood) for some background on the produced code.
 
 
 ## Usage
