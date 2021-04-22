@@ -21,7 +21,7 @@ let (+%) = Int32.add
 
 exception NYI of Source.region * string
 
-let nyi at s = raise (NYI (at, s))
+let _nyi at s = raise (NYI (at, s))
 
 
 (* Environment *)
@@ -430,20 +430,22 @@ let rec classify_pat p =
   | RefP p1 | AnnotP (p1, _) -> classify_pat p1
   | TupP ps -> List.fold_left max IrrelevantPat (List.map classify_pat ps)
 
-let rec compile_pat_pre ctxt func_loc_opt p =
+let rec compile_pat_rec_pre ctxt func_loc_opt p : E.Set.t =
   let t = Source.et p in
   match p.it with
-  | WildP -> ()
-  | VarP x -> compile_val_var_bind_pre ctxt x t func_loc_opt
-  | AnnotP (p1, _) -> compile_pat_pre ctxt func_loc_opt p1
+  | WildP -> E.Set.empty
+  | VarP x ->
+    compile_val_var_bind_pre ctxt x t func_loc_opt;
+    E.Set.singleton x.it
+  | AnnotP (p1, _) -> compile_pat_rec_pre ctxt func_loc_opt p1
   | LitP _ | TupP _ | ConP _ | RefP _ -> assert false
 
-let rec compile_pat_post ctxt p =
+let rec compile_pat_rec_post ctxt p =
   let t = Source.et p in
   match p.it with
   | WildP -> ()
   | VarP x -> compile_val_var_bind_post ctxt x t pat_rep
-  | AnnotP (p1, _) -> compile_pat_post ctxt p1
+  | AnnotP (p1, _) -> compile_pat_rec_post ctxt p1
   | LitP _ | TupP _ | ConP _ | RefP _ -> assert false
 
 let rec compile_pat ctxt fail p =
@@ -936,31 +938,30 @@ and compile_exp_func_opt ctxt e dst : func_loc option =
 
 
 and compile_func ctxt e : func_loc =
-  let func_loc, def = compile_func_pre ctxt e in
+  let func_loc, def, _fixup = compile_func_staged ctxt E.Set.empty e in
   def ctxt;
   func_loc
 
-and compile_func_pre ctxt e : func_loc * _ =
-  let vars = filter_vars ctxt (free_exp e) in
-  let at = e.at in
+and compile_func_staged ctxt rec_xs f : func_loc * _ * _ =
+  let emit ctxt = List.iter (emit_instr ctxt f.at) in
+  let vars = filter_vars ctxt (free_exp f) in
   let rec flat ps e =
     match e.it with
     | FunE (p, e') -> flat (p::ps) e'
     | _ ->
       let fn, def_func = emit_func_deferred ctxt in
-      {funcidx = fn; arity = List.length ps},
-      fun ctxt ->
-        let envts = lower_clos_env ctxt at vars in
-        let ps = List.rev ps in
-        let arity = List.length ps in
-        let _code, closN, closNenv = lower_clos_type ctxt at arity envts in
-        let argts, argv_opt = lower_param_types ctxt at arity in
-        def_func at W.(ref_ closN :: argts) [boxedref] (fun ctxt _ ->
+      let envflds, fixups = lower_clos_env ctxt f.at vars rec_xs in
+      let ps = List.rev ps in
+      let arity = List.length ps in
+      let _code, closN, closNenv = lower_clos_type ctxt f.at arity envflds in
+      let def ctxt =
+        let argts, argv_opt = lower_param_types ctxt f.at arity in
+        def_func f.at W.(ref_ closN :: argts) [boxedref] (fun ctxt _ ->
           let ctxt = enter_scope ctxt FuncScope in
-          let clos = emit_param ctxt at in
-          let args = List.map (fun _ -> emit_param ctxt at) argts in
+          let clos = emit_param ctxt f.at in
+          let args = List.map (fun _ -> emit_param ctxt f.at) argts in
           let arg0 = List.hd args in
-          compile_load_env ctxt clos closN closNenv vars at;
+          compile_load_env ctxt clos closN closNenv vars f.at;
 
           let partial = List.exists (fun p -> classify_pat p = PartialPat) ps in
           if not partial then
@@ -969,33 +970,55 @@ and compile_func_pre ctxt e : func_loc * _ =
               | IrrelevantPat -> ()
               | TotalPat ->
                 Intrinsic.compile_load_arg ctxt pI.at i arg0 argv_opt;
-                compile_coerce ctxt arg_rep pat_rep (Source.et pI) at;
+                compile_coerce ctxt arg_rep pat_rep (Source.et pI) f.at;
                 compile_pat ctxt (-1l) pI;
               | PartialPat -> assert false
             ) ps
           else
-            emit_block ctxt at W.block W.void (fun ctxt ->
-              emit_block ctxt at W.block W.void (fun ctxt ->
+            emit_block ctxt f.at W.block W.void (fun ctxt ->
+              emit_block ctxt f.at W.block W.void (fun ctxt ->
                 List.iteri (fun i pI ->
                   match classify_pat pI with
                   | IrrelevantPat -> ()
                   | TotalPat ->
                     Intrinsic.compile_load_arg ctxt pI.at i arg0 argv_opt;
-                    compile_coerce ctxt arg_rep pat_rep (Source.et pI) at;
+                    compile_coerce ctxt arg_rep pat_rep (Source.et pI) f.at;
                     compile_pat ctxt (-1l) pI;
                   | PartialPat ->
                     Intrinsic.compile_load_arg ctxt pI.at i arg0 argv_opt;
-                    compile_coerce ctxt arg_rep pat_rep (Source.et pI) at;
+                    compile_coerce ctxt arg_rep pat_rep (Source.et pI) f.at;
                     compile_pat ctxt 0l pI;
                 ) ps;
-                emit_instr ctxt at W.(br (1l @@ at));
+                emit ctxt W.[br (1l @@ f.at)];
               );
-              emit_instr ctxt at W.unreachable
+              emit ctxt W.[unreachable]
             );
           compile_exp ctxt e arg_rep
         );
-        compile_alloc_clos ctxt fn (List.length ps) vars closN closNenv at
-  in flat [] e
+        compile_alloc_clos ctxt fn (List.length ps) vars closN closNenv f.at
+      in
+      let fixup ctxt self =
+        if fixups <> [] then begin
+          let tmp = emit_local ctxt f.at W.(ref_null_ closNenv) in
+          compile_val_var ctxt Source.(self @@ f.at) (Source.et f) rigid_rep;
+          emit ctxt W.[
+            rtt_canon (lower_anyclos_type ctxt f.at @@ f.at);
+            rtt_sub (closN @@ f.at);
+            rtt_sub (closNenv @@ f.at);
+            ref_cast;
+            local_set (tmp @@ f.at);
+          ];
+          List.iter (fun (x, t, i) ->
+            emit ctxt W.[local_get (tmp @@ f.at)];
+            compile_val_var ctxt Source.(x @@ f.at) t local_rep;
+            emit ctxt W.[
+              struct_set (closNenv @@ f.at) (clos_env_idx +% int32 i @@ f.at)
+            ];
+          ) fixups
+        end
+      in
+      {funcidx = fn; arity = List.length ps}, def, fixup
+  in flat [] f
 
 
 (* Modules *)
@@ -1033,9 +1056,9 @@ and compile_mod_func_opt ctxt m : func_loc option =
 
   | FunM (x, _s, m2) ->
     let vars = filter_vars ctxt (free_mod m) in
-    let envts = lower_clos_env ctxt m.at vars in
+    let envflds, _ = lower_clos_env ctxt m.at vars E.Set.empty in
     let _, s1, s2 = T.as_fct (Source.et m) in
-    let _code, closN, closNenv = lower_fct_clos_type ctxt m.at s1 s2 envts in
+    let _code, closN, closNenv = lower_fct_clos_type ctxt m.at s1 s2 envflds in
     let vt1, _ = lower_sig_type ctxt x.at s1 in
     let vt2, _ = lower_sig_type ctxt m2.at s2 in
     let fn = emit_func ctxt m.at W.(ref_ closN :: [vt1]) [vt2]
@@ -1126,7 +1149,8 @@ and compile_coerce_mod ctxt s1 s2 at =
     | T.Fct (_, s11, s12), T.Fct (_, s21, s22) ->
       let ft, fidx = lower_sig_type ctxt at s1 in
       let anyclos = lower_anyclos_type ctxt at in
-      let _code, clos1, closenv = lower_fct_clos_type ctxt at s12 s22 [ft] in
+      let envflds = W.[field ft] in
+      let _code, clos1, closenv = lower_fct_clos_type ctxt at s12 s22 envflds in
       let vt21, _ = lower_sig_type ctxt at s21 in
       let vt22, _ = lower_sig_type ctxt at s22 in
       let fn = emit_func ctxt at W.(ref_ clos1 :: [vt21]) [vt22]
@@ -1187,25 +1211,32 @@ and need_coerce_mod s1 s2 =
 
 (* Declarations *)
 
-and compile_dec_pre ctxt d : _ list =
-  let scope, env = current_scope ctxt in
-  if scope <> GlobalScope then nyi d.at "recursive functions in local scope";
+and compile_dec_rec ctxt d : E.Set.t * _ list =
   match d.it with
   | ValD (p, e) ->
-    compile_pat_pre ctxt None p;
-    let pass2 ctxt =
-      let func_loc, def = compile_func_pre ctxt e in
-      compile_pat_pre ctxt (Some func_loc) p;
-      let pass3 ctxt = def ctxt; compile_pat_post ctxt p in
-      [pass3]
-    in [pass2]
-  | RecD ds -> compile_decs_pre ctxt ds
+    let xs = compile_pat_rec_pre ctxt None p in
+    let pass2 ctxt xs = (* knows recursive bindings but not yet func_locs *)
+      let func_loc, def, fixup = compile_func_staged ctxt xs e in
+      ignore (compile_pat_rec_pre ctxt (Some func_loc) p);
+      let pass3 ctxt = (* knows func_locs *)
+        def ctxt;
+        compile_pat_rec_post ctxt p;
+        let pass4 ctxt = (* has the environment initialised, fix up recursion *)
+          if xs <> E.Set.empty then
+            fixup ctxt (E.Set.choose xs)
+        in pass4
+      in pass3
+    in xs, [pass2]
+  | RecD ds -> compile_decs_rec ctxt ds
   | _ -> assert false
 
-and compile_decs_pre ctxt ds : _ list =
+and compile_decs_rec ctxt ds : E.Set.t * _ list =
   match ds with
-  | [] -> []
-  | d::ds' -> compile_dec_pre ctxt d @ compile_decs_pre ctxt ds'
+  | [] -> E.Set.empty, []
+  | d::ds' ->
+    let xs1, fs1 = compile_dec_rec ctxt d in
+    let xs2, fs2 = compile_decs_rec ctxt ds' in
+    E.Set.union xs1 xs2, fs1 @ fs2
 
 and compile_dec ctxt d dst =
   let emit ctxt = List.iter (emit_instr ctxt d.at) in
@@ -1289,9 +1320,10 @@ and compile_dec ctxt d dst =
     compile_coerce ctxt unit_rep dst (T.Tup []) d.at
 
   | RecD ds ->
-    let passes2 = compile_decs_pre ctxt ds in
-    let passes3 = List.concat_map (fun f -> f ctxt) passes2 in
-    List.iter (fun f -> f ctxt) passes3
+    let xs, passes2 = compile_decs_rec ctxt ds in
+    let passes3 = List.map (fun f -> f ctxt xs) passes2 in
+    let passes4 = List.map (fun f -> f ctxt) passes3 in
+    List.iter (fun f -> f ctxt) passes4
 
   | InclD m ->
     let _, str = T.as_str (Source.et m) in

@@ -121,10 +121,9 @@ and lower_func_type ctxt at arity : int32 * int32 =
   def_code codedt;
   code, clos
 
-and lower_clos_type ctxt at arity envts : int32 * int32 * int32 =
+and lower_clos_type ctxt at arity flds : int32 * int32 * int32 =
   let code, clos = lower_func_type ctxt at arity in
-  let closdt =
-    W.(type_struct (field i32 :: field (ref_ code) :: List.map field envts)) in
+  let closdt = W.(type_struct (field i32 :: field (ref_ code) :: flds)) in
   let clos_env = emit_type ctxt at closdt in
   code, clos, clos_env
 
@@ -169,22 +168,29 @@ and lower_fct_type ctxt at s1 s2 : int32 * int32 =
   def_code codedt;
   code, clos
 
-let lower_fct_clos_type ctxt at s1 s2 envts : int32 * int32 * int32 =
+let lower_fct_clos_type ctxt at s1 s2 flds : int32 * int32 * int32 =
   let code, clos = lower_fct_type ctxt at s1 s2 in
-  let closdt =
-    W.(type_struct (field i32 :: field (ref_ code) :: List.map field envts)) in
+  let closdt = W.(type_struct (field i32 :: field (ref_ code) :: flds)) in
   let clos_env = emit_type ctxt at closdt in
   code, clos, clos_env
 
 
 (* Closure environments *)
 
-let lower_clos_env ctxt at vars : W.value_type list =
+let lower_clos_env ctxt at vars rec_xs
+  : W.field_type list * (string * T.typ * int) list =
   let open Syntax in
-  List.map (fun (_, s) ->
-    fst (lower_sig_type ctxt at s)
-  ) (Vars.bindings vars.mods)
-  @
-  List.map (fun (_, t) ->
-    lower_value_type ctxt at local_rep t
-  ) (Vars.bindings vars.vals)
+  let fixups = ref [] in
+  let k = Env.Map.cardinal vars.mods in
+  let flds =
+    List.mapi (fun i (x, s) ->
+      W.field (fst (lower_sig_type ctxt at s))
+    ) (Vars.bindings vars.mods)
+    @
+    List.mapi (fun i (x, t) ->
+      let vt = lower_value_type ctxt at local_rep t in
+      if Env.Set.mem x rec_xs
+      then (fixups := (x, t, i + k) :: !fixups; W.field_mut vt)
+      else W.field vt
+    ) (Vars.bindings vars.vals)
+  in flds, !fixups

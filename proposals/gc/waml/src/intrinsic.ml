@@ -325,8 +325,8 @@ let rec compile_apply ctxt arity =
       );
       (* Dispatching here when closure arity > apply arity *)
       (* Create curried closure *)
-      let _, clos1, curriedN =
-        lower_clos_type ctxt at 1 W.(ref_ anyclos :: argts) in
+      let flds = List.map W.field W.(ref_ anyclos :: argts) in
+      let _, clos1, curriedN = lower_clos_type ctxt at 1 flds in
       emit ctxt W.[
         i32_const (1l @@ at);
         ref_func (compile_curry ctxt arity @@ at);
@@ -350,8 +350,8 @@ and compile_curry ctxt arity =
     let emit ctxt = List.iter (emit_instr ctxt at) in
     let anyclos = lower_anyclos_type ctxt at in
     let argts, argv_opt = lower_param_types ctxt at arity in
-    let _, clos1, curriedN =
-      lower_clos_type ctxt at 1 W.(ref_ anyclos :: argts) in
+    let flds = List.map W.field W.(ref_ anyclos :: argts) in
+    let _, clos1, curriedN = lower_clos_type ctxt at 1 flds in
     (* curryN = fun xN => apply_N+1 x0 ... xN-1 xN *)
     emit_func ctxt at W.[ref_ clos1; boxedref] [boxedref] (fun ctxt fn ->
       def_fwd fn;

@@ -326,16 +326,14 @@ module MakeSet (Elem : Ord) : Set with type Elem = Elem.T =
 
   val empty = Empty
 
-  rec val add x s =
-    case s of
+  rec val add x s = case s of
     | Empty => Mem x Empty Empty
     | Mem y s1 s2 =>
       if Elem.lt x y then Mem y (add x s1) s2
       else if Elem.lt y x then Mem y s1 (add x s2)
       else s
 
-  rec val mem x s =
-    case s of
+  rec val mem x s = case s of
     | Empty => False
     | Mem y s1 s2 =>
       if Elem.lt x y then mem x s1 else ~ Elem.lt y x \/ mem x s2
