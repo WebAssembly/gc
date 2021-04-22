@@ -121,16 +121,13 @@ let lookup_intrinsic ctxt name f : int32 =
   | None ->
     let fwd = ref (-1l) in
     let idx = f (fun idx ->
-Printf.printf "[intrinsic %s = $%ld]\n%!" name idx;
         ctxt.int.intrinsics := Intrinsics.add name idx !(ctxt.int.intrinsics);
         fwd := idx
       )
     in
     assert (!fwd = -1l || !fwd = idx);
     if !fwd = -1l then
-(Printf.printf "[intrinsic %s = $%ld]\n%!" name idx;
       ctxt.int.intrinsics := Intrinsics.add name idx !(ctxt.int.intrinsics);
-);
     idx
 
 
@@ -217,19 +214,24 @@ let emit_let ctxt at bt ts f =
   let locals = List.map (fun t -> t @@ at) ts in
   emit_instr ctxt at (W.let_ bt locals (get_entities ctxt'.int.instrs))
 
-let emit_func ctxt at ts1' ts2' f : int32 =
-  let ft = W.(FuncType (ts1', ts2')) in
-  let typeidx = emit_type ctxt at W.(FuncDefType ft) in
+let emit_func_deferred ctxt : int32 * _ =
   let idx, func = alloc_entity ctxt.int.funcs in
-  let ctxt' = {ctxt with int =
-    {ctxt.int with locals = make_entities (); instrs = make_entities ()}} in
-  f ctxt' idx;
-  define_entity func (
-    { W.ftype = typeidx @@ at;
-      W.locals = get_entities ctxt'.int.locals;
-      W.body = get_entities ctxt'.int.instrs;
-    } @@ at
-  );
+  idx, fun at ts1' ts2' f ->
+    let ft = W.(FuncType (ts1', ts2')) in
+    let typeidx = emit_type ctxt at W.(FuncDefType ft) in
+    let ctxt' = {ctxt with int =
+      {ctxt.int with locals = make_entities (); instrs = make_entities ()}} in
+    f ctxt' idx;
+    define_entity func (
+      { W.ftype = typeidx @@ at;
+        W.locals = get_entities ctxt'.int.locals;
+        W.body = get_entities ctxt'.int.instrs;
+      } @@ at
+    )
+
+let emit_func ctxt at ts1' ts2' f : int32 =
+  let idx, def_func = emit_func_deferred ctxt in
+  def_func at ts1' ts2' f;
   idx
 
 let emit_func_ref ctxt _at idx =
