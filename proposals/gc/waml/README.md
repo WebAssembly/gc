@@ -43,11 +43,10 @@ waml 0.1 interpreter
   (type $1 (func (param (ref 2) (ref eq)) (result (ref eq))))
   (type $2 (struct (field i32) (field (ref 1))))
   (type $3 (struct (field i32)))
-  (type $4 (func (param (ref 5) (ref eq)) (result (ref eq))))
-  (type $5 (struct (field i32) (field (ref 4))))
-  (global $0 (mut (ref null eq)) (ref.null eq))
-  (global $1 (mut (ref null eq)) (ref.null eq))
-  (func $0 (type 0)
+  (global $0 (mut (ref null 2)) (ref.null 2))
+  (global $1 (mut i32) (i32.const 0))
+  (func $0
+    (type 0)
     (i32.const 1)
     (ref.func 1)
     (rtt.canon 3)
@@ -55,19 +54,22 @@ waml 0.1 interpreter
     (struct.new 2)
     (global.set 0)
     (global.get 0)
-    (ref.as_data)
-    (rtt.canon 3)
-    (rtt.sub 5)
-    (ref.cast)
+    (ref.as_non_null)
     (i32.const 5)
     (i31.new)
     (call 1)
+    (ref.as_i31)
+    (i31.get_s)
     (global.set 1)
   )
-  (func $1 (type 1)
+  (func $1
+    (type 1)
+    (local i32)
     (local.get 1)
     (ref.as_i31)
     (i31.get_s)
+    (local.set 2)
+    (local.get 2)
     (i32.const 7)
     (i32.add)
     (i31.new)
@@ -78,8 +80,8 @@ waml 0.1 interpreter
   (start 0)
   (elem $0 declare func 1)
 )
-(i31 12) : Int
-val f : Int -> Int
+12 : Int
+val f : Int ->1 Int
 > 
 ```
 See [below](#under-the-hood) for some background on the produced code.

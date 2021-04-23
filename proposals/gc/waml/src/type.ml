@@ -7,6 +7,7 @@ module S = Env
 
 type var = string
 type pred = Any | Eq | Ord | Num
+type arity = UnknownArity | KnownArity of int | VariableArity
 
 type typ =
   | Var of var * typ list
@@ -17,7 +18,7 @@ type typ =
   | Text
   | Ref of typ
   | Tup of typ list
-  | Fun of typ * typ
+  | Fun of typ * typ * arity ref
   | Data of typ
   | Infer of infer ref
 
@@ -43,17 +44,17 @@ let var b = Var (b, [])
 let rec fun_flat ts t =
   match ts with
   | [] -> t
-  | t'::ts' -> Fun (t', fun_flat ts' t)
+  | t'::ts' -> Fun (t', fun_flat ts' t, ref VariableArity)
 
 let is_fun = function Fun _ -> true | _ -> false
 
 let as_tup = function Tup ts -> ts | _ -> assert false
-let as_fun = function Fun (t1, t2) -> t1, t2 | _ -> assert false
+let as_fun = function Fun (t1, t2, a) -> t1, t2, a | _ -> assert false
 let as_data = function Data t -> t | _ -> assert false
 
 let rec as_fun_flat t = as_fun_flat' [] t
 and as_fun_flat' ts = function
-  | Fun (t1, t2) -> as_fun_flat' (t1::ts) t2
+  | Fun (t1, t2, _) -> as_fun_flat' (t1::ts) t2
   | Infer {contents = Res t'} -> as_fun_flat' ts t'
   | t -> List.rev ts, t
 
@@ -74,14 +75,23 @@ let string_of_pred = function
   | Ord -> "ord"
   | Num -> "num"
 
+let string_of_arity a =
+  match !a with
+  | UnknownArity -> "?"
+  | KnownArity i -> string_of_int i
+  | VariableArity -> ""
+
 let rec string_of_typ = function
-  | Fun (t1, t2) -> string_of_typ_app t1 ^ " -> " ^ string_of_typ t2
+  | Fun (t1, t2, a) ->
+    string_of_typ_app t1 ^ " ->" ^ string_of_arity a ^ " " ^ string_of_typ t2
   | Data t -> "data " ^ string_of_typ t
+  | Infer {contents = Res t'} -> string_of_typ t'
   | t -> string_of_typ_app t
 
 and string_of_typ_app = function
   | Var (b, ts) -> list " " string_of_typ_simple (var b :: ts)
   | Ref t -> "ref " ^ string_of_typ_simple t
+  | Infer {contents = Res t'} -> string_of_typ_app t'
   | t -> string_of_typ_simple t
 
 and string_of_typ_simple = function
@@ -92,7 +102,7 @@ and string_of_typ_simple = function
   | Float -> "Float"
   | Text -> "Text"
   | Tup ts -> "(" ^ list ", " string_of_typ ts ^ ")"
-  | Infer {contents = Res t'} -> string_of_typ t'
+  | Infer {contents = Res t'} -> string_of_typ_simple t'
   | Infer {contents = Unres (y, Any)} -> "_" ^ y
   | Infer {contents = Unres (y, p)} -> "(_" ^ y ^ " " ^ string_of_pred p ^ ")"
   | t -> "(" ^ string_of_typ t ^ ")"
@@ -143,7 +153,7 @@ let rec free = function
   | Bool | Byte | Int | Float | Text -> Set.empty
   | Ref t | Data t-> free t
   | Tup ts -> list free ts
-  | Fun (t1, t2) -> free t1 ++ free t2
+  | Fun (t1, t2, _) -> free t1 ++ free t2
   | Infer {contents = Res t'} -> free t'
   | Infer _ -> Set.empty
 
@@ -171,7 +181,7 @@ let rec free_infer = function
   | Bool | Byte | Int | Float | Text -> []
   | Ref t | Data t -> free_infer t
   | Tup ts -> list free_infer ts
-  | Fun (t1, t2) -> free_infer t1 @ free_infer t2
+  | Fun (t1, t2, _) -> free_infer t1 @ free_infer t2
   | Infer {contents = Res t'} -> free_infer t'
   | Infer inf -> [inf]
 
@@ -241,7 +251,7 @@ let rec subst ((m, s) as su) t =
   | Bool | Byte | Int | Float | Text -> t
   | Ref t1 -> Ref (subst su t1)
   | Tup ts -> Tup (List.map (subst su) ts)
-  | Fun (t1, t2) -> Fun (subst su t1, subst su t2)
+  | Fun (t1, t2, a) -> Fun (subst su t1, subst su t2, ref !a)
   | Data t1 -> Data (subst su t1)
   | Infer {contents = Res t'} -> subst su t'
   | Infer _ -> t
@@ -279,7 +289,9 @@ let rec eq t1 t2 =
   | Ref t1', Ref t2' -> eq t1' t2'
   | Tup ts1, Tup ts2 ->
     List.length ts1 = List.length ts2 && List.for_all2 eq ts1 ts2
-  | Fun (t11, t12), Fun (t21, t22) -> eq t11 t21 && eq t12 t22
+  | Fun (t11, t12, a1), Fun (t21, t22, a2) ->
+    assert (!a1 = !a2);
+    eq t11 t21 && eq t12 t22
   | Data t1', Data t2' -> eq t1' t2'
   | Infer {contents = Res t1'}, t2 -> eq t1' t2
   | t1, Infer {contents = Res t2'} -> eq t1 t2'
@@ -299,8 +311,9 @@ let infer' p b = Infer (ref (Unres (b, p)))
 let infer p = incr infer_ctr; infer' p ("a" ^ string_of_int !infer_ctr)
 
 let inst (Forall (bs, t)) =
-  subst (typ_subst bs (List.map (infer' Any) bs)) t
-
+  match subst (typ_subst bs (List.map (infer' Any) bs)) t with
+  | Fun (t1, t2, a) -> Fun (t1, t2, ref !a)
+  | t' -> t'
 
 let list f capt i s ts =
   List.fold_left Set.union Set.empty (List.map (f capt i s) ts)
@@ -310,7 +323,8 @@ let rec generalize' capt i s = function
   | Bool | Byte | Int | Float | Text -> Set.empty
   | Ref t | Data t -> generalize' capt i s t
   | Tup ts -> list generalize' capt i s ts
-  | Fun (t1, t2) ->
+  | Fun (t1, t2, arity) ->
+    if !arity = UnknownArity then arity := VariableArity;
     let set1 = generalize' capt i s t1 in
     let set2 = generalize' capt i s t2 in
     set1 ++ set2
@@ -337,7 +351,7 @@ let rec default = function
   | Bool | Byte | Int | Float | Text -> ()
   | Ref t | Data t -> default t
   | Tup ts -> List.iter default ts
-  | Fun (t1, t2) -> default t1; default t2
+  | Fun (t1, t2, _) -> default t1; default t2
   | Infer {contents = Res t} -> default t
   | Infer inf -> inf := Res Int
 
@@ -371,7 +385,7 @@ let rec occurs inf = function
   | Var (_, ts) | Tup ts -> List.exists (f inf) ts
   | Bool | Byte | Int | Float | Text -> false
   | Ref t -> occurs inf t
-  | Fun (t1, t2) -> occurs inf t1 || occurs inf t2
+  | Fun (t1, t2, _) -> occurs inf t1 || occurs inf t2
   | Infer {contents = Res t} -> occurs inf t
   | Infer ({contents = Unres _} as inf') -> inf == inf'
 *)
@@ -382,7 +396,7 @@ let rec enforce inf p = function
   | Bool | Byte | Text when p <= Eq -> ()
   | Ref t when p <= Eq -> enforce inf p t
   | Tup ts -> List.iter (enforce inf p) ts
-  | Fun (t1, t2) when p = Any -> enforce inf p t1; enforce inf p t2
+  | Fun (t1, t2, _) when p = Any -> enforce inf p t1; enforce inf p t2
   | Data t when p = Any -> enforce inf p t
   | Infer {contents = Res t'} -> enforce inf p t'
   | Infer ({contents = Unres (y, p')} as inf') when inf' != inf ->
@@ -396,7 +410,15 @@ let rec unify t1 t2 =
   | Ref t1', Ref t2' -> unify t1' t2'
   | Tup ts1, Tup ts2 when List.length ts1 = List.length ts2 ->
     List.iter2 unify ts1 ts2
-  | Fun (t11, t12), Fun (t21, t22) -> unify t11 t21; unify t12 t22
+  | Fun (t11, t12, a1), Fun (t21, t22, a2) ->
+    let a' =
+      match !a1, !a2 with
+      | UnknownArity, a | a, UnknownArity -> a
+      | VariableArity, _ | _, VariableArity -> VariableArity
+      | KnownArity n1, KnownArity n2 ->
+        if n1 = n2 then KnownArity n1 else VariableArity
+    in a1 := a'; a2 := a';
+    unify t11 t21; unify t12 t22
   | Data t1', Data t2' -> unify t1' t2'
   | Infer {contents = Res t1'}, t2 -> unify t1' t2
   | t1, Infer {contents = Res t2'} -> unify t1 t2'

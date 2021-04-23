@@ -2,6 +2,7 @@
 
 type var = string
 type pred = Any | Eq | Ord | Num
+type arity = UnknownArity | KnownArity of int | VariableArity
 
 type typ =
   | Var of var * typ list
@@ -12,7 +13,7 @@ type typ =
   | Text
   | Ref of typ
   | Tup of typ list
-  | Fun of typ * typ
+  | Fun of typ * typ * arity ref
   | Data of typ
   | Infer of infer ref
 
@@ -39,7 +40,7 @@ val fun_flat : typ list -> typ -> typ
 val is_fun : typ -> bool
 
 val as_tup : typ -> typ list
-val as_fun : typ -> typ * typ
+val as_fun : typ -> typ * typ * arity ref
 val as_fun_flat : typ -> typ list * typ
 val as_data : typ -> typ
 

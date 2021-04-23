@@ -6,24 +6,32 @@ module W = Emit.W
 
 (* Locations *)
 
+type null = Null | Nonull
+
 type loc =
   | PreLoc of int32
   | LocalLoc of int32
   | GlobalLoc of int32
-  | ClosureLoc of int32 * int32 * int32 (* fldidx, localidx, typeidx *)
+  | ClosureLoc of null * int32 * int32 * int32 (* fldidx, localidx, typeidx *)
 
-type func_loc = {funcidx : int32; arity : int}
+type func_loc = {funcidx : int32; typeidx : int32; arity : int}
+
+let as_local_loc = function LocalLoc idx -> idx | _ -> assert false
+let as_global_loc = function GlobalLoc idx -> idx | _ -> assert false
 
 
 (* Representations *)
 
-type null = Null | Nonull
 type rep =
   | DropRep                (* value never used *)
   | BlockRep of null       (* like Boxed, but empty tuples are suppressed *)
   | BoxedRep of null       (* boxed representation that may not be null *)
   | UnboxedRep of null     (* representation with unboxed type or concrete ref types *)
   | UnboxedLaxRep of null  (* like Unboxed, but Int may have junk high bit *)
+
+let null_rep = function
+  | BlockRep n | BoxedRep n | UnboxedRep n | UnboxedLaxRep n -> n
+  | DropRep -> assert false
 
 (* Configurable *)
 let boxed_if flag null = if !flag then BoxedRep null else UnboxedRep null
@@ -48,8 +56,6 @@ let loc_rep = function
   | LocalLoc _ -> local_rep ()
   | ClosureLoc _ -> clos_rep ()
 
-let as_local_loc = function LocalLoc idx -> idx | _ -> assert false
-let as_global_loc = function GlobalLoc idx -> idx | _ -> assert false
 
 let max_func_arity = 5
 
@@ -108,8 +114,11 @@ and lower_var_type ctxt at t : int32 =
   | T.Ref t1 ->
     let t1' = lower_value_type ctxt at field_rep t1 in
     emit_type ctxt at W.(type_struct [field_mut t1'])
-  | T.Fun _ ->
-    lower_anyclos_type ctxt at
+  | T.Fun (_, _, arity_opt) ->
+    (match !arity_opt with
+    | T.KnownArity arity -> snd (lower_func_type ctxt at arity)
+    | T.UnknownArity | T.VariableArity -> lower_anyclos_type ctxt at
+    )
   | _ -> Printf.printf "%s\n%!" (T.string_of_typ t); assert false
 
 and lower_anyclos_type ctxt at : int32 =

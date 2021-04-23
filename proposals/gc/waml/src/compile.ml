@@ -89,7 +89,7 @@ let string_of_loc = function
   | PreLoc i -> "prelude" ^ Int32.to_string i
   | LocalLoc i -> "local" ^ Int32.to_string i
   | GlobalLoc i -> "global" ^ Int32.to_string i
-  | ClosureLoc (i, _, _) -> "closure" ^ Int32.to_string i
+  | ClosureLoc (_, i, _, _) -> "closure" ^ Int32.to_string i
 
 let print_env env =
   E.iter_mods (fun x locs -> let l, flo = locs.it in
@@ -163,6 +163,15 @@ let compile_coerce ctxt src dst t at =
       ]
     | T.Tup [] | T.Var _ | T.Data _ ->
       non_null n1 n2
+    | T.Fun (_, _, {contents = T.KnownArity _}) as t ->
+      let x = lower_var_type ctxt at t in
+      non_null n1 n2;
+      emit ctxt W.[
+        ref_as_data;
+        rtt_canon (lower_anyclos_type ctxt at @@ at);
+        rtt_sub (x @@ at);
+        ref_cast;
+      ]
     | t ->
       let x = lower_var_type ctxt at t in
       non_null n1 n2;
@@ -247,7 +256,7 @@ let find_val_var = find_var E.find_opt_val
 let find_mod_var = find_var E.find_opt_mod
 
 let compile_var find_var ctxt x =
-  let loc, _ = find_var ctxt x ctxt.ext.envs in
+  let loc, funcloc_opt = find_var ctxt x ctxt.ext.envs in
   (match loc with
   | PreLoc idx ->
     let _, l = List.nth Prelude.vals (Int32.to_int idx) in
@@ -256,21 +265,25 @@ let compile_var find_var ctxt x =
     emit_instr ctxt x.at W.(local_get (idx @@ x.at));
   | GlobalLoc idx ->
     emit_instr ctxt x.at W.(global_get (idx @@ x.at));
-  | ClosureLoc (idx, localidx, typeidx) ->
+  | ClosureLoc (null, idx, localidx, typeidx) ->
     emit_instr ctxt x.at W.(local_get (localidx @@ x.at));
     emit_instr ctxt x.at W.(struct_get (typeidx @@ x.at) (idx @@ x.at));
+    if null = Null then emit_instr ctxt x.at W.ref_as_non_null
   );
-  loc
+  loc, funcloc_opt
 
 let compile_val_var ctxt x t dst =
-  let loc = compile_var find_val_var ctxt x in
-  compile_coerce ctxt (loc_rep loc) dst t x.at
+  let loc, funcloc_opt = compile_var find_val_var ctxt x in
+  let rep = loc_rep loc in
+  match funcloc_opt with
+  | None -> compile_coerce ctxt rep dst t x.at
+  | Some ({typeidx; _} : func_loc) ->
+    if null_rep rep = Null && null_rep dst <> Null then
+      emit_instr ctxt x.at W.ref_as_non_null
 
 let compile_mod_var ctxt x =
-  match compile_var find_mod_var ctxt x with
-  | PreLoc _ -> assert false
-  | LocalLoc _ | GlobalLoc _ -> emit_instr ctxt x.at W.ref_as_non_null
-  | ClosureLoc _ -> ()
+  let loc, _ = compile_var find_mod_var ctxt x in
+  if null_rep (loc_rep loc) = Null then emit_instr ctxt x.at W.ref_as_non_null
 
 let compile_mod_proj ctxt str x =
   let _, typeidx = lower_str_type ctxt x.at str in
@@ -319,7 +332,13 @@ let name_of_path q =
 
 let compile_val_var_bind_pre ctxt x t funcloc_opt =
   let scope, env = current_scope ctxt in
-  let vt = lower_value_type ctxt x.at (scope_rep scope) t in
+  let rep = scope_rep scope in
+  let vt =
+    match funcloc_opt with
+    | None -> lower_value_type ctxt x.at rep t
+    | Some ({typeidx; _} : func_loc) ->
+      if null_rep rep = Null then W.(ref_null_ typeidx) else W.(ref_ typeidx)
+  in
   let loc =
     match scope with
     | PreScope -> assert false
@@ -375,7 +394,7 @@ let filter_vars ctxt vars =
     mods = filter_loc ctxt find_mod_var vars.mods;
   }
 
-let compile_load_env ctxt clos closN closNenv vars at =
+let compile_load_env ctxt clos closN closNenv vars envflds at =
   if vars <> empty then begin
     let emit ctxt = List.iter (emit_instr ctxt at) in
     let anyclos = lower_anyclos_type ctxt at in
@@ -395,7 +414,7 @@ let compile_load_env ctxt clos closN closNenv vars at =
         let x' = Source.(@@) x at in
         let _, func_loc_opt = find_mod_var ctxt x' ctxt.ext.envs in
         env := E.extend_mod !env x'
-          (ClosureLoc (idx, envlocal, closNenv), func_loc_opt);
+          (ClosureLoc (Nonull, idx, envlocal, closNenv), func_loc_opt);
         i +% 1l
       ) vars.mods 0l
     in
@@ -404,8 +423,14 @@ let compile_load_env ctxt clos closN closNenv vars at =
         let idx = clos_env_idx +% i in
         let x' = Source.(@@) x at in
         let _, func_loc_opt = find_val_var ctxt x' ctxt.ext.envs in
+        let null =
+          if func_loc_opt = None then Nonull else
+          match List.nth envflds (Int32.to_int i) with
+          | W.(FieldType (ValueStorageType (RefType (Nullable, _)), _)) -> Null
+          | _ -> Nonull
+        in
         env := E.extend_val !env x'
-          (ClosureLoc (idx, envlocal, closNenv), func_loc_opt);
+          (ClosureLoc (null, idx, envlocal, closNenv), func_loc_opt);
         i +% 1l
       ) vars.vals clos_mod_env_len
     in ()
@@ -655,9 +680,9 @@ and compile_exp_func_opt ctxt e dst : func_loc option =
             rtt_sub (clos @@ e.at);
             struct_new (clos @@ e.at);
           ];
-          Some {funcidx = fn; arity = con.arity}
+          Some {funcidx = fn; typeidx = clos; arity = con.arity}
 
-        | T.Fun (_, t') -> eta t'
+        | T.Fun (_, t', _) -> eta t'
 
         | _ -> assert false
       in eta t
@@ -856,16 +881,8 @@ and compile_exp_func_opt ctxt e dst : func_loc option =
         )
 
       | _ ->
-        (match compile_exp_func_opt ctxt e1 ref_rep with
-        | Some {funcidx; arity} when arity = List.length es ->
-          let anyclos = lower_anyclos_type ctxt e1.at in
-          let _, closN = lower_func_type ctxt e1.at arity in
-          emit ctxt W.[
-            ref_as_data;
-            rtt_canon (anyclos @@ e1.at);
-            rtt_sub (closN @@ e1.at);
-            ref_cast;
-          ];
+        (match compile_exp_func_opt ctxt e1 rigid_rep with
+        | Some {funcidx; arity; _} when arity = List.length es ->
           Intrinsic.compile_push_args ctxt e.at (List.length es) 0l (fun i ->
             compile_exp ctxt (List.nth es i) arg_rep
           );
@@ -873,7 +890,6 @@ and compile_exp_func_opt ctxt e dst : func_loc option =
             call (funcidx @@ e.at);
           ]
         | _ ->
-          compile_coerce ctxt ref_rep rigid_rep (Source.et e1) e1.at;
           Intrinsic.compile_push_args ctxt e.at (List.length es) 0l (fun i ->
             compile_exp ctxt (List.nth es i) arg_rep
           );
@@ -983,7 +999,7 @@ and compile_func_staged ctxt rec_xs f : func_loc * _ * _ =
           let clos = emit_param ctxt f.at in
           let args = List.map (fun _ -> emit_param ctxt f.at) argts in
           let arg0 = List.hd args in
-          compile_load_env ctxt clos closN closNenv vars f.at;
+          compile_load_env ctxt clos closN closNenv vars envflds f.at;
 
           let partial = List.exists (fun p -> classify_pat p = PartialPat) ps in
           if not partial then
@@ -1041,7 +1057,7 @@ and compile_func_staged ctxt rec_xs f : func_loc * _ * _ =
           ) fixups
         end
       in
-      {funcidx = fn; arity = List.length ps}, def, fixup
+      {funcidx = fn; typeidx = closN; arity = List.length ps}, def, fixup
   in flat [] f
 
 
@@ -1091,13 +1107,13 @@ and compile_mod_func_opt ctxt m : func_loc option =
         let _, env = current_scope ctxt in
         let clos = emit_param ctxt m2.at in
         let arg = emit_param ctxt m2.at in
-        compile_load_env ctxt clos closN closNenv vars m2.at;
+        compile_load_env ctxt clos closN closNenv vars envflds m2.at;
         env := E.extend_mod !env x (LocalLoc arg, None);
         compile_mod ctxt m2
       )
     in
     compile_alloc_clos ctxt fn 1 vars E.Set.empty closN closNenv m.at;
-    Some {funcidx = fn; arity = 1}
+    Some {funcidx = fn; typeidx = closN; arity = 1}
 
   | AppM (m1, m2) ->
     let anyclos = lower_anyclos_type ctxt m1.at in

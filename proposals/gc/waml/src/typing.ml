@@ -143,7 +143,7 @@ and check_typ' (env : env) t : T.typ =
   | TextT -> T.Text
   | RefT t1 -> T.Ref (check_typ env t1)
   | TupT ts -> T.Tup (List.map (check_typ env) ts)
-  | FunT (t1, t2) -> T.Fun (check_typ env t1, check_typ env t2)
+  | FunT (t1, t2) -> T.Fun (check_typ env t1, check_typ env t2, ref T.VariableArity)
 
 
 (* Patterns *)
@@ -188,7 +188,7 @@ and check_pat' env p : T.typ * env =
     let pt = check_val_path env q in
     let ts, env' = check_pats env ps in
     let t = T.(infer Any) in
-    let t1' = List.fold_right (fun tI t -> T.Fun (tI, t)) ts t in
+    let t1' = List.fold_right (fun tI t -> T.Fun (tI, t, ref T.VariableArity)) ts t in
     unify (T.inst pt) (T.Data t1') q.at;
     t, env'
 
@@ -216,6 +216,10 @@ and check_pats env = function
 
 
 (* Expressions *)
+
+let rec arity_exp = function
+  | {it = FunE (_, e); _} -> 1 + arity_exp e
+  | _ -> 0
 
 let rec check_exp env e : T.typ =
   assert (e.et = None);
@@ -297,13 +301,17 @@ and check_exp' env e : T.typ =
   | FunE (p1, e2) ->
     let t1, env' = check_pat env p1 in
     let t2 = check_exp (E.adjoin env env') e2 in
-    T.Fun (t1, t2)
+    (match e2.it with
+    | FunE _ -> let _, _, arity = T.as_fun t2 in arity := T.VariableArity
+    | _ -> ()
+    );
+    T.Fun (t1, t2, ref (T.KnownArity (arity_exp e)))
 
   | AppE (e1, e2) ->
     let t1 = check_exp env e1 in
     let t2 = check_exp env e2 in
     let t = T.(infer Any) in
-    unify t1 (T.Fun (t2, t)) e1.at;
+    unify t1 (T.Fun (t2, t, ref T.UnknownArity)) e1.at;
     t
 
   | AnnotE (e1, t) ->
@@ -419,7 +427,7 @@ and check_dec' pass env d : T.typ * T.var list * env =
       List.fold_left (fun env2 c ->
         let (x, ts) = c.it in
         let ts' = List.map (check_typ env') ts in
-        let t' = List.fold_right (fun tI t' -> T.Fun (tI, t')) ts' t in
+        let t' = List.fold_right (fun tI t' -> T.Fun (tI, t', ref T.VariableArity)) ts' t in
         c.et <- Some t';
         E.extend_val env2 x (T.Forall (bs, T.Data t'))
       ) E.empty cs
@@ -438,11 +446,11 @@ and check_dec' pass env d : T.typ * T.var list * env =
     let _, bs, env' = check_decs RecPrePass env ds (T.Tup []) in
     let _, _, env'' = check_decs RecPass (E.adjoin env env') ds (T.Tup []) in
     let env''' =
-      if E.is_empty_vals env'' then env'' else
-      let _, t = E.choose_val env'' in
-      let T.Forall (bs, t') = T.generalize env t.it in
-      if bs = [] then env'' else
-      E.map_vals (fun (T.Forall (bs', t)) -> T.Forall (bs, t)) env''
+      let bs = List.concat_map (fun (_, t) ->
+          let T.Forall (bs, _) = T.generalize env t.it in bs
+        ) (E.vals env'')
+      in
+      E.map_vals (fun (T.Forall (_, t)) -> T.Forall (bs, t)) env''
     in
     T.Tup [], bs, env'''
 
@@ -500,7 +508,7 @@ and check_spec' pass env s : T.var list * env =
       List.fold_left (fun env2 c ->
         let (x, ts) = c.it in
         let ts' = List.map (check_typ env') ts in
-        let t' = List.fold_right (fun tI t' -> T.Fun (tI, t')) ts' t in
+        let t' = List.fold_right (fun tI t' -> T.Fun (tI, t', ref T.VariableArity)) ts' t in
         E.extend_val env2 x (T.Forall (bs, T.Data t'))
       ) E.empty cs
     in
