@@ -74,6 +74,17 @@ let rec find_typ_var ctxt y envs : data =
 (* Debug printing *)
 
 (*
+let string_of_null = function
+  | Null -> "0"
+  | Nonull -> ""
+
+let string_of_rep = function
+  | DropRep -> "drop"
+  | BlockRep n -> "block" ^ string_of_null n
+  | BoxedRep n -> "boxed" ^ string_of_null n
+  | UnboxedRep n -> "unboxed" ^ string_of_null n
+  | UnboxedLaxRep n -> "lax" ^ string_of_null n
+
 let string_of_loc = function
   | PreLoc i -> "prelude" ^ Int32.to_string i
   | LocalLoc i -> "local" ^ Int32.to_string i
@@ -98,6 +109,10 @@ let string_of_type ctxt idx =
 let string_of_field_type ctxt idx i =
   let idx' = Emit.lookup_ref_field_type ctxt idx i in
   Int32.to_string idx' ^ " = " ^ string_of_type ctxt idx'
+
+let mark ctxt i =
+  emit_instr ctxt no_region W.(i32_const (i @@ no_region));
+  emit_instr ctxt no_region W.drop
 *)
 
 
@@ -917,7 +932,7 @@ and compile_exp_func_opt ctxt e dst : func_loc option =
           | TotalPat ->
             let ctxt = enter_scope ctxt LocalScope in
             emit ctxt W.[local_get (tmp @@ pI.at)];
-            compile_coerce ctxt arg_rep (pat_rep ()) (Source.et pI) e.at;
+            compile_coerce ctxt (tmp_rep ()) (pat_rep ()) (Source.et pI) e.at;
             compile_pat ctxt (-1l) None pI;
             compile_exp ctxt eI dst;
             emit ctxt W.[br (0l @@ eI.at)];

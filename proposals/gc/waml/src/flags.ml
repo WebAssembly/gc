@@ -10,7 +10,7 @@ let trace = ref false
 let width = ref 80
 let textual = ref false
 
-let box_locals = ref true
-let box_globals = ref true
-let box_temps = ref true
-let box_scrut = ref true
+let box_locals = ref false
+let box_globals = ref false
+let box_temps = ref false
+let box_scrut = ref false

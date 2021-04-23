@@ -32,21 +32,21 @@ let argspec = Arg.align
   "-s", Arg.Set Flags.print_sig,
     " print type signature (default when interactive)";
   "-blocals", Arg.Set Flags.box_locals,
-    " box locals (default)";
+    " box locals";
   "-bglobals", Arg.Set Flags.box_globals,
-    " box globals (default)";
+    " box globals";
   "-btemps", Arg.Set Flags.box_temps,
     " box temporaries";
   "-bscrut", Arg.Set Flags.box_scrut,
-    " box pattern scrutinees (default)";
+    " box pattern scrutinees";
   "-ublocals", Arg.Clear Flags.box_locals,
-    " unbox locals";
+    " unbox locals (default)";
   "-ubglobals", Arg.Clear Flags.box_globals,
-    " unbox globals";
+    " unbox globals (default)";
   "-ubtemps", Arg.Clear Flags.box_temps,
-    " unbox temporaries";
+    " unbox temporaries (default)";
   "-ubscrut", Arg.Clear Flags.box_scrut,
-    " unbox pattern scrutinees";
+    " unbox pattern scrutinees (default)";
   "-x", Arg.Set Flags.textual,
     " output textual Wasm";
   "-w", Arg.Int (fun n -> Flags.width := n),
