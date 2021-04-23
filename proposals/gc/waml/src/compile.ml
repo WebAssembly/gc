@@ -248,8 +248,9 @@ let compile_val_var ctxt x t dst =
 
 let compile_mod_var ctxt x =
   match compile_var find_mod_var ctxt x with
+  | PreLoc _ -> assert false
   | LocalLoc _ | GlobalLoc _ -> emit_instr ctxt x.at W.ref_as_non_null
-  | _ -> ()
+  | ClosureLoc _ -> ()
 
 let compile_mod_proj ctxt str x =
   let _, typeidx = lower_str_type ctxt x.at str in
@@ -392,7 +393,7 @@ let compile_load_env ctxt clos closN closNenv vars at =
     in ()
   end
 
-let compile_alloc_clos ctxt fn arity vars closN closNenv at =
+let compile_alloc_clos ctxt fn arity vars rec_xs closN closNenv at =
   let emit ctxt = List.iter (emit_instr ctxt at) in
   let anyclos = lower_anyclos_type ctxt at in
   emit_func_ref ctxt at fn;
@@ -404,7 +405,8 @@ let compile_alloc_clos ctxt fn arity vars closN closNenv at =
     compile_mod_var ctxt (Source.(@@) x at)
   ) vars.mods;
   Vars.iter (fun x t ->
-    compile_val_var ctxt (Source.(@@) x at) t local_rep
+    let rep = if E.Set.mem x rec_xs then local_rep else clos_rep in
+    compile_val_var ctxt (Source.(@@) x at) t rep
   ) vars.vals;
   emit ctxt W.[
     rtt_canon (anyclos @@ at);
@@ -617,7 +619,7 @@ and compile_exp_func_opt ctxt e dst : func_loc option =
               ];
               List.iteri (fun i _ ->
                 Intrinsic.compile_load_arg ctxt e.at i arg0 argv_opt;
-                (* TODO: coerce from local_rep to field_rep here?
+                (* TODO: coerce from local_rep/clos_rep to field_rep here?
                 compile_coerce ctxt lax_rep dst (Source.et e) e.at;
                 *)
               ) argts;
@@ -997,7 +999,8 @@ and compile_func_staged ctxt rec_xs f : func_loc * _ * _ =
             );
           compile_exp ctxt e arg_rep
         );
-        compile_alloc_clos ctxt fn (List.length ps) vars closN closNenv f.at
+        compile_alloc_clos
+          ctxt fn (List.length ps) vars rec_xs closN closNenv f.at
       in
       let fixup ctxt self =
         if fixups <> [] then begin
@@ -1013,7 +1016,7 @@ and compile_func_staged ctxt rec_xs f : func_loc * _ * _ =
           ];
           List.iter (fun (x, t, i) ->
             emit ctxt W.[local_get (tmp @@ f.at)];
-            compile_val_var ctxt Source.(x @@ f.at) t local_rep;
+            compile_val_var ctxt Source.(x @@ f.at) t clos_rep;
             emit ctxt W.[
               struct_set (closNenv @@ f.at) (clos_env_idx +% int32 i @@ f.at)
             ];
@@ -1075,7 +1078,7 @@ and compile_mod_func_opt ctxt m : func_loc option =
         compile_mod ctxt m2
       )
     in
-    compile_alloc_clos ctxt fn 1 vars closN closNenv m.at;
+    compile_alloc_clos ctxt fn 1 vars E.Set.empty closN closNenv m.at;
     Some {funcidx = fn; arity = 1}
 
   | AppM (m1, m2) ->

@@ -196,9 +196,11 @@ let compile_push_args ctxt at n shift compile_eI =
   | _, Some argv ->
     let tmp = emit_local ctxt at W.(ref_null_ argv) in
     emit ctxt W.[
+      i32_const (0l @@ at);
+      i31_new;
       i32_const (int32 n @@ at);
       rtt_canon (argv @@ at);
-      array_new_default (argv @@ at);
+      array_new (argv @@ at);
       local_tee (tmp +% shift @@ at);
       ref_as_non_null;
     ];
@@ -403,6 +405,9 @@ and compile_curry ctxt arity =
           let len = emit_local ctxt at W.i32 in
           let i = emit_local ctxt at W.i32 in
           emit ctxt W.[
+            (* Array init value *)
+            i32_const (0l @@ at);
+            i31_new;
             (* Load source *)
             local_get (0l @@ at);  (* curriedN *)
             struct_get (curriedN @@ at) (curry_arg_idx @@ at);
@@ -415,7 +420,7 @@ and compile_curry ctxt arity =
             i32_add;
             local_tee (len +% 1l @@ at);
             rtt_canon (argv @@ at);
-            array_new_default (argv @@ at);
+            array_new (argv @@ at);
             local_tee (dst +% 1l @@ at);
             (* Initialise applied argument *)
             local_get (i +% 1l @@ at);

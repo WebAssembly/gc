@@ -26,10 +26,12 @@ type rep =
   | UnboxedLaxRep of null  (* like Unboxed, but Int may have junk high bit *)
 
 (* Configurable *)
-let local_rep = if !Flags.box_locals then BoxedRep Null else UnboxedRep Null    (* values stored in locals *)
-let global_rep = if !Flags.box_globals then BoxedRep Null else UnboxedRep Null  (* values stored in globals *)
-let tmp_rep = if !Flags.box_temps then BoxedRep Null else UnboxedRep Null       (* values stored in temps *)
-let pat_rep = if !Flags.box_scrut then BoxedRep Null else UnboxedRep Null       (* values fed into patterns *)
+let boxed_if flag null = if !flag then BoxedRep null else UnboxedRep null
+let local_rep = boxed_if Flags.box_locals Null    (* values stored in locals *)
+let clos_rep = boxed_if Flags.box_locals Nonull   (* values stored in closures *)
+let global_rep = boxed_if Flags.box_globals Null  (* values stored in globals *)
+let tmp_rep = boxed_if Flags.box_temps Null       (* values stored in temps *)
+let pat_rep = boxed_if Flags.box_scrut Nonull     (* values fed into patterns *)
 
 (* Non-configurable *)
 let ref_rep = BoxedRep Null         (* expecting a reference *)
@@ -43,7 +45,8 @@ let unit_rep = BlockRep Nonull      (* nothing on stack *)
 let loc_rep = function
   | PreLoc _ -> UnboxedRep Nonull
   | GlobalLoc _ -> global_rep
-  | LocalLoc _ | ClosureLoc _ -> local_rep
+  | LocalLoc _ -> local_rep
+  | ClosureLoc _ -> clos_rep
 
 let as_local_loc = function LocalLoc idx -> idx | _ -> assert false
 let as_global_loc = function GlobalLoc idx -> idx | _ -> assert false
@@ -64,7 +67,6 @@ let lower_ref null ht =
 
 let boxed = W.eq
 let boxedref = lower_ref Nonull boxed
-let boxednullref = lower_ref Null boxed
 
 let rec lower_value_type ctxt at rep t : W.value_type =
   match T.norm t, rep with
@@ -132,7 +134,7 @@ and lower_param_types ctxt at arity : W.value_type list * int32 option =
   if arity <= max_func_arity then
     List.init arity (fun _ -> boxedref), None
   else
-    let argv = emit_type ctxt at W.(type_array (field_mut boxednullref)) in
+    let argv = emit_type ctxt at W.(type_array (field_mut boxedref)) in
     W.[ref_ argv], Some argv
 
 and lower_block_type ctxt at rep t : W.block_type =
@@ -189,9 +191,10 @@ let lower_clos_env ctxt at vars rec_xs
     ) (Vars.bindings vars.mods)
     @
     List.mapi (fun i (x, t) ->
-      let vt = lower_value_type ctxt at local_rep t in
-      if Env.Set.mem x rec_xs
-      then (fixups := (x, t, i + k) :: !fixups; W.field_mut vt)
-      else W.field vt
+      if Env.Set.mem x rec_xs then begin
+        fixups := (x, t, i + k) :: !fixups;
+        W.field_mut (lower_value_type ctxt at local_rep t)
+      end else
+        W.field (lower_value_type ctxt at clos_rep t)
     ) (Vars.bindings vars.vals)
   in flds, !fixups

@@ -454,14 +454,15 @@ Waml types are lowered to Wasm as shown in the following table.
 | Int       | i32               | i31ref          | i32             |
 | Float     | f64               | ref (struct f64)| f64             |
 | Text      | ref (array i8)    | same            | same            |
-| (Float,Text)|ref (struct anyref anyref)| same   | same            |
-| ref T     | ref (struct anyref) | same          | same            |
+| (Float,Text)|ref (struct eqnnref eqnnref)| same   | same            |
+| ref T     | ref (struct eqnnref) | same          | same            |
 | C (nullary) | i31ref          | i31ref          | i31ref          |
 | C (args)  | ref (struct i32 ...) | same         | same            |
-| a         | anyref            | anyref          | anyref          |
+| a         | eqnnref            | eqnnref          | eqnnref          |
 | T1 -> T2  | ref (struct i32 ...) | same         | same            |
 
-Notably, all fields of tuples and the contents of type `ref` have to be represented as `anyref`, in order to be compatible with [polymorphism](#polymorphism).
+Here, `eqnnref` stands for the type `(ref eq)` (non-null `eqref`).
+Notably, all fields of tuples and the contents of ML type `ref` have to be represented as `eqnnref`, in order to be compatible with [polymorphism](#polymorphism).
 
 
 ### Algebraic Data Types
@@ -477,7 +478,7 @@ When a constructor is applied to too few arguments, a [curried closure](#curryin
 
 ### Polymorphism
 
-Polymorphism requires the use of `eqref` as a universal representation for any value of variable type. It use
+Polymorphism requires the use of `anyref` as a universal representation for any value of variable type. In fact, the compiler uses `(ref eq)` (non-null `eqref`, called `eqnnref` in this doc), in order to allow direct comparisons for implementing equality on any type without an additional down cast.
 
 References returned from a generic function call are cast back to their concrete type when that type is known at the call site.
 
@@ -488,7 +489,7 @@ val f z (x, y) = x + y + z
 val p = (3, 4)
 val _ = f 2 p
 ```
-If `p` was not represented as `ref (struct anyref anyref)`, then the call to `f` would produce invalid Wasm.
+If `p` was not represented as `ref (struct eqnnref eqnnref)`, then the call to `f` would produce invalid Wasm.
 
 
 ### Bindings
@@ -500,7 +501,7 @@ Waml bindings are compiled to Wasm as follows.
 | `val`            | mutable `global`| `local`        | immutable field |
 | `module`         | mutable `global`| `local`        | immutable field |
 
-Note that all global declarations have to be compiled into mutable globals, since they could not be initialised otherwise.
+Note that all global declarations have to be compiled into mutable globals, since they could not be initialised otherwise. Also, globals need to be of nullable type.
 
 The compiler can be configured (independently form each other) to either box or unbox values stored in locals, globals, temporaries or for pattern scrutinees (run with `-h` for flags).
 
@@ -520,6 +521,40 @@ Functions are represented as flat closures. In order to support currying, each c
 All fields in a closure are immutable, with the only exception of environment fields for bindings within the same recursive declaration group. This is so that the necessary mutually recursive closures can be constructed, by fixing up the respective slots after all other closures in the group have been allocated.
 
 Code pointers are references to the actual Wasm function. In addition to its regular parameters, its first parameter is a reference to its a closure environment. However, in order to be compatible across call sites, the closure parameter's type does not include the function-specific environment fields. It hence has to be down-cast first inside the function to access the environment fields.
+
+In order to avoid an infinite number of cases for [currying](#currying), there is a maximum arity `M` for which parameters are passed directly. Beyond that treshold, they are wrapped in a variadic array.
+
+Overall, this scheme creates a hierarchy of closure types as follows:
+```
+$anyclos               = (struct (field i32))
+ +- $clos1             = (struct (field i32(1) (ref $code1)))
+ |   +- $clos1/i32     = (struct (field i32(1) (ref $code1) i32))
+ |   +- $clos1/f64-i32 = (struct (field i32(1) (ref $code1) f64 i32))
+ |   ...
+ +- $clos2             = (struct (field i32(2) (ref $code2)))
+ |   ...
+ +- $clos3             = (struct (field i32(3) (ref $code3)))
+ |   ...
+ .
+ .
+ +- $closM             = (struct (field i32(M) (ref $codeM)))
+ |   ...
+ +- $closVar           = (struct (field i32(N>M) (ref $codeVar)))
+     ...
+```
+where
+```
+$code1 = (func (param (ref $clos1) eqnnref) (result eqnnref))
+$code2 = (func (param (ref $clos2) eqnnref eqnnref) (result eqnnref))
+$code3 = (func (param (ref $clos3) eqnnref eqnnref eqnnref) (result eqnnref))
+...
+$codeM = (func (param (ref $clos3) eqnnref eqnnref ... eqnnref) (result eqnnref))
+$codeVar = (func (param (ref $clos3) (ref $argv)) (result eqnnref))
+$argv = (array eqnnref)
+...
+```
+The compiler generate a suitable RTT hierarchy to enable appropriate casts for supporting [currying](#currying).
+For both type definitions and corresponding RTTs it is important that they are structural/canonical, in order for [separate compilation](#compilation-units) to work.
 
 For example, the Waml function `f` in the following example,
 ```
@@ -585,7 +620,7 @@ While certainly interesting, this is fairly standard and largely orthogonal to t
 
 Waml implements a complete ML-style module system, where a module is either a _structure_, encapsulating a set of definitions, or a _functor_, which is a module parameterised over another module. Both kinds of modules can both be nested into structures and passed to or returned from functors. In other words, modules are higher-order.
 
-Each Waml structure is compiled to a corresponding Wasm struct carrying the definition it exports. Because any type aspect of a module signature can be made abstract after the fact (using signature annotations), which provides a module-level form of [polymorphism](#polymorphism), all structure fields representing values also need to use `eqref` as a [universal representation](#polymorphism).
+Each Waml structure is compiled to a corresponding Wasm struct carrying the definition it exports. Because any type aspect of a module signature can be made abstract after the fact (using signature annotations), which provides a module-level form of [polymorphism](#polymorphism), all structure fields representing values also need to use `eqnnref` as a [universal representation](#polymorphism).
 
 Functors are compiled to functions. Since they can be defined in nested scopes, they have to be represented as _closures_, in the same way as [regular functions](#functions-and-closures).
 
