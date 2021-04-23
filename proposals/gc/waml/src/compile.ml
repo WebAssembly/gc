@@ -24,53 +24,6 @@ exception NYI of Source.region * string
 let _nyi at s = raise (NYI (at, s))
 
 
-(* Environment *)
-
-type data_con = {tag : int32; typeidx : int32; arity : int}
-type data = (string * data_con) list
-type env = (loc * func_loc option, data, loc * func_loc option, unit) E.env
-type scope = PreScope | LocalScope | GlobalScope
-
-let make_env () =
-  let env = ref Env.empty in
-  List.iteri (fun i (x, _) ->
-    env := E.extend_val !env Source.(x @@ Prelude.region)
-      (PreLoc (int32 i), None)
-  ) Prelude.vals;
-  env
-
-let scope_rep = function
-  | PreScope -> rigid_rep
-  | LocalScope -> local_rep ()
-  | GlobalScope -> global_rep ()
-
-
-(* Compilation context *)
-
-type ctxt_ext = { envs : (scope * env ref) list }
-type ctxt = ctxt_ext Emit.ctxt
-
-let make_ext_ctxt () : ctxt_ext = { envs = [(PreScope, make_env ())] }
-let make_ctxt () : ctxt = Emit.make_ctxt (make_ext_ctxt ())
-
-let enter_scope ctxt scope : ctxt =
-  {ctxt with ext = {envs = (scope, ref E.empty) :: ctxt.ext.envs}}
-
-let current_scope ctxt : scope * env ref =
-  List.hd ctxt.ext.envs
-
-let rec find_typ_var ctxt y envs : data =
-  match envs with
-  | [] ->
-    Printf.printf "[find_typ_var `%s` @@ %s]\n%!" y.it
-      (Source.string_of_region y.at);
-    assert false
-  | (_, env)::envs' ->
-    match E.find_opt_typ y !env with
-    | None -> find_typ_var ctxt y envs'
-    | Some {it = data; _} -> data
-
-
 (* Debug printing *)
 
 (*
@@ -215,7 +168,7 @@ let compile_coerce ctxt src dst t at =
   | DropRep, _ -> assert false
 
 
-(* Variables and Paths *)
+(* Literals *)
 
 let compile_lit ctxt l at =
   let emit ctxt = List.iter (emit_instr ctxt at) in
@@ -240,6 +193,20 @@ let compile_lit ctxt l at =
       i32_const (int32 (String.length s) @@ at);
       call (Intrinsic.compile_text_new ctxt @@ at);
     ]
+
+
+(* Variables and Paths *)
+
+let rec find_typ_var ctxt y envs : data =
+  match envs with
+  | [] ->
+    Printf.printf "[find_typ_var `%s` @@ %s]\n%!" y.it
+      (Source.string_of_region y.at);
+    assert false
+  | (_, env)::envs' ->
+    match E.find_opt_typ y !env with
+    | None -> find_typ_var ctxt y envs'
+    | Some {it = data; _} -> data
 
 
 let rec find_var f ctxt x envs : loc * func_loc option =

@@ -2,6 +2,7 @@ open Emit
 
 module T = Type
 module W = Emit.W
+module E = Env
 
 
 (* Locations *)
@@ -62,6 +63,56 @@ let max_func_arity = 5
 let clos_arity_idx = 0l
 let clos_code_idx = 1l
 let clos_env_idx = 2l  (* first environment entry *)
+
+
+(* Environment *)
+
+type data_con = {tag : int32; typeidx : int32; arity : int}
+type data = (string * data_con) list
+type env = (loc * func_loc option, data, loc * func_loc option, unit) E.env
+type scope = PreScope | LocalScope | GlobalScope
+
+let make_env () =
+  let env = ref E.empty in
+  List.iteri (fun i (x, _) ->
+    env := E.extend_val !env Source.(x @@ Prelude.region)
+      (PreLoc (Int32.of_int i), None)
+  ) Prelude.vals;
+  env
+
+let scope_rep = function
+  | PreScope -> rigid_rep
+  | LocalScope -> local_rep ()
+  | GlobalScope -> global_rep ()
+
+
+(* Compilation context *)
+
+module ClosKey =
+struct
+  type t = int * W.field_type list
+  let compare = compare
+end
+
+module ClosMap = Map.Make(ClosKey)
+
+type ctxt_ext =
+  { envs : (scope * env ref) list;
+    clostypes : (int32 * int32 * int32) ClosMap.t ref;
+  }
+type ctxt = ctxt_ext Emit.ctxt
+
+let make_ext_ctxt () : ctxt_ext =
+  { envs = [(PreScope, make_env ())];
+    clostypes = ref ClosMap.empty;
+  }
+let make_ctxt () : ctxt = Emit.make_ctxt (make_ext_ctxt ())
+
+let enter_scope ctxt scope : ctxt =
+  {ctxt with ext = {ctxt.ext with envs = (scope, ref E.empty) :: ctxt.ext.envs}}
+
+let current_scope ctxt : scope * env ref =
+  List.hd ctxt.ext.envs
 
 
 (* Lowering types *)
@@ -125,19 +176,29 @@ and lower_anyclos_type ctxt at : int32 =
   emit_type ctxt at W.(type_struct [field i32])
 
 and lower_func_type ctxt at arity : int32 * int32 =
-  let code, def_code = emit_type_deferred ctxt at in
-  let closdt = W.(type_struct [field i32; field (ref_ code)]) in
-  let clos = emit_type ctxt at closdt in
-  let argts, _ = lower_param_types ctxt at arity in
-  let codedt = W.(type_func (ref_ clos :: argts) [boxedref]) in
-  def_code codedt;
-  code, clos
+  match ClosMap.find_opt (arity, []) !(ctxt.ext.clostypes) with
+  | Some (code, clos, _) -> code, clos
+  | None ->
+    let code, def_code = emit_type_deferred ctxt at in
+    let closdt = W.(type_struct [field i32; field (ref_ code)]) in
+    let clos = emit_type ctxt at closdt in
+    let argts, _ = lower_param_types ctxt at arity in
+    let codedt = W.(type_func (ref_ clos :: argts) [boxedref]) in
+    def_code codedt;
+    ctxt.ext.clostypes :=
+      ClosMap.add (arity, []) (code, clos, clos) !(ctxt.ext.clostypes);
+    code, clos
 
 and lower_clos_type ctxt at arity flds : int32 * int32 * int32 =
-  let code, clos = lower_func_type ctxt at arity in
-  let closdt = W.(type_struct (field i32 :: field (ref_ code) :: flds)) in
-  let clos_env = emit_type ctxt at closdt in
-  code, clos, clos_env
+  match ClosMap.find_opt (arity, flds) !(ctxt.ext.clostypes) with
+  | Some (code, clos, clos_env) -> code, clos, clos_env
+  | None ->
+    let code, clos = lower_func_type ctxt at arity in
+    let closdt = W.(type_struct (field i32 :: field (ref_ code) :: flds)) in
+    let clos_env = emit_type ctxt at closdt in
+    ctxt.ext.clostypes :=
+      ClosMap.add (arity, flds) (code, clos, clos_env) !(ctxt.ext.clostypes);
+    code, clos, clos_env
 
 and lower_param_types ctxt at arity : W.value_type list * int32 option =
   if arity <= max_func_arity then
@@ -164,9 +225,9 @@ let rec lower_sig_type ctxt at s : W.value_type * int32 =
 
 and lower_str_type ctxt at str : W.value_type * int32 =
   let mod_ts = List.map (fun (_, s) ->
-    fst (lower_sig_type ctxt at s.Source.it)) (Env.mods str) in
+    fst (lower_sig_type ctxt at s.Source.it)) (E.mods str) in
   let val_ts = List.map (fun (_, pt) ->
-    lower_value_type ctxt at struct_rep (T.as_mono pt.Source.it)) (Env.vals str) in
+    lower_value_type ctxt at struct_rep (T.as_mono pt.Source.it)) (E.vals str) in
   let x = emit_type ctxt at W.(type_struct (List.map field (mod_ts @ val_ts))) in
   W.ref_ x, x
 
@@ -193,14 +254,14 @@ let lower_clos_env ctxt at vars rec_xs
   : W.field_type list * (string * T.typ * int) list =
   let open Syntax in
   let fixups = ref [] in
-  let k = Env.Map.cardinal vars.mods in
+  let k = E.Map.cardinal vars.mods in
   let flds =
     List.mapi (fun i (x, s) ->
       W.field (fst (lower_sig_type ctxt at s))
     ) (Vars.bindings vars.mods)
     @
     List.mapi (fun i (x, t) ->
-      if Env.Set.mem x rec_xs then begin
+      if E.Set.mem x rec_xs then begin
         fixups := (x, t, i + k) :: !fixups;
         W.field_mut (lower_value_type ctxt at (local_rep ()) t)
       end else

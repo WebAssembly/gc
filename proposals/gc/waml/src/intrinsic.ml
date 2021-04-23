@@ -1,6 +1,8 @@
 open Emit
 open Lower
 
+type ctxt = Lower.ctxt
+
 let (@@) = W.Source.(@@)
 let (+%) = Int32.add
 let int32 = W.I32.of_int_s
