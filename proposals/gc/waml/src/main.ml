@@ -12,6 +12,13 @@ let add_arg source = args := !args @ [source]
 
 let quote s = "\"" ^ String.escaped s ^ "\""
 
+let box_all b =
+  Flags.box_locals := b;
+  Flags.box_globals := b;
+  Flags.box_temps := b;
+  Flags.box_scrut := b
+
+let _ = box_all true
 let argspec = Arg.align
 [
   "-", Arg.Set Flags.prompt,
@@ -39,6 +46,8 @@ let argspec = Arg.align
     " box temporaries";
   "-bscrut", Arg.Set Flags.box_scrut,
     " box pattern scrutinees";
+  "-ball", Arg.Unit (fun () -> box_all true),
+    " box all";
   "-ublocals", Arg.Clear Flags.box_locals,
     " unbox locals (default)";
   "-ubglobals", Arg.Clear Flags.box_globals,
@@ -47,6 +56,8 @@ let argspec = Arg.align
     " unbox temporaries (default)";
   "-ubscrut", Arg.Clear Flags.box_scrut,
     " unbox pattern scrutinees (default)";
+  "-uball", Arg.Unit (fun () -> box_all false),
+    " unbox all";
   "-x", Arg.Set Flags.textual,
     " output textual Wasm";
   "-w", Arg.Int (fun n -> Flags.width := n),

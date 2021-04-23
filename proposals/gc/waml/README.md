@@ -256,7 +256,7 @@ sig ::=
   '{' spec;* '}'                             structure
   '(' uid ':' sig ')' -> sig                 functor
   sig -> sig                                 functor (shorthand)
-  sig 'with' 'type' upath '=' typ            refinement
+  sig 'with' 'type' upath lid* '=' typ       type refinement
 ```
 Notes:
 
