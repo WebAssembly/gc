@@ -27,11 +27,11 @@ type rep =
 
 (* Configurable *)
 let boxed_if flag null = if !flag then BoxedRep null else UnboxedRep null
-let local_rep = boxed_if Flags.box_locals Null    (* values stored in locals *)
-let clos_rep = boxed_if Flags.box_locals Nonull   (* values stored in closures *)
-let global_rep = boxed_if Flags.box_globals Null  (* values stored in globals *)
-let tmp_rep = boxed_if Flags.box_temps Null       (* values stored in temps *)
-let pat_rep = boxed_if Flags.box_scrut Nonull     (* values fed into patterns *)
+let local_rep () = boxed_if Flags.box_locals Null    (* values stored in locals *)
+let clos_rep () = boxed_if Flags.box_locals Nonull   (* values stored in closures *)
+let global_rep () = boxed_if Flags.box_globals Null  (* values stored in globals *)
+let tmp_rep () = boxed_if Flags.box_temps Null       (* values stored in temps *)
+let pat_rep () = boxed_if Flags.box_scrut Nonull     (* values fed into patterns *)
 
 (* Non-configurable *)
 let ref_rep = BoxedRep Null         (* expecting a reference *)
@@ -43,10 +43,10 @@ let arg_rep = BoxedRep Nonull       (* argument and result values *)
 let unit_rep = BlockRep Nonull      (* nothing on stack *)
 
 let loc_rep = function
-  | PreLoc _ -> UnboxedRep Nonull
-  | GlobalLoc _ -> global_rep
-  | LocalLoc _ -> local_rep
-  | ClosureLoc _ -> clos_rep
+  | PreLoc _ -> rigid_rep
+  | GlobalLoc _ -> global_rep ()
+  | LocalLoc _ -> local_rep ()
+  | ClosureLoc _ -> clos_rep ()
 
 let as_local_loc = function LocalLoc idx -> idx | _ -> assert false
 let as_global_loc = function GlobalLoc idx -> idx | _ -> assert false
@@ -193,8 +193,8 @@ let lower_clos_env ctxt at vars rec_xs
     List.mapi (fun i (x, t) ->
       if Env.Set.mem x rec_xs then begin
         fixups := (x, t, i + k) :: !fixups;
-        W.field_mut (lower_value_type ctxt at local_rep t)
+        W.field_mut (lower_value_type ctxt at (local_rep ()) t)
       end else
-        W.field (lower_value_type ctxt at clos_rep t)
+        W.field (lower_value_type ctxt at (clos_rep ()) t)
     ) (Vars.bindings vars.vals)
   in flds, !fixups
