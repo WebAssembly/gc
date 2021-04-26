@@ -19,7 +19,7 @@ WASMDIR =		_wasm
 WASMDEPS =	$(WASMFILES:%=$(WASMDIR)/%)
 
 DIRS =		src
-LIBS =		bigarray wasm
+LIBS =		bigarray unix wasm
 INCLS =		$(PWD)/_wasm/_build
 FLAGS = 	-lexflags -ml -cflags '-w +a-4-27-37-42-44-45 -warn-error +a-3'
 OCB =		ocamlbuild -verbose 8 $(FLAGS) $(DIRS:%=-I %) $(LIBS:%=-lib %) -cflags '$(INCLS:%=-I %)' -lflags '$(INCLS:%=-I %)'

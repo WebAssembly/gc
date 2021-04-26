@@ -922,3 +922,4 @@ let check_module (m : module_) =
   ignore (List.fold_left (check_export c) NameSet.empty exports);
   require (List.length c.memories <= 1) m.at
     "multiple memories are not allowed (yet)"
+;Canon.print_sccs (List.map Source.it types)
