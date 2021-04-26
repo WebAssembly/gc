@@ -45,3 +45,17 @@ assert z21 == 3.14
 assert z22 == 2
 assert z31 == 2.71
 assert z32 == 3
+
+
+;; Recursion
+
+data R = R1 | R2 Int R | R3 R R Int R
+
+
+;; Mutual recursion
+
+(; TODO
+rec data A = A1 | A2 B | A3 C B A
+and data B = B1 Int | B2 A A | B3 B C
+and data C = C1 | C2 | C3 A B C | C4 A B C
+;)

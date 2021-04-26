@@ -18,13 +18,12 @@ let box_all b =
   Flags.box_temps := b;
   Flags.box_scrut := b
 
-let _ = box_all true
 let argspec = Arg.align
 [
   "-", Arg.Set Flags.prompt,
     " start interactive prompt (default if no files given)";
   "-r", Arg.Set Flags.interpret,
-    " interpret input (default when interactive)";  (* TODO: for now *)
+    " interpret input";
   "-c", Arg.Set Flags.compile,
     " compile input to Wasm (default when files given)";
   "-d", Arg.Set Flags.dry,
@@ -77,7 +76,6 @@ let () =
   try
     Arg.parse argspec add_arg usage;
     if !args = [] then Flags.prompt := true;
-    if !Flags.prompt then Flags.interpret := true;  (* TODO: for now *)
     if !Flags.compile then Flags.unchecked := false;
     if !Flags.interpret then
     (

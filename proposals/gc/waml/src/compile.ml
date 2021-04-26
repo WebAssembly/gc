@@ -21,7 +21,7 @@ let (+%) = Int32.add
 
 exception NYI of Source.region * string
 
-let _nyi at s = raise (NYI (at, s))
+let nyi at s = raise (NYI (at, s))
 
 
 (* Debug printing *)
@@ -1235,6 +1235,7 @@ and compile_dec_rec ctxt d : E.Set.t * _ list =
       in pass3
     in xs, [pass2]
   | RecD ds -> compile_decs_rec ctxt ds
+  | DatD _ -> nyi d.at "mutually recursive data types"
   | _ -> assert false
 
 and compile_decs_rec ctxt ds : E.Set.t * _ list =
