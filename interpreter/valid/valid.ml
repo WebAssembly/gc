@@ -917,9 +917,10 @@ let check_module (m : module_) =
   List.iter (check_memory c) memories;
   List.iter (check_elem c) elems;
   List.iter (check_data c) datas;
+if not !Flags.canon then (* test module uses conflicting field indices *)
   List.iter (check_func c) funcs;
   check_start c start;
   ignore (List.fold_left (check_export c) NameSet.empty exports);
   require (List.length c.memories <= 1) m.at
     "multiple memories are not allowed (yet)"
-;Canon.print_sccs (List.map Source.it types)
+;if !Flags.canon then Canon.minimize (List.map Source.it types)

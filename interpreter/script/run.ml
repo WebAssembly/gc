@@ -532,7 +532,11 @@ and run_script script =
 and run_quote_script script =
   let save_quote = !quote in
   quote := [];
-  (try run_script script with exn -> quote := save_quote; raise exn);
+  (try run_script script
+  with exn ->
+    quote := save_quote;
+    Printexc.(raise_with_backtrace exn (Printexc.get_raw_backtrace ()))
+  );
   bind scripts None (List.rev !quote);
   quote := !quote @ save_quote
 

@@ -71,14 +71,17 @@ let reset space = space.count <- 0l
 
 let shift category at n i =
   let i' = Int32.add i n in
-   if I32.lt_u i' n then
-     error at ("too many " ^ category ^ " bindings");
-   i'
+  if I32.lt_u i' n then
+    error at ("too many " ^ category ^ " bindings");
+  i'
+
+let peek category space =
+  space.count
 
 let bind category space n at =
-   let i = space.count in
-   space.count <- shift category at n i;
-   i
+  let i = space.count in
+  space.count <- shift category at n i;
+  i
 
 let scoped category n space at =
   {map = VarMap.map (shift category at n) space.map; count = space.count}
@@ -150,8 +153,16 @@ let func_type (c : context) x =
 
 
 let bind_abs category space x =
-  if VarMap.mem x.it space.map then
-    error x.at ("duplicate " ^ category ^ " " ^ x.it);
+ignore peek;
+(*
+  (match VarMap.find_opt x.it space.map with
+  | Some i when i <> peek category space ->
+    error x.at ("duplicate " ^ category ^ " " ^ x.it
+^ " " ^ Int32.to_string i ^ " vs " ^ Int32.to_string (peek category space)
+        );
+  | _ -> ()
+  );
+*)
   let i = bind category space 1l x.at in
   space.map <- VarMap.add x.it i space.map;
   i

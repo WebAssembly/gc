@@ -59,7 +59,7 @@ let zero = Set.singleton 0l
 let shift s = Set.map (Int32.add (-1l)) (Set.remove 0l s)
 
 let (++) = union
-let list free xs = List.fold_left union empty (List.map free xs)
+let list free xs = List.fold_left (fun s x -> union s (free x)) empty xs
 
 let var_type = function
   | SynVar x -> types (idx' x)
