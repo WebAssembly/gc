@@ -7,4 +7,5 @@ let width = ref 80
 let harness = ref true
 
 let canon = ref false
-let rand = ref (-1)
+let canon_incremental = ref false
+let canon_random = ref (-1)

@@ -1,6 +1,30 @@
 module T = Types
 
+
+(*** Auxiliaries **************************************************************)
+
 module IntSet = Set.Make(Int)
+module IntMap = Map.Make(Int)
+
+module Table =  (* A growable array *)
+struct
+  type 'a t = 'a array ref
+  let make n x = ref (Array.make n x)
+  let get t i = (!t).(i)
+  let set t i x = (!t).(i) <- x
+  let grow t n x =
+    let t' = Array.make (Array.length !t + n) x in
+    for i = 0 to Array.length !t - 1 do
+      t'.(i) <- (!t).(i)
+    done;
+    t := t'
+  let really_set t i x =
+    let n = Array.length !t in
+    if i >= n then grow t n x else set t i x
+end
+
+
+(*** Computing SCCs ***********************************************************)
 
 module Scc =
 struct
@@ -74,31 +98,34 @@ struct
 end
 
 
+(*** Type Graph Representation ************************************************)
+
 module Label =
 struct
   type t = string
   type key = t * int array
 
   let dummy = ""
+  let dummy_key = (dummy, [||])
 
   let bool b x = Buffer.add_uint8 b (if x then 1 else 0)
   let rec int b i =
     if 0 <= i && i < 128 then Buffer.add_uint8 b i else
     (Buffer.add_uint8 b (i land 0x7f lor 0x80); int b (i lsr 7))
 
-  type labeling = {label : t; prior_vars : int array; rec_vars : int array}
+  type labeling = {label : t; ext_vars : int array; rec_vars : int array}
   type context =
     { scc : IntSet.t;
       buf : Buffer.t;
-      mutable prior : int list;
+      mutable ext : int list;
       mutable rec_ : int list;
     }
 
   let rec label scc dt : labeling =
-    let c = {scc; buf = Buffer.create 32; prior = []; rec_ = []} in
+    let c = {scc; buf = Buffer.create 32; ext = []; rec_ = []} in
     def_label c dt;
     { label = Buffer.contents c.buf;
-      prior_vars = Array.of_list (List.rev c.prior);
+      ext_vars = Array.of_list (List.rev c.ext);
       rec_vars = Array.of_list (List.rev c.rec_);
     }
 
@@ -161,10 +188,13 @@ struct
     | T.SynVar x' ->
       let x = Int32.to_int x' in
       if IntSet.mem x c.scc
-      then (c.prior <- -1 :: c.prior; c.rec_ <- x :: c.rec_)
-      else (c.prior <- x :: c.prior; c.rec_ <- -1 :: c.rec_)
+      then (c.ext <- -1 :: c.ext; c.rec_ <- x :: c.rec_)
+      else c.ext <- x :: c.ext
     | T.SemVar _ -> assert false
 
+  let is_struct label = label.[0] = '\x01'
+  let is_array label = label.[0] = '\x02'
+  let is_func label = label.[0] = '\x03'
 (*
   type def_label =
     | StructLabel of field_label array
@@ -186,7 +216,7 @@ struct
 
   and var_label =
     | RecVarLabel
-    | PriorVarLabel of int32
+    | ExtVarLabel of int32
 
   type t = def_label
 
@@ -225,7 +255,7 @@ struct
   and var_label r xs = function
     | T.SynVar x' ->
       let x = Int32.to_int x' in
-      if IntSet.mem x r then (xs := x :: !xs; RecVarLabel) else PriorVarLabel x'
+      if IntSet.mem x r then (xs := x :: !xs; RecVarLabel) else ExtVarLabel x'
     | T.SemVar _ -> assert false
 *)
 end
@@ -233,56 +263,43 @@ end
 
 module Vert =
 struct
-  type vert_idx = int
-  type edge_idx = int
-  type edge =
-    { from : vert_idx;
-      pos : int;
-      to_ : vert_idx;
-      mutable idx : edge_idx;
-    }
+  type idx = int
   type t =
-    { typeidx : int;
-      vertidx : vert_idx;
+    { id : int;
       label : Label.t;
-      priors : vert_idx array;
-      succs : vert_idx array;
-      mutable inedges : edge list;
+      succs : int array;  (* id of successor, or -1 when within own SCC *)
+      inner : idx array;  (* index within own SCC for each succ id of -1 *)
     }
 
   let dummy =
-    { typeidx = -1;
-      vertidx = -1;
+    { id = -1;
       label = Label.dummy;
-      priors = [||];
       succs = [||];
-      inedges = [];
+      inner = [||];
     }
 
-  let compare_edge_pos {pos = pos1; _} {pos = pos2; _} = compare pos1 pos2
-
-  let label scc x v dt : t =
+  let make scc x dt : t =
     let open Label in
-    let c = {scc; buf = Buffer.create 32; prior = []; rec_ = []} in
+    let c = {scc; buf = Buffer.create 32; ext = []; rec_ = []} in
     Label.def_label c dt;
-    { typeidx = x;
-      vertidx = v;
+    { id = x;
       label = Buffer.contents c.buf;
-      priors = Array.of_list (List.rev c.prior);
-      succs = Array.of_list (List.rev c.rec_);
-      inedges = [];
+      succs = Array.of_list (List.rev c.ext);
+      inner = Array.of_list (List.rev c.rec_);
     }
 end
 
 
+(*** Minimization *************************************************************)
+
+(* Implementation based on:
+ *  Antti Valmari, Petri Lehtinen
+ *  "Efficient minimization of DFAs with partial transition functions"
+ *  Symposium on Theoretical Aspects of Computer Science (STACS), 2008
+ *)
+
 module Minimize =
 struct
-  (* Implementation based on:
-   *  Antti Valmari, Petri Lehtinen.
-   *  "Efficient minimization of DFAs with partial transition functions".
-   *  STACS 2008
-   *)
-
   module Part =
   struct
     type elem =
@@ -385,35 +402,40 @@ struct
       done
   end
 
+  type edge_idx = int
+  type edge =
+    { from : Vert.idx;
+      pos : int;
+      to_ : Vert.idx;
+      mutable idx : edge_idx;
+    }
+
+  let dummy_edge = {from = -1; pos = -1; to_ = -1; idx = -1}
+  let compare_edge_pos {pos = pos1; _} {pos = pos2; _} = compare pos1 pos2
+
   let minimize (verts : Vert.t array) =
     let num_verts = Array.length verts in
 
     (* Initialise edge map *)
+    let inedges = Array.make num_verts [] in
     let num_edges = ref 0 in
     let max_arity = ref (-1) in
     for v = 0 to num_verts - 1 do
-      let open Vert in
-      let vx = verts.(v) in
-      let pos = ref 0 in
-      for i = 0 to Array.length vx.succs - 1 do
-        let w = vx.succs.(i) in
-        if w <> -1 then begin
-          let wx = verts.(w) in
-          wx.inedges <- {from = v; pos = !pos; to_ = w; idx = -1} :: wx.inedges;
-          incr pos
-        end
+      let inner = verts.(v).Vert.inner in
+      let arity = Array.length inner in
+      for i = 0 to arity - 1 do
+        let w = inner.(i) in
+        inedges.(w) <- {from = v; pos = i; to_ = w; idx = -1} :: inedges.(w)
       done;
-      num_edges := !num_edges + !pos;
-      max_arity := max !max_arity !pos;
+      num_edges := !num_edges + arity;
+      max_arity := max !max_arity arity;
     done;
     let e = ref 0 in
-    let edges = Array.make !num_edges
-      Vert.{from = -1; pos = -1; to_ = -1; idx = -1} in
+    let edges = Array.make !num_edges dummy_edge in
     for v = 0 to num_verts - 1 do
-      let open Vert in
       List.iter (fun edge ->
         edges.(!e) <- edge; edge.idx <- !e; incr e
-      ) verts.(v).inedges
+      ) inedges.(v)
     done;
 (*
 Printf.printf "[edges:";
@@ -428,8 +450,8 @@ Printf.printf "]\n%!";
     (* Initialise blocks: partition by vertex label *)
     let labelmap = Hashtbl.create num_verts in
     for v = 0 to num_verts - 1 do
-      let vx = verts.(v) in
-      let key = (vx.Vert.label, vx.Vert.priors) in
+      let vert = verts.(v) in
+      let key = (vert.Vert.label, vert.Vert.succs) in
       let vs =
         match Hashtbl.find_opt labelmap key with
         | None -> []
@@ -464,12 +486,12 @@ Printf.printf "]\n%!";
     (* Initialise splitters: partition by edge position and label *)
     let posmap = Array.make (!max_arity + 1) [] in
     for e = 0 to !num_edges - 1 do
-      let pos = edges.(e).Vert.pos in
+      let pos = edges.(e).pos in
       posmap.(pos) <- e :: posmap.(pos);
     done;
     let s = ref (-1) in
     let l = ref 0 in
-    let edge_block e = blocks.Part.el.(edges.(e).Vert.to_).Part.set in
+    let edge_block e = blocks.Part.el.(edges.(e).to_).Part.set in
     Array.iter (fun es ->
       if es = [] then () else
       let open Part in
@@ -528,7 +550,7 @@ Printf.printf "]\n%!";
       let sp = unready_splitters.(!unready_splitters_top) in
       let e = ref (Part.set_first splitters sp) in
       while !e <> -1 do
-        let v = edges.(!e).Vert.from in
+        let v = edges.(!e).from in
         let b = Part.elem_set blocks v in
         if Part.set_has_no_marks blocks b then begin
           touched_blocks.(!touched_blocks_top) <- b;
@@ -546,15 +568,14 @@ Printf.printf "]\n%!";
             if Part.set_size blocks b < Part.set_size blocks b' then b else b' in
           let v = ref (Part.set_first blocks b'') in
           while !v <> -1 do
-            let vx = verts.(!v) in
             List.iter (fun edge ->
-              let sp = Part.elem_set splitters edge.Vert.idx in
+              let sp = Part.elem_set splitters edge.idx in
               if Part.set_has_no_marks splitters sp then begin
                 touched_splitters.(!touched_splitters_top) <- sp;
                 incr touched_splitters_top
               end;
-              Part.elem_mark splitters edge.Vert.idx;
-            ) vx.Vert.inedges;
+              Part.elem_mark splitters edge.idx;
+            ) inedges.(!v);
             v := Part.elem_next blocks !v;
           done;
           while !touched_splitters_top <> 0 do
@@ -578,56 +599,88 @@ Printf.printf "]\n%!";
 end
 
 
+(*** Type Repository **********************************************************)
+
+(* Implementation based on:
+ *  Laurent Mauborgne
+ *  "An Incremental Unique Representation for Regular Trees"
+ *  Nordic Journal of Computing, 7(2008)
+ *)
+
 module Repo =
 struct
   type id = int
-  type key = {label : Label.t; priors : id array; succs : Vert.vert_idx array}
+  type comp_id = int
+  type plain_key = {label : Label.t; succs : Vert.idx array}
+  type partial_key =
+    | NodeKey of {plain_key : plain_key; inner : partial_key array}
+    | PathKey of int list
+
+  type comp = Vert.t array
   type rep =
-    { id : id;
-      key : key;
-      vert : Vert.t;
+    { comp : comp_id;  (* type's SCC id *)
+      idx : Vert.idx;  (* type's index into its SCC, -1 if not recursive *)
     }
 
-  let key_table : (key, rep) Hashtbl.t = Hashtbl.create 1001
-  let id_table : (id, rep) Hashtbl.t = Hashtbl.create 1001
+  let dummy_rep = {comp = -1; idx = -1}
+
+  let id_count = ref 0
+  let comp_count = ref 0
+  let id_table : rep Table.t = Table.make 33 dummy_rep
+  let comp_table : comp Table.t = Table.make 11 [||]
+  let plain_table : (plain_key, id) Hashtbl.t = Hashtbl.create 33
+  let rec_table : (partial_key, id) Hashtbl.t = Hashtbl.create 11
 
   module PairSet =
-    Set.Make(struct type t = Vert.vert_idx * id let compare = compare end)
+    Set.Make(struct type t = Vert.idx * id let compare = compare end)
 
+(*
   let rec equal ass verts v id =
     let p = (v, id) in
     PairSet.mem p !ass ||
     let vert = verts.(v) in
-    let rep = Hashtbl.find id_table id in
+    let rep = Table.get id_table id in
     vert.Vert.label = rep.key.label &&
     equal_succ (ass := PairSet.add p !ass; ass) verts vert rep.key 0
 
   and equal_succ ass verts vert key i =
     i = Array.length verts &&
-    let v' = vert.Vert.priors.(i) in
-    v' <> -1 && v' = key.priors.(i) ||
+    let v' = vert.Vert.succs.(i) in
+    v' <> -1 && v' = key.succs.(i) ||
     let id' = key.succs.(i) in
     id' <> -1 && equal ass verts v' id' && equal_succ ass verts vert key (i + 1)
+*)
+
+  let rec partial_key verts vert = partial_key' verts IntMap.empty [] vert
+
+  and partial_key' verts map p vert =
+    match IntMap.find_opt vert.Vert.id map with
+    | Some k -> k
+    | None ->
+      let map' = IntMap.add vert.Vert.id (PathKey p) map in
+      let inner = Array.mapi (fun i v ->
+        partial_key' verts map' (i::p) verts.(v)) vert.Vert.inner in
+      let plain_key = {label = vert.Vert.label; succs = vert.Vert.succs} in
+      NodeKey {plain_key; inner}
 
 
   let verts_of_scc dta dtamap scc sccmap : Vert.t array =
     let open Vert in
-    let size = IntSet.cardinal scc in
-    let verts = Array.make size Vert.dummy in
+    let num_verts = IntSet.cardinal scc in
+    let verts = Array.make num_verts Vert.dummy in
     let v = ref 0 in
     IntSet.iter (fun x ->
       sccmap.(x) <- !v;
-      verts.(!v) <- Vert.label scc x !v dta.(x); incr v
+      verts.(!v) <- Vert.make scc (-x) dta.(x); incr v
     ) scc;
-    for v = 0 to size - 1 do
+    for v = 0 to num_verts - 1 do
       let vert = verts.(v) in
-      for i = 0 to Array.length vert.priors - 1 do
-        let x = vert.priors.(i) in
-        if x <> - 1 then vert.priors.(i) <- dtamap.(x)
-      done;
       for i = 0 to Array.length vert.succs - 1 do
         let x = vert.succs.(i) in
-        if x <> -1 then vert.succs.(i) <- sccmap.(x)
+        if x <> - 1 then vert.succs.(i) <- dtamap.(x)
+      done;
+      for i = 0 to Array.length vert.inner - 1 do
+        vert.inner.(i) <- sccmap.(vert.inner.(i))
       done
     done;
     verts
@@ -637,75 +690,235 @@ struct
    * dtamap : id array, mapping (known) typeidx's to id's
    * scc : IntSet.t, current SCC to add
    * sccmap : vertidx array, mapping recursive vars to index in their SCC
+   * result : id IntMap.t, mapping SCC typeidx's to repo id's
    *)
-  let add_scc dta dtamap scc sccmap =
-    let size = IntSet.cardinal scc in
+  let rec add_scc dta dtamap scc sccmap : id IntMap.t =
     let verts = verts_of_scc dta dtamap scc sccmap in
-    size, verts
 
-(*
-  type def_key =
-    | StructKey of field_key array
-    | ArrayKey of field_key
-    | FuncKey of value_key array * value_key array
+    (* If SCC is non-recursive, look it up in plain table *)
+    if Array.length verts = 1 && verts.(0).Vert.inner = [||] then begin
+      let vert = verts.(0) in
+      let key = {label = vert.Vert.label; succs = vert.Vert.succs} in
+      let id =
+        match Hashtbl.find_opt plain_table key with
+        | Some id -> id
+        | None ->
+          let id = !id_count in
+          Table.really_set comp_table !comp_count verts;
+          Table.really_set id_table id {comp = !comp_count; idx = -1};
+          Hashtbl.add plain_table key id;
+          incr id_count;
+          incr comp_count;
+          id
+      in
+      assert (id >= 0);
+      IntMap.singleton (IntSet.choose scc) id
+    end else
+      add_recursive verts
 
-  and field_key =
-    | ValueFieldKey of value_key * T.mutability
-    | PackedFieldKey of T.pack_size
+  and add_recursive verts =
+    (* Compute set of adjacent recursive components *)
+    let open Vert in
+    let own_size = Array.length verts in
+    let adj_comps = ref IntMap.empty in
+    let adj_verts = ref IntMap.empty in
+    let num_comps = ref 0 in
+    let num_verts = ref own_size in
+    (* For all nodes in SCC... *)
+    for v = 0 to own_size - 1 do
+      let succs = verts.(v).succs in
+      (* For all their external successors... *)
+      for i = 0 to Array.length succs - 1 do
+        let id = succs.(i) in
+        if id <> -1 then begin
+          let rep = Table.get id_table id in
+          (* If they are themselves recursive... *)
+          if rep.idx <> -1 && not (IntMap.mem rep.comp !adj_comps) then begin
+            adj_comps := IntMap.add rep.comp !num_comps !adj_comps;
+            incr num_comps;
+            (* Add all their vertices to the current graph *)
+            let comp_verts = Table.get comp_table rep.comp in
+            for j = 0 to Array.length comp_verts - 1 do
+              assert (comp_verts.(j).id >= 0);
+              adj_verts := IntMap.add comp_verts.(j).id !num_verts !adj_verts;
+              incr num_verts
+            done
+          end
+        end
+      done
+    done;
+    let adj_comps_inv = Array.make !num_comps (-1) in
+    let adj_verts_inv = Array.make !num_verts (-1) in
+    IntMap.iter (fun comp i -> adj_comps_inv.(i) <- comp) !adj_comps;
+    IntMap.iter (fun v i -> adj_verts_inv.(i) <- v) !adj_verts;
 
-  and value_key =
-    | NumKey of T.num_type
-    | RefKey of T.nullability * heap_key
+    (* Construct graph for SCC + adjacent components *)
+    let combined_verts = Array.make !num_verts Vert.dummy in
+    for v = 0 to own_size - 1 do
+      combined_verts.(v) <- verts.(v)
+    done;
+    let v = ref own_size in
+    for comp = 0 to !num_comps - 1 do
+      let verts = Table.get comp_table (adj_comps_inv.(comp)) in
+      for v' = 0 to Array.length verts - 1 do
+        combined_verts.(!v) <- verts.(v'); incr v
+      done
+    done;
+    assert (!v = !num_verts);
+    (* Remap internal successors as inner edges *)
+    for v = 0 to !num_verts - 1 do
+      let vert = combined_verts.(v) in
+      let new_inner = ref [] in
+      let i = ref 0 in  (* index into old vert.inner *)
+      let succs = Array.map (fun id ->
+        if id = -1 then begin
+          assert (v < own_size);
+          new_inner := vert.inner.(!i) :: !new_inner; incr i; -1
+        end else
+          match IntMap.find_opt id !adj_verts with
+          | None -> id
+          | Some w -> new_inner := w :: !new_inner; -1
+      ) vert.succs in
+      assert (!i = Array.length vert.inner);
+      let inner = Array.of_list (List.rev !new_inner) in
+      combined_verts.(v) <- {vert with succs; inner}
+    done;
 
-  and heap_key =
-    | DefHeapKey of var_key
-    | RttHeapKey of var_key * int32 option
-    | OtherHeapKey of T.heap_type
+    (* Minimize *)
+    let blocks, _ = Minimize.minimize combined_verts in
 
-  and var_key =
-    | ExtVarKey of int32
-    | RecVarKey of int list
-*)
+    let idmap = ref IntMap.empty in
+    let prior_size = !num_verts - own_size in
+    if blocks.Minimize.Part.num = prior_size then begin
+      (* No new vertices => SCC already exists in repo *)
+      let open Minimize.Part in
+      for bl = 0 to blocks.num - 1 do
+        (* Find representative from repo (must be exactly 1) *)
+        let i = ref blocks.st.(bl).first in
+        let r = ref (-1) in
+        while !r = -1 do
+          assert (!i < blocks.st.(bl).first);
+          let v = blocks.elems.(!i) in
+          if v >= own_size then r := v else incr i
+        done;
+        let id = adj_verts_inv.(!r) in
+        (* Add all vertices originating from new SCC to id map *)
+        for i = blocks.st.(bl).first to blocks.st.(bl).last - 1 do
+          let v = blocks.elems.(i) in
+          assert (v < own_size || v = !r);
+          if v < own_size then idmap := IntMap.add (-verts.(v).id) id !idmap
+        done
+      done
+    end else begin
+      (* New unique vertices => SCC is either new or exists elsewhere in repo *)
+      let open Minimize.Part in
+      (* Extract minimized SCC *)
+      let min_size = blocks.num - prior_size in
+      let min_verts = Array.make min_size Vert.dummy in
+      let v = ref 0 in
+      for bl = 0 to blocks.num - 1 do
+        let v' = blocks.elems.(blocks.st.(bl).first) in
+        (* If node is from new SCC *)
+        if v' < own_size then begin
+          (* Use first vertex in block as representative in new SCC *)
+          let vert = verts.(v') in
+          for i = blocks.st.(bl).first to blocks.st.(bl).last - 1 do
+            assert (blocks.elems.(i) < own_size);
+            adj_verts_inv.(blocks.elems.(i)) <- !v
+          done;
+          min_verts.(!v) <- vert;
+          incr v
+        end else
+          assert (set_size blocks bl = 1)
+      done;
+      assert (Array.for_all ((<>) (-1)) adj_verts_inv);
+      (* Remap inner edges *)
+      for v = 0 to min_size - 1 do
+        let vert = min_verts.(v) in
+        if vert.inner <> [||] then begin
+          let new_inner = ref [] in
+          let i = ref 0 in  (* indexes into old vert.inner *)
+          for j = 0 to Array.length vert.succs - 1 do
+            let w = vert.succs.(j) in
+            if w = -1 then begin
+              let w = vert.inner.(!i) in
+              incr i;
+              let w' = adj_verts_inv.(w) in
+              if w < own_size then
+                new_inner := w' :: !new_inner
+              else
+                vert.succs.(j) <- w'
+            end
+          done;
+          assert (!i = Array.length vert.inner);
+          let inner = Array.of_list (List.rev !new_inner) in
+          min_verts.(v) <- {vert with inner}
+        end
+      done;
+
+      (* Try to find SCC elsewhere in repo *)
+      let vert0 = min_verts.(0) in
+      let k0 = partial_key min_verts vert0 in
+      match Hashtbl.find_opt rec_table k0 with
+      | Some id0 ->
+        (* Equivalent SCC exists, parallel-traverse to find id map *)
+        let rec add_comp vert id = function
+          | PathKey _ -> ()
+          | NodeKey {plain_key = {label; succs}; inner} ->
+            idmap := IntMap.add (-vert.id) id !idmap;
+            let rep = Table.get id_table id in
+            let repo_vert = (Table.get comp_table rep.comp).(rep.idx) in
+            assert (label = repo_vert.Vert.label);
+            assert (label = vert.Vert.label);
+            assert (succs = vert.Vert.succs);
+            assert (Array.length succs = Array.length repo_vert.Vert.succs);
+            assert (Array.length inner = Array.length repo_vert.Vert.inner);
+            assert (Array.length inner = Array.length vert.Vert.inner);
+            let i = ref 0 in
+            for j = 0 to Array.length succs - 1 do
+              if succs.(j) = -1 then begin
+                let p = inner.(!i) in
+                let v' = vert.Vert.inner.(!i) in
+                let id = repo_vert.Vert.succs.(j) in
+                incr i;
+                add_comp min_verts.(v') id p
+              end
+            done
+        in add_comp vert0 id0 k0
+
+      | None ->
+        (* This is a new component, enter into tables *)
+        Table.really_set comp_table !comp_count min_verts;
+        for v = 0 to min_size - 1 do
+          let vert = min_verts.(v) in
+          let rep = {comp = !comp_count; idx = v} in
+          let id = !id_count + v in
+          let k = if v = 0 then k0 else partial_key min_verts min_verts.(v) in
+          Table.really_set id_table id rep;
+          Hashtbl.add rec_table k id;
+          idmap := IntMap.add (-vert.id) id !idmap;
+          (* Remap remaining inner edges to new nodes *)
+          if vert.inner <> [||] then begin
+            let i = ref 0 in  (* indexes into old vert.inner *)
+            for j = 0 to Array.length vert.succs - 1 do
+              let w = vert.succs.(j) in
+              if w = -1 then begin
+                vert.succs.(j) <- vert.inner.(!i) + !id_count;
+                incr i
+              end
+            done;
+            assert (!i = Array.length vert.inner);
+            min_verts.(v) <- {vert with inner = [||]}
+          end
+        done;
+        incr comp_count;
+        id_count := !id_count + min_size
+    end;
+    !idmap
 end
 
 
-module DumbTypeHash =  (* just for assertions *)
-struct
-  type t = T.def_type
-
-  let context : Match.context ref = ref []
-
-  let equal dt1 dt2 = Match.eq_def_type !context [] dt1 dt2
-
-  let rec hash_list hash = function
-    | [] -> 0
-    | x::xs -> hash x lxor (hash_list hash xs lsl 1)
-
-  let rec hash = function
-    | T.StructDefType (T.StructType fts) -> 1 + hash_list hash_field fts
-    | T.ArrayDefType (T.ArrayType ft) -> 2 + hash_field ft
-    | T.FuncDefType (T.FuncType (ts1, ts2)) ->
-      3 + hash_list hash_val ts1 lxor hash_list hash_val ts2
-
-  and hash_field (T.FieldType (st, _)) = hash_storage st
-
-  and hash_storage = function
-    | T.ValueStorageType t -> hash_val t
-    | T.PackedStorageType sz -> T.packed_size sz
-
-  and hash_val = function
-    | T.NumType t -> Hashtbl.hash t
-    | T.RefType (_, ht) -> hash_heap ht
-    | T.BotType -> assert false
-
-  and hash_heap = function
-    | T.DefHeapType _ -> 37
-    | T.RttHeapType _ -> 62
-    | ht -> Hashtbl.hash ht
-end
-
-module DumbTypeTbl = Hashtbl.Make(DumbTypeHash)
-
+(*** Testing Stuff ************************************************************)
 
 module Fuzz =
 struct
@@ -761,43 +974,117 @@ struct
 end
 
 
+module DumbTypeHash =  (* just for assertions *)
+struct
+  type t = T.def_type
+
+  let context : Match.context ref = ref []
+
+  let equal dt1 dt2 = Match.eq_def_type !context [] dt1 dt2
+
+  let rec hash_list hash = function
+    | [] -> 0
+    | x::xs -> hash x lxor (hash_list hash xs lsl 1)
+
+  let rec hash = function
+    | T.StructDefType (T.StructType fts) -> 1 + hash_list hash_field fts
+    | T.ArrayDefType (T.ArrayType ft) -> 2 + hash_field ft
+    | T.FuncDefType (T.FuncType (ts1, ts2)) ->
+      3 + hash_list hash_val ts1 lxor hash_list hash_val ts2
+
+  and hash_field (T.FieldType (st, _)) = hash_storage st
+
+  and hash_storage = function
+    | T.ValueStorageType t -> hash_val t
+    | T.PackedStorageType sz -> T.packed_size sz
+
+  and hash_val = function
+    | T.NumType t -> Hashtbl.hash t
+    | T.RefType (_, ht) -> hash_heap ht
+    | T.BotType -> assert false
+
+  and hash_heap = function
+    | T.DefHeapType _ -> 37
+    | T.RttHeapType _ -> 62
+    | ht -> Hashtbl.hash ht
+end
+
+module DumbTypeTbl = Hashtbl.Make(DumbTypeHash)
+
+
 let minimize dts =
   let dta = Array.of_list dts in
 
-let dta, dts =
-if !Flags.rand >= 0 then
-let dta = Fuzz.fuzz !Flags.rand in
-let dts = Array.to_list dta in
-dta, dts
-else dta, dts
-in
+  (* Hack for fuzzing *)
+  let dta, dts =
+    if !Flags.canon_random >= 0 then
+      let dta = Fuzz.fuzz !Flags.canon_random in
+      let dts = Array.to_list dta in
+      dta, dts
+    else dta, dts
+  in
 
-(* Double-check statistics *)
-Printf.printf "%d types%!" (List.length dts);
-Printf.printf " .%!";
-let module_ = Ast.{empty_module with types = List.rev (List.fold_left (fun tys dt -> Source.(dt @@ no_region) :: tys) [] dts)} in
-Printf.printf " .%!";
-let wasm = Encode.encode Source.(module_ @@ no_region) in
-Printf.printf " .%!";
-Printf.printf " (module with %s bytes)%!" I64.(to_string_u (of_int_u (String.length wasm)));
-(*
-DumbTypeHash.context := dts;
-let th = DumbTypeTbl.create 1001 in
-List.iter (fun dt -> DumbTypeTbl.replace th dt ()) dts;
-Printf.printf ", %d different" (DumbTypeTbl.length th);
-*)
-Printf.printf "\n%!";
+  (* Upfront statistics *)
+  Printf.printf "%d types%!" (Array.length dta);
+  if !Flags.canon_random >= 0 then begin
+    Printf.printf " generated .%!";
+    let types = List.rev (   (* carefully avoid List.map to be tail-recursive *)
+      List.fold_left (fun tys dt -> Source.(dt @@ no_region) :: tys) [] dts) in
+    Printf.printf " .%!";
+    let wasm = Encode.encode Source.(Ast.{empty_module with types} @@ no_region) in
+    let size = I64.(to_string_u (of_int_u (String.length wasm))) in
+    Printf.printf " .%!";
+    Printf.printf " (module with %s bytes)%!" size
+  end;
+  if Array.length dta < 7001 then begin (* superslow, so only for small modules *)
+    DumbTypeHash.context := dts;
+    let th = DumbTypeTbl.create 1001 in
+    List.iter (fun dt -> DumbTypeTbl.replace th dt ()) dts;
+    Printf.printf ", %d different" (DumbTypeTbl.length th);
+    let funs = DumbTypeTbl.fold (fun dt _ n -> match dt with T.FuncDefType _ -> n + 1 | _ -> n) th 0 in
+    let strs = DumbTypeTbl.fold (fun dt _ n -> match dt with T.StructDefType _ -> n + 1 | _ -> n) th 0 in
+    let arrs = DumbTypeTbl.fold (fun dt _ n -> match dt with T.ArrayDefType _ -> n + 1 | _ -> n) th 0 in
+    Printf.printf " (%d funcs, %d structs, %d arrays)" funs strs arrs;
+  end;
+  Printf.printf "\n%!";
 
+  (* Prepare measurements *)
   Gc.compact ();
   let gc_start = Gc.quick_stat () in
   let time_start = Unix.times () in
-  let sccs0 = Scc.deftypes dta in
-let sccs = if true then sccs0 else [IntSet.of_list (List.init (Array.length dta) Fun.id)] in
+
+  (* Main action *)
+  let sccs = Scc.deftypes dta in
   let dtamap = Array.init (Array.length dta) Fun.id in
   let sccmap = Array.make (Array.length dta) (-1) in
-  let parts = List.fold_left (fun parts scc ->
-    Minimize.minimize (Repo.verts_of_scc dta dtamap scc sccmap) :: parts
-  ) [] sccs in
+  let idmap =
+    if !Flags.canon_incremental then begin
+      List.fold_left (fun idmap scc ->
+        let idmap' = Repo.add_scc dta dtamap scc sccmap in
+        IntMap.union (fun _ _ x -> Some x) idmap idmap'
+      ) IntMap.empty sccs
+    end else begin
+      let sccs' = [List.fold_left IntSet.union IntSet.empty sccs] in
+      let parts = List.fold_left (fun parts scc ->
+        let verts = Repo.verts_of_scc dta dtamap scc sccmap in
+        (verts, Minimize.minimize verts) :: parts
+      ) [] sccs' in
+      let verts, (blocks, _) = List.hd parts in
+      (* Hack fake repo for diagnostics below *)
+      let open Minimize.Part in
+      let open Repo in
+      Table.really_set comp_table 0 verts;
+      let idmap = ref IntMap.empty in
+      for id = 0 to Array.length verts - 1 do
+        Table.really_set id_table id {comp = 0; idx = id};
+        let r = blocks.elems.(blocks.st.(blocks.el.(id).set).first) in
+        idmap := IntMap.add id r !idmap
+      done;
+      !idmap
+    end
+  in
+
+  (* Output measurements *)
   let time_end = Unix.times () in
   let gc_end = Gc.quick_stat () in
   Printf.printf "Time: user %.2f ms, system %.2f ms; GC: major %d, minor %d, compactions %d\n"
@@ -807,18 +1094,31 @@ let sccs = if true then sccs0 else [IntSet.of_list (List.init (Array.length dta)
     (gc_end.Gc.minor_collections - gc_start.Gc.minor_collections)
     (gc_end.Gc.compactions - gc_start.Gc.compactions);
 
-let max1 = List.fold_left (fun n scc -> max n (IntSet.cardinal scc)) 0 sccs0 in
-let m = List.fold_left (fun m (blocks, _) -> m + blocks.Minimize.Part.num) 0 parts in
-  Printf.printf "%d types (%d recursion groups, largest %d), minimized %d types\n" (Array.length dta) (List.length sccs0) max1 m;
-ignore parts
-(*
-  List.iter2 (fun xs (blocks, splitters) ->
-    Printf.printf "  ";
-    IntSet.iter (Printf.printf "%d ") xs;
-    Printf.printf " (blocks: ";
-    Part.print blocks;
-    Printf.printf ", splitters: ";
-    Part.print splitters;
-    Printf.printf ")\n";
-  ) sccs parts
-*)
+  let funs = List.fold_left (fun n -> function T.FuncDefType _ -> n + 1 | _ -> n) 0 dts in
+  let strs = List.fold_left (fun n -> function T.StructDefType _ -> n + 1 | _ -> n) 0 dts in
+  let arrs = List.fold_left (fun n -> function T.ArrayDefType _ -> n + 1 | _ -> n) 0 dts in
+  let maxr = List.fold_left (fun n scc -> max n (IntSet.cardinal scc)) 0 sccs in
+  Printf.printf "%d types (%d funcs, %d structs, %d arrays, %d recursion groups, largest %d)\n"
+    (Array.length dta) funs strs arrs (List.length sccs) maxr;
+
+  (* Construct minimized types *)
+  let set = ref IntSet.empty in
+  let total = ref 0 in
+  let mfuns = ref 0 in
+  let mstrs = ref 0 in
+  let marrs = ref 0 in
+  IntMap.iter (fun _ id ->
+    if IntSet.mem id !set then () else
+    let rep = Table.get Repo.id_table id in
+    let comp = Table.get Repo.comp_table rep.Repo.comp in
+    let vert = comp.(max 0 rep.Repo.idx) in
+    set := IntSet.add id !set;
+    incr total;
+    if Label.is_func vert.Vert.label then incr mfuns
+    else if Label.is_struct vert.Vert.label then incr mstrs
+    else if Label.is_array vert.Vert.label then incr marrs
+    else assert false
+  ) idmap;
+  Printf.printf "%s minimized to %d types (%d funcs, %d structs, %d arrays)\n%!"
+    (if !Flags.canon_incremental then "incrementally" else "globally")
+    !total !mfuns !mstrs !marrs

@@ -32,7 +32,9 @@ let argspec = Arg.align
   "-d", Arg.Set Flags.dry, " dry, do not run program";
   "-t", Arg.Set Flags.trace, " trace execution";
   "-c", Arg.Set Flags.canon, " canonicalize types";
-  "-cr", Arg.Int (fun n -> Flags.rand := n), " canonicalize randomized types";
+  "-ci", Arg.Set Flags.canon_incremental, " canonicalize incrementally";
+  "-cr", Arg.Int (fun n -> Flags.canon_random := n),
+    " canonicalize randomized types";
   "-v", Arg.Unit banner, " show version"
 ]
 
@@ -42,7 +44,10 @@ let () =
     configure ();
     Arg.parse argspec
       (fun file -> add_arg ("(input " ^ quote file ^ ")")) usage;
-if !Flags.rand >= 0 then (Canon.minimize []; exit 0);
+
+    if !Flags.canon_incremental then Flags.canon := true;
+    if !Flags.canon_random >= 0 then (Canon.minimize []; exit 0);
+
     List.iter (fun arg -> if not (Run.run_string arg) then exit 1) !args;
     if !args = [] then Flags.interactive := true;
     if !Flags.interactive then begin
