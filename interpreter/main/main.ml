@@ -35,6 +35,7 @@ let argspec = Arg.align
   "-ci", Arg.Set Flags.canon_incremental, " canonicalize incrementally";
   "-cr", Arg.Int (fun n -> Flags.canon_random := n),
     " canonicalize randomized types";
+  "-cv", Arg.Set Flags.canon_verify, " canonicalize types with verification";
   "-v", Arg.Unit banner, " show version"
 ]
 
@@ -45,7 +46,7 @@ let () =
     Arg.parse argspec
       (fun file -> add_arg ("(input " ^ quote file ^ ")")) usage;
 
-    if !Flags.canon_incremental then Flags.canon := true;
+    if !Flags.canon_incremental || !Flags.canon_verify then Flags.canon := true;
     if !Flags.canon_random >= 0 then (Canon.minimize []; exit 0);
 
     List.iter (fun arg -> if not (Run.run_string arg) then exit 1) !args;

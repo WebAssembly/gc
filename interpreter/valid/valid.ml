@@ -922,6 +922,4 @@ if not !Flags.canon then (* HACK: test module uses conflicting field indices *)
   check_start c start;
   ignore (List.fold_left (check_export c) NameSet.empty exports);
   require (List.length c.memories <= 1) m.at
-    "multiple memories are not allowed (yet)";
-
-  if !Flags.canon then Canon.minimize (List.map Source.it types)
+    "multiple memories are not allowed (yet)"

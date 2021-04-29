@@ -458,6 +458,7 @@ let rec run_command cmd =
     if not !Flags.unchecked then begin
       trace "Checking...";
       Valid.check_module m;
+if !Flags.canon then Canon.minimize (List.map Source.it m.it.Ast.types);
       if !Flags.print_sig then begin
         trace "Signature:";
         print_module x_opt m
