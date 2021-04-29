@@ -578,20 +578,25 @@ struct
     | NodeKey of {plain_key : plain_key; inner : partial_key array}
     | PathKey of int list
 
-  type comp = Vert.t array
   type rep =
     { comp : comp_id;  (* type's SCC's id, with all inners = [] *)
       idx : Vert.idx;  (* type's index into its SCC, -1 if not recursive *)
     }
-
+  type comp =
+    { verts : Vert.t array;  (* the vertices of the component *)
+      unrolled : (Label.t * int * id, unit) Hashtbl.t;
+        (* occurring labels l that have pos edges to other inner vertices *)
+    }
+ 
   let dummy_rep = {comp = -1; idx = -1}
+  let dummy_comp = {verts = [||]; unrolled = Hashtbl.create 0}
 
 
   (* State *)
   let id_count = ref 0
   let comp_count = ref 0
   let id_table : rep Table.t = Table.make 33 dummy_rep
-  let comp_table : comp Table.t = Table.make 33 [||]
+  let comp_table : comp Table.t = Table.make 33 dummy_comp
   let plain_table : (plain_key, id) Hashtbl.t = Hashtbl.create 33
   let rec_table : (partial_key, id) Hashtbl.t = Hashtbl.create 11
 
@@ -624,7 +629,7 @@ struct
             assert (id < !id_count);
             let rep' = Table.get id_table id in
             let comp' = Table.get comp_table rep'.comp in
-            assert (comp' == comp);
+            assert (comp'.verts == comp);
             rep'.idx
           end else begin
             assert (id = -1);
@@ -642,37 +647,44 @@ struct
   let assert_valid_state () =
     assert (!id_count <= Table.size id_table);
     assert (!comp_count <= Table.size comp_table);
-    Array.iteri (fun i verts ->
+    Array.iteri (fun i comp ->
       if i >= !comp_count then () else let _ = () in
-      assert (Vert.assert_valid_graph !id_count verts);
+      assert (Vert.assert_valid_graph !id_count comp.verts);
       Array.iter (fun vert ->
         assert (vert.Vert.inner = [||])
-      ) verts
+      ) comp.verts;
+      Hashtbl.iter (fun (label, pos, id) () ->
+        assert (
+          Array.exists (fun vert ->
+            vert.Vert.label = label && vert.Vert.succs.(pos) = id
+          ) comp.verts
+        )
+      ) comp.unrolled
     ) !comp_table;
     Array.iteri (fun i rep ->
       if i >= !id_count then () else let _ = () in
       assert (rep.comp < !comp_count);
-      let verts = Table.get comp_table rep.comp in
+      let comp = Table.get comp_table rep.comp in
       assert (rep.idx >= 0 || rep.idx = -1);
-      assert (rep.idx >= 0 || Array.length verts = 1);
-      assert (rep.idx < Array.length verts);
+      assert (rep.idx >= 0 || Array.length comp.verts = 1);
+      assert (rep.idx < Array.length comp.verts);
     ) !id_table;
     Hashtbl.iter (fun k id ->
       assert (id < !id_count);
       let rep = Table.get id_table id in
       assert (rep.idx = -1);
       let comp = Table.get comp_table rep.comp in
-      assert (Array.length comp = 1);
-      assert (comp.(0).Vert.label = k.label);
-      assert (comp.(0).Vert.succs = k.succs);
-      assert (comp.(0).Vert.inner = [||]);
+      assert (Array.length comp.verts = 1);
+      assert (comp.verts.(0).Vert.label = k.label);
+      assert (comp.verts.(0).Vert.succs = k.succs);
+      assert (comp.verts.(0).Vert.inner = [||]);
     ) plain_table;
     Hashtbl.iter (fun k id ->
       assert (id < !id_count);
       let rep = Table.get id_table id in
       assert (rep.idx >= 0);
       let comp = Table.get comp_table rep.comp in
-      assert (assert_valid_key comp 0 comp.(rep.idx) true k);
+      assert (assert_valid_key comp.verts 0 comp.verts.(rep.idx) true k);
     ) rec_table;
     true
 
@@ -752,24 +764,18 @@ let adddesc : adddesc array ref = ref [||]
           let rep = Table.get id_table id in
           (* If those are themselves recursive... *)
           if rep.idx <> -1 && not (IntMap.mem rep.comp !adj_comps) then begin
-            let comp_verts = Table.get comp_table rep.comp in
+            let comp = Table.get comp_table rep.comp in
             (* And if their component contains a vertex with the same label... *)
-            let j = ref 0 in
-            while !j < Array.length comp_verts do
-              let vert' = comp_verts.(!j) in
-              if vert'.label = vert.label && Array.mem id vert'.succs then begin
-                (* Add that component and all its vertices to the current graph *)
-                adj_comps := IntMap.add rep.comp !num_comps !adj_comps;
-                incr num_comps;
-                for j = 0 to Array.length comp_verts - 1 do
-                  assert (comp_verts.(j).id >= 0);
-                  adj_verts := IntMap.add comp_verts.(j).id !num_verts !adj_verts;
-                  incr num_verts
-                done;
-                j := Array.length comp_verts
-              end;
-              incr j
-            done;
+            if Hashtbl.mem comp.unrolled (vert.label, i, id) then begin
+              (* Add component and its vertices *)
+              adj_comps := IntMap.add rep.comp !num_comps !adj_comps;
+              incr num_comps;
+              for j = 0 to Array.length comp.verts - 1 do
+                assert (comp.verts.(j).id >= 0);
+                adj_verts := IntMap.add comp.verts.(j).id !num_verts !adj_verts;
+                incr num_verts
+              done;
+            end;
           end
         end
       done
@@ -790,7 +796,7 @@ let adddesc : adddesc array ref = ref [||]
         | None ->
           let id = !id_count in
           vert.Vert.id <- id;
-          Table.really_set comp_table !comp_count verts;
+          Table.really_set comp_table !comp_count {dummy_comp with verts};
           Table.really_set id_table id {comp = !comp_count; idx = -1};
           Hashtbl.add plain_table key id;
           incr id_count;
@@ -819,10 +825,10 @@ let adddesc : adddesc array ref = ref [||]
         combined_verts.(v) <- verts.(v)
       done;
       let v = ref own_size in
-      for comp = 0 to !num_comps - 1 do
-        let verts = Table.get comp_table (adj_comps_inv.(comp)) in
-        for v' = 0 to Array.length verts - 1 do
-          combined_verts.(!v) <- verts.(v'); incr v
+      for c = 0 to !num_comps - 1 do
+        let comp = Table.get comp_table (adj_comps_inv.(c)) in
+        for v' = 0 to Array.length comp.verts - 1 do
+          combined_verts.(!v) <- comp.verts.(v'); incr v
         done
       done;
       assert (!v = !num_verts);
@@ -951,12 +957,15 @@ let adddesc : adddesc array ref = ref [||]
         | Some id0 ->
 (* Printf.printf "[found]%!"; *)
           (* Equivalent SCC exists, parallel-traverse key to find id map *)
+          let rep0 = Table.get id_table id0 in
+          let comp_verts = (Table.get comp_table rep0.comp).verts in
           let rec add_comp v id = function
             | PathKey _ -> ()
             | NodeKey {plain_key = {label; succs}; inner} ->
               let vert = min_verts.(v) in
               let rep = Table.get id_table id in
-              let repo_vert = (Table.get comp_table rep.comp).(rep.idx) in
+              assert ((Table.get comp_table rep.comp).verts == comp_verts);
+              let repo_vert = comp_verts.(rep.idx) in
               assert (label = repo_vert.Vert.label);
               assert (label = vert.Vert.label);
               assert (succs = vert.Vert.succs);
@@ -985,7 +994,8 @@ let adddesc : adddesc array ref = ref [||]
           (* This is a new component, enter into tables *)
           let id0 = !id_count in
           let compid = !comp_count in
-          Table.really_set comp_table !comp_count min_verts;
+          let unrolled = Hashtbl.create min_size in
+          Table.really_set comp_table !comp_count {verts = min_verts; unrolled};
           incr comp_count;
           id_count := !id_count + min_size;
           for v = 0 to min_size - 1 do
@@ -995,7 +1005,7 @@ let adddesc : adddesc array ref = ref [||]
             let k = if v = 0 then k0 else partial_key min_verts min_verts.(v) in
             Table.really_set id_table id rep;
             Hashtbl.add rec_table k id;
-            (* Remap vertex'es inner edges to new ids *)
+            (* Remap vertex'es inner edges to new ids and add unrolled edges *)
             if vert.inner <> [||] then begin
               let i = ref 0 in  (* indexes into old vert.inner *)
               for j = 0 to Array.length vert.succs - 1 do
@@ -1003,7 +1013,9 @@ let adddesc : adddesc array ref = ref [||]
                 if w = -1 then begin
                   assert (vert.inner.(!i) >= 0);
                   assert (vert.inner.(!i) < min_size);
-                  vert.succs.(j) <- id0 + vert.inner.(!i);
+                  let idj = id0 + vert.inner.(!i) in
+                  vert.succs.(j) <- idj;
+                  Hashtbl.add unrolled (vert.label, j, idj) ();
                   incr i
                 end
               done;
@@ -1171,7 +1183,7 @@ Repo.adddesc := Array.make size Repo.Unknown;
     (* Hack fake repo for diagnostics below *)
     let open Minimize.Part in
     let open Repo in
-    Table.really_set comp_table 0 verts;
+    Table.really_set comp_table 0 {dummy_comp with verts};
     for v = 0 to size - 1 do
       Table.really_set id_table v {comp = 0; idx = v};
       let r = blocks.elems.(blocks.st.(blocks.el.(v).set).first) in
@@ -1206,7 +1218,7 @@ Repo.adddesc := Array.make size Repo.Unknown;
     if IntSet.mem id !set then () else
     let rep = Table.get Repo.id_table id in
     let comp = Table.get Repo.comp_table rep.Repo.comp in
-    let vert = comp.(max 0 rep.Repo.idx) in
+    let vert = comp.Repo.verts.(max 0 rep.Repo.idx) in
     set := IntSet.add id !set;
     incr total;
     if Label.is_func vert.Vert.label then incr mfuns
