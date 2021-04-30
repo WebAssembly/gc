@@ -470,7 +470,7 @@ let start = if !Flags.canon then Canon.time_start () else Canon.time_end () in
       Valid.check_module m;
 let finish = Canon.time_end () in
 if !Flags.canon then Canon.time_print start finish;
-if !Flags.canon then Canon.minimize (List.map Source.it m.it.Ast.types);
+if !Flags.canon then Canon.canonicalize (List.map Source.it m.it.Ast.types);
       if !Flags.print_sig then begin
         trace "Signature:";
         print_module x_opt m

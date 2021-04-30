@@ -49,7 +49,7 @@ let () =
       (fun file -> add_arg ("(input " ^ quote file ^ ")")) usage;
 
     if !Flags.canon_global || !Flags.canon_verify then Flags.canon := true;
-    if !Flags.canon_random >= 0 then (Canon.minimize []; exit 0);
+    if !Flags.canon_random >= 0 then (Canon.canonicalize []; exit 0);
 
     List.iter (fun arg -> if not (Run.run_string arg) then exit 1) !args;
     if !args = [] then Flags.interactive := true;
