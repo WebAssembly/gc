@@ -35,6 +35,8 @@ let argspec = Arg.align
   "-ci", Arg.Set Flags.canon_incremental, " canonicalize incrementally";
   "-cr", Arg.Int (fun n -> Flags.canon_random := n),
     " canonicalize randomized types";
+  "-cs", Arg.Int (fun n -> Flags.canon_seed := n),
+    " set canonicalization random seed";
   "-cv", Arg.Set Flags.canon_verify, " canonicalize types with verification";
   "-v", Arg.Unit banner, " show version"
 ]

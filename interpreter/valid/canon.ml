@@ -588,11 +588,12 @@ struct
         (* occurring labels l that have pos edges to other inner vertices *)
     }
  
+
+  (* State *)
+
   let dummy_rep = {comp = -1; idx = -1}
   let dummy_comp = {verts = [||]; unrolled = Hashtbl.create 0}
 
-
-  (* State *)
   let id_count = ref 0
   let comp_count = ref 0
   let id_table : rep Table.t = Table.make 33 dummy_rep
@@ -600,6 +601,8 @@ struct
   let plain_table : (plain_key, id) Hashtbl.t = Hashtbl.create 33
   let rec_table : (partial_key, id) Hashtbl.t = Hashtbl.create 11
 
+
+  (* Verification *)
 
   let rec assert_valid_key comp d vert vert_closed = function
     | PathKey p -> assert (List.length p < Array.length comp); true
@@ -689,6 +692,8 @@ struct
     true
 
 
+  (* Key computation *)
+
   let rec partial_key verts vert =
     assert (Vert.assert_valid !id_count (Array.length verts) vert);
     let k = partial_key' verts (ref IntMap.empty) [] vert in
@@ -705,6 +710,8 @@ struct
       let succs = Array.copy vert.Vert.succs in
       NodeKey {plain_key = {label = vert.Vert.label; succs}; inner}
 
+
+  (* Initial graph construction *)
 
   let verts_of_scc dta dtamap scc sccmap : Vert.t array =
     let open Vert in
@@ -729,7 +736,7 @@ struct
 
 
 (* Statistics hack *)
-type adddesc = Unknown | NonrecNew | NonrecOld | RecNew | RecOldReached | RecOldUnreached
+type adddesc = Unknown | NonrecNew | NonrecOld | RecNew | RecOldPre | RecOldReachedPre | RecOldReached | RecOldUnreached
 let adddesc : adddesc array ref = ref [||]
 
   (* dta : typeidx->def_type array, as in input module
@@ -811,15 +818,120 @@ let adddesc : adddesc array ref = ref [||]
       dtamap.(x) <- id
     end
 
-    (* SCC is recursive (or may be), need to minimize *)
+    (* SCC is recursive (or may be via unrolling), try partial key *)
     else begin
+      let k0 = partial_key verts verts.(0) in
+      match Hashtbl.find_opt rec_table k0 with
+      | Some id0 ->
+(* Printf.printf "[found rec pre]%!"; *)
+        (* Equivalent SCC exists, parallel-traverse key to find id map *)
+        let rep0 = Table.get id_table id0 in
+        let comp_verts = (Table.get comp_table rep0.comp).verts in
+        let rec add_comp v id = function
+          | PathKey _ -> ()
+          | NodeKey {plain_key = {label; succs}; inner} ->
+            let vert = verts.(v) in
+            let rep = Table.get id_table id in
+            assert ((Table.get comp_table rep.comp).verts == comp_verts);
+            let repo_vert = comp_verts.(rep.idx) in
+            assert (label = repo_vert.Vert.label);
+            assert (label = vert.Vert.label);
+            assert (succs = vert.Vert.succs);
+            assert (Array.length succs = Array.length repo_vert.Vert.succs);
+            assert (Array.length inner = Array.length vert.Vert.inner);
+            assert (Array.length repo_vert.Vert.inner = 0);
+            assert (Vert.is_raw_id verts.(v).id);
+            let x = Vert.raw_id vert.id in
+            assert (dtamap.(x) = -1);
+            dtamap.(x) <- id;
+!adddesc.(x) <- RecOldPre;
+            (* Add successors *)
+            let i = ref 0 in
+            for j = 0 to Array.length succs - 1 do
+              if succs.(j) = -1 then begin
+                let p = inner.(!i) in
+                let v' = vert.Vert.inner.(!i) in
+                let id = repo_vert.Vert.succs.(j) in
+                incr i;
+                add_comp v' id p
+              end
+            done
+        in add_comp 0 id0 k0
+
+      | None ->
+    (* Lookup wasn't successful, need to compare with adjacent components *)
+
+    (* Try naive compariosn with adjacent components, if they are small enough *)
+    let prior_size = !num_verts - own_size in
+    let no_match =
+      2 lsl own_size >= prior_size ||
+      begin
+        let rec equal map v id =
+(* Printf.printf "[equal %d/%d %d/%d]\n%!" v own_size id !id_count; *)
+          assert (v >= 0 && v < own_size);
+          assert (id >= 0 && id < !id_count);
+(* ( *)
+          match IntMap.find_opt v !map with
+          | Some id' -> id = id'
+          | None ->
+            let vert1 = verts.(v) in
+            let rep = Table.get id_table id in
+            let vert2 = (Table.get comp_table rep.comp).verts.(max 0 rep.idx) in
+            vert1.label = vert2.label &&
+            let len = Array.length vert1.succs in
+            assert (len = Array.length vert2.succs);
+            let pos = ref 0 in
+            let i = ref (-1) in
+            let eq = ref true in
+            map := IntMap.add v id !map;
+            while !eq && !pos < len do
+              let id1 = vert1.succs.(!pos) in
+              let id2 = vert2.succs.(!pos) in
+              eq := id1 = id2 ||
+                id1 = -1 && (incr i; equal map vert1.inner.(!i) id2);
+              incr pos
+            done;
+            assert (not !eq || !i + 1 = Array.length vert1.inner);
+            !eq
+(* ) && (Printf.printf "[equal %d/%d %d/%d succeded]\n%!" v own_size id !id_count; true) *)
+(* || (Printf.printf "[equal %d/%d %d/%d failed]\n%!" v own_size id !id_count; false) *)
+        in
+        IntMap.exists (fun compid _ ->
+          let comp_verts = (Table.get comp_table compid).verts in
+          let len = Array.length comp_verts in
+          let no_match = ref true in
+          let i = ref 0 in
+          let map = ref IntMap.empty in
+          while !no_match && !i < len do
+            map := IntMap.empty;
+(* Printf.printf "[try comp %d type %d/%d]\n%!" compid !i len; *)
+            if equal map 0 comp_verts.(!i).id then no_match := false
+            else incr i
+          done;
+          if not !no_match then begin
+            (* Update dtamap based on map *)
+            assert (IntMap.cardinal !map = own_size);
+            IntMap.iter (fun v id ->
+              dtamap.(Vert.raw_id verts.(v).id) <- id;
+!adddesc.(Vert.raw_id verts.(v).id) <- RecOldReachedPre;
+            ) !map
+(* ;Printf.printf "pre-found\n%!" *)
+          end;
+          !no_match
+        ) !adj_comps
+      end
+    in
+(* if not no_math then Printf.printf "[rec old reached pre"; IntSet.iter (fun x -> Printf.printf " %d" dtamap.(x)) scc; Printf.printf "]%!\n"; *)
+
+    (* Naive comparison wasn't successful or skipped, need to minimize SCC *)
+    if no_match then begin
       (* Auxiliary mappings *)
       let adj_comps_inv = Array.make !num_comps (-1) in
       let adj_verts_inv = Array.make !num_verts (-1) in
       IntMap.iter (fun comp i -> adj_comps_inv.(i) <- comp) !adj_comps;
       IntMap.iter (fun v i -> adj_verts_inv.(i) <- v) !adj_verts;
 
-      (* Construct graph for SCC + adjacent recursive components *)
+      (* Construct graph for SCC, plus possibly adjacent recursive components *)
       let combined_verts = Array.make !num_verts Vert.dummy in
       for v = 0 to own_size - 1 do
         combined_verts.(v) <- verts.(v)
@@ -875,7 +987,6 @@ let adddesc : adddesc array ref = ref [||]
       in
 
       (* If result adds no vertices to repo, then SCC already exists *)
-      let prior_size = !num_verts - own_size in
 (* Printf.printf "[test new vertices]%!"; *)
       if blocks.Minimize.Part.num = prior_size then begin
 (* Printf.printf "[no new vertices]%!"; *)
@@ -1029,6 +1140,7 @@ let adddesc : adddesc array ref = ref [||]
           done
 (* ;Printf.printf "[rec new(%d)" min_size; IntSet.iter (fun x -> Printf.printf " %d" dtamap.(x)) scc; Printf.printf "]%!\n"; *)
       end
+    end
     end;
 
     (* Post conditions *)
@@ -1051,7 +1163,7 @@ struct
     let y = ref 0 in
     Array.init n (fun x ->
       if !y < x && Random.int 5 = 0 then
-        y := x + (1 + Random.int 10) * Random.int 20 + 1;
+        y := x + (1 + Random.int 40) * Random.int 40 + 1;
       fuzz_def x (min n (max x !y))
     )
 
@@ -1094,7 +1206,7 @@ struct
     | _ -> T.DefHeapType (fuzz_var x y)
 
   and fuzz_var x y =
-    let idx = Random.(if bool () || x = y then int x else x + int (y - x)) in
+    let idx = Random.(if bool () || x = y then int (x + 1) else x + int (y - x)) in
     T.SynVar (Int32.of_int idx)
 end
 
@@ -1143,6 +1255,7 @@ let minimize dts =
   (* Hack for fuzzing *)
   let dta, dts =
     if !Flags.canon_random < 0 then dta, dts else begin
+      if !Flags.canon_seed <> -1 then Random.init !Flags.canon_seed;
       let dta = Fuzz.fuzz !Flags.canon_random in
       let dts = Array.to_list dta in
       Printf.printf "%d types generated .%!" (Array.length dta);
@@ -1325,8 +1438,10 @@ Repo.adddesc := Array.make size Repo.Unknown;
           | NonrecNew -> "new plain type"
           | NonrecOld -> "dup plain type"
           | RecNew -> "new cyclic type"
-          | RecOldUnreached -> "old cyclic type"
+          | RecOldPre -> "old cyclic type pre"
+          | RecOldReachedPre -> "old cyclic type reached pre"
           | RecOldReached -> "old cyclic type reached"
+          | RecOldUnreached -> "old cyclic type"
           | Unknown -> assert false
           )
       ) !diffs_by_id;

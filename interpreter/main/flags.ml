@@ -9,4 +9,5 @@ let harness = ref true
 let canon = ref false
 let canon_incremental = ref false
 let canon_random = ref (-1)
+let canon_seed = ref (-1)
 let canon_verify = ref false
