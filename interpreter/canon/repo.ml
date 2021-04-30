@@ -37,6 +37,43 @@ let plain_table : (plain_key, id) Hashtbl.t = Hashtbl.create 33
 let rec_table : (partial_key, id) Hashtbl.t = Hashtbl.create 11
 
 
+(* Statistics *)
+
+type stat =
+  { mutable total_comp : int;
+    mutable total_vert : int;
+    mutable flat_new : int;
+    mutable flat_found : int;
+    mutable rec_new : int;
+    mutable rec_found_pre : int;
+    mutable rec_found_post : int;
+    mutable rec_unrolled_pre : int;
+    mutable rec_unrolled_post : int;
+    mutable min_count : int;
+    mutable min_comps : int;
+    mutable min_verts : int;
+  }
+
+let stat =
+  { total_comp = 0;
+    total_vert = 0;
+    flat_new = 0;
+    flat_found = 0;
+    rec_new = 0;
+    rec_found_pre = 0;
+    rec_found_post = 0;
+    rec_unrolled_pre = 0;
+    rec_unrolled_post = 0;
+    min_count = 0;
+    min_comps = 0;
+    min_verts = 0;
+  }
+
+(* Statistics hack *)
+type adddesc = Unknown | NonrecNew | NonrecOld | RecNew | RecOldPre | RecOldReachedPre | RecOldReached | RecOldUnreached
+let adddesc : adddesc array ref = ref [||]
+
+
 (* Verification *)
 
 let rec assert_valid_key comp d vert vert_closed = function
@@ -169,39 +206,6 @@ let verts_of_scc dta dtamap scc sccmap : Vert.t array =
   done;
   verts
 
-(* Statistics *)
-
-type stat =
-  { mutable total : int;
-    mutable flat_new : int;
-    mutable flat_found : int;
-    mutable rec_new : int;
-    mutable rec_found_pre : int;
-    mutable rec_found_post : int;
-    mutable rec_unrolled_pre : int;
-    mutable rec_unrolled_post : int;
-    mutable min_count : int;
-    mutable min_comps : int;
-    mutable min_verts : int;
-  }
-
-let stat =
-  { total = 0;
-    flat_new = 0;
-    flat_found = 0;
-    rec_new = 0;
-    rec_found_pre = 0;
-    rec_found_post = 0;
-    rec_unrolled_pre = 0;
-    rec_unrolled_post = 0;
-    min_count = 0;
-    min_comps = 0;
-    min_verts = 0;
-  }
-
-(* Statistics hack *)
-type adddesc = Unknown | NonrecNew | NonrecOld | RecNew | RecOldPre | RecOldReachedPre | RecOldReached | RecOldUnreached
-let adddesc : adddesc array ref = ref [||]
 
 (* dta : typeidx->def_type array, as in input module
  * dtamap : typeidx->id array, mapping (known) typeidx's to id's
@@ -213,7 +217,8 @@ let adddesc : adddesc array ref = ref [||]
 let add_scc dta dtamap scc sccmap =
 (* Printf.printf "[add"; IntSet.iter (Printf.printf " %d") scc; Printf.printf "]%!"; *)
   assert (IntSet.for_all (fun x -> dtamap.(x) = -1) scc);
-  stat.total <- stat.total + 1;
+  stat.total_comp <- stat.total_comp + 1;
+  stat.total_vert <- stat.total_vert + IntSet.cardinal scc;
   let verts = verts_of_scc dta dtamap scc sccmap in
   assert (Vert.assert_valid_graph !id_count verts);
   assert (assert_valid_state ());

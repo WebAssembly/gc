@@ -58,6 +58,10 @@ let () =
       banner ();
       Run.run_stdin ()
     end
+;if !Flags.canon then begin
+Printf.printf "Canonicalization total:\n";
+Canon.time_print !(Canon.time_total);
+end
   with exn ->
     flush_all ();
     prerr_endline

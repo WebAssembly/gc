@@ -5,21 +5,44 @@ module T = Types
 
 (* Profiling *)
 
-let time_end () =
+let time_now () =
   let gc = Gc.quick_stat () in
   let time = Unix.times () in
   gc, time
 
-let time_start () =
-  Gc.compact (); time_end ()
+let time_start () = Gc.compact (); time_now ()
+let time_end () = time_now ()
 
-let time_print (gc_start, time_start) (gc_end, time_end) =
+let time_diff (gc_start, time_start) (gc_end, time_end) =
+  Gc.{gc_end with
+    major_collections = gc_end.major_collections - gc_start.major_collections;
+    minor_collections = gc_end.minor_collections - gc_start.minor_collections;
+    compactions = gc_end.compactions - gc_start.compactions;
+  },
+  Unix.{time_end with
+    tms_utime = time_end.tms_utime -. time_start.tms_utime;
+    tms_stime = time_end.tms_stime -. time_start.tms_stime;
+  }
+
+let time_add (gc_start, time_start) (gc_end, time_end) =
+  Gc.{gc_end with
+    major_collections = gc_end.major_collections + gc_start.major_collections;
+    minor_collections = gc_end.minor_collections + gc_start.minor_collections;
+    compactions = gc_end.compactions + gc_start.compactions;
+  },
+  Unix.{time_end with
+    tms_utime = time_end.tms_utime +. time_start.tms_utime;
+    tms_stime = time_end.tms_stime +. time_start.tms_stime;
+  }
+
+let time_print (gc, time) =
   Printf.printf "Time: user %.2f ms, system %.2f ms; GC: major %d, minor %d, compactions %d\n"
-    ((time_end.Unix.tms_utime -. time_start.Unix.tms_utime) *. 1000.0)
-    ((time_end.Unix.tms_stime -. time_start.Unix.tms_stime) *. 1000.0)
-    (gc_end.Gc.major_collections - gc_start.Gc.major_collections)
-    (gc_end.Gc.minor_collections - gc_start.Gc.minor_collections)
-    (gc_end.Gc.compactions - gc_start.Gc.compactions)
+    (time.Unix.tms_utime *. 1000.0) (time.Unix.tms_stime *. 1000.0)
+    gc.Gc.major_collections gc.Gc.minor_collections gc.Gc.compactions
+
+let time_total = let now = time_now () in ref (time_diff now now)
+
+let time_record diff = time_total := time_add !time_total diff
 
 
 (* Main runner *)
@@ -48,13 +71,13 @@ let canonicalize dts =
       let decode_start = time_start () in
       ignore (Decode.decode "fuzzed" wasm);
       let decode_end = time_end () in
-      time_print decode_start decode_end;
+      time_print (time_diff decode_start decode_end);
 
       Printf.printf "Validating...\n%!";
       let valid_start = time_start () in
       Valid.check_module module_;
       let valid_end = time_end () in
-      time_print valid_start valid_end;
+      time_print (time_diff valid_start valid_end);
 
       dta, dts
     end
@@ -65,7 +88,7 @@ let canonicalize dts =
   let time1 = time_start () in
 
   let size = Array.length dta in
-Repo.adddesc := Array.make size Repo.Unknown;
+Repo.adddesc := Array.make size Repo.Unknown;  (* Temp HACK *)
   let dtamap = Array.make size (-1) in
   let sccmap = Array.make size (-1) in
   let sccs = Scc.deftypes dta in
@@ -88,7 +111,8 @@ Repo.adddesc := Array.make size Repo.Unknown;
   end;
 
   let time2 = time_end () in
-  time_print time1 time2;
+  time_print (time_diff time1 time2);
+  time_record (time_diff time1 time2);
 
   (* Statistics *)
   let funs = List.fold_left (fun n -> function T.FuncDefType _ -> n + 1 | _ -> n) 0 dts in
@@ -122,7 +146,7 @@ Repo.adddesc := Array.make size Repo.Unknown;
   if not !Flags.canon_global then begin
     let open Repo in
     Printf.printf "%d repo lookups (involving %.1f types on average)\n"
-      stat.total (float size /. float stat.total);
+      stat.total_comp (float stat.total_vert /. float stat.total_comp);
     Printf.printf "  non-recursive: %d new, %d found\n"
       stat.flat_new stat.flat_found;
     Printf.printf "  recursive: %d new, %d found (%d pre, %d post minimization), %d unrolled (%d pre, %d post minimization)\n"
