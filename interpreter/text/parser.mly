@@ -75,9 +75,6 @@ let shift category at n i =
     error at ("too many " ^ category ^ " bindings");
   i'
 
-let peek category space =
-  space.count
-
 let bind category space n at =
   let i = space.count in
   space.count <- shift category at n i;
@@ -153,16 +150,8 @@ let func_type (c : context) x =
 
 
 let bind_abs category space x =
-ignore peek;
-(*
-  (match VarMap.find_opt x.it space.map with
-  | Some i when i <> peek category space ->
-    error x.at ("duplicate " ^ category ^ " " ^ x.it
-^ " " ^ Int32.to_string i ^ " vs " ^ Int32.to_string (peek category space)
-        );
-  | _ -> ()
-  );
-*)
+  if VarMap.mem x.it space.map then
+    error x.at ("duplicate " ^ category ^ " " ^ x.it);
   let i = bind category space 1l x.at in
   space.map <- VarMap.add x.it i space.map;
   i
@@ -358,16 +347,16 @@ field_type_list :
   | field_type field_type_list { fun c -> $1 c :: $2 c }
 
 struct_field_list :
-  | /* empty */ { fun c -> [] }
+  | /* empty */ { fun c s -> [] }
   | LPAR FIELD field_type_list RPAR struct_field_list
     { let at3 = ati 3 in
-      fun c -> let fts = $3 c in
-      ignore (anon_fields c (Lib.List32.length fts) at3); fts @ $5 c }
+      fun c s -> let fts = $3 c in
+      ignore (anon_fields c (Lib.List32.length fts) at3); fts @ $5 c s }
   | LPAR FIELD bind_var field_type RPAR struct_field_list
-    { fun c -> ignore (bind_field c $3); $4 c :: $6 c }
+    { fun c s -> ignore (bind_field c ((s ^ $3.it) @@ $3.at)); $4 c :: $6 c s }
 
 struct_type :
-  | struct_field_list { fun c -> let c' = enter_struct c in StructType ($1 c') }
+  | struct_field_list { fun c s -> let c' = enter_struct c in StructType ($1 c' s) }
 
 array_type :
   | field_type { fun c -> ArrayType ($1 c) }
@@ -387,9 +376,9 @@ func_type :
       FuncType ($4 c :: ins, out) }
 
 def_type :
-  | LPAR STRUCT struct_type RPAR { fun c -> StructDefType ($3 c) }
-  | LPAR ARRAY array_type RPAR { fun c -> ArrayDefType ($3 c) }
-  | LPAR FUNC func_type RPAR { fun c -> FuncDefType ($3 c) }
+  | LPAR STRUCT struct_type RPAR { fun c s -> StructDefType ($3 c s) }
+  | LPAR ARRAY array_type RPAR { fun c _ -> ArrayDefType ($3 c) }
+  | LPAR FUNC func_type RPAR { fun c _ -> FuncDefType ($3 c) }
 
 table_type :
   | limits ref_type { fun c -> TableType ($1, $2 c) }
@@ -415,6 +404,14 @@ num :
 var :
   | NAT { let at = at () in fun c lookup -> nat32 $1 at @@ at }
   | VAR { let at = at () in fun c lookup -> lookup c ($1 @@ at) @@ at }
+
+var2 :
+  | NAT { "", let at = at () in fun c lookup -> nat32 $1 at @@ at }
+  | VAR { $1 ^ ",", let at = at () in fun c lookup -> lookup c ($1 @@ at) @@ at }
+
+var3 :
+  | NAT { let at = at () in fun c s lookup -> nat32 $1 at @@ at }
+  | VAR { let at = at () in fun c s lookup -> lookup c ((s ^ $1) @@ at) @@ at }
 
 var_list :
   | /* empty */ { fun c lookup -> [] }
@@ -518,8 +515,8 @@ plain_instr :
   | I31_NEW { fun c -> i31_new }
   | I31_GET { fun c -> $1 }
   | STRUCT_NEW var { fun c -> $1 ($2 c type_) }
-  | STRUCT_GET var var { fun c -> $1 ($2 c type_) ($3 c field) }
-  | STRUCT_SET var var { fun c -> struct_set ($2 c type_) ($3 c field) }
+  | STRUCT_GET var2 var3 { fun c -> $1 (snd $2 c type_) ($3 c (fst $2) field) }
+  | STRUCT_SET var2 var3 { fun c -> struct_set (snd $2 c type_) ($3 c (fst $2) field) }
   | ARRAY_NEW var { fun c -> $1 ($2 c type_) }
   | ARRAY_GET var { fun c -> $1 ($2 c type_) }
   | ARRAY_SET var { fun c -> array_set ($2 c type_) }
@@ -1125,14 +1122,14 @@ inline_export :
 /* Modules */
 
 type_ :
-  | def_type { let at = at () in fun c -> define_type c ($1 c @@ at) }
+  | def_type { let at = at () in fun c s -> define_type c ($1 c s @@ at) }
 
 type_def :
   | LPAR TYPE type_ RPAR
     { let at = at () in
-      fun c -> ignore (anon_type c at); fun () -> $3 c }
+      fun c -> ignore (anon_type c at); fun () -> $3 c "" }
   | LPAR TYPE bind_var type_ RPAR  /* Sugar */
-    { fun c -> ignore (bind_type c $3); fun () -> $4 c }
+    { fun c -> ignore (bind_type c $3); fun () -> $4 c ($3.it ^ ",") }
 
 start :
   | LPAR START var RPAR

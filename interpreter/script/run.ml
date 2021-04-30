@@ -295,7 +295,15 @@ let rec run_definition def : Ast.module_ =
   | Textual m -> m
   | Encoded (name, bs) ->
     trace "Decoding...";
+(* Hack for statistics *)
+if !Flags.canon then Printf.printf "Decoding...\n%!";
+let start = if !Flags.canon then Canon.time_start () else Canon.time_end () in
+let result =
     Decode.decode name bs
+in
+let finish = Canon.time_end () in
+if !Flags.canon then Canon.time_print start finish;
+result
   | Quoted (_, s) ->
     trace "Parsing quote...";
     let def' = Parse.string_to_module s in
@@ -312,7 +320,7 @@ let run_action act : Value.t list =
       if List.length vs <> List.length ins then
         Script.error act.at "wrong number of arguments";
       List.iter2 (fun v t ->
-        if not (Match.match_value_type [] [] (Value.type_of_value v.it) t) then
+        if not (Match.match_value_type [||] [] (Value.type_of_value v.it) t) then
           Script.error v.at "wrong type of argument"
       ) vs ins;
       Eval.invoke f (List.map (fun v -> v.it) vs)
@@ -457,7 +465,11 @@ let rec run_command cmd =
     let m = run_definition def in
     if not !Flags.unchecked then begin
       trace "Checking...";
+if !Flags.canon then Printf.printf "Validating...\n%!";
+let start = if !Flags.canon then Canon.time_start () else Canon.time_end () in
       Valid.check_module m;
+let finish = Canon.time_end () in
+if !Flags.canon then Canon.time_print start finish;
 if !Flags.canon then Canon.minimize (List.map Source.it m.it.Ast.types);
       if !Flags.print_sig then begin
         trace "Signature:";

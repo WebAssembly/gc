@@ -20,9 +20,9 @@ let rec depth = function
 let rec eq_rtt rtt1 rtt2 =
   match rtt1, rtt2 with
   | Rtt (x1, None), Rtt (x2, None) ->
-    Match.eq_var_type [] [] (SemVar x1) (SemVar x2) 
+    Match.eq_var_type [||] [] (SemVar x1) (SemVar x2) 
   | Rtt (x1, Some rtt1'), Rtt (x2, Some rtt2') ->
-    Match.eq_var_type [] [] (SemVar x1) (SemVar x2) && eq_rtt rtt1' rtt2'
+    Match.eq_var_type [||] [] (SemVar x1) (SemVar x2) && eq_rtt rtt1' rtt2'
   | _, _ -> false
 
 let rec match_rtt rtt1 rtt2 =

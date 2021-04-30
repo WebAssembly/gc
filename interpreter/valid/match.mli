@@ -1,6 +1,6 @@
 open Types
 
-type context = def_type list
+type context = def_type array
 type assump = (var * var) list
 
 

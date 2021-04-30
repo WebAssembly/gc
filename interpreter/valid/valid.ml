@@ -17,28 +17,28 @@ let require b at s = if not b then error at s
 
 type context =
 {
-  types : def_type list;
-  funcs : syn_var list;
-  tables : table_type list;
-  memories : memory_type list;
-  globals : global_type list;
-  elems : ref_type list;
-  datas : unit list;
-  locals : value_type list;
+  types : def_type array;
+  funcs : syn_var array;
+  tables : table_type array;
+  memories : memory_type array;
+  globals : global_type array;
+  elems : ref_type array;
+  datas : unit array;
+  locals : value_type array;
   results : value_type list;
-  labels : result_type list;
+  labels : result_type array;
   refs : Free.t;
 }
 
 let empty_context =
-  { types = []; funcs = []; tables = []; memories = [];
-    globals = []; elems = []; datas = [];
-    locals = []; results = []; labels = [];
+  { types = [||]; funcs = [||]; tables = [||]; memories = [||];
+    globals = [||]; elems = [||]; datas = [||];
+    locals = [||]; results = []; labels = [||];
     refs = Free.empty
   }
 
 let lookup category list x =
-  try Lib.List32.nth list x.it with Failure _ ->
+  try list.(Int32.to_int x.it) with Invalid_argument _ ->
     error x.at ("unknown " ^ category ^ " " ^ I32.to_string_u x.it)
 
 let type_ (c : context) x = lookup "type" c.types x
@@ -361,18 +361,18 @@ let rec check_instr (c : context) (e : instr) (s : infer_result_type) : op_type 
 
   | Block (bt, es) ->
     let FuncType (ts1, ts2) as ft = check_block_type c bt e.at in
-    check_block {c with labels = ts2 :: c.labels} es ft e.at;
+    check_block {c with labels = Array.append [|ts2|] c.labels} es ft e.at;
     ts1 --> ts2
 
   | Loop (bt, es) ->
     let FuncType (ts1, ts2) as ft = check_block_type c bt e.at in
-    check_block {c with labels = ts1 :: c.labels} es ft e.at;
+    check_block {c with labels = Array.append [|ts1|] c.labels} es ft e.at;
     ts1 --> ts2
 
   | If (bt, es1, es2) ->
     let FuncType (ts1, ts2) as ft = check_block_type c bt e.at in
-    check_block {c with labels = ts2 :: c.labels} es1 ft e.at;
-    check_block {c with labels = ts2 :: c.labels} es2 ft e.at;
+    check_block {c with labels = Array.append [|ts2|] c.labels} es1 ft e.at;
+    check_block {c with labels = Array.append [|ts2|] c.labels} es2 ft e.at;
     (ts1 @ [NumType I32Type]) --> ts2
 
   | Let (bt, locals, es) ->
@@ -380,8 +380,8 @@ let rec check_instr (c : context) (e : instr) (s : infer_result_type) : op_type 
     List.iter (check_local c false) locals;
     let c' =
       { c with
-        labels = ts2 :: c.labels;
-        locals = List.map Source.it locals @ c.locals;
+        labels = Array.append [|ts2|] c.labels;
+        locals = Array.append (Array.map Source.it (Array.of_list locals)) c.locals;
       }
     in check_block c' es ft e.at;
     (ts1 @ List.map Source.it locals) --> ts2
@@ -782,9 +782,9 @@ let check_func (c : context) (f : func) =
   List.iter (check_local c true) locals;
   let c' =
     { c with
-      locals = ts1 @ List.map Source.it locals;
+      locals = Array.append (Array.of_list ts1) (Array.map Source.it (Array.of_list locals));
       results = ts2;
-      labels = [ts2]
+      labels = [|ts2|]
     }
   in check_block c' body (FuncType ([], ts2)) f.at
 
@@ -849,7 +849,7 @@ let check_global (c : context) (glob : global) : context =
   check_global_type c gtype glob.at;
   let GlobalType (t, mut) = gtype in
   check_const c ginit t;
-  { c with globals = c.globals @ [gtype] }
+  { c with globals = Array.append c.globals [|gtype|] }
 
 
 (* Modules *)
@@ -865,16 +865,16 @@ let check_import (im : import) (c : context) : context =
   match idesc.it with
   | FuncImport x ->
     ignore (func_type c x);
-    {c with funcs = x.it :: c.funcs}
+    {c with funcs = Array.append [|x.it|] c.funcs}
   | TableImport tt ->
     check_table_type c tt idesc.at;
-    {c with tables = tt :: c.tables}
+    {c with tables = Array.append [|tt|] c.tables}
   | MemoryImport mt ->
     check_memory_type c mt idesc.at;
-    {c with memories = mt :: c.memories}
+    {c with memories = Array.append [|mt|] c.memories}
   | GlobalImport gt ->
     check_global_type c gt idesc.at;
-    {c with globals = gt :: c.globals}
+    {c with globals = Array.append [|gt|] c.globals}
 
 module NameSet = Set.Make(struct type t = Ast.name let compare = compare end)
 
@@ -899,16 +899,16 @@ let check_module (m : module_) =
     List.fold_right check_import imports
       { empty_context with
         refs = Free.module_ ({m.it with funcs = []; start = None} @@ m.at);
-        types = List.map (fun ty -> ty.it) types;
+        types = Array.map Source.it (Array.of_list types);
       }
   in
   let c1 =
     { c0 with
-      funcs = c0.funcs @ List.map (fun f -> ignore (func_type c0 f.it.ftype); f.it.ftype.it) funcs;
-      tables = c0.tables @ List.map (fun tab -> tab.it.ttype) tables;
-      memories = c0.memories @ List.map (fun mem -> mem.it.mtype) memories;
-      elems = List.map (fun elem -> elem.it.etype) elems;
-      datas = List.map (fun _data -> ()) datas;
+      funcs = Array.append c0.funcs (Array.map (fun f -> ignore (func_type c0 f.it.ftype); f.it.ftype.it) (Array.of_list funcs));
+      tables = Array.append c0.tables (Array.map (fun tab -> tab.it.ttype) (Array.of_list tables));
+      memories = Array.append c0.memories (Array.map (fun mem -> mem.it.mtype) (Array.of_list memories));
+      elems = Array.map (fun elem -> elem.it.etype) (Array.of_list elems);
+      datas = Array.map (fun _data -> ()) (Array.of_list datas);
     }
   in
   List.iter (check_type c1) types;
@@ -917,9 +917,8 @@ let check_module (m : module_) =
   List.iter (check_memory c) memories;
   List.iter (check_elem c) elems;
   List.iter (check_data c) datas;
-if not !Flags.canon then (* HACK: test module uses conflicting field indices *)
   List.iter (check_func c) funcs;
   check_start c start;
   ignore (List.fold_left (check_export c) NameSet.empty exports);
-  require (List.length c.memories <= 1) m.at
+  require (Array.length c.memories <= 1) m.at
     "multiple memories are not allowed (yet)"

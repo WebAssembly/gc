@@ -1,11 +1,11 @@
 open Types
 
-type context = Types.def_type list
+type context = Types.def_type array
 type assump = (var * var) list
 
 
 let lookup c = function
-  | SynVar x -> Lib.List32.nth c x
+  | SynVar x -> c.(Int32.to_int x)
   | SemVar x -> def_of x
 
 let equal_var x y =

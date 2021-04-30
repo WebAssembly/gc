@@ -21,7 +21,7 @@ struct
     t := t'
   let really_set t i x =
     let n = Array.length !t in
-    if i >= n then grow t n x else set t i x
+    if i >= n then grow t (min 10 n) x else set t i x
 end
 
 
@@ -734,6 +734,35 @@ struct
     done;
     verts
 
+  (* Statistics *)
+
+  type stat =
+    { mutable total : int;
+      mutable flat_new : int;
+      mutable flat_found : int;
+      mutable rec_new : int;
+      mutable rec_found_pre : int;
+      mutable rec_found_post : int;
+      mutable rec_unrolled_pre : int;
+      mutable rec_unrolled_post : int;
+      mutable min_count : int;
+      mutable min_comps : int;
+      mutable min_verts : int;
+    }
+
+  let stat =
+    { total = 0;
+      flat_new = 0;
+      flat_found = 0;
+      rec_new = 0;
+      rec_found_pre = 0;
+      rec_found_post = 0;
+      rec_unrolled_pre = 0;
+      rec_unrolled_post = 0;
+      min_count = 0;
+      min_comps = 0;
+      min_verts = 0;
+    }
 
 (* Statistics hack *)
 type adddesc = Unknown | NonrecNew | NonrecOld | RecNew | RecOldPre | RecOldReachedPre | RecOldReached | RecOldUnreached
@@ -749,6 +778,7 @@ let adddesc : adddesc array ref = ref [||]
   let add_scc dta dtamap scc sccmap =
 (* Printf.printf "[add"; IntSet.iter (Printf.printf " %d") scc; Printf.printf "]%!"; *)
     assert (IntSet.for_all (fun x -> dtamap.(x) = -1) scc);
+    stat.total <- stat.total + 1;
     let verts = verts_of_scc dta dtamap scc sccmap in
     assert (Vert.assert_valid_graph !id_count verts);
     assert (assert_valid_state ());
@@ -796,6 +826,7 @@ let adddesc : adddesc array ref = ref [||]
       let id =
         match Hashtbl.find_opt plain_table key with
         | Some id ->
+          stat.flat_found <- stat.flat_found + 1;
 !adddesc.(x) <- NonrecOld;
 (* Printf.printf "[plain old %d]\n%!" id; *)
           id
@@ -808,6 +839,7 @@ let adddesc : adddesc array ref = ref [||]
           Hashtbl.add plain_table key id;
           incr id_count;
           incr comp_count;
+          stat.flat_new <- stat.flat_new + 1;
 !adddesc.(x) <- NonrecNew;
 (* Printf.printf "[plain new %d]\n%!" id; *)
           assert (assert_valid_state ());
@@ -823,10 +855,11 @@ let adddesc : adddesc array ref = ref [||]
       let k0 = partial_key verts verts.(0) in
       match Hashtbl.find_opt rec_table k0 with
       | Some id0 ->
-(* Printf.printf "[found rec pre]%!"; *)
         (* Equivalent SCC exists, parallel-traverse key to find id map *)
+        stat.rec_found_pre <- stat.rec_found_pre + 1;
         let rep0 = Table.get id_table id0 in
         let comp_verts = (Table.get comp_table rep0.comp).verts in
+(* Printf.printf "[found pre minimization, was vert %d/%d]\n%!" rep0.idx (Array.length comp_verts); *)
         let rec add_comp v id = function
           | PathKey _ -> ()
           | NodeKey {plain_key = {label; succs}; inner} ->
@@ -861,7 +894,7 @@ let adddesc : adddesc array ref = ref [||]
       | None ->
     (* Lookup wasn't successful, need to compare with adjacent components *)
 
-    (* Try naive compariosn with adjacent components, if they are small enough *)
+    (* Try naive comparison with adjacent components, if they are small enough *)
     let prior_size = !num_verts - own_size in
     let no_match =
       2 lsl own_size >= prior_size ||
@@ -909,6 +942,7 @@ let adddesc : adddesc array ref = ref [||]
             else incr i
           done;
           if not !no_match then begin
+            stat.rec_unrolled_pre <- stat.rec_unrolled_pre + 1;
             (* Update dtamap based on map *)
             assert (IntMap.cardinal !map = own_size);
             IntMap.iter (fun v id ->
@@ -966,6 +1000,9 @@ let adddesc : adddesc array ref = ref [||]
 
       (* Minimize *)
 (* Printf.printf "[minimize]%!"; *)
+      stat.min_count <- stat.min_count + 1;
+      stat.min_comps <- stat.min_comps + !num_comps + 1;
+      stat.min_verts <- stat.min_verts + !num_verts;
       let blocks, _ = Minimize.minimize combined_verts in
 (* Printf.printf "[minimize done]%!"; *)
 
@@ -989,6 +1026,7 @@ let adddesc : adddesc array ref = ref [||]
       (* If result adds no vertices to repo, then SCC already exists *)
 (* Printf.printf "[test new vertices]%!"; *)
       if blocks.Minimize.Part.num = prior_size then begin
+        stat.rec_unrolled_post <- stat.rec_unrolled_post + 1;
 (* Printf.printf "[no new vertices]%!"; *)
         let open Minimize.Part in
         (* For each vertex from new SCC, find representative r from repo *)
@@ -1066,10 +1104,11 @@ let adddesc : adddesc array ref = ref [||]
         let k0 = partial_key min_verts vert0 in
         match Hashtbl.find_opt rec_table k0 with
         | Some id0 ->
-(* Printf.printf "[found]%!"; *)
           (* Equivalent SCC exists, parallel-traverse key to find id map *)
+          stat.rec_found_post <- stat.rec_found_post + 1;
           let rep0 = Table.get id_table id0 in
           let comp_verts = (Table.get comp_table rep0.comp).verts in
+(* Printf.printf "[found post minimization, was vert %d/%d]\n%!" rep0.idx (Array.length comp_verts); *)
           let rec add_comp v id = function
             | PathKey _ -> ()
             | NodeKey {plain_key = {label; succs}; inner} ->
@@ -1103,6 +1142,7 @@ let adddesc : adddesc array ref = ref [||]
         | None ->
 (* Printf.printf "[not found]%!"; *)
           (* This is a new component, enter into tables *)
+          stat.rec_new <- stat.rec_new + 1;
           let id0 = !id_count in
           let compid = !comp_count in
           let unrolled = Hashtbl.create min_size in
@@ -1215,7 +1255,7 @@ module DumbTypeHash =  (* just for assertions *)
 struct
   type t = T.def_type
 
-  let context : Match.context ref = ref []
+  let context : Match.context ref = ref [||]
 
   let equal dt1 dt2 = Match.eq_def_type !context [] dt1 dt2
 
@@ -1249,6 +1289,27 @@ end
 module DumbTypeTbl = Hashtbl.Make(DumbTypeHash)
 
 
+(* Profiling *)
+
+let time_end () =
+  let gc = Gc.quick_stat () in
+  let time = Unix.times () in
+  gc, time
+
+let time_start () =
+  Gc.compact (); time_end ()
+
+let time_print (gc_start, time_start) (gc_end, time_end) =
+  Printf.printf "Time: user %.2f ms, system %.2f ms; GC: major %d, minor %d, compactions %d\n"
+    ((time_end.Unix.tms_utime -. time_start.Unix.tms_utime) *. 1000.0)
+    ((time_end.Unix.tms_stime -. time_start.Unix.tms_stime) *. 1000.0)
+    (gc_end.Gc.major_collections - gc_start.Gc.major_collections)
+    (gc_end.Gc.minor_collections - gc_start.Gc.minor_collections)
+    (gc_end.Gc.compactions - gc_start.Gc.compactions)
+
+
+(* Main runner *)
+
 let minimize dts =
   let dta = Array.of_list dts in
 
@@ -1258,35 +1319,43 @@ let minimize dts =
       if !Flags.canon_seed <> -1 then Random.init !Flags.canon_seed;
       let dta = Fuzz.fuzz !Flags.canon_random in
       let dts = Array.to_list dta in
-      Printf.printf "%d types generated .%!" (Array.length dta);
+      Printf.printf "%d types generated.%!" (Array.length dta);
       let types = List.rev (   (* carefully avoid List.map to be tail-recursive *)
         List.fold_left (fun tys dt -> Source.(dt @@ no_region) :: tys) [] dts) in
-      Printf.printf " .%!";
+      Printf.printf ".%!";
       let module_ = Source.(Ast.{empty_module with types} @@ no_region) in
-      (* Printf.printf "Encoding...\n%!"; *)
+
       let wasm = Encode.encode module_ in
-      (* Printf.printf "Validating...\n%!"; *)
-      Valid.check_module module_;
       let bytes = I64.(to_string_u (of_int_u (String.length wasm))) in
-      Printf.printf " .%!";
+      Printf.printf ".%!";
       Printf.printf " (module with %s bytes)\n%!" bytes;
+
+      Printf.printf "Decoding...\n%!";
+      let decode_start = time_start () in
+      ignore (Decode.decode "fuzzed" wasm);
+      let decode_end = time_end () in
+      time_print decode_start decode_end;
+
+      Printf.printf "Validating...\n%!";
+      let valid_start = time_start () in
+      Valid.check_module module_;
+      let valid_end = time_end () in
+      time_print valid_start valid_end;
+
       dta, dts
     end
   in
 
-  (* Prepare measurements *)
-  Printf.printf "Minimizing...\n%!";
-  Gc.compact ();
-  let gc_start = Gc.quick_stat () in
-  let time_start = Unix.times () in
-
   (* Main action *)
+  Printf.printf "Minimizing...\n%!";
+  let time1 = time_start () in
+
   let size = Array.length dta in
 Repo.adddesc := Array.make size Repo.Unknown;
   let dtamap = Array.make size (-1) in
   let sccmap = Array.make size (-1) in
   let sccs = Scc.deftypes dta in
-  if !Flags.canon_incremental then begin
+  if not !Flags.canon_global then begin
     List.iter (fun scc -> Repo.add_scc dta dtamap scc sccmap) sccs
   end else begin
     let comp = List.fold_left IntSet.union IntSet.empty sccs in
@@ -1304,16 +1373,10 @@ Repo.adddesc := Array.make size Repo.Unknown;
     done;
   end;
 
-  (* Output measurements *)
-  let time_end = Unix.times () in
-  let gc_end = Gc.quick_stat () in
-  Printf.printf "Time: user %.2f ms, system %.2f ms; GC: major %d, minor %d, compactions %d\n"
-    ((time_end.Unix.tms_utime -. time_start.Unix.tms_utime) *. 1000.0)
-    ((time_end.Unix.tms_stime -. time_start.Unix.tms_stime) *. 1000.0)
-    (gc_end.Gc.major_collections - gc_start.Gc.major_collections)
-    (gc_end.Gc.minor_collections - gc_start.Gc.minor_collections)
-    (gc_end.Gc.compactions - gc_start.Gc.compactions);
+  let time2 = time_end () in
+  time_print time1 time2;
 
+  (* Statistics *)
   let funs = List.fold_left (fun n -> function T.FuncDefType _ -> n + 1 | _ -> n) 0 dts in
   let strs = List.fold_left (fun n -> function T.StructDefType _ -> n + 1 | _ -> n) 0 dts in
   let arrs = List.fold_left (fun n -> function T.ArrayDefType _ -> n + 1 | _ -> n) 0 dts in
@@ -1321,7 +1384,6 @@ Repo.adddesc := Array.make size Repo.Unknown;
   Printf.printf "%d types (%d funcs, %d structs, %d arrays, %d recursion groups, largest %d)\n"
     size funs strs arrs (List.length sccs) maxr;
 
-  (* Statistics *)
   let set = ref IntSet.empty in
   let total = ref 0 in
   let mfuns = ref 0 in
@@ -1339,15 +1401,33 @@ Repo.adddesc := Array.make size Repo.Unknown;
     else if Label.is_array vert.Vert.label then incr marrs
     else assert false
   ) dtamap;
-  Printf.printf "%s minimized to %d types (%d funcs, %d structs, %d arrays)\n%!"
-    (if !Flags.canon_incremental then "incrementally" else "globally")
+  Printf.printf "%sminimized to %d types (%d funcs, %d structs, %d arrays)\n%!"
+    (if !Flags.canon_global then "globally " else "")
     !total !mfuns !mstrs !marrs;
+
+  if not !Flags.canon_global then begin
+    let open Repo in
+    Printf.printf "%d repo lookups (involving %.1f types on average)\n"
+      stat.total (float size /. float stat.total);
+    Printf.printf "  non-recursive: %d new, %d found\n"
+      stat.flat_new stat.flat_found;
+    Printf.printf "  recursive: %d new, %d found (%d pre, %d post minimization), %d unrolled (%d pre, %d post minimization)\n"
+      stat.rec_new
+      (stat.rec_found_pre + stat.rec_found_post)
+        stat.rec_found_pre stat.rec_found_post
+      (stat.rec_unrolled_pre + stat.rec_unrolled_post)
+        stat.rec_unrolled_pre stat.rec_unrolled_post;
+    Printf.printf "  minimizations: %d (involving %.1f groups, %.1f types on average)\n%!"
+      stat.min_count
+      (float stat.min_comps /. float stat.min_count)
+      (float stat.min_verts /. float stat.min_count);
+  end;
 
   (* Verification & diagnostics *)
   if !Flags.canon_verify then begin
     Printf.printf "Verifying...\n%!";
     let typetbl = DumbTypeTbl.create 1001 in
-    DumbTypeHash.context := dts;
+    DumbTypeHash.context := dta;
     let i = ref 0 in
     List.iteri (fun x dt ->
       let xs =
