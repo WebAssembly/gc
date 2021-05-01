@@ -1,6 +1,6 @@
 (* Type Repository *)
 
-(* Implementation based on:
+(* Implementation based on ideas from:
  *  Laurent Mauborgne
  *  "An Incremental Unique Representation for Regular Trees"
  *  Nordic Journal of Computing, 7(2008)
@@ -212,7 +212,9 @@ let verts_of_scc dta dtamap scc sccmap : Vert.t array =
  * scc : typeidx set, current SCC to add
  * sccmap : typeidx->vertidx array, mapping type to relative index in their SCC
  *
- * Fills in dtamap with new mappings for nodes in scc
+ * Fills in dtamap with new mappings for nodes in scc.
+ *
+ * TODO: This function needs some clean-up refacting!
  *)
 let add_scc dta dtamap scc sccmap =
 (* Printf.printf "[add"; IntSet.iter (Printf.printf " %d") scc; Printf.printf "]%!"; *)

@@ -1,12 +1,10 @@
-(* Type Graph Representation: Labels and Keys *)
+(* Type Graph Representation: Labels *)
 
 module T = Types
 
 type t = string
-type key = t * int array
 
 let dummy = ""
-let dummy_key = (dummy, [||])
 
 type labeling = {label : t; ext_vars : int array; rec_vars : int array}
 type context =
