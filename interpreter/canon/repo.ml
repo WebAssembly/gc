@@ -8,11 +8,9 @@
 
 type id = int
 type comp_id = int
-type plain_key = {label : Label.t; succs : Vert.idx array}
-type partial_key =
-  | NodeKey of {plain_key : plain_key; inner : partial_key array}
+type key =
+  | NodeKey of {label : Label.t; succs : Vert.idx array; inner : key array}
   | PathKey of int list
-
 type rep =
   { comp : comp_id;  (* type's SCC's id, with all inners = [] *)
     idx : Vert.idx;  (* type's index into its SCC, -1 if not recursive *)
@@ -33,8 +31,7 @@ let id_count = ref 0
 let comp_count = ref 0
 let id_table : rep Arraytbl.t = Arraytbl.make 13003 dummy_rep
 let comp_table : comp Arraytbl.t = Arraytbl.make 13003 dummy_comp
-let plain_table : (plain_key, id) Hashtbl.t = Hashtbl.create 13003
-let rec_table : (partial_key, id) Hashtbl.t = Hashtbl.create 13003
+let key_table : (key, id) Hashtbl.t = Hashtbl.create 13003
 
 
 (* Statistics *)
@@ -78,7 +75,7 @@ let adddesc : adddesc array ref = ref [||]
 
 let rec assert_valid_key comp d vert vert_closed = function
   | PathKey p -> assert (List.length p < Array.length comp); true
-  | NodeKey {plain_key = {label; succs}; inner} ->
+  | NodeKey {label; succs; inner} ->
     assert (label = vert.Vert.label);
     assert (Array.length succs = Array.length vert.Vert.succs);
     let vins = ref [] in
@@ -140,6 +137,7 @@ let assert_valid_state () =
     if i >= !id_count then () else let _ = () in
     assert (rep.comp < !comp_count);
     let comp = Arraytbl.get comp_table rep.comp in
+    assert (Array.length comp.verts >= 1);
     assert (rep.idx >= 0 || rep.idx = -1);
     assert (rep.idx >= 0 || Array.length comp.verts = 1);
     assert (rep.idx < Array.length comp.verts);
@@ -147,40 +145,29 @@ let assert_valid_state () =
   Hashtbl.iter (fun k id ->
     assert (id < !id_count);
     let rep = Arraytbl.get id_table id in
-    assert (rep.idx = -1);
     let comp = Arraytbl.get comp_table rep.comp in
-    assert (Array.length comp.verts = 1);
-    assert (comp.verts.(0).Vert.label = k.label);
-    assert (comp.verts.(0).Vert.succs = k.succs);
-    assert (comp.verts.(0).Vert.inner = [||]);
-  ) plain_table;
-  Hashtbl.iter (fun k id ->
-    assert (id < !id_count);
-    let rep = Arraytbl.get id_table id in
-    assert (rep.idx >= 0);
-    let comp = Arraytbl.get comp_table rep.comp in
-    assert (assert_valid_key comp.verts 0 comp.verts.(rep.idx) true k);
-  ) rec_table;
+    assert (assert_valid_key comp.verts 0 comp.verts.(max 0 rep.idx) true k);
+  ) key_table;
   true
 
 
 (* Key computation *)
 
-let rec partial_key verts vert =
+let rec key verts vert =
   assert (Vert.assert_valid !id_count (Array.length verts) vert);
-  let k = partial_key' verts (ref IntMap.empty) [] vert in
+  let k = key' verts (ref IntMap.empty) [] vert in
   assert (assert_valid_key verts 0 vert false k);
   k
 
-and partial_key' verts map p vert =
+and key' verts map p vert =
   match IntMap.find_opt vert.Vert.id !map with
   | Some k -> k
   | None ->
     map := IntMap.add vert.Vert.id (PathKey p) !map;
     let inner = Array.mapi (fun i v ->
-      partial_key' verts map (i::p) verts.(v)) vert.Vert.inner in
+      key' verts map (i::p) verts.(v)) vert.Vert.inner in
     let succs = Array.copy vert.Vert.succs in
-    NodeKey {plain_key = {label = vert.Vert.label; succs}; inner}
+    NodeKey {label = vert.Vert.label; succs; inner}
 
 
 (* Initial graph construction *)
@@ -260,13 +247,13 @@ let add_scc dta dtamap scc sccmap =
     done
   done;
 
-  (* If SCC is non-recursive, look it up in plain table *)
+  (* If SCC is non-recursive, look it up in table *)
   if !num_verts = 1 && verts.(0).Vert.inner = [||] then begin
     let x = IntSet.choose scc in
     let vert = verts.(0) in
-    let key = {label = vert.Vert.label; succs = vert.Vert.succs} in
+    let key = key verts vert in
     let id =
-      match Hashtbl.find_opt plain_table key with
+      match Hashtbl.find_opt key_table key with
       | Some id ->
         stat.flat_found <- stat.flat_found + 1;
 !adddesc.(x) <- NonrecOld;
@@ -278,7 +265,7 @@ let add_scc dta dtamap scc sccmap =
         vert.Vert.id <- id;
         Arraytbl.really_set comp_table !comp_count {dummy_comp with verts};
         Arraytbl.really_set id_table id {comp = !comp_count; idx = -1};
-        Hashtbl.add plain_table key id;
+        Hashtbl.add key_table key id;
         incr id_count;
         incr comp_count;
         stat.flat_new <- stat.flat_new + 1;
@@ -292,10 +279,10 @@ let add_scc dta dtamap scc sccmap =
     dtamap.(x) <- id
   end
 
-  (* SCC is recursive (or may be via unrolling), try partial key *)
+  (* SCC is recursive (or may be via unrolling), try key *)
   else begin
-    let k0 = partial_key verts verts.(0) in
-    match Hashtbl.find_opt rec_table k0 with
+    let k0 = key verts verts.(0) in
+    match Hashtbl.find_opt key_table k0 with
     | Some id0 ->
       (* Equivalent SCC exists, parallel-traverse key to find id map *)
       stat.rec_found_pre <- stat.rec_found_pre + 1;
@@ -304,7 +291,7 @@ let add_scc dta dtamap scc sccmap =
 (* Printf.printf "[found pre minimization, was vert %d/%d]\n%!" rep0.idx (Array.length comp_verts); *)
       let rec add_comp v id = function
         | PathKey _ -> ()
-        | NodeKey {plain_key = {label; succs}; inner} ->
+        | NodeKey {label; succs; inner} ->
           let vert = verts.(v) in
           let rep = Arraytbl.get id_table id in
           assert ((Arraytbl.get comp_table rep.comp).verts == comp_verts);
@@ -543,8 +530,8 @@ let add_scc dta dtamap scc sccmap =
       (* Try to find SCC elsewhere in repo *)
 (* Printf.printf "[lookup in repo]%!"; *)
       let vert0 = min_verts.(0) in
-      let k0 = partial_key min_verts vert0 in
-      match Hashtbl.find_opt rec_table k0 with
+      let k0 = key min_verts vert0 in
+      match Hashtbl.find_opt key_table k0 with
       | Some id0 ->
         (* Equivalent SCC exists, parallel-traverse key to find id map *)
         stat.rec_found_post <- stat.rec_found_post + 1;
@@ -553,7 +540,7 @@ let add_scc dta dtamap scc sccmap =
 (* Printf.printf "[found post minimization, was vert %d/%d]\n%!" rep0.idx (Array.length comp_verts); *)
         let rec add_comp v id = function
           | PathKey _ -> ()
-          | NodeKey {plain_key = {label; succs}; inner} ->
+          | NodeKey {label; succs; inner} ->
             let vert = min_verts.(v) in
             let rep = Arraytbl.get id_table id in
             assert ((Arraytbl.get comp_table rep.comp).verts == comp_verts);
@@ -595,9 +582,9 @@ let add_scc dta dtamap scc sccmap =
           let vert = min_verts.(v) in
           let id = id0 + v in
           let rep = {comp = compid; idx = v} in
-          let k = if v = 0 then k0 else partial_key min_verts min_verts.(v) in
+          let k = if v = 0 then k0 else key min_verts min_verts.(v) in
           Arraytbl.really_set id_table id rep;
-          Hashtbl.add rec_table k id;
+          Hashtbl.add key_table k id;
           (* Remap vertex'es inner edges to new ids and add unrolled edges *)
           if vert.inner <> [||] then begin
             let i = ref 0 in  (* indexes into old vert.inner *)
