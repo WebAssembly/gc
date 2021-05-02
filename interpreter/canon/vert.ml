@@ -4,7 +4,7 @@ type idx = int
 type t =
   { mutable id : int;
     label : Label.t;
-    succs : int array;  (* id of successor, or -1 when within own SCC *)
+    succs : int array;  (* id of successor, or negative when within own SCC *)
     mutable inner : idx array;  (* index within own SCC for each succ id of -1 *)
   }
 
@@ -15,29 +15,15 @@ let dummy =
     inner = [||];
   }
 
-let raw_id id = -id - 1
-let is_raw_id id = id < 0
-
-let make scc x dt : t =
-  let open Label in
-  let c = {scc; buf = Buffer.create 32; ext = []; rec_ = []} in
-  Label.def_label c dt;
-  { id = x;
-    label = Buffer.contents c.buf;
-    succs = Array.of_list (List.rev c.ext);
-    inner = Array.of_list (List.rev c.rec_);
-  }
-
-
 (* Verification *)
 
 let assert_valid maxid maxvert vert =
-  let n = ref 0 in
+let n = ref 0 in
   assert (vert.id < maxid);
   Array.iter (fun id ->
-    assert (id = -1 || id >= 0);
-    assert (id < maxid);
-    if id = -1 then incr n;
+    if id >= 0 then assert (id < maxid);
+    if id < 0 then assert (-id-1 < maxvert);
+    if id < 0 then incr n;
   ) vert.succs;
   assert (!n = Array.length vert.inner);
   Array.iter (fun w ->
@@ -50,6 +36,28 @@ let assert_valid_graph maxid verts =
   Array.for_all (fun vert ->
     assert_valid maxid (Array.length verts) vert
   ) verts
+
+
+(* Construction *)
+
+let raw_id id = -id - 1
+let is_raw_id id = id < 0
+
+let make scc x dt : t =
+  let open Label in
+  let c = {scc; buf = Buffer.create 32; edges = []} in
+  Label.def_label c dt;
+  let succs = Array.of_list (List.rev c.edges) in
+  let inner = ref [] in
+  let n = ref 0 in
+  Array.iteri (fun i id ->
+    if id < 0 then inner := -id-1 :: !inner;
+    if id < 0 then incr n
+  ) succs;
+  assert (!n = List.length !inner);
+  let vert = {id = x; label = Buffer.contents c.buf; succs; inner = Array.of_list (List.rev !inner) } in
+  assert (assert_valid Int.max_int Int.max_int vert);
+  vert
 
 
 (* Debugging aid *)

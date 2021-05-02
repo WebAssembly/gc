@@ -8,11 +8,14 @@
 
 type id = int
 type comp_id = int
+
 type key =
-  | NodeKey of {label : Label.t; succs : Vert.idx array; inner : key array}
+  | NodeKey of {label : Label.t; succs : key_edge array}
   | PathKey of int list
+and key_edge = ExtEdge of id | InnerEdge of key
+
 type rep =
-  { comp : comp_id;  (* type's SCC's id, with all inners = [] *)
+  { comp : comp_id;  (* type's SCC's id, with all succsessors as id's *)
     idx : Vert.idx;  (* type's index into its SCC, -1 if not recursive *)
   }
 type comp =
@@ -75,24 +78,28 @@ let adddesc : adddesc array ref = ref [||]
 
 let rec assert_valid_key comp d vert vert_closed = function
   | PathKey p -> assert (List.length p < Array.length comp); true
-  | NodeKey {label; succs; inner} ->
+  | NodeKey {label; succs} ->
     assert (label = vert.Vert.label);
     assert (Array.length succs = Array.length vert.Vert.succs);
     let vins = ref [] in
-    Array.iteri (fun i id ->
-      assert (id >= 0 || id = -1);
-      assert (id < !id_count);
-      if id = -1 then
-        vins := vert.Vert.succs.(i) :: !vins
-      else
+    let kins = ref [] in
+    Array.iteri (fun i edge ->
+      match edge with
+      | ExtEdge id ->
+        assert (id >= 0);
+        assert (id < !id_count);
         assert (id = vert.Vert.succs.(i));
+      | InnerEdge k ->
+        assert (vert_closed = (vert.Vert.succs.(i) >= 0));
+        vins := vert.Vert.succs.(i) :: !vins;
+        kins := k :: !kins
     ) succs;
     let vins = Array.of_list (List.rev !vins) in
-    assert (Array.length vins = Array.length inner);
+    let kins = Array.of_list (List.rev !kins) in
     if vert_closed then
       assert (vert.Vert.inner = [||])
     else
-      assert (Array.length inner = Array.length vert.Vert.inner);
+      assert (Array.length vins = Array.length vert.Vert.inner);
     Array.iteri (fun i k ->
       let id = vins.(i) in
       let w =
@@ -104,8 +111,10 @@ let rec assert_valid_key comp d vert vert_closed = function
           assert (comp'.verts == comp);
           rep'.idx
         end else begin
-          assert (id = -1);
-          vert.Vert.inner.(i)
+          assert (id < 0);
+          let w = -id-1 in
+          assert (w = vert.Vert.inner.(i));
+          w
         end
       in
       assert (w >= 0);
@@ -113,7 +122,7 @@ let rec assert_valid_key comp d vert vert_closed = function
       let vert' = comp.(w) in
       assert (d < Array.length comp);
       assert (assert_valid_key comp (d + 1) vert' vert_closed k)
-    ) inner;
+    ) kins;
     true
 
 let assert_valid_state () =
@@ -156,7 +165,7 @@ let assert_valid_state () =
 let rec key verts vert =
   assert (Vert.assert_valid !id_count (Array.length verts) vert);
   let k = key' verts (ref IntMap.empty) [] vert in
-  assert (assert_valid_key verts 0 vert false k);
+  (* assert (assert_valid_key verts 0 vert false k); *)
   k
 
 and key' verts map p vert =
@@ -166,8 +175,11 @@ and key' verts map p vert =
     map := IntMap.add vert.Vert.id (PathKey p) !map;
     let inner = Array.mapi (fun i v ->
       key' verts map (i::p) verts.(v)) vert.Vert.inner in
-    let succs = Array.copy vert.Vert.succs in
-    NodeKey {label = vert.Vert.label; succs; inner}
+    let i = ref (-1) in
+    let succs = Array.map (fun id ->
+      if id >= 0 then ExtEdge id else (incr i; InnerEdge inner.(!i))
+    ) vert.Vert.succs in
+    NodeKey {label = vert.Vert.label; succs}
 
 
 (* Initial graph construction *)
@@ -183,12 +195,12 @@ let verts_of_scc dta dtamap scc sccmap : Vert.t array =
   ) scc;
   for v = 0 to num_verts - 1 do
     let vert = verts.(v) in
-    for i = 0 to Array.length vert.succs - 1 do
-      let x = vert.succs.(i) in
-      if x <> - 1 then vert.succs.(i) <- dtamap.(x)
-    done;
     for i = 0 to Array.length vert.inner - 1 do
       vert.inner.(i) <- sccmap.(vert.inner.(i))
+    done;
+    for i = 0 to Array.length vert.succs - 1 do
+      let x = vert.succs.(i) in
+      vert.succs.(i) <- if x >= 0 then dtamap.(x) else -sccmap.(-x-1)-1
     done
   done;
   verts
@@ -226,7 +238,7 @@ let add_scc dta dtamap scc sccmap =
     (* For all their external successors... *)
     for i = 0 to Array.length succs - 1 do
       let id = succs.(i) in
-      if id <> -1 then begin
+      if id >= 0 then begin
         let rep = Arraytbl.get id_table id in
         (* If those are themselves recursive... *)
         if rep.idx <> -1 && not (IntMap.mem rep.comp !adj_comps) then begin
@@ -248,10 +260,12 @@ let add_scc dta dtamap scc sccmap =
   done;
 
   (* If SCC is non-recursive, look it up in table *)
-  if !num_verts = 1 && verts.(0).Vert.inner = [||] then begin
+  assert (Array.for_all ((<=) 0) verts.(0).Vert.succs = (verts.(0).Vert.inner = [||]));
+  if !num_verts = 1 && Array.for_all ((<=) 0) verts.(0).Vert.succs then begin
     let x = IntSet.choose scc in
     let vert = verts.(0) in
     let key = key verts vert in
+    assert (assert_valid_key verts 0 vert false key);
     let id =
       match Hashtbl.find_opt key_table key with
       | Some id ->
@@ -282,6 +296,7 @@ let add_scc dta dtamap scc sccmap =
   (* SCC is recursive (or may be via unrolling), try key *)
   else begin
     let k0 = key verts verts.(0) in
+    assert (assert_valid_key verts 0 verts.(0) false k0);
     match Hashtbl.find_opt key_table k0 with
     | Some id0 ->
       (* Equivalent SCC exists, parallel-traverse key to find id map *)
@@ -291,16 +306,15 @@ let add_scc dta dtamap scc sccmap =
 (* Printf.printf "[found pre minimization, was vert %d/%d]\n%!" rep0.idx (Array.length comp_verts); *)
       let rec add_comp v id = function
         | PathKey _ -> ()
-        | NodeKey {label; succs; inner} ->
+        | NodeKey {label; succs} ->
           let vert = verts.(v) in
           let rep = Arraytbl.get id_table id in
           assert ((Arraytbl.get comp_table rep.comp).verts == comp_verts);
           let repo_vert = comp_verts.(rep.idx) in
           assert (label = repo_vert.Vert.label);
           assert (label = vert.Vert.label);
-          assert (succs = vert.Vert.succs);
+          assert (Array.map (function ExtEdge id -> id | InnerEdge _ -> -1) succs = vert.Vert.succs);
           assert (Array.length succs = Array.length repo_vert.Vert.succs);
-          assert (Array.length inner = Array.length vert.Vert.inner);
           assert (Array.length repo_vert.Vert.inner = 0);
           assert (Vert.is_raw_id verts.(v).id);
           let x = Vert.raw_id vert.id in
@@ -310,13 +324,14 @@ let add_scc dta dtamap scc sccmap =
           (* Add successors *)
           let i = ref 0 in
           for j = 0 to Array.length succs - 1 do
-            if succs.(j) = -1 then begin
-              let p = inner.(!i) in
-              let v' = vert.Vert.inner.(!i) in
+            match succs.(j) with
+            | ExtEdge _ -> ()
+            | InnerEdge k' ->
+              let v' = -vert.Vert.succs.(j)-1 in
+              assert (v' = vert.Vert.inner.(!i));
               let id = repo_vert.Vert.succs.(j) in
               incr i;
-              add_comp v' id p
-            end
+              add_comp v' id k'
           done
       in add_comp 0 id0 k0
 
@@ -350,7 +365,9 @@ let add_scc dta dtamap scc sccmap =
             let id1 = vert1.succs.(!pos) in
             let id2 = vert2.succs.(!pos) in
             eq := id1 = id2 ||
-              id1 = -1 && (incr i; equal map vert1.inner.(!i) id2);
+              id1 < 0 && (incr i;
+                assert (-id1-1 = vert1.inner.(!i));
+                equal map (-id1-1) id2);
             incr pos
           done;
           assert (not !eq || !i + 1 = Array.length vert1.inner);
@@ -413,13 +430,14 @@ let add_scc dta dtamap scc sccmap =
       let new_inner = ref [] in
       let i = ref 0 in  (* index into old vert.inner *)
       let succs = Array.map (fun id ->
-        if id = -1 then begin
+        if id < 0 then begin
           assert (v < own_size);
-          new_inner := vert.inner.(!i) :: !new_inner; incr i; -1
+          assert (-id-1 = vert.inner.(!i));
+          new_inner := -id-1 :: !new_inner; incr i; id
         end else
           match IntMap.find_opt id !adj_verts with
           | None -> id
-          | Some w -> new_inner := w :: !new_inner; -1
+          | Some w -> new_inner := w :: !new_inner; -w-1
       ) vert.succs in
       assert (!i = Array.length vert.inner);
       let inner = Array.of_list (List.rev !new_inner) in
@@ -505,17 +523,18 @@ let add_scc dta dtamap scc sccmap =
       (* Remap inner edges *)
       for v = 0 to min_size - 1 do
         let vert = min_verts.(v) in
-        if vert.inner <> [||] then begin
+        if true || vert.inner <> [||] then begin
           let new_inner = ref [] in
           let i = ref 0 in  (* indexes into old vert.inner *)
           for j = 0 to Array.length vert.succs - 1 do
-            let w = vert.succs.(j) in
-            if w = -1 then begin
-              let w = vert.inner.(!i) in
+            let id = vert.succs.(j) in
+            if id < 0 then begin
+              let w = -id-1 in
+              assert (w = vert.inner.(!i));
               incr i;
               let w' = remap_verts.(w) in
               if w < own_size then
-                new_inner := w' :: !new_inner
+                (new_inner := w' :: !new_inner; vert.succs.(j) <- -w'-1)
               else
                 vert.succs.(j) <- w'
             end
@@ -531,6 +550,7 @@ let add_scc dta dtamap scc sccmap =
 (* Printf.printf "[lookup in repo]%!"; *)
       let vert0 = min_verts.(0) in
       let k0 = key min_verts vert0 in
+      assert (assert_valid_key min_verts 0 vert0 false k0);
       match Hashtbl.find_opt key_table k0 with
       | Some id0 ->
         (* Equivalent SCC exists, parallel-traverse key to find id map *)
@@ -540,27 +560,27 @@ let add_scc dta dtamap scc sccmap =
 (* Printf.printf "[found post minimization, was vert %d/%d]\n%!" rep0.idx (Array.length comp_verts); *)
         let rec add_comp v id = function
           | PathKey _ -> ()
-          | NodeKey {label; succs; inner} ->
+          | NodeKey {label; succs} ->
             let vert = min_verts.(v) in
             let rep = Arraytbl.get id_table id in
             assert ((Arraytbl.get comp_table rep.comp).verts == comp_verts);
             let repo_vert = comp_verts.(rep.idx) in
             assert (label = repo_vert.Vert.label);
             assert (label = vert.Vert.label);
-            assert (succs = vert.Vert.succs);
+            assert (Array.map (function ExtEdge id -> id | InnerEdge _ -> -1) succs = vert.Vert.succs);
             assert (Array.length succs = Array.length repo_vert.Vert.succs);
-            assert (Array.length inner = Array.length vert.Vert.inner);
             assert (Array.length repo_vert.Vert.inner = 0);
             (* Add successors *)
             let i = ref 0 in
             for j = 0 to Array.length succs - 1 do
-              if succs.(j) = -1 then begin
-                let p = inner.(!i) in
-                let v' = vert.Vert.inner.(!i) in
+              match succs.(j) with
+              | ExtEdge _ -> ()
+              | InnerEdge k' ->
+                let v' = -vert.Vert.succs.(j)-1 in
+                assert (v' = vert.Vert.inner.(!i));
                 let id = repo_vert.Vert.succs.(j) in
                 incr i;
-                add_comp v' id p
-              end
+                add_comp v' id k'
             done;
             assert (Vert.is_raw_id vert.id);
             let orig_v = sccmap.(Vert.raw_id vert.id) in
@@ -583,19 +603,22 @@ let add_scc dta dtamap scc sccmap =
           let id = id0 + v in
           let rep = {comp = compid; idx = v} in
           let k = if v = 0 then k0 else key min_verts min_verts.(v) in
+          assert (assert_valid_key min_verts 0 min_verts.(v) false k);
           Arraytbl.really_set id_table id rep;
           Hashtbl.add key_table k id;
           (* Remap vertex'es inner edges to new ids and add unrolled edges *)
           if vert.inner <> [||] then begin
             let i = ref 0 in  (* indexes into old vert.inner *)
             for j = 0 to Array.length vert.succs - 1 do
-              let w = vert.succs.(j) in
-              if w = -1 then begin
-                assert (vert.inner.(!i) >= 0);
-                assert (vert.inner.(!i) < min_size);
-                let idj = id0 + vert.inner.(!i) in
-                vert.succs.(j) <- idj;
-                Hashtbl.add unrolled (vert.label, j, idj) ();
+              let idj = vert.succs.(j) in
+              if idj < 0 then begin
+                let w = -idj-1 in
+                assert (w = vert.inner.(!i));
+                assert (w >= 0);
+                assert (w < min_size);
+                let idj' = id0 + w in
+                vert.succs.(j) <- idj';
+                Hashtbl.add unrolled (vert.label, j, idj') ();
                 incr i
               end
             done;

@@ -6,14 +6,6 @@ type t = string
 
 let dummy = ""
 
-type labeling = {label : t; ext_vars : int array; rec_vars : int array}
-type context =
-  { scc : IntSet.t;
-    buf : Buffer.t;
-    mutable ext : int list;
-    mutable rec_ : int list;
-  }
-
 
 (* Inspection *)
 
@@ -24,20 +16,18 @@ let is_func label = label.[0] = '\x03'
 
 (* Extract labels from types *)
 
+type context =
+  { scc : IntSet.t;
+    buf : Buffer.t;
+    mutable edges : int list;  (* negative when internal edge *)
+  }
+
 let bool b x = Buffer.add_uint8 b (if x then 1 else 0)
 let rec int b i =
   if 0 <= i && i < 128 then Buffer.add_uint8 b i else
   (Buffer.add_uint8 b (i land 0x7f lor 0x80); int b (i lsr 7))
 
-let rec label scc dt : labeling =
-  let c = {scc; buf = Buffer.create 32; ext = []; rec_ = []} in
-  def_label c dt;
-  { label = Buffer.contents c.buf;
-    ext_vars = Array.of_list (List.rev c.ext);
-    rec_vars = Array.of_list (List.rev c.rec_);
-  }
-
-and def_label c = function
+let rec def_label c = function
   | T.StructDefType (T.StructType fts) ->
     Buffer.add_uint8 c.buf 1;
     List.iter (field_label c) fts;
@@ -95,7 +85,6 @@ and heap_label c = function
 and var_label c = function
   | T.SynVar x' ->
     let x = Int32.to_int x' in
-    if IntSet.mem x c.scc
-    then (c.ext <- -1 :: c.ext; c.rec_ <- x :: c.rec_)
-    else c.ext <- x :: c.ext
+    let id = if IntSet.mem x c.scc then (-x-1) else x in
+    c.edges <- id :: c.edges
   | T.SemVar _ -> assert false
