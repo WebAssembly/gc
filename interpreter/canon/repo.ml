@@ -178,6 +178,165 @@ and key' verts map p vert =
 
 
 (* dta : typeidx->def_type array, as in input module
+ * dtamap : typeidx->id array, mapping (known) typeidx's to id's
+ *
+ * Fills in dtamap with new id mappings for nodes.
+ *
+ * TODO: This function needs some clean-up refacting!
+ *)
+let add_graph dta dtamap =
+(* Printf.printf "[add"; IntSet.iter (Printf.printf " %d") scc; Printf.printf "]%!"; *)
+  assert (Array.for_all ((=) (-1)) dtamap);
+  let size = Array.length dta in
+  stat.total_comp <- stat.total_comp + 1;  (* TODO: Hm... *)
+  stat.total_vert <- stat.total_vert + size;
+  let verts = Vert.graph dta in
+  assert (Vert.assert_valid_graph !id_count verts);
+  assert (assert_valid_state ());
+
+  (* Minimize *)
+(* Printf.printf "[minimize]%!"; *)
+  stat.min_count <- stat.min_count + 1;
+  stat.min_comps <- stat.min_comps + 1;  (* TOOD: Hm... *)
+  stat.min_verts <- stat.min_verts + size;
+  let blocks, _ = Minimize.minimize verts in
+(* Printf.printf "[minimize done]%!"; *)
+
+  (* Extract minimized graph *)
+  let module P = Minimize.Part in
+  let min_size = blocks.P.num in
+  let min_verts = Array.make min_size Vert.dummy in
+  let remap_verts = Array.make size (-1) in
+  let v = ref 0 in
+  for bl = 0 to blocks.P.num - 1 do
+    let open Minimize.Part in
+    let v' = blocks.elems.(blocks.st.(bl).first) in
+    (* Use first vertex in block as representative in new graph *)
+    let vert = verts.(v') in
+    (* Remap block's vertices *)
+    for i = blocks.st.(bl).first to blocks.st.(bl).last - 1 do
+      assert (remap_verts.(blocks.elems.(i)) = -1);
+      remap_verts.(blocks.elems.(i)) <- !v
+    done;
+    min_verts.(!v) <- vert;
+    incr v
+  done;
+  assert (Array.for_all ((<>) (-1)) remap_verts);
+  (* Remap inner edges *)
+  for v = 0 to min_size - 1 do
+    let vert = min_verts.(v) in
+    for j = 0 to Array.length vert.Vert.succs - 1 do
+      let id = vert.Vert.succs.(j) in
+      if id < 0 then begin
+        let w = -id-1 in
+        let w' = remap_verts.(w) in
+        vert.Vert.succs.(j) <- -w'-1
+      end
+    done
+  done;
+  assert (Vert.assert_valid_graph !id_count min_verts);
+
+  (* A helper for updating SCC's entries in dtamap *)
+  let update_dtamap bl id desc =
+  (* Printf.printf "[update bl=%d id=%d]\n%!" bl id; *)
+    let open Minimize.Part in
+    for i = blocks.st.(bl).first to blocks.st.(bl).last - 1 do
+      let v = blocks.elems.(i) in
+      assert (Vert.is_raw_id Vert.(verts.(v).id));
+      let x = Vert.raw_id Vert.(verts.(v).id) in
+      assert (dtamap.(x) = -1);
+!adddesc.(x) <- desc;
+    done
+  in
+
+  (* Compute SCC's of this graph *)
+  let sccs = Scc.sccs min_verts in
+
+  (* Try to find each SCC in repo *)
+  List.iter (fun scc ->
+    let open Vert in
+(* Printf.printf "[lookup in repo]%!"; *)
+    (* Compute key of first vertex *)
+    let vert0 = min_verts.(0) in
+    let k0 = key min_verts vert0 in
+    assert (assert_valid_key min_verts 0 vert0 false k0);
+    match Hashtbl.find_opt key_table k0 with
+    | Some id0 ->
+      (* Equivalent SCC exists, parallel-traverse key to find id map *)
+      stat.rec_found_post <- stat.rec_found_post + 1;
+      let rep0 = Arraytbl.get id_table id0 in
+      let comp_verts = (Arraytbl.get comp_table rep0.comp).verts in
+      let rec add_comp v id = function
+        | PathKey _ -> ()
+        | NodeKey {label; succs} ->
+          let vert = min_verts.(v) in
+          let rep = Arraytbl.get id_table id in
+          assert ((Arraytbl.get comp_table rep.comp).verts == comp_verts);
+          let repo_vert = comp_verts.(rep.idx) in
+          assert (label = repo_vert.Vert.label);
+          assert (label = vert.Vert.label);
+          assert (Array.map (function ExtEdge id -> id | InnerEdge _ -> -1) succs = Array.map (fun id -> if id > 0 then id else -1) vert.Vert.succs);
+          assert (Array.length succs = Array.length repo_vert.Vert.succs);
+          (* Add successors *)
+          for j = 0 to Array.length succs - 1 do
+            match succs.(j) with
+            | ExtEdge _ -> ()
+            | InnerEdge k' ->
+              let v' = -vert.Vert.succs.(j)-1 in
+              let id = repo_vert.Vert.succs.(j) in
+              add_comp v' id k'
+          done;
+          assert (Vert.is_raw_id vert.id);
+          let orig_v = dtamap.(Vert.raw_id vert.id) in
+          update_dtamap blocks.P.el.(orig_v).P.set id RecOldUnreached
+      in add_comp 0 id0 k0
+(* ;Printf.printf "[global old(%d)" min_size; IntSet.iter (fun x -> Printf.printf " %d" dtamap.(x)) scc; Printf.printf "]%!\n"; *)
+
+    | None ->
+(* Printf.printf "[not found]%!"; *)
+      (* This is a new component, enter into tables *)
+      stat.rec_new <- stat.rec_new + 1;
+      let id0 = !id_count in
+      let compid = !comp_count in
+      let unrolled = Hashtbl.create min_size in
+      Arraytbl.really_set comp_table !comp_count {verts = min_verts; unrolled};
+      incr comp_count;
+      id_count := !id_count + min_size;
+      for v = 0 to min_size - 1 do
+        let vert = min_verts.(v) in
+        let id = id0 + v in
+        let rep = {comp = compid; idx = v} in
+        let k = if v = 0 then k0 else key min_verts min_verts.(v) in
+        assert (assert_valid_key min_verts 0 min_verts.(v) false k);
+        Arraytbl.really_set id_table id rep;
+        Hashtbl.add key_table k id;
+        (* Remap vertex'es inner edges to new ids and add unrolled edges *)
+        for j = 0 to Array.length vert.succs - 1 do
+          let idj = vert.succs.(j) in
+          if idj < 0 then begin
+            let w = -idj-1 in
+            assert (w >= 0);
+            assert (w < min_size);
+            let idj' = id0 + w in
+            vert.succs.(j) <- idj';
+            Hashtbl.add unrolled (vert.label, j, idj') ()
+          end
+        done;
+        assert (Vert.is_raw_id vert.id);
+        let orig_v = dtamap.(Vert.raw_id vert.id) in
+        update_dtamap blocks.P.el.(orig_v).P.set id RecNew;
+        vert.id <- id
+      done
+(* ;Printf.printf "[global new(%d)" min_size; IntSet.iter (fun x -> Printf.printf " %d" dtamap.(x)) scc; Printf.printf "]%!\n"; *)
+  ) sccs;
+
+  (* Post conditions *)
+  assert (Array.for_all ((<=) 0) dtamap);
+  assert (assert_valid_state ())
+
+
+(* dta : typeidx->def_type array, as in input module
+ * dtamap : typeidx->id array, mapping (known) typeidx's to id's
  * scc : typeidx set, current SCC to add
  * dtamap : typeidx->id array, mapping (known) typeidx's to id's
  * sccmap : typeidx->vertidx array, mapping type to relative index in their SCC
