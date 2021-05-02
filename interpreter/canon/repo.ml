@@ -31,10 +31,10 @@ let dummy_comp = {verts = [||]; unrolled = Hashtbl.create 0}
 
 let id_count = ref 0
 let comp_count = ref 0
-let id_table : rep Arraytbl.t = Arraytbl.make 33 dummy_rep
-let comp_table : comp Arraytbl.t = Arraytbl.make 33 dummy_comp
-let plain_table : (plain_key, id) Hashtbl.t = Hashtbl.create 33
-let rec_table : (partial_key, id) Hashtbl.t = Hashtbl.create 11
+let id_table : rep Arraytbl.t = Arraytbl.make 13003 dummy_rep
+let comp_table : comp Arraytbl.t = Arraytbl.make 13003 dummy_comp
+let plain_table : (plain_key, id) Hashtbl.t = Hashtbl.create 13003
+let rec_table : (partial_key, id) Hashtbl.t = Hashtbl.create 13003
 
 
 (* Statistics *)
