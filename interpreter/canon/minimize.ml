@@ -160,7 +160,8 @@ Printf.printf "]\n%!";
   let labelmap = Hashtbl.create num_verts in
   for v = 0 to num_verts - 1 do
     let vert = verts.(v) in
-    let key = (vert.Vert.label, vert.Vert.succs) in
+    (* TODO: avoid copying the array by using custom hash function *)
+    let key = (vert.Vert.label, Array.map (fun i -> if i < 0 then -1 else i) vert.Vert.succs) in
     let vs =
       match Hashtbl.find_opt labelmap key with
       | None -> []

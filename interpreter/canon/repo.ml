@@ -533,7 +533,7 @@ let add_scc dta dtamap scc sccmap =
             let repo_vert = comp_verts.(rep.idx) in
             assert (label = repo_vert.Vert.label);
             assert (label = vert.Vert.label);
-            assert (Array.map (function ExtEdge id -> id | InnerEdge _ -> -1) succs = vert.Vert.succs);
+            assert (Array.map (function ExtEdge id -> id | InnerEdge _ -> -1) succs = Array.map (fun id -> if id > 0 then id else -1) vert.Vert.succs);
             assert (Array.length succs = Array.length repo_vert.Vert.succs);
             (* Add successors *)
             for j = 0 to Array.length succs - 1 do
