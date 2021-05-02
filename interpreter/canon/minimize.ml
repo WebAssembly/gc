@@ -126,14 +126,18 @@ let minimize (verts : Vert.t array) =
   let num_edges = ref 0 in
   let max_arity = ref (-1) in
   for v = 0 to num_verts - 1 do
-    let inner = verts.(v).Vert.inner in
-    let arity = Array.length inner in
-    for i = 0 to arity - 1 do
-      let w = inner.(i) in
-      inedges.(w) <- {from = v; pos = i; to_ = w; idx = -1} :: inedges.(w)
+    let pos = ref 0 in
+    let succs = verts.(v).Vert.succs in
+    for i = 0 to Array.length succs - 1 do
+      let id = succs.(i) in
+      if id < 0 then begin
+        let w = -id-1 in
+        inedges.(w) <- {from = v; pos = !pos; to_ = w; idx = -1} :: inedges.(w);
+        incr pos
+      end
     done;
-    num_edges := !num_edges + arity;
-    max_arity := max !max_arity arity;
+    num_edges := !num_edges + !pos;
+    max_arity := max !max_arity !pos;
   done;
   let e = ref 0 in
   let edges = Array.make !num_edges dummy_edge in
