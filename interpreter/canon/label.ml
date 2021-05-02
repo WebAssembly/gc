@@ -85,6 +85,6 @@ and heap_label c = function
 and var_label c = function
   | T.SynVar x' ->
     let x = Int32.to_int x' in
-    let id = if IntSet.mem x c.scc then (-x-1) else x in
+    let id = if c.scc = IntSet.empty || IntSet.mem x c.scc then (-x-1) else x in
     c.edges <- id :: c.edges
   | T.SemVar _ -> assert false

@@ -179,6 +179,15 @@ and key' verts map p vert =
 
 (* Initial graph construction *)
 
+let verts_of_graph dta dtamap : Vert.t array =
+  let num_verts = Array.length dta in
+  let verts = Array.make num_verts Vert.dummy in
+  let v = ref 0 in
+  Array.iteri (fun x dt ->
+    verts.(!v) <- Vert.make IntSet.empty (Vert.raw_id x) dt; incr v
+  ) dta;
+  verts
+
 let verts_of_scc dta dtamap scc sccmap : Vert.t array =
   let open Vert in
   let num_verts = IntSet.cardinal scc in
