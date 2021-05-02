@@ -90,36 +90,32 @@ let canonicalize dts =
   let size = Array.length dta in
 Repo.adddesc := Array.make size Repo.Unknown;  (* Temp HACK *)
   let dtamap = Array.make size (-1) in
-  let sccs, sccmap =
-    if not !Flags.canon_global then begin
-      let sccmap = Array.make size (-1) in
-      let sccs = Scc.deftypes dta in
-      List.iter (fun scc -> Repo.add_scc dta dtamap scc sccmap) sccs;
-      sccs, sccmap
-    end else begin
-      let verts = Repo.verts_of_graph dta dtamap in
-      assert (Array.length verts = size);
-      let blocks, _ = Minimize.minimize verts in
-      (* Hack fake repo for diagnostics below *)
-      let open Minimize.Part in
-      let open Repo in
-      Arraytbl.really_set comp_table 0 {dummy_comp with verts};
-      for v = 0 to size - 1 do
-        Arraytbl.really_set id_table v {comp = 0; idx = v};
-        let r = blocks.elems.(blocks.st.(blocks.el.(v).set).first) in
-        dtamap.(v) <- r
-      done;
-      [], dtamap
-    end
-  in
+  if not !Flags.canon_global then begin
+    let sccmap = Array.make size (-1) in
+    let sccs = Scc.sccs_of_deftypes dta in
+    List.iter (fun scc -> Repo.add_scc dta scc dtamap sccmap) sccs
+  end else begin
+    let verts = Vert.graph dta in
+    assert (List.for_all Fun.id
+      (List.map2 IntSet.equal (Scc.sccs_of_deftypes dta) (Scc.sccs verts)));
+    let blocks, _ = Minimize.minimize verts in
+    (* Hack fake repo for diagnostics below *)
+    let open Minimize.Part in
+    let open Repo in
+    Arraytbl.really_set comp_table 0 {dummy_comp with verts};
+    for v = 0 to size - 1 do
+      Arraytbl.really_set id_table v {comp = 0; idx = v};
+      let r = blocks.elems.(blocks.st.(blocks.el.(v).set).first) in
+      dtamap.(v) <- r
+    done
+  end;
 
   let time2 = time_end () in
   time_print (time_diff time1 time2);
   time_record (time_diff time1 time2);
 
   (* Statistics *)
-  let sccs = if !Flags.canon_global then sccs else Scc.deftypes dta in
-
+  let sccs = Scc.sccs (Vert.graph dta) in
   let funs = List.fold_left (fun n -> function T.FuncDefType _ -> n + 1 | _ -> n) 0 dts in
   let strs = List.fold_left (fun n -> function T.StructDefType _ -> n + 1 | _ -> n) 0 dts in
   let arrs = List.fold_left (fun n -> function T.ArrayDefType _ -> n + 1 | _ -> n) 0 dts in

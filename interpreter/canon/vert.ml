@@ -39,9 +39,29 @@ let make scc x dt : t =
   let c = {scc; buf = Buffer.create 32; edges = []} in
   Label.def_label c dt;
   let succs = Array.of_list (List.rev c.edges) in
-  let vert = {id = x; label = Buffer.contents c.buf; succs} in
+  let vert = {id = raw_id x; label = Buffer.contents c.buf; succs} in
   assert (assert_valid Int.max_int Int.max_int vert);
   vert
+
+let graph dta : t array =
+  Array.mapi (fun x dt -> make IntSet.empty x dt) dta
+
+let graph_of_scc dta scc dtamap sccmap : t array =
+  let num_verts = IntSet.cardinal scc in
+  let verts = Array.make num_verts dummy in
+  let v = ref 0 in
+  IntSet.iter (fun x ->
+    sccmap.(x) <- !v;
+    verts.(!v) <- make scc x dta.(x); incr v
+  ) scc;
+  for v = 0 to num_verts - 1 do
+    let vert = verts.(v) in
+    for i = 0 to Array.length vert.succs - 1 do
+      let x = vert.succs.(i) in
+      vert.succs.(i) <- if x >= 0 then dtamap.(x) else -sccmap.(-x-1)-1
+    done
+  done;
+  verts
 
 
 (* Debugging aid *)

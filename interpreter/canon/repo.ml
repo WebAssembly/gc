@@ -177,51 +177,21 @@ and key' verts map p vert =
     NodeKey {label = vert.Vert.label; succs}
 
 
-(* Initial graph construction *)
-
-let verts_of_graph dta dtamap : Vert.t array =
-  let num_verts = Array.length dta in
-  let verts = Array.make num_verts Vert.dummy in
-  let v = ref 0 in
-  Array.iteri (fun x dt ->
-    verts.(!v) <- Vert.make IntSet.empty (Vert.raw_id x) dt; incr v
-  ) dta;
-  verts
-
-let verts_of_scc dta dtamap scc sccmap : Vert.t array =
-  let open Vert in
-  let num_verts = IntSet.cardinal scc in
-  let verts = Array.make num_verts Vert.dummy in
-  let v = ref 0 in
-  IntSet.iter (fun x ->
-    sccmap.(x) <- !v;
-    verts.(!v) <- Vert.make scc (Vert.raw_id x) dta.(x); incr v
-  ) scc;
-  for v = 0 to num_verts - 1 do
-    let vert = verts.(v) in
-    for i = 0 to Array.length vert.succs - 1 do
-      let x = vert.succs.(i) in
-      vert.succs.(i) <- if x >= 0 then dtamap.(x) else -sccmap.(-x-1)-1
-    done
-  done;
-  verts
-
-
 (* dta : typeidx->def_type array, as in input module
- * dtamap : typeidx->id array, mapping (known) typeidx's to id's
  * scc : typeidx set, current SCC to add
+ * dtamap : typeidx->id array, mapping (known) typeidx's to id's
  * sccmap : typeidx->vertidx array, mapping type to relative index in their SCC
  *
- * Fills in dtamap with new mappings for nodes in scc.
+ * Fills in dtamap and sccmap with new mappings for nodes in scc.
  *
  * TODO: This function needs some clean-up refacting!
  *)
-let add_scc dta dtamap scc sccmap =
+let add_scc dta scc dtamap sccmap =
 (* Printf.printf "[add"; IntSet.iter (Printf.printf " %d") scc; Printf.printf "]%!"; *)
   assert (IntSet.for_all (fun x -> dtamap.(x) = -1) scc);
   stat.total_comp <- stat.total_comp + 1;
   stat.total_vert <- stat.total_vert + IntSet.cardinal scc;
-  let verts = verts_of_scc dta dtamap scc sccmap in
+  let verts = Vert.graph_of_scc dta scc dtamap sccmap in
   assert (Vert.assert_valid_graph !id_count verts);
   assert (assert_valid_state ());
 

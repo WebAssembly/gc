@@ -6,17 +6,18 @@
 
 module T = Types
 
-type vert =
+type vert_info =
   { mutable index : int;
     mutable low : int;
     mutable onstack : bool;
   }
 
-let deftypes (dta : T.def_type array) : IntSet.t list =
-  let len = Array.length dta in
+
+let sccs (graph : Vert.t array) : IntSet.t list =
+  let len = Array.length graph in
   if len = 0 then [] else
 
-  let vert = Array.init len (fun _ -> {index = -1; low = -1; onstack = false}) in
+  let info = Array.init len (fun _ -> {index = -1; low = -1; onstack = false}) in
   let stack = Array.make len (-1) in
   let stack_top = ref 0 in
   let index = ref 0 in
@@ -25,7 +26,57 @@ let deftypes (dta : T.def_type array) : IntSet.t list =
   let rec connect x =
     stack.(!stack_top) <- x;
     incr stack_top;
-    let v = vert.(x) in
+    let v = info.(x) in
+    v.onstack <- true;
+    v.index <- !index;
+    v.low <- !index;
+    incr index;
+    visit v graph.(x);
+    if v.low = v.index then sccs := scc x IntSet.empty :: !sccs
+
+  and scc x ys =
+    decr stack_top;
+    let y = stack.(!stack_top) in
+    info.(y).onstack <- false;
+    let ys' = IntSet.add y ys in
+    if x = y then ys' else scc x ys'
+
+  and visit v vert =
+    let succs = vert.Vert.succs in
+    for i = 0 to Array.length succs - 1 do
+      let id = succs.(i) in
+      if id < 0 then begin
+        let x = -id-1 in
+        let w = info.(x) in
+        if w.index = -1 then begin
+          connect x;
+          v.low <- min v.low w.low
+        end else if w.onstack then
+          v.low <- min v.low w.index
+      end
+    done
+  in
+
+  for x = 0 to len - 1 do
+    if info.(x).index = -1 then connect x
+  done;
+  List.rev !sccs
+
+
+let sccs_of_deftypes (dta : T.def_type array) : IntSet.t list =
+  let len = Array.length dta in
+  if len = 0 then [] else
+
+  let info = Array.init len (fun _ -> {index = -1; low = -1; onstack = false}) in
+  let stack = Array.make len (-1) in
+  let stack_top = ref 0 in
+  let index = ref 0 in
+  let sccs = ref [] in
+
+  let rec connect x =
+    stack.(!stack_top) <- x;
+    incr stack_top;
+    let v = info.(x) in
     v.onstack <- true;
     v.index <- !index;
     v.low <- !index;
@@ -36,7 +87,7 @@ let deftypes (dta : T.def_type array) : IntSet.t list =
   and scc x ys =
     decr stack_top;
     let y = stack.(!stack_top) in
-    vert.(y).onstack <- false;
+    info.(y).onstack <- false;
     let ys' = IntSet.add y ys in
     if x = y then ys' else scc x ys'
 
@@ -59,7 +110,7 @@ let deftypes (dta : T.def_type array) : IntSet.t list =
     | T.DefHeapType (T.SynVar x')
     | T.RttHeapType (T.SynVar x', _) ->
       let x = Int32.to_int x' in
-      let w = vert.(x) in
+      let w = info.(x) in
       if w.index = -1 then begin
         connect x;
         v.low <- min v.low w.low
@@ -69,6 +120,6 @@ let deftypes (dta : T.def_type array) : IntSet.t list =
   in
 
   for x = 0 to len - 1 do
-    if vert.(x).index = -1 then connect x
+    if info.(x).index = -1 then connect x
   done;
   List.rev !sccs
