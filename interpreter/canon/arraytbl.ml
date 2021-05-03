@@ -14,4 +14,4 @@ let grow t n x =
 
 let really_set t i x =
   let n = Array.length !t in
-  if i >= n then grow t (max 10 n) x else set t i x
+  if i >= n then grow t (5 * (n + 1)) x else set t i x

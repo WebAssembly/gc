@@ -10,3 +10,4 @@ let canon : [`CanonMin | `CanonGlobal | `CanonIncr] option ref = ref None
 let canon_random = ref (-1)
 let canon_seed = ref (-1)
 let canon_verify = ref false
+let canon_iter = ref 1

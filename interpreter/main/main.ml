@@ -43,6 +43,8 @@ let argspec = Arg.align
     " canonicalize randomized types";
   "-cs", Arg.Int (fun n -> Flags.canon_seed := n),
     " set canonicalization random seed";
+  "-cn", Arg.Int (fun n -> Flags.canon_iter := n),
+    " canonicalization repetitions";
   "-cv", Arg.Set Flags.canon_verify, " canonicalize types with verification";
   "-v", Arg.Unit banner, " show version"
 ]

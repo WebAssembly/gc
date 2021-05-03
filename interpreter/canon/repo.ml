@@ -291,6 +291,7 @@ let add_graph dta dtamap =
       (* Equivalent SCC exists, parallel-traverse key to find id map *)
       stat.rec_found_post <- stat.rec_found_post + 1;
       let rep0 = Arraytbl.get id_table id0 in
+if rep0.idx <> 0 then Printf.printf "[found non-canonical index %d!]\n%!" rep0.idx;
       let comp_verts = (Arraytbl.get comp_table rep0.comp).verts in
       let rec add_comp v id = function
         | PathKey _ -> ()
@@ -333,12 +334,14 @@ let add_graph dta dtamap =
       Array.iteri (fun v vert ->
 (* Printf.printf "[new v=%d x=%d]\n%!" v (-vert.id-1); *)
         let id = id0 + v in
+if true || v = v0 then begin
         let k = if v = v0 then k0 else key scc_verts scc_verts.(v) in
         assert (v <> v0 || k = key scc_verts scc_verts.(v));
         assert (assert_valid_key scc_verts 0 scc_verts.(v) false k);
+        Hashtbl.add key_table k id;
+end;
         assert (Arraytbl.size id_table <= id || (Arraytbl.get id_table id).comp = dummy_rep.comp);
         Arraytbl.really_set id_table id {comp = compid; idx = v};
-        Hashtbl.add key_table k id;
         assert (Vert.is_raw_id vert.id);
         let x = Vert.raw_id vert.id in
         update_dtamap blocks.P.el.(x).P.set id RecNew;

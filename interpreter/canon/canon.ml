@@ -63,9 +63,9 @@ let canonicalize dts =
       let module_ = Source.(Ast.{empty_module with types} @@ no_region) in
 
       let wasm = Encode.encode module_ in
-      let bytes = I64.(to_string_u (of_int_u (String.length wasm - 8))) in
+      let bytes = String.length wasm - 8 in
       Printf.printf ".%!";
-      Printf.printf " (type section with %s bytes)\n%!" bytes;
+      Printf.printf " (type section with %.1f KiB)\n%!" (float bytes /. 1024.0);
 
       Printf.printf "Decoding...\n%!";
       let decode_start = time_start () in
@@ -84,34 +84,39 @@ let canonicalize dts =
   in
 
   (* Main action *)
-  Printf.printf "Minimizing...\n%!";
+  if !Flags.canon_iter = 1 then
+    Printf.printf "Minimizing...\n%!"
+  else
+    Printf.printf "Minimizing (%d times)...\n%!" !Flags.canon_iter;
   let time1 = time_start () in
 
   let size = Array.length dta in
 Repo.adddesc := Array.make size Repo.Unknown;  (* Temp HACK *)
   let dtamap = Array.make size (-1) in
-  (match Option.get !Flags.canon with
-  | `CanonGlobal ->
-    Repo.add_graph dta dtamap
-  | `CanonIncr ->
-    let sccmap = Array.make size (-1) in
-    let sccs = Scc.sccs_of_deftypes dta in
-    List.iter (fun scc -> Repo.add_scc dta scc dtamap sccmap) sccs
-  | `CanonMin ->
-    let verts = Vert.graph dta in
-    assert (List.for_all Fun.id
-      (List.map2 IntSet.equal (Scc.sccs_of_deftypes dta) (Scc.sccs verts)));
-    let blocks, _ = Minimize.minimize verts in
-    (* Hack fake repo for diagnostics below *)
-    let open Minimize.Part in
-    let open Repo in
-    Arraytbl.really_set comp_table 0 {dummy_comp with verts};
-    for v = 0 to size - 1 do
-      Arraytbl.really_set id_table v {comp = 0; idx = v};
-      let r = blocks.elems.(blocks.st.(blocks.el.(v).set).first) in
-      dtamap.(v) <- r
-    done
-  );
+  for iter = 1 to !Flags.canon_iter do
+    if iter > 1 then Array.fill dtamap 0 size (-1);
+    match Option.get !Flags.canon with
+    | `CanonGlobal ->
+      Repo.add_graph dta dtamap
+    | `CanonIncr ->
+      let sccmap = Array.make size (-1) in
+      let sccs = Scc.sccs_of_deftypes dta in
+      List.iter (fun scc -> Repo.add_scc dta scc dtamap sccmap) sccs
+    | `CanonMin ->
+      let verts = Vert.graph dta in
+      assert (List.for_all Fun.id
+        (List.map2 IntSet.equal (Scc.sccs_of_deftypes dta) (Scc.sccs verts)));
+      let blocks, _ = Minimize.minimize verts in
+      (* Hack fake repo for diagnostics below *)
+      let open Minimize.Part in
+      let open Repo in
+      Arraytbl.really_set comp_table 0 {dummy_comp with verts};
+      for v = 0 to size - 1 do
+        Arraytbl.really_set id_table v {comp = 0; idx = v};
+        let r = blocks.elems.(blocks.st.(blocks.el.(v).set).first) in
+        dtamap.(v) <- r
+      done
+  done;
 
   let time2 = time_end () in
   time_print (time_diff time1 time2);
