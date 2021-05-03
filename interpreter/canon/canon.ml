@@ -90,11 +90,14 @@ let canonicalize dts =
   let size = Array.length dta in
 Repo.adddesc := Array.make size Repo.Unknown;  (* Temp HACK *)
   let dtamap = Array.make size (-1) in
-  if not !Flags.canon_global then begin
+  (match Option.get !Flags.canon with
+  | `CanonGlobal ->
+    Repo.add_graph dta dtamap
+  | `CanonIncr ->
     let sccmap = Array.make size (-1) in
     let sccs = Scc.sccs_of_deftypes dta in
     List.iter (fun scc -> Repo.add_scc dta scc dtamap sccmap) sccs
-  end else begin
+  | `CanonMin ->
     let verts = Vert.graph dta in
     assert (List.for_all Fun.id
       (List.map2 IntSet.equal (Scc.sccs_of_deftypes dta) (Scc.sccs verts)));
@@ -108,7 +111,7 @@ Repo.adddesc := Array.make size Repo.Unknown;  (* Temp HACK *)
       let r = blocks.elems.(blocks.st.(blocks.el.(v).set).first) in
       dtamap.(v) <- r
     done
-  end;
+  );
 
   let time2 = time_end () in
   time_print (time_diff time1 time2);
@@ -141,10 +144,13 @@ Repo.adddesc := Array.make size Repo.Unknown;  (* Temp HACK *)
     else assert false
   ) dtamap;
   Printf.printf "%sminimized to %d types (%d funcs, %d structs, %d arrays)\n%!"
-    (if !Flags.canon_global then "globally " else "")
-    !total !mfuns !mstrs !marrs;
+    (match Option.get !Flags.canon with
+    | `CanonMin -> ""
+    | `CanonGlobal -> "globally "
+    | `CanonIncr -> "incrementally "
+    ) !total !mfuns !mstrs !marrs;
 
-  if not !Flags.canon_global then begin
+  if !Flags.canon = Some `CanonIncr then begin
     let open Repo in
     Printf.printf "%d repo lookups (involving %.1f types on average)\n"
       stat.total_comp (float stat.total_vert /. float stat.total_comp);

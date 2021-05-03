@@ -104,6 +104,8 @@ let rec assert_valid_key comp d vert vert_closed = function
           assert (id < !id_count);
           let rep' = Arraytbl.get id_table id in
           let comp' = Arraytbl.get comp_table rep'.comp in
+if comp'.verts != comp then
+Printf.printf "!!! vertid=%d i=%d id=%d\n%!" vert.Vert.id i id;
           assert (comp'.verts == comp);
           rep'.idx
         end else begin
@@ -126,7 +128,7 @@ let assert_valid_state () =
     if i >= !comp_count then () else let _ = () in
     assert (Vert.assert_valid_graph !id_count comp.verts);
     Array.iter (fun vert ->
-      assert (Array.for_all ((<=) 0) vert.Vert.succs);
+      assert (Array.for_all (fun id -> id >= 0) vert.Vert.succs);
     ) comp.verts;
     Hashtbl.iter (fun (label, pos, id) () ->
       assert (
@@ -181,8 +183,6 @@ and key' verts map p vert =
  * dtamap : typeidx->id array, mapping (known) typeidx's to id's
  *
  * Fills in dtamap with new id mappings for nodes.
- *
- * TODO: This function needs some clean-up refacting!
  *)
 let add_graph dta dtamap =
 (* Printf.printf "[add"; IntSet.iter (Printf.printf " %d") scc; Printf.printf "]%!"; *)
@@ -207,19 +207,17 @@ let add_graph dta dtamap =
   let min_size = blocks.P.num in
   let min_verts = Array.make min_size Vert.dummy in
   let remap_verts = Array.make size (-1) in
-  let v = ref 0 in
   for bl = 0 to blocks.P.num - 1 do
     let open Minimize.Part in
     let v' = blocks.elems.(blocks.st.(bl).first) in
     (* Use first vertex in block as representative in new graph *)
     let vert = verts.(v') in
+    min_verts.(bl) <- vert;
     (* Remap block's vertices *)
     for i = blocks.st.(bl).first to blocks.st.(bl).last - 1 do
       assert (remap_verts.(blocks.elems.(i)) = -1);
-      remap_verts.(blocks.elems.(i)) <- !v
-    done;
-    min_verts.(!v) <- vert;
-    incr v
+      remap_verts.(blocks.elems.(i)) <- bl
+    done
   done;
   assert (Array.for_all ((<>) (-1)) remap_verts);
   (* Remap inner edges *)
@@ -234,32 +232,60 @@ let add_graph dta dtamap =
       end
     done
   done;
+(* Printf.printf "[min graph size=%d, original=%d]\n%!" min_size size; *)
   assert (Vert.assert_valid_graph !id_count min_verts);
 
+  (* Compute SCC's of this graph *)
+  let sccs = Scc.sccs min_verts in
+(* Printf.printf "[components %d]\n%!" (List.length sccs); *)
+
   (* A helper for updating SCC's entries in dtamap *)
+  let remap_min_verts = Array.make min_size (-1) in
   let update_dtamap bl id desc =
   (* Printf.printf "[update bl=%d id=%d]\n%!" bl id; *)
     let open Minimize.Part in
     for i = blocks.st.(bl).first to blocks.st.(bl).last - 1 do
+      remap_min_verts.(bl) <- id;
       let v = blocks.elems.(i) in
       assert (Vert.is_raw_id Vert.(verts.(v).id));
       let x = Vert.raw_id Vert.(verts.(v).id) in
       assert (dtamap.(x) = -1);
+      dtamap.(x) <- id;
 !adddesc.(x) <- desc;
     done
   in
 
-  (* Compute SCC's of this graph *)
-  let sccs = Scc.sccs min_verts in
-
   (* Try to find each SCC in repo *)
+(* let i=ref 0 in *)
   List.iter (fun scc ->
     let open Vert in
-(* Printf.printf "[lookup in repo]%!"; *)
-    (* Compute key of first vertex *)
-    let vert0 = min_verts.(0) in
-    let k0 = key min_verts vert0 in
-    assert (assert_valid_key min_verts 0 vert0 false k0);
+(* Printf.printf "[comp %d(%d)" !i (IntSet.cardinal scc); IntSet.iter (Printf.printf " %d") scc; Printf.printf "]\n%!"; incr i; *)
+
+    (* Extract SCC *)
+    let scc_size = IntSet.cardinal scc in
+    let scc_verts = Array.make scc_size Vert.dummy in
+    let v' = ref 0 in
+    IntSet.iter (fun v ->
+      let vert = min_verts.(v) in
+      scc_verts.(!v') <- vert;
+(* Printf.printf "[scc v=%d x=%d v'=%d]\n%!" v (-vert.id-1) !v'; *)
+      remap_min_verts.(v) <- -(!v')-1;
+      incr v'
+    ) scc;
+    (* Remap inner edges (again) *)
+    Array.iter (fun vert ->
+      for j = 0 to Array.length vert.succs - 1 do
+        let id = vert.succs.(j) in
+        if id < 0 then vert.succs.(j) <- remap_min_verts.(-id-1)
+      done
+    ) scc_verts;
+    assert (Vert.assert_valid_graph !id_count scc_verts);
+
+    (* Compute key of minimal vertex *)
+    let v0 = 0 in
+    let vert0 = scc_verts.(v0) in
+    let k0 = key scc_verts vert0 in
+    assert (assert_valid_key scc_verts 0 vert0 false k0);
     match Hashtbl.find_opt key_table k0 with
     | Some id0 ->
       (* Equivalent SCC exists, parallel-traverse key to find id map *)
@@ -269,7 +295,8 @@ let add_graph dta dtamap =
       let rec add_comp v id = function
         | PathKey _ -> ()
         | NodeKey {label; succs} ->
-          let vert = min_verts.(v) in
+          let vert = scc_verts.(v) in
+(* Printf.printf "[old v=%d x=%d]\n%!" v (-vert.id-1); *)
           let rep = Arraytbl.get id_table id in
           assert ((Arraytbl.get comp_table rep.comp).verts == comp_verts);
           let repo_vert = comp_verts.(rep.idx) in
@@ -281,15 +308,15 @@ let add_graph dta dtamap =
           for j = 0 to Array.length succs - 1 do
             match succs.(j) with
             | ExtEdge _ -> ()
-            | InnerEdge k' ->
-              let v' = -vert.Vert.succs.(j)-1 in
-              let id = repo_vert.Vert.succs.(j) in
-              add_comp v' id k'
+            | InnerEdge kj ->
+              let vj = -vert.Vert.succs.(j)-1 in
+              let idj = repo_vert.Vert.succs.(j) in
+              add_comp vj idj kj
           done;
           assert (Vert.is_raw_id vert.id);
-          let orig_v = dtamap.(Vert.raw_id vert.id) in
-          update_dtamap blocks.P.el.(orig_v).P.set id RecOldUnreached
-      in add_comp 0 id0 k0
+          let x = Vert.raw_id vert.id in
+          update_dtamap blocks.P.el.(x).P.set id RecOldUnreached
+      in add_comp v0 id0 k0
 (* ;Printf.printf "[global old(%d)" min_size; IntSet.iter (fun x -> Printf.printf " %d" dtamap.(x)) scc; Printf.printf "]%!\n"; *)
 
     | None ->
@@ -298,35 +325,43 @@ let add_graph dta dtamap =
       stat.rec_new <- stat.rec_new + 1;
       let id0 = !id_count in
       let compid = !comp_count in
-      let unrolled = Hashtbl.create min_size in
-      Arraytbl.really_set comp_table !comp_count {verts = min_verts; unrolled};
+      let unrolled = Hashtbl.create scc_size in
+      assert (Arraytbl.size comp_table <= !comp_count || (Arraytbl.get comp_table !comp_count).verts = dummy_comp.verts);
+      Arraytbl.really_set comp_table !comp_count {verts = scc_verts; unrolled};
       incr comp_count;
-      id_count := !id_count + min_size;
-      for v = 0 to min_size - 1 do
-        let vert = min_verts.(v) in
+      id_count := !id_count + scc_size;
+      Array.iteri (fun v vert ->
+(* Printf.printf "[new v=%d x=%d]\n%!" v (-vert.id-1); *)
         let id = id0 + v in
-        let rep = {comp = compid; idx = v} in
-        let k = if v = 0 then k0 else key min_verts min_verts.(v) in
-        assert (assert_valid_key min_verts 0 min_verts.(v) false k);
-        Arraytbl.really_set id_table id rep;
+        let k = if v = v0 then k0 else key scc_verts scc_verts.(v) in
+        assert (v <> v0 || k = key scc_verts scc_verts.(v));
+        assert (assert_valid_key scc_verts 0 scc_verts.(v) false k);
+        assert (Arraytbl.size id_table <= id || (Arraytbl.get id_table id).comp = dummy_rep.comp);
+        Arraytbl.really_set id_table id {comp = compid; idx = v};
         Hashtbl.add key_table k id;
-        (* Remap vertex'es inner edges to new ids and add unrolled edges *)
+        assert (Vert.is_raw_id vert.id);
+        let x = Vert.raw_id vert.id in
+        update_dtamap blocks.P.el.(x).P.set id RecNew;
+        vert.id <- id;
+        incr v'
+      ) scc_verts;
+      (* Remap inner edges to new ids and add unrolled edges *)
+      (* (must happen after key computation, to avoid bogus keys) *)
+      Array.iteri (fun v vert ->
         for j = 0 to Array.length vert.succs - 1 do
           let idj = vert.succs.(j) in
           if idj < 0 then begin
             let w = -idj-1 in
             assert (w >= 0);
-            assert (w < min_size);
+            assert (w < scc_size);
             let idj' = id0 + w in
+(* Printf.printf "[succ v=%d j=%d w=%d id'=%d]\n%!" v j w idj'; *)
             vert.succs.(j) <- idj';
             Hashtbl.add unrolled (vert.label, j, idj') ()
           end
-        done;
-        assert (Vert.is_raw_id vert.id);
-        let orig_v = dtamap.(Vert.raw_id vert.id) in
-        update_dtamap blocks.P.el.(orig_v).P.set id RecNew;
-        vert.id <- id
-      done
+        done
+      ) scc_verts;
+      assert (assert_valid_state ())
 (* ;Printf.printf "[global new(%d)" min_size; IntSet.iter (fun x -> Printf.printf " %d" dtamap.(x)) scc; Printf.printf "]%!\n"; *)
   ) sccs;
 
@@ -343,7 +378,7 @@ let add_graph dta dtamap =
  *
  * Fills in dtamap and sccmap with new mappings for nodes in scc.
  *
- * TODO: This function needs some clean-up refacting!
+ * TODO: This function needs some serious refactoring and code deduping!
  *)
 let add_scc dta scc dtamap sccmap =
 (* Printf.printf "[add"; IntSet.iter (Printf.printf " %d") scc; Printf.printf "]%!"; *)
@@ -442,9 +477,9 @@ let add_scc dta scc dtamap sccmap =
           let repo_vert = comp_verts.(rep.idx) in
           assert (label = repo_vert.Vert.label);
           assert (label = vert.Vert.label);
-          assert (Array.map (function ExtEdge id -> id | InnerEdge _ -> -1) succs = vert.Vert.succs);
+          assert (Array.map (function ExtEdge id -> id | InnerEdge _ -> -1) succs = Array.map (fun id -> if id > 0 then id else -1) vert.Vert.succs);
           assert (Array.length succs = Array.length repo_vert.Vert.succs);
-          assert (Vert.is_raw_id verts.(v).id);
+          assert (Vert.is_raw_id vert.id);
           let x = Vert.raw_id vert.id in
           assert (dtamap.(x) = -1);
           dtamap.(x) <- id;
@@ -706,6 +741,7 @@ let add_scc dta scc dtamap sccmap =
           assert (assert_valid_key min_verts 0 min_verts.(v) false k);
           Arraytbl.really_set id_table id rep;
           Hashtbl.add key_table k id;
+          (* TODO: doesn't this need to happen after all key computations? *)
           (* Remap vertex'es inner edges to new ids and add unrolled edges *)
           for j = 0 to Array.length vert.succs - 1 do
             let idj = vert.succs.(j) in

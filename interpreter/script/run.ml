@@ -295,15 +295,19 @@ let rec run_definition def : Ast.module_ =
   | Textual m -> m
   | Encoded (name, bs) ->
     trace "Decoding...";
-(* Hack for statistics *)
-if !Flags.canon then Printf.printf "Decoding...\n%!";
-let start = if !Flags.canon then Canon.time_start () else Canon.time_end () in
-let result =
-    Decode.decode name bs
-in
-let finish = Canon.time_end () in
-if !Flags.canon then Canon.time_print (Canon.time_diff start finish);
-result
+    (* Hack for statistics *)
+    let start = if !Flags.canon = None then Canon.time_now () else
+      begin
+        Printf.printf "Decoding...\n%!";
+        Canon.time_start ()
+      end
+    in
+    let m = Decode.decode name bs in
+    if !Flags.canon <> None then begin
+      let finish = Canon.time_end () in
+      Canon.time_print (Canon.time_diff start finish)
+    end;
+    m
   | Quoted (_, s) ->
     trace "Parsing quote...";
     let def' = Parse.string_to_module s in
@@ -465,12 +469,18 @@ let rec run_command cmd =
     let m = run_definition def in
     if not !Flags.unchecked then begin
       trace "Checking...";
-if !Flags.canon then Printf.printf "Validating...\n%!";
-let start = if !Flags.canon then Canon.time_start () else Canon.time_end () in
+      let start = if !Flags.canon = None then Canon.time_now () else
+        begin
+          Printf.printf "Validating...\n%!";
+          Canon.time_start ()
+        end
+      in
       Valid.check_module m;
-let finish = Canon.time_end () in
-if !Flags.canon then Canon.time_print (Canon.time_diff start finish);
-if !Flags.canon then Canon.canonicalize (List.map Source.it m.it.Ast.types);
+      if !Flags.canon <> None then begin
+        let finish = Canon.time_end () in
+        Canon.time_print (Canon.time_diff start finish);
+        Canon.canonicalize (List.map Source.it m.it.Ast.types)
+      end;
       if !Flags.print_sig then begin
         trace "Signature:";
         print_module x_opt m

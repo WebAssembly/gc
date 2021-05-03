@@ -31,8 +31,14 @@ let argspec = Arg.align
   "-h", Arg.Clear Flags.harness, " exclude harness for JS conversion";
   "-d", Arg.Set Flags.dry, " dry, do not run program";
   "-t", Arg.Set Flags.trace, " trace execution";
-  "-c", Arg.Set Flags.canon, " canonicalize types";
-  "-cg", Arg.Set Flags.canon_global, " canonicalize globally";
+  "-c", Arg.Unit (fun () -> Flags.canon := Some `CanonGlobal),
+    " canonicalize types";
+  "-cg", Arg.Unit (fun () -> Flags.canon := Some `CanonGlobal),
+    " canonicalize globally (default)";
+  "-ci", Arg.Unit (fun () -> Flags.canon := Some `CanonIncr),
+    " canonicalize incrementally";
+  "-cm", Arg.Unit (fun () -> Flags.canon := Some `CanonMin),
+    " canonicalize but minimize only";
   "-cr", Arg.Int (fun n -> Flags.canon_random := n),
     " canonicalize randomized types";
   "-cs", Arg.Int (fun n -> Flags.canon_seed := n),
@@ -48,7 +54,6 @@ let () =
     Arg.parse argspec
       (fun file -> add_arg ("(input " ^ quote file ^ ")")) usage;
 
-    if !Flags.canon_global || !Flags.canon_verify then Flags.canon := true;
     if !Flags.canon_random >= 0 then (Canon.canonicalize []; exit 0);
 
     List.iter (fun arg -> if not (Run.run_string arg) then exit 1) !args;
@@ -57,11 +62,12 @@ let () =
       Flags.print_sig := true;
       banner ();
       Run.run_stdin ()
+    end;
+
+    if !Flags.canon <> None then begin
+      Printf.printf "Canonicalization total:\n";
+      Canon.time_print !(Canon.time_total);
     end
-;if !Flags.canon then begin
-Printf.printf "Canonicalization total:\n";
-Canon.time_print !(Canon.time_total);
-end
   with exn ->
     flush_all ();
     prerr_endline
