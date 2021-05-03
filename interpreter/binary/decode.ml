@@ -118,7 +118,9 @@ let len32 s =
 
 let bool s = (u1 s = 1)
 let string s = let n = len32 s in get_string n s
-let rec list f n s = if n = 0 then [] else let x = f s in x :: list f (n - 1) s
+let rec list f n s = list' f n s []
+and list' f n s xs =
+  if n = 0 then List.rev xs else let x = f s in list' f (n - 1) s (x::xs)
 let opt f b s = if b then Some (f s) else None
 let vec f s = let n = len32 s in list f n s
 let either f1 f2 s =

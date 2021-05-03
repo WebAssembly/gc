@@ -63,9 +63,9 @@ let canonicalize dts =
       let module_ = Source.(Ast.{empty_module with types} @@ no_region) in
 
       let wasm = Encode.encode module_ in
-      let bytes = I64.(to_string_u (of_int_u (String.length wasm))) in
+      let bytes = I64.(to_string_u (of_int_u (String.length wasm - 8))) in
       Printf.printf ".%!";
-      Printf.printf " (module with %s bytes)\n%!" bytes;
+      Printf.printf " (type section with %s bytes)\n%!" bytes;
 
       Printf.printf "Decoding...\n%!";
       let decode_start = time_start () in
