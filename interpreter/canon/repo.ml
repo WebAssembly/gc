@@ -3,7 +3,7 @@
 (* Implementation based on ideas from:
  *  Laurent Mauborgne
  *  "An Incremental Unique Representation for Regular Trees"
- *  Nordic Journal of Computing, 7(2000)
+ *  Nordic Journal of Computing, 7(4), 2000
  *)
 
 type id = int
