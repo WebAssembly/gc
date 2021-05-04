@@ -3,7 +3,7 @@
 (* Implementation based on ideas from:
  *  Laurent Mauborgne
  *  "An Incremental Unique Representation for Regular Trees"
- *  Nordic Journal of Computing, 7(2008)
+ *  Nordic Journal of Computing, 7(2000)
  *)
 
 type id = int
@@ -52,6 +52,11 @@ type stat =
     mutable min_count : int;
     mutable min_comps : int;
     mutable min_verts : int;
+    mutable time_graph : Prof.time;
+    mutable time_min : Prof.time;
+    mutable time_scc : Prof.time;
+    mutable time_find : Prof.time;
+    mutable time_enter : Prof.time;
   }
 
 let stat =
@@ -67,9 +72,14 @@ let stat =
     min_count = 0;
     min_comps = 0;
     min_verts = 0;
+    time_graph = Prof.zero;
+    time_min = Prof.zero;
+    time_scc = Prof.zero;
+    time_find = Prof.zero;
+    time_enter = Prof.zero;
   }
 
-(* Statistics hack *)
+(* Diagnostic hack *)
 type adddesc = Unknown | NonrecNew | NonrecOld | RecNew | RecOldPre | RecOldReachedPre | RecOldReached | RecOldUnreached
 let adddesc : adddesc array ref = ref [||]
 
@@ -179,10 +189,14 @@ and key' verts map p vert =
     NodeKey {label = vert.Vert.label; succs}
 
 
-(* dta : typeidx->def_type array, as in input module
- * dtamap : typeidx->id array, mapping (known) typeidx's to id's
+(*
+ * Whole-module type addition
  *
- * Fills in dtamap with new id mappings for nodes.
+ * Parameters:
+ *  dta : typeidx->def_type array, as in input module
+ *  dtamap : typeidx->id array, mapping (known) typeidx's to id's
+ *
+ * Fills in dtamap with new id mappings for vertices.
  *)
 let add_graph dta dtamap =
 (* Printf.printf "[add"; IntSet.iter (Printf.printf " %d") scc; Printf.printf "]%!"; *)
@@ -190,7 +204,10 @@ let add_graph dta dtamap =
   let size = Array.length dta in
   stat.total_comp <- stat.total_comp + 1;  (* TODO: Hm... *)
   stat.total_vert <- stat.total_vert + size;
+  let start_graph = Prof.now () in
   let verts = Vert.graph dta in
+  let finish_graph = Prof.now () in
+  stat.time_graph <- Prof.(add stat.time_graph (diff start_graph finish_graph));
   assert (Vert.assert_valid_graph !id_count verts);
   assert (assert_valid_state ());
 
@@ -199,7 +216,10 @@ let add_graph dta dtamap =
   stat.min_count <- stat.min_count + 1;
   stat.min_comps <- stat.min_comps + 1;  (* TOOD: Hm... *)
   stat.min_verts <- stat.min_verts + size;
+  let start_min = Prof.now () in
   let blocks, _ = Minimize.minimize verts in
+  let finish_min = Prof.now () in
+  stat.time_min <- Prof.(add stat.time_min (diff start_min finish_min));
 (* Printf.printf "[minimize done]%!"; *)
 
   (* Extract minimized graph *)
@@ -236,7 +256,10 @@ let add_graph dta dtamap =
   assert (Vert.assert_valid_graph !id_count min_verts);
 
   (* Compute SCC's of this graph *)
+  let start_scc = Prof.now () in
   let sccs = Scc.sccs min_verts in
+  let finish_scc = Prof.now () in
+  stat.time_scc <- Prof.(add stat.time_scc (diff start_scc finish_scc));
 (* Printf.printf "[components %d]\n%!" (List.length sccs); *)
 
   (* A helper for updating SCC's entries in dtamap *)
@@ -257,6 +280,7 @@ let add_graph dta dtamap =
 
   (* Try to find each SCC in repo *)
 (* let i=ref 0 in *)
+  let start_find = Prof.now () in
   List.iter (fun scc ->
     let open Vert in
 (* Printf.printf "[comp %d(%d)" !i (IntSet.cardinal scc); IntSet.iter (Printf.printf " %d") scc; Printf.printf "]\n%!"; incr i; *)
@@ -323,6 +347,7 @@ if rep0.idx <> 0 then Printf.printf "[found non-canonical index %d!]\n%!" rep0.i
     | None ->
 (* Printf.printf "[not found]%!"; *)
       (* This is a new component, enter into tables *)
+      (* let start_enter = Prof.now () in *)
       stat.rec_new <- stat.rec_new + 1;
       let id0 = !id_count in
       let compid = !comp_count in
@@ -364,24 +389,32 @@ end;
           end
         done
       ) scc_verts;
+      (* let finish_enter = Prof.now () in *)
+      (* stat.time_enter <- Prof.(add stat.time_enter (diff start_enter finish_enter)); *)
       assert (assert_valid_state ())
 (* ;Printf.printf "[global new(%d)" min_size; IntSet.iter (fun x -> Printf.printf " %d" dtamap.(x)) scc; Printf.printf "]%!\n"; *)
   ) sccs;
+  let finish_find = Prof.now () in
+  stat.time_find <- Prof.(add stat.time_find (diff start_find finish_find));
 
   (* Post conditions *)
   assert (Array.for_all ((<=) 0) dtamap);
   assert (assert_valid_state ())
 
 
-(* dta : typeidx->def_type array, as in input module
- * dtamap : typeidx->id array, mapping (known) typeidx's to id's
- * scc : typeidx set, current SCC to add
- * dtamap : typeidx->id array, mapping (known) typeidx's to id's
- * sccmap : typeidx->vertidx array, mapping type to relative index in their SCC
+(*
+ * Incremental type addition
  *
- * Fills in dtamap and sccmap with new mappings for nodes in scc.
+ * Parameters:
+ *  dta : typeidx->def_type array, as in input module
+ *  dtamap : typeidx->id array, mapping (known) typeidx's to id's
+ *  scc : typeidx set, current SCC to add
+ *  dtamap : typeidx->id array, mapping (known) typeidx's to id's
+ *  sccmap : typeidx->vertidx array, mapping type to relative index in their SCC
  *
- * TODO: This function needs some serious refactoring and code deduping!
+ * Fills in dtamap and sccmap with new mappings for vertices in scc.
+ *
+ * TODO: THIS FUNCTION NEEDS SOME SERIOUS REFACTORING AND CODE DEDUPING!
  *)
 let add_scc dta scc dtamap sccmap =
 (* Printf.printf "[add"; IntSet.iter (Printf.printf " %d") scc; Printf.printf "]%!"; *)
@@ -427,8 +460,9 @@ let add_scc dta scc dtamap sccmap =
     done
   done;
 
-  (* If SCC is non-recursive, look it up in table *)
-  if !num_verts = 1 && Array.for_all ((<=) 0) verts.(0).Vert.succs then begin
+  (* If SCC is non-recursive or only with itself, look it up in table *)
+  (* (this could probably be folded into the following case) *)
+  if !num_verts = 1 then begin
     let x = IntSet.choose scc in
     let vert = verts.(0) in
     let key = key verts vert in
@@ -445,7 +479,8 @@ let add_scc dta scc dtamap sccmap =
         let id = !id_count in
         vert.Vert.id <- id;
         Arraytbl.really_set comp_table !comp_count {dummy_comp with verts};
-        Arraytbl.really_set id_table id {comp = !comp_count; idx = -1};
+        let idx = if Array.for_all ((<=) 0) verts.(0).Vert.succs then -1 else 0 in
+        Arraytbl.really_set id_table id {comp = !comp_count; idx};
         Hashtbl.add key_table key id;
         incr id_count;
         incr comp_count;

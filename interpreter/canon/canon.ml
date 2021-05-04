@@ -1,48 +1,21 @@
-(* Ad-hoc module for testing type canonicalization *)
+(* Ad-hoc module for testing and measuring type canonicalization *)
 
 module T = Types
 
 
 (* Profiling *)
 
-let time_now () =
-  let gc = Gc.quick_stat () in
-  let time = Unix.times () in
-  gc, time
+let time_total = ref Prof.zero
+let decode_total = ref Prof.zero
+let valid_total = ref Prof.zero
+let graph_total = ref Prof.zero
+let min_total = ref Prof.zero
+let scc_total = ref Prof.zero
+let find_total = ref Prof.zero
 
-let time_start () = Gc.compact (); time_now ()
-let time_end () = time_now ()
-
-let time_diff (gc_start, time_start) (gc_end, time_end) =
-  Gc.{gc_end with
-    major_collections = gc_end.major_collections - gc_start.major_collections;
-    minor_collections = gc_end.minor_collections - gc_start.minor_collections;
-    compactions = gc_end.compactions - gc_start.compactions;
-  },
-  Unix.{time_end with
-    tms_utime = time_end.tms_utime -. time_start.tms_utime;
-    tms_stime = time_end.tms_stime -. time_start.tms_stime;
-  }
-
-let time_add (gc_start, time_start) (gc_end, time_end) =
-  Gc.{gc_end with
-    major_collections = gc_end.major_collections + gc_start.major_collections;
-    minor_collections = gc_end.minor_collections + gc_start.minor_collections;
-    compactions = gc_end.compactions + gc_start.compactions;
-  },
-  Unix.{time_end with
-    tms_utime = time_end.tms_utime +. time_start.tms_utime;
-    tms_stime = time_end.tms_stime +. time_start.tms_stime;
-  }
-
-let time_print (gc, time) =
-  Printf.printf "Time: user %.2f ms, system %.2f ms; GC: major %d, minor %d, compactions %d\n"
-    (time.Unix.tms_utime *. 1000.0) (time.Unix.tms_stime *. 1000.0)
-    gc.Gc.major_collections gc.Gc.minor_collections gc.Gc.compactions
-
-let time_total = let now = time_now () in ref (time_diff now now)
-
-let time_record diff = time_total := time_add !time_total diff
+let time_record diff = time_total := Prof.add !time_total diff
+let decode_record diff = decode_total := Prof.add !decode_total diff
+let valid_record diff = valid_total := Prof.add !valid_total diff
 
 
 (* Main runner *)
@@ -68,16 +41,16 @@ let canonicalize dts =
       Printf.printf " (type section with %.1f KiB)\n%!" (float bytes /. 1024.0);
 
       Printf.printf "Decoding...\n%!";
-      let decode_start = time_start () in
+      let decode_start = Prof.start () in
       ignore (Decode.decode "fuzzed" wasm);
-      let decode_end = time_end () in
-      time_print (time_diff decode_start decode_end);
+      let decode_end = Prof.finish () in
+      Prof.print (Prof.diff decode_start decode_end);
 
       Printf.printf "Validating...\n%!";
-      let valid_start = time_start () in
+      let valid_start = Prof.start () in
       Valid.check_module module_;
-      let valid_end = time_end () in
-      time_print (time_diff valid_start valid_end);
+      let valid_end = Prof.finish () in
+      Prof.print (Prof.diff valid_start valid_end);
 
       dta, dts
     end
@@ -88,7 +61,7 @@ let canonicalize dts =
     Printf.printf "Minimizing...\n%!"
   else
     Printf.printf "Minimizing (%d times)...\n%!" !Flags.canon_iter;
-  let time1 = time_start () in
+  let time1 = Prof.start () in
 
   let size = Array.length dta in
 Repo.adddesc := Array.make size Repo.Unknown;  (* Temp HACK *)
@@ -97,7 +70,7 @@ Repo.adddesc := Array.make size Repo.Unknown;  (* Temp HACK *)
     if iter > 1 then Array.fill dtamap 0 size (-1);
     match Option.get !Flags.canon with
     | `CanonGlobal ->
-      Repo.add_graph dta dtamap
+      Repo.add_graph dta dtamap;
     | `CanonIncr ->
       let sccmap = Array.make size (-1) in
       let sccs = Scc.sccs_of_deftypes dta in
@@ -118,11 +91,16 @@ Repo.adddesc := Array.make size Repo.Unknown;  (* Temp HACK *)
       done
   done;
 
-  let time2 = time_end () in
-  time_print (time_diff time1 time2);
-  time_record (time_diff time1 time2);
+  let time2 = Prof.finish () in
+  Prof.print (Prof.diff time1 time2);
+  time_record (Prof.diff time1 time2);
 
   (* Statistics *)
+  graph_total := Repo.(stat.time_graph);
+  min_total := Repo.(stat.time_min);
+  scc_total := Repo.(stat.time_scc);
+  find_total := Repo.(stat.time_find);
+
   let sccs = Scc.sccs (Vert.graph dta) in
   let funs = List.fold_left (fun n -> function T.FuncDefType _ -> n + 1 | _ -> n) 0 dts in
   let strs = List.fold_left (fun n -> function T.StructDefType _ -> n + 1 | _ -> n) 0 dts in

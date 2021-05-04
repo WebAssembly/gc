@@ -67,8 +67,14 @@ let () =
     end;
 
     if !Flags.canon <> None then begin
-      Printf.printf "Canonicalization total:\n";
-      Canon.time_print !(Canon.time_total);
+      Printf.printf "Total times:\n";
+      Printf.printf "Decoding, "; Prof.print !(Canon.decode_total);
+      Printf.printf "Validation, "; Prof.print !(Canon.valid_total);
+      Printf.printf "Canonicalization, "; Prof.print !(Canon.time_total);
+      Printf.printf "  Graph construction, "; Prof.print !(Canon.graph_total);
+      Printf.printf "  Minimization, "; Prof.print !(Canon.min_total);
+      Printf.printf "  SCC computation, "; Prof.print !(Canon.scc_total);
+      Printf.printf "  Repo lookup, "; Prof.print !(Canon.find_total);
     end
   with exn ->
     flush_all ();

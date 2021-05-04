@@ -296,16 +296,17 @@ let rec run_definition def : Ast.module_ =
   | Encoded (name, bs) ->
     trace "Decoding...";
     (* Hack for statistics *)
-    let start = if !Flags.canon = None then Canon.time_now () else
+    let start = if !Flags.canon = None then Prof.now () else
       begin
         Printf.printf "Decoding...\n%!";
-        Canon.time_start ()
+        Prof.start ()
       end
     in
     let m = Decode.decode name bs in
     if !Flags.canon <> None then begin
-      let finish = Canon.time_end () in
-      Canon.time_print (Canon.time_diff start finish)
+      let finish = Prof.finish () in
+      Prof.print (Prof.diff start finish);
+      Canon.decode_record (Prof.diff start finish)
     end;
     m
   | Quoted (_, s) ->
@@ -469,16 +470,17 @@ let rec run_command cmd =
     let m = run_definition def in
     if not !Flags.unchecked then begin
       trace "Checking...";
-      let start = if !Flags.canon = None then Canon.time_now () else
+      let start = if !Flags.canon = None then Prof.now () else
         begin
           Printf.printf "Validating...\n%!";
-          Canon.time_start ()
+          Prof.start ()
         end
       in
       Valid.check_module m;
       if !Flags.canon <> None then begin
-        let finish = Canon.time_end () in
-        Canon.time_print (Canon.time_diff start finish);
+        let finish = Prof.finish () in
+        Prof.print (Prof.diff start finish);
+        Canon.valid_record (Prof.diff start finish);
         Canon.canonicalize (List.map Source.it m.it.Ast.types)
       end;
       if !Flags.print_sig then begin
