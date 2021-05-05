@@ -329,7 +329,7 @@ assert fac 5 == 120
 
 ### Pattern Matching
 ```
-data Exp a =
+rec data Exp a =
   | Lit a
   | Add (Exp a) (Exp a)
   | Mul (Exp a) (Exp a)
@@ -346,7 +346,7 @@ val x = eval exp
 
 ### Polymorphism
 ```
-data List a = Nil | Cons a (List a)
+rec data List a = Nil | Cons a (List a)
 
 rec val foldl xs y f =
   case xs of
@@ -378,7 +378,7 @@ signature Ord =
 module MakeSet (Elem : Ord) : Set with type Elem = Elem.T =
 {
   type Elem = Elem.T
-  data Set = Empty | Mem Elem Set Set
+  rec data Set = Empty | Mem Elem Set Set
 
   val empty = Empty
 

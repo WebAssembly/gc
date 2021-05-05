@@ -18,7 +18,7 @@ signature Ord =
 module MakeSet (Elem : Ord) : Set with type Elem = Elem.T =
 {
   type Elem = Elem.T
-  data Set = Empty | Mem Elem Set Set
+  rec data Set = Empty | Mem Elem Set Set
 
   val empty = Empty
 

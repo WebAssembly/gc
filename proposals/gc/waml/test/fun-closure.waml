@@ -16,7 +16,7 @@ val h x =
 assert h 1 2 == 5
 
 
-data List a = Nil | Cons a (List a)
+rec data List a = Nil | Cons a (List a)
 val a = [1, 2, 5, 6, -8]
 
 rec val foreach xs f =

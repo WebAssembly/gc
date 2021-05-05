@@ -35,7 +35,7 @@ assert fst p3 == 3.14
 val A = snd p3
 
 
-data List a = Nil | Cons a (List a)
+rec data List a = Nil | Cons a (List a)
 rec val rev xs = rev' xs Nil
 and val rev' xs ys =
   case xs of

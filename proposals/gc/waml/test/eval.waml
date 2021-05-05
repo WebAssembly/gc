@@ -1,6 +1,6 @@
 ;; A simple expression evaluator
 
-data Exp a =
+rec data Exp a =
   | Lit a
   | Var Text
   | Add (Exp a) (Exp a)

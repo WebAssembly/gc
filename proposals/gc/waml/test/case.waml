@@ -26,7 +26,7 @@ assert (case Y 2 of X => 1 | Y n => n | Z i j => i + j) == 2
 assert (case Z 4 5 of X => 1 | Y n => n | Z i j => i + j) == 9
 
 
-data List a = Nil | Cons a (List a)
+rec data List a = Nil | Cons a (List a)
 assert (case Nil of [] => 1 | _ => 2) == 1
 assert (case [] of [] => 1 | _ => 2) == 1
 assert (case [] of Nil => 1 | _ => 2) == 1

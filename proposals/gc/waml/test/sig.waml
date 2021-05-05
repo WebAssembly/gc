@@ -1,0 +1,25 @@
+;; Signatures
+
+signature Empty = {}
+
+signature S =
+{
+  type T = Int
+  data U = A | B T
+  rec data R = R R
+  type V
+  val x : Int
+  val y : V
+  val f : Int -> Int
+  signature S = {type ST; type SV = V; val x : ST; val y : V}
+  module A : S
+}
+
+signature SS =
+{
+  include S
+  val z : T -> U -> A.SV
+}
+
+signature F = Empty -> S
+signature G = (X : S) -> (Y : SS) -> {include S with type V = X.V; type W = Y.T}

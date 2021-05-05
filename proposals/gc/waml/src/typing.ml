@@ -417,11 +417,11 @@ and check_dec' pass env d : T.typ * T.var list * env =
     let b = y.it in
     let bs = List.map it ys in
     let t = T.Var (b, List.map T.var bs) in
+    let env' = E.extend_typs_var env ys in
     let env1 =
       if pass = RecPass then E.empty else
       E.singleton_typ y (T.Lambda (bs, t))
     in
-    let env' = E.extend_typs_var (E.adjoin env env1) ys in
     let env2 =
       if pass = RecPrePass then E.empty else
       List.fold_left (fun env2 c ->
@@ -445,14 +445,13 @@ and check_dec' pass env d : T.typ * T.var list * env =
   | RecD ds ->
     let _, bs, env' = check_decs RecPrePass env ds (T.Tup []) in
     let _, _, env'' = check_decs RecPass (E.adjoin env env') ds (T.Tup []) in
-    let env''' =
-      let bs = List.concat_map (fun (_, t) ->
-          let T.Forall (bs, _) = T.generalize env t.it in bs
-        ) (E.vals env'')
-      in
-      E.map_vals (fun (T.Forall (_, t)) -> T.Forall (bs, t)) env''
+    let bs = List.concat_map (fun (_, t) ->
+        let T.Forall (bs, _) = T.generalize env t.it in bs
+      ) (E.vals env'')
     in
-    T.Tup [], bs, env'''
+    let env''' = E.adjoin env' env'' in
+    T.Tup [], bs,
+      E.map_vals (fun (T.Forall (bs', t)) -> T.Forall (bs' @ bs, t)) env'''
 
   | InclD m ->
     let s = check_mod env m in
@@ -501,8 +500,11 @@ and check_spec' pass env s : T.var list * env =
     let b = y.it in
     let bs = List.map it ys in
     let t = T.Var (b, List.map T.var bs) in
-    let env1 = E.singleton_typ y (T.Lambda (bs, t)) in
-    let env' = E.extend_typs_var (E.adjoin env env1) ys in
+    let env' = E.extend_typs_var env ys in
+    let env1 =
+      if pass = RecPass then E.empty else
+      E.singleton_typ y (T.Lambda (bs, t))
+    in
     let env2 =
       if pass = RecPrePass then E.empty else
       List.fold_left (fun env2 c ->
@@ -525,7 +527,7 @@ and check_spec' pass env s : T.var list * env =
   | RecS ss ->
     let bs, env' = check_specs RecPrePass env ss in
     let _, env'' = check_specs RecPass (E.adjoin env env') ss in
-    bs, env''
+    bs, E.adjoin env' env''
 
   | InclS s ->
     let s' = check_sig env s in

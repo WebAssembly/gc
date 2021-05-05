@@ -1,7 +1,7 @@
 ;; Exports
 
 type Pair a b = (a, b)
-data List a = Nil | Cons a (List a)
+rec data List a = Nil | Cons a (List a)
 
 val x = 9
 val v = ref 3.14

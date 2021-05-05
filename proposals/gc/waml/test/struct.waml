@@ -6,10 +6,15 @@ module M =
 {
   type T = Int
   data U = A | B T
+  rec data R = R R
+  rec data R1 = R1 R2
+  and data R2 = R2 R1
   val x = 1
   val f x = x + 1
   assert x == 1
   assert f x == 2
+  signature S = {type ST; val x : ST}
+  module A : S = {type ST = T; val x = x}
 }
 
 assert M.x == 1

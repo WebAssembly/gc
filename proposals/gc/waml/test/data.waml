@@ -49,7 +49,9 @@ assert z32 == 3
 
 ;; Recursion
 
-data R = R1 | R2 Int R | R3 R R Int R
+rec data R = R1 | R2 Int R | R3 R R Int R
+
+type R' = R
 
 
 ;; Mutual recursion
