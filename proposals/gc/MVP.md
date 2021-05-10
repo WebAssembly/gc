@@ -537,7 +537,7 @@ The opcode for heap types is encoded as an `s33`.
 | 0xfb40 | `ref.test $t` | `$t : typeidx` |
 | 0xfb41 | `ref.cast $t` | `$t : typeidx` |
 | 0xfb42 | `br_on_cast $l` | `$l : labelidx` |
-| 0xfb42 | `br_on_cast_fail $l` | `$l : labelidx` |
+| 0xfb43 | `br_on_cast_fail $l` | `$l : labelidx` |
 | 0xfb50 | `ref.is_func` | |
 | 0xfb51 | `ref.is_data` | |
 | 0xfb52 | `ref.is_i31` | |
