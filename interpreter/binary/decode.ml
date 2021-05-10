@@ -143,6 +143,8 @@ let sized f s =
 
 open Types
 
+let var s = u32 s
+
 let mutability s =
   match int8 s with
   | 0 -> Immutable
@@ -165,8 +167,8 @@ let heap_type s =
   | -0x12l -> AnyHeapType
   | -0x13l -> EqHeapType
   | -0x16l -> I31HeapType
-  | -0x17l -> let n = u32 s in RttHeapType (SynVar (s33 s), Some n)
-  | -0x18l -> RttHeapType (SynVar (s33 s), None)
+  | -0x17l -> let n = u32 s in RttHeapType (SynVar (var s), Some n)
+  | -0x18l -> RttHeapType (SynVar (var s), None)
   | -0x19l -> DataHeapType
   | i when i >= 0l -> DefHeapType (SynVar i)
   | _ -> error s pos "malformed heap type"
@@ -181,8 +183,8 @@ let ref_type s =
   | -0x14l -> (Nullable, heap_type s)
   | -0x15l -> (NonNullable, heap_type s)
   | -0x16l -> (Nullable, I31HeapType)
-  | -0x17l -> let n = u32 s in (Nullable, RttHeapType (SynVar (s33 s), Some n))
-  | -0x18l -> (Nullable, RttHeapType (SynVar (s33 s), None))
+  | -0x17l -> let n = u32 s in (Nullable, RttHeapType (SynVar (var s), Some n))
+  | -0x18l -> (Nullable, RttHeapType (SynVar (var s), None))
   | -0x19l -> (Nullable, DataHeapType)
   | _ -> error s pos "malformed reference type"
 
@@ -247,8 +249,6 @@ let global_type s =
 
 
 (* Decode instructions *)
-
-let var s = u32 s
 
 let op s = int8 s
 let end_ s = expect 0x0b s "END opcode expected"

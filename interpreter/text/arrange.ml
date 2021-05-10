@@ -37,8 +37,14 @@ let name = string_with List.iter add_unicode_char
 
 let list_of_opt = function None -> [] | Some x -> [x]
 
-let list f xs = List.map f xs
-let listi f xs = List.mapi f xs
+let rec list f xs = list' f [] xs
+and list' f ys = function
+  | [] -> List.rev ys
+  | x::xs -> list' f (f x :: ys) xs
+let rec listi f xs = listi' f 0 [] xs
+and listi' f i ys = function
+  | [] -> List.rev ys
+  | x::xs -> listi' f (i + 1) (f i x :: ys) xs
 let opt f xo = list f (list_of_opt xo)
 let opt_s f xo = Lib.Option.get (Lib.Option.map f xo) ""
 
