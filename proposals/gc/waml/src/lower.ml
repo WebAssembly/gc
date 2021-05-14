@@ -95,16 +95,20 @@ struct
 end
 
 module ClosMap = Map.Make(ClosKey)
+module IdxMap = Map.Make(Int32)
 
+type clos_idxs = {codeidx : int32; closidx : int32; envidx : int32}
 type ctxt_ext =
   { envs : (scope * env ref) list;
-    clostypes : (int32 * int32 * int32) ClosMap.t ref;
+    clostypes : clos_idxs ClosMap.t ref;
+    rttglobals : int32 IdxMap.t ref;
   }
 type ctxt = ctxt_ext Emit.ctxt
 
 let make_ext_ctxt () : ctxt_ext =
   { envs = [(PreScope, make_env ())];
     clostypes = ref ClosMap.empty;
+    rttglobals = ref IdxMap.empty;
   }
 let make_ctxt () : ctxt = Emit.make_ctxt (make_ext_ctxt ())
 
@@ -177,7 +181,7 @@ and lower_anyclos_type ctxt at : int32 =
 
 and lower_func_type ctxt at arity : int32 * int32 =
   match ClosMap.find_opt (arity, []) !(ctxt.ext.clostypes) with
-  | Some (code, clos, _) -> code, clos
+  | Some {codeidx; closidx; _} -> codeidx, closidx
   | None ->
     let code, def_code = emit_type_deferred ctxt at in
     let closdt = W.(type_struct [field i32; field (ref_ code)]) in
@@ -185,19 +189,20 @@ and lower_func_type ctxt at arity : int32 * int32 =
     let argts, _ = lower_param_types ctxt at arity in
     let codedt = W.(type_func (ref_ clos :: argts) [boxedref]) in
     def_code codedt;
-    ctxt.ext.clostypes :=
-      ClosMap.add (arity, []) (code, clos, clos) !(ctxt.ext.clostypes);
+    let clos_idxs = {codeidx = code; closidx = clos; envidx = clos} in
+    ctxt.ext.clostypes := ClosMap.add (arity, []) clos_idxs !(ctxt.ext.clostypes);
     code, clos
 
 and lower_clos_type ctxt at arity flds : int32 * int32 * int32 =
   match ClosMap.find_opt (arity, flds) !(ctxt.ext.clostypes) with
-  | Some (code, clos, clos_env) -> code, clos, clos_env
+  | Some {codeidx; closidx; envidx} -> codeidx, closidx, envidx
   | None ->
     let code, clos = lower_func_type ctxt at arity in
     let closdt = W.(type_struct (field i32 :: field (ref_ code) :: flds)) in
     let clos_env = emit_type ctxt at closdt in
+    let clos_idxs = {codeidx = code; closidx = clos; envidx = clos_env} in
     ctxt.ext.clostypes :=
-      ClosMap.add (arity, flds) (code, clos, clos_env) !(ctxt.ext.clostypes);
+      ClosMap.add (arity, flds) clos_idxs !(ctxt.ext.clostypes);
     code, clos, clos_env
 
 and lower_param_types ctxt at arity : W.value_type list * int32 option =
@@ -268,3 +273,23 @@ let lower_clos_env ctxt at vars rec_xs
         W.field (lower_value_type ctxt at (clos_rep ()) t)
     ) (Vars.bindings vars.vals)
   in flds, !fixups
+
+
+(* RTTs *)
+
+let rec lower_rtt_global ctxt xat typeidx supidxs : int32 =
+  match IdxMap.find_opt typeidx !(ctxt.ext.rttglobals) with
+  | Some idx -> idx
+  | None ->
+    let open W.Source in
+    let instrs =
+      match supidxs with
+      | [] -> W.[rtt_canon (typeidx @@ xat) @@ xat]
+      | typeidx'::supidxs' ->
+        let idx' = lower_rtt_global ctxt xat typeidx' supidxs' in
+        W.[global_get (idx' @@ xat) @@ xat; rtt_sub (typeidx @@ xat) @@ xat]
+    in
+    let t = W.(rttref_n typeidx (Int32.of_int (List.length supidxs))) in
+    let idx = emit_global ctxt xat W.Immutable t (Some (instrs @@ xat)) in
+    ctxt.ext.rttglobals := IdxMap.add typeidx idx !(ctxt.ext.rttglobals);
+    idx
