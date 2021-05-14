@@ -95,8 +95,8 @@ struct
     | Immutable -> int8 0
     | Mutable -> int8 1
 
-  let var_type = function
-    | SynVar x -> s33 x
+  let var_type var = function
+    | SynVar x -> var x
     | SemVar _ -> assert false
 
   let num_type = function
@@ -112,9 +112,9 @@ struct
     | DataHeapType -> s7 (-0x19)
     | FuncHeapType -> s7 (-0x10)
     | ExternHeapType -> s7 (-0x11)
-    | DefHeapType x -> var_type x
-    | RttHeapType (x, None) -> s7 (-0x18); var_type x
-    | RttHeapType (x, Some n) -> s7 (-0x17); s32 n; var_type x
+    | DefHeapType x -> var_type s33 x
+    | RttHeapType (x, None) -> s7 (-0x18); var_type u32 x
+    | RttHeapType (x, Some n) -> s7 (-0x17); s32 n; var_type u32 x
     | BotHeapType -> assert false
 
   let ref_type = function
