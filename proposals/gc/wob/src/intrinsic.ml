@@ -15,7 +15,7 @@ let compile_text_new ctxt : int32 =
     let at = Prelude.region in
     let typeidx = lower_text_type ctxt in
     let t' = W.(RefType (Nullable, DefHeapType (SynVar typeidx))) in
-    emit_func ctxt at W.[i32t; i32t] [t'] (fun ctxt _ ->
+    emit_func ctxt at W.[i32; i32] [t'] (fun ctxt _ ->
       let srcidx = emit_param ctxt at in
       let lenidx = emit_param ctxt at in
       let dstidx = emit_local ctxt at t' in
@@ -24,8 +24,8 @@ let compile_text_new ctxt : int32 =
         rtt_canon (typeidx @@ at);
         array_new_default (typeidx @@ at);
         local_set (dstidx @@ at);
-        block voidbt (List.map (fun e -> e @@ at) [
-          loop voidbt (List.map (fun e -> e @@ at) [
+        block void (List.map (fun e -> e @@ at) [
+          loop void (List.map (fun e -> e @@ at) [
             local_get (lenidx @@ at);
             i32_eqz;
             br_if (1l @@ at);
@@ -52,15 +52,15 @@ let compile_text_cpy ctxt : int32 =
     let at = Prelude.region in
     let typeidx = lower_text_type ctxt in
     let t' = W.(RefType (Nullable, DefHeapType (SynVar typeidx))) in
-    emit_func ctxt at W.[t'; i32t; t'; i32t; i32t] [] (fun ctxt _ ->
+    emit_func ctxt at W.[t'; i32; t'; i32; i32] [] (fun ctxt _ ->
       let dstidx = emit_param ctxt at in
       let dstkidx = emit_param ctxt at in
       let srcidx = emit_param ctxt at in
       let srckidx = emit_param ctxt at in
       let lenidx = emit_param ctxt at in
       emit_instr ctxt at W.(
-        block voidbt (List.map (fun e -> e @@ at) [
-          loop voidbt (List.map (fun e -> e @@ at) [
+        block void (List.map (fun e -> e @@ at) [
+          loop void (List.map (fun e -> e @@ at) [
             local_get (lenidx @@ at);
             i32_eqz;
             br_if (1l @@ at);
@@ -127,16 +127,16 @@ let compile_text_eq ctxt : int32 =
     let at = Prelude.region in
     let typeidx = lower_text_type ctxt in
     let t' = W.(RefType (Nullable, DefHeapType (SynVar typeidx))) in
-    emit_func ctxt at [t'; t'] W.[i32t] (fun ctxt _ ->
+    emit_func ctxt at [t'; t'] W.[i32] (fun ctxt _ ->
       let arg1idx = emit_param ctxt at in
       let arg2idx = emit_param ctxt at in
-      let lenidx = emit_local ctxt at W.i32t in
+      let lenidx = emit_local ctxt at W.i32 in
       List.iter (emit_instr ctxt at) W.[
-        block voidbt (List.map (fun e -> e @@ at) [
+        block void (List.map (fun e -> e @@ at) [
           local_get (arg1idx @@ at);
           local_get (arg2idx @@ at);
           ref_eq;
-          if_ voidbt (List.map (fun e -> e @@ at) [
+          if_ void (List.map (fun e -> e @@ at) [
             i32_const (1l @@ at); return
           ]) [];
           local_get (arg1idx @@ at);
@@ -146,8 +146,8 @@ let compile_text_eq ctxt : int32 =
           local_tee (lenidx @@ at);
           i32_ne;
           br_if (0l @@ at);
-          block voidbt (List.map (fun e -> e @@ at) [
-            loop voidbt (List.map (fun e -> e @@ at) [
+          block void (List.map (fun e -> e @@ at) [
+            loop void (List.map (fun e -> e @@ at) [
               local_get (lenidx @@ at);
               i32_eqz;
               br_if (1l @@ at);

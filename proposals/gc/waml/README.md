@@ -676,22 +676,24 @@ function arraybuffer(bytes) {
   return buffer;
 }
 
-let registry = {};
+let registry = {__proto__: null};
 
 async function link(name) {
-  let bytes = await fs.readFile(name + ".wasm", "binary");
-  let binary = arraybuffer(bytes);
-  let module = await WebAssembly.compile(binary);
-  for (let im of WebAssembly.Module.imports(module)) {
-    link(im.module);
+  if (! (name in registry)) {
+    let bytes = await fs.readFile(name + ".wasm", "binary");
+    let binary = arraybuffer(bytes);
+    let module = await WebAssembly.compile(binary);
+    for (let im of WebAssembly.Module.imports(module)) {
+      link(im.module);
+    }
+    let instance = await WebAssembly.instantiate(module, registry);
+    registry[name] = instance.exports;
   }
-  let instance = await WebAssembly.instantiate(module, registry);
-  registry[name] = instance.exports;
-  return instance;
+  return registry[name];
 }
 
 async function run(name) {
-  let instance = await link(name);
-  return instance.return;
+  let exports = await link(name);
+  return exports.return;
 }
 ```
