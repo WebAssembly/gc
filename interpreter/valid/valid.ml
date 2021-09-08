@@ -229,6 +229,16 @@ let peek_rtt i s at =
       ("type mismatch: instruction requires RTT reference type" ^
        " but stack has " ^ string_of_value_type (RefType rt))
 
+let peek_def kind i s at =
+  let rt = peek_ref i s at in
+  match rt with
+  | _, DefHeapType (SynVar x) -> Some x
+  | _, BotHeapType -> None
+  | _ ->
+    error at
+      ("type mismatch: instruction requires " ^ kind ^ " reference type" ^
+       " but stack has " ^ string_of_value_type (RefType rt))
+
 
 (* Type Synthesis *)
 
@@ -490,16 +500,12 @@ let rec check_instr (c : context) (e : instr) (s : infer_result_type) : op_type 
     ts1 --> ts2
 
   | CallRef ->
-    (match peek_ref 0 s e.at with
-    | (nul, DefHeapType (SynVar x)) ->
+    (match peek_def "function" 0 s e.at with
+    | Some x ->
       let FuncType (ts1, ts2) = func_type c (x @@ e.at) in
-      (ts1 @ [RefType (nul, DefHeapType (SynVar x))]) --> ts2
-    | (_, BotHeapType) as rt ->
-      [RefType rt] -->... []
-    | rt ->
-      error e.at
-        ("type mismatch: instruction requires function reference type" ^
-         " but stack has " ^ string_of_value_type (RefType rt))
+      (ts1 @ [RefType (Nullable, DefHeapType (SynVar x))]) --> ts2
+    | None ->
+      [RefType (Nullable, BotHeapType)] -->... []
     )
 
   | CallIndirect (x, y) ->
@@ -511,25 +517,21 @@ let rec check_instr (c : context) (e : instr) (s : infer_result_type) : op_type 
     (ts1 @ [NumType I32Type]) --> ts2
 
   | ReturnCallRef ->
-    (match peek_ref 0 s e.at with
-    | (nul, DefHeapType (SynVar x)) ->
+    (match peek_def "function" 0 s e.at with
+    | Some x ->
       let FuncType (ts1, ts2) = func_type c (x @@ e.at) in
       require (match_result_type c.types [] ts2 c.results) e.at
         ("type mismatch: current function requires result type " ^
          string_of_result_type c.results ^
          " but callee returns " ^ string_of_result_type ts2);
-      (ts1 @ [RefType (nul, DefHeapType (SynVar x))]) -->... []
-    | (_, BotHeapType) as rt ->
-      [RefType rt] -->... []
-    | rt ->
-      error e.at
-        ("type mismatch: instruction requires function reference type" ^
-         " but stack has " ^ string_of_value_type (RefType rt))
+      (ts1 @ [RefType (Nullable, DefHeapType (SynVar x))]) -->... []
+    | None ->
+      [RefType (Nullable, BotHeapType)] -->... []
     )
 
   | FuncBind x ->
-    (match peek_ref 0 s e.at with
-    | (nul, DefHeapType (SynVar y)) ->
+    (match peek_def "function" 0 s e.at with
+    | Some y ->
       let FuncType (ts1, ts2) = func_type c (y @@ e.at) in
       let FuncType (ts1', _) as ft' = func_type c x in
       require (List.length ts1 >= List.length ts1') x.at
@@ -537,14 +539,11 @@ let rec check_instr (c : context) (e : instr) (s : infer_result_type) : op_type 
       let ts11, ts12 = Lib.List.split (List.length ts1 - List.length ts1') ts1 in
       require (match_func_type c.types [] (FuncType (ts12, ts2)) ft') e.at
         "type mismatch in function type";
-      (ts11 @ [RefType (nul, DefHeapType (SynVar y))]) -->
+      (ts11 @ [RefType (Nullable, DefHeapType (SynVar y))]) -->
         [RefType (NonNullable, DefHeapType (SynVar x.it))]
-    | (_, BotHeapType) as rt ->
-      [RefType rt] -->.. [RefType (NonNullable, DefHeapType (SynVar x.it))]
-    | rt ->
-      error e.at
-        ("type mismatch: instruction requires function reference type" ^
-         " but stack has " ^ string_of_value_type (RefType rt))
+    | None ->
+      [RefType (Nullable, BotHeapType)] -->..
+        [RefType (NonNullable, DefHeapType (SynVar x.it))]
     )
 
   | LocalGet x ->
@@ -696,24 +695,34 @@ let rec check_instr (c : context) (e : instr) (s : infer_result_type) : op_type 
     (ts @ [RefType (NonNullable, RttHeapType (SynVar x.it, None))]) -->
       [RefType (NonNullable, DefHeapType (SynVar x.it))]
 
-  | StructGet (x, y, exto) ->
-    let StructType fts = struct_type c x in
-    require (y.it < Lib.List32.length fts) y.at
-      ("unknown field " ^ I32.to_string_u y.it);
-    let FieldType (st, _) = Lib.List32.nth fts y.it in
-    require ((exto <> None) == is_packed_storage_type st) y.at
-      ("field is " ^ (if exto = None then "packed" else "unpacked"));
-    let t = unpacked_storage_type st in
-    [RefType (Nullable, DefHeapType (SynVar x.it))] --> [t]
+  | StructGet (y, exto) ->
+    (match peek_def "struct" 0 s e.at with
+    | Some x ->
+      let StructType fts = struct_type c (x @@ e.at) in
+      require (y.it < Lib.List32.length fts) y.at
+        ("unknown field " ^ I32.to_string_u y.it);
+      let FieldType (st, _) = Lib.List32.nth fts y.it in
+      require ((exto <> None) == is_packed_storage_type st) y.at
+        ("field is " ^ (if exto = None then "packed" else "unpacked"));
+      let t = unpacked_storage_type st in
+      [RefType (Nullable, DefHeapType (SynVar x))] --> [t]
+    | None ->
+      [RefType (Nullable, BotHeapType)] --> [BotType]
+    )
 
-  | StructSet (x, y) ->
-    let StructType fts = struct_type c x in
-    require (y.it < Lib.List32.length fts) y.at
-      ("unknown field " ^ I32.to_string_u y.it);
-    let FieldType (st, mut) = Lib.List32.nth fts y.it in
-    require (mut == Mutable) y.at "field is immutable";
-    let t = unpacked_storage_type st in
-    [RefType (Nullable, DefHeapType (SynVar x.it)); t] --> []
+  | StructSet y ->
+    (match peek_def "struct" 1 s e.at with
+    | Some x ->
+      let StructType fts = struct_type c (x @@ e.at) in
+      require (y.it < Lib.List32.length fts) y.at
+        ("unknown field " ^ I32.to_string_u y.it);
+      let FieldType (st, mut) = Lib.List32.nth fts y.it in
+      require (mut == Mutable) y.at "field is immutable";
+      let t = unpacked_storage_type st in
+      [RefType (Nullable, DefHeapType (SynVar x)); t] --> []
+    | None ->
+      [RefType (Nullable, BotHeapType); BotType] --> []
+    )
 
   | ArrayNew (x, initop) ->
     let ArrayType ft = array_type c x in
@@ -725,22 +734,37 @@ let rec check_instr (c : context) (e : instr) (s : infer_result_type) : op_type 
     (ts @ [NumType I32Type; RefType (NonNullable, RttHeapType (SynVar x.it, None))]) -->
       [RefType (NonNullable, DefHeapType (SynVar x.it))]
 
-  | ArrayGet (x, exto) ->
-    let ArrayType (FieldType (st, _)) = array_type c x in
-    require ((exto <> None) == is_packed_storage_type st) e.at
-      ("array is " ^ (if exto = None then "packed" else "unpacked"));
-    let t = unpacked_storage_type st in
-    [RefType (Nullable, DefHeapType (SynVar x.it)); NumType I32Type] --> [t]
+  | ArrayGet exto ->
+    (match peek_def "array" 1 s e.at with
+    | Some x ->
+      let ArrayType (FieldType (st, _)) = array_type c (x @@ e.at) in
+      require ((exto <> None) == is_packed_storage_type st) e.at
+        ("array is " ^ (if exto = None then "packed" else "unpacked"));
+      let t = unpacked_storage_type st in
+      [RefType (Nullable, DefHeapType (SynVar x)); NumType I32Type] --> [t]
+    | None ->
+      [RefType (Nullable, BotHeapType); NumType I32Type] --> [BotType]
+    )
 
-  | ArraySet x ->
-    let ArrayType (FieldType (st, mut)) = array_type c x in
-    require (mut == Mutable) e.at "array is immutable";
-    let t = unpacked_storage_type st in
-    [RefType (Nullable, DefHeapType (SynVar x.it)); NumType I32Type; t] --> []
+  | ArraySet ->
+    (match peek_def "array" 2 s e.at with
+    | Some x ->
+      let ArrayType (FieldType (st, mut)) = array_type c (x @@ e.at) in
+      require (mut == Mutable) e.at "array is immutable";
+      let t = unpacked_storage_type st in
+      [RefType (Nullable, DefHeapType (SynVar x)); NumType I32Type; t] --> []
+    | None ->
+      [RefType (Nullable, BotHeapType); NumType I32Type; BotType] --> []
+    )
 
-  | ArrayLen x ->
-    let ArrayType _ = array_type c x in
-    [RefType (Nullable, DefHeapType (SynVar x.it))] --> [NumType I32Type]
+  | ArrayLen ->
+    (match peek_def "array" 0 s e.at with
+    | Some x ->
+      let ArrayType _ = array_type c (x @@ e.at) in
+      [RefType (Nullable, DefHeapType (SynVar x))] --> [NumType I32Type]
+    | None ->
+      [RefType (Nullable, BotHeapType)] --> [NumType I32Type]
+    )
 
   | RttCanon x ->
     ignore (type_ c x);

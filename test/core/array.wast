@@ -64,7 +64,7 @@
   (type $mvec (array (mut f32)))
 
   (func $get (param $i i32) (param $v (ref $vec)) (result f32)
-    (array.get $vec (local.get $v) (local.get $i))
+    (array.get (local.get $v) (local.get $i))
   )
   (func (export "get") (param $i i32) (result f32)
     (call $get (local.get $i)
@@ -73,8 +73,8 @@
   )
 
   (func $set_get (param $i i32) (param $v (ref $mvec)) (param $y f32) (result f32)
-    (array.set $mvec (local.get $v) (local.get $i) (local.get $y))
-    (array.get $mvec (local.get $v) (local.get $i))
+    (array.set (local.get $v) (local.get $i) (local.get $y))
+    (array.get (local.get $v) (local.get $i))
   )
   (func (export "set_get") (param $i i32) (param $y f32) (result f32)
     (call $set_get (local.get $i)
@@ -84,7 +84,7 @@
   )
 
   (func $len (param $v (ref $vec)) (result i32)
-    (array.len $vec (local.get $v))
+    (array.len (local.get $v))
   )
   (func (export "len") (result i32)
     (call $len (array.new_default $vec (i32.const 3) (rtt.canon $vec)))
@@ -102,7 +102,7 @@
   (module
     (type $a (array i64))
     (func (export "array.set-immutable") (param $a (ref $a))
-      (array.set $a (local.get $a) (i32.const 0) (i64.const 1))
+      (array.set (local.get $a) (i32.const 0) (i64.const 1))
     )
   )
   "array is immutable"
@@ -114,10 +114,10 @@
 (module
   (type $t (array (mut i32)))
   (func (export "array.get-null")
-    (local (ref null $t)) (drop (array.get $t (local.get 0) (i32.const 0)))
+    (local (ref null $t)) (drop (array.get (local.get 0) (i32.const 0)))
   )
   (func (export "array.set-null")
-    (local (ref null $t)) (array.set $t (local.get 0) (i32.const 0) (i32.const 0))
+    (local (ref null $t)) (array.set (local.get 0) (i32.const 0) (i32.const 0))
   )
 )
 

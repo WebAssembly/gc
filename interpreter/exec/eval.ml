@@ -687,24 +687,24 @@ let rec step (c : config) : config =
           with Failure _ -> Crash.error e.at "type mismatch packing value"
         in Ref (Data.DataRef data) :: vs'', []
 
-      | StructGet (x, y, exto), Ref (NullRef _) :: vs' ->
+      | StructGet (x, exto), Ref (NullRef _) :: vs' ->
         vs', [Trapping "null structure reference" @@ e.at]
 
-      | StructGet (x, y, exto), Ref Data.(DataRef (Struct (_, _, fs))) :: vs' ->
+      | StructGet (x, exto), Ref Data.(DataRef (Struct (_, _, fs))) :: vs' ->
         let f =
-          try Lib.List32.nth fs y.it
-          with Failure _ -> Crash.error y.at "undefined field"
+          try Lib.List32.nth fs x.it
+          with Failure _ -> Crash.error x.at "undefined field"
         in
         (try Data.read_field f exto :: vs', []
         with Failure _ -> Crash.error e.at "type mismatch reading field")
 
-      | StructSet (x, y), v :: Ref (NullRef _) :: vs' ->
+      | StructSet x, v :: Ref (NullRef _) :: vs' ->
         vs', [Trapping "null structure reference" @@ e.at]
 
-      | StructSet (x, y), v :: Ref Data.(DataRef (Struct (_, _, fs))) :: vs' ->
+      | StructSet x, v :: Ref Data.(DataRef (Struct (_, _, fs))) :: vs' ->
         let f =
-          try Lib.List32.nth fs y.it
-          with Failure _ -> Crash.error y.at "undefined field"
+          try Lib.List32.nth fs x.it
+          with Failure _ -> Crash.error x.at "undefined field"
         in
         (try Data.write_field f v; vs', []
         with Failure _ -> Crash.error e.at "type mismatch writing field")
@@ -723,32 +723,32 @@ let rec step (c : config) : config =
           with Failure _ -> Crash.error e.at "type mismatch packing value"
         in Ref (Data.DataRef data) :: vs'', []
 
-      | ArrayGet (x, exto), Num (I32 i) :: Ref (NullRef _) :: vs' ->
+      | ArrayGet exto, Num (I32 i) :: Ref (NullRef _) :: vs' ->
         vs', [Trapping "null array reference" @@ e.at]
 
-      | ArrayGet (x, exto), Num (I32 i) :: Ref Data.(DataRef (Array (_, _, fs))) :: vs'
+      | ArrayGet exto, Num (I32 i) :: Ref Data.(DataRef (Array (_, _, fs))) :: vs'
         when I32.ge_u i (Lib.List32.length fs) ->
         vs', [Trapping "out of bounds array access" @@ e.at]
 
-      | ArrayGet (x, exto), Num (I32 i) :: Ref Data.(DataRef (Array (_, _, fs))) :: vs' ->
+      | ArrayGet exto, Num (I32 i) :: Ref Data.(DataRef (Array (_, _, fs))) :: vs' ->
         (try Data.read_field (Lib.List32.nth fs i) exto :: vs', []
         with Failure _ -> Crash.error e.at "type mismatch reading array")
 
-      | ArraySet x, v :: Num (I32 i) :: Ref (NullRef _) :: vs' ->
+      | ArraySet, v :: Num (I32 i) :: Ref (NullRef _) :: vs' ->
         vs', [Trapping "null array reference" @@ e.at]
 
-      | ArraySet x, v :: Num (I32 i) :: Ref (Data.DataRef (Data.Array (_, _, fs))) :: vs'
+      | ArraySet, v :: Num (I32 i) :: Ref (Data.DataRef (Data.Array (_, _, fs))) :: vs'
         when I32.ge_u i (Lib.List32.length fs) ->
         vs', [Trapping "out of bounds array access" @@ e.at]
 
-      | ArraySet x, v :: Num (I32 i) :: Ref (Data.DataRef (Data.Array (_, _, fs))) :: vs' ->
+      | ArraySet, v :: Num (I32 i) :: Ref (Data.DataRef (Data.Array (_, _, fs))) :: vs' ->
         (try Data.write_field (Lib.List32.nth fs i) v; vs', []
         with Failure _ -> Crash.error e.at "type mismatch writing array")
 
-      | ArrayLen x, Ref (NullRef _) :: vs' ->
+      | ArrayLen, Ref (NullRef _) :: vs' ->
         vs', [Trapping "null array reference" @@ e.at]
 
-      | ArrayLen x, Ref (Data.DataRef (Data.Array (_, _, svs))) :: vs' ->
+      | ArrayLen, Ref (Data.DataRef (Data.Array (_, _, svs))) :: vs' ->
         Num (I32 (Lib.List32.length svs)) :: vs', []
 
       | RttCanon x, vs ->
