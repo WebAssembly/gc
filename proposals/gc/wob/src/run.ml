@@ -304,6 +304,8 @@ let compile_string string file : bool =
 
 let load_file url at : entry =
   try
+    if !Flags.prompt then
+      print_endline ("// loading \"" ^ url ^ "\"");
     trace (String.make 60 '-');
     trace ("Loading import \"" ^ url ^ "\"...");
     let src_file = url ^ ".wob" in
