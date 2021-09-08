@@ -685,15 +685,26 @@ let rec check_instr (c : context) (e : instr) (s : infer_result_type) : op_type 
   | I31Get ext ->
     [RefType (Nullable, I31HeapType)] --> [NumType I32Type]
 
-  | StructNew (x, initop) ->
-    let StructType fts = struct_type c x in
-    require
-      ( initop = Explicit || List.for_all (fun ft ->
-          defaultable_value_type (unpacked_field_type ft)) fts ) e.at
-      ("field type is not defaultable");
-    let ts = if initop = Implicit then [] else List.map unpacked_field_type fts in
-    (ts @ [RefType (NonNullable, RttHeapType (SynVar x.it, None))]) -->
-      [RefType (NonNullable, DefHeapType (SynVar x.it))]
+  | StructNew initop ->
+    (match peek_rtt 0 s e.at with
+    | _, DefHeapType (SynVar x) ->
+      let StructType fts = struct_type c (x @@ e.at) in
+      require
+        ( initop = Explicit || List.for_all (fun ft ->
+            defaultable_value_type (unpacked_field_type ft)) fts ) e.at
+        ("field type is not defaultable");
+      let ts = if initop = Implicit then [] else List.map unpacked_field_type fts in
+      (ts @ [RefType (NonNullable, RttHeapType (SynVar x, None))]) -->
+        [RefType (NonNullable, DefHeapType (SynVar x))]
+    | _, BotHeapType ->
+      if initop = Implicit then
+        [NumType I32Type; RefType (NonNullable, BotHeapType)] -->
+          [RefType (NonNullable, BotHeapType)]
+      else
+        [NumType I32Type; RefType (NonNullable, BotHeapType)] -->..
+          [RefType (NonNullable, BotHeapType)]
+    | _ -> assert false
+    )
 
   | StructGet (y, exto) ->
     (match peek_def "struct" 0 s e.at with
@@ -724,15 +735,23 @@ let rec check_instr (c : context) (e : instr) (s : infer_result_type) : op_type 
       [RefType (Nullable, BotHeapType); BotType] --> []
     )
 
-  | ArrayNew (x, initop) ->
-    let ArrayType ft = array_type c x in
-    require
-      ( initop = Explicit ||
-        defaultable_value_type (unpacked_field_type ft) ) e.at
-      ("array type is not defaultable");
-    let ts = if initop = Implicit then [] else [unpacked_field_type ft] in
-    (ts @ [NumType I32Type; RefType (NonNullable, RttHeapType (SynVar x.it, None))]) -->
-      [RefType (NonNullable, DefHeapType (SynVar x.it))]
+  | ArrayNew initop ->
+    (match peek_rtt 0 s e.at with
+    | _, DefHeapType (SynVar x) ->
+      let ArrayType ft = array_type c (x @@ e.at) in
+      require
+        ( initop = Explicit ||
+          defaultable_value_type (unpacked_field_type ft) ) e.at
+        ("array type is not defaultable");
+      let ts = if initop = Implicit then [] else [unpacked_field_type ft] in
+      (ts @ [NumType I32Type; RefType (NonNullable, RttHeapType (SynVar x, None))]) -->
+        [RefType (NonNullable, DefHeapType (SynVar x))]
+    | _, BotHeapType ->
+      let ts = if initop = Implicit then [] else [BotType] in
+      (ts @ [NumType I32Type; RefType (NonNullable, BotHeapType)]) -->
+        [RefType (NonNullable, BotHeapType)]
+    | _ -> assert false
+    )
 
   | ArrayGet exto ->
     (match peek_def "array" 1 s e.at with

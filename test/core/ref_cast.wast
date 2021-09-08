@@ -18,14 +18,14 @@
   (table 20 dataref)
 
   (func $init
-    (table.set (i32.const 0) (struct.new_default $t0 (global.get $t0)))
-    (table.set (i32.const 10) (struct.new_default $t0 (global.get $t0')))
-    (table.set (i32.const 1) (struct.new_default $t1 (global.get $t1)))
-    (table.set (i32.const 11) (struct.new_default $t1' (global.get $t1')))
-    (table.set (i32.const 2) (struct.new_default $t2 (global.get $t2)))
-    (table.set (i32.const 12) (struct.new_default $t2' (global.get $t2')))
-    (table.set (i32.const 3) (struct.new_default $t3 (global.get $t3)))
-    (table.set (i32.const 4) (struct.new_default $t3 (global.get $t4)))
+    (table.set (i32.const 0) (struct.new_default (global.get $t0)))
+    (table.set (i32.const 10) (struct.new_default (global.get $t0')))
+    (table.set (i32.const 1) (struct.new_default (global.get $t1)))
+    (table.set (i32.const 11) (struct.new_default (global.get $t1')))
+    (table.set (i32.const 2) (struct.new_default (global.get $t2)))
+    (table.set (i32.const 12) (struct.new_default (global.get $t2')))
+    (table.set (i32.const 3) (struct.new_default (global.get $t3)))
+    (table.set (i32.const 4) (struct.new_default (global.get $t4)))
   )
 
   (func (export "test-sub")
