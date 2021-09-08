@@ -113,7 +113,7 @@ let compile_coerce ctxt src dst t at =
         ref_as_data;
         global_get (rttidx @@ at);
         ref_cast;
-        struct_get (boxedfloat @@ at) (0l @@ at);
+        struct_get (0l @@ at);
       ]
     | T.Tup [] | T.Var _ | T.Data _ ->
       non_null n1 n2
@@ -239,7 +239,7 @@ let compile_var find_var ctxt x =
     emit_instr ctxt x.at W.(global_get (idx @@ x.at));
   | ClosureLoc (null, idx, localidx, typeidx) ->
     emit_instr ctxt x.at W.(local_get (localidx @@ x.at));
-    emit_instr ctxt x.at W.(struct_get (typeidx @@ x.at) (idx @@ x.at));
+    emit_instr ctxt x.at W.(struct_get (idx @@ x.at));
     if null = Null then emit_instr ctxt x.at W.ref_as_non_null
   );
   loc, funcloc_opt
@@ -258,14 +258,13 @@ let compile_mod_var ctxt x =
   if null_rep (loc_rep loc) = Null then emit_instr ctxt x.at W.ref_as_non_null
 
 let compile_mod_proj ctxt str x =
-  let _, typeidx = lower_str_type ctxt x.at str in
   let i = ref 0 in
   let found = ref false in
   E.iter_mods (fun x' _ ->
     if not !found then if x' = x.it then found := true else incr i
   ) str;
   emit_instr ctxt x.at W.(
-    struct_get (typeidx @@ x.at) (int32 !i @@ x.at)
+    struct_get (int32 !i @@ x.at)
   )
 
 let rec compile_mod_path ctxt q =
@@ -276,7 +275,6 @@ let rec compile_mod_path ctxt q =
     compile_mod_proj ctxt (snd (T.as_str (Source.et q'))) x
 
 let compile_val_proj ctxt str x t dst =
-  let _, typeidx = lower_str_type ctxt x.at str in
   let k = E.cardinal_mods str in
   let i = ref 0 in
   let found = ref false in
@@ -284,7 +282,7 @@ let compile_val_proj ctxt str x t dst =
     if not !found then if x' = x.it then found := true else incr i
   ) str;
   emit_instr ctxt x.at W.(
-    struct_get (typeidx @@ x.at) (int32 (k + !i) @@ x.at)
+    struct_get (int32 (k + !i) @@ x.at)
   );
   compile_coerce ctxt struct_rep dst t x.at
 
@@ -504,7 +502,7 @@ let rec compile_pat ctxt fail funcloc_opt p =
           local_get (tmp @@ p.at);
         ];
         emit ctxt W.[
-          struct_get (typeidx @@ pI.at) (int32 i @@ pI.at);
+          struct_get (int32 i @@ pI.at);
         ];
         compile_coerce ctxt field_rep (pat_rep ()) (Source.et pI) pI.at;
         compile_pat ctxt fail None pI;
@@ -554,7 +552,7 @@ let rec compile_pat ctxt fail funcloc_opt p =
       let tmp = emit_local ctxt p.at W.(ref_null_ con.typeidx) in
       emit ctxt W.[local_tee (tmp @@ p.at)];
       emit ctxt W.[
-        struct_get (con.typeidx @@ p.at) (0l @@ p.at);
+        struct_get (0l @@ p.at);
         i32_const (con.tag @@ p.at);
         i32_ne;
         br_if (fail @@ p.at);
@@ -564,7 +562,7 @@ let rec compile_pat ctxt fail funcloc_opt p =
           emit ctxt W.[
             local_get (tmp @@ p.at);
             ref_as_non_null;
-            struct_get (con.typeidx @@ pI.at) (int32 (i + 1) @@ pI.at);
+            struct_get (int32 (i + 1) @@ pI.at);
           ];
           compile_coerce ctxt field_rep (pat_rep ()) (Source.et pI) pI.at;
           compile_pat ctxt fail None pI;
@@ -574,10 +572,9 @@ let rec compile_pat ctxt fail funcloc_opt p =
     )
 
   | RefP p1 ->
-    let typeidx = lower_var_type ctxt p.at t in
     compile_coerce ctxt (pat_rep ()) rigid_rep t p.at;
     emit ctxt W.[
-      struct_get (typeidx @@ p.at) (0l @@ p.at);
+      struct_get (0l @@ p.at);
     ];
     compile_coerce ctxt field_rep (pat_rep ()) (Source.et p1) p1.at;
     compile_pat ctxt fail None p1
@@ -782,20 +779,18 @@ and compile_exp_func_opt ctxt e dst : func_loc option =
     None
 
   | DerefE e1 ->
-    let typ = lower_var_type ctxt e.at (Source.et e1) in
     compile_exp ctxt e1 rigid_rep;
     emit ctxt W.[
-      struct_get (typ @@ e.at) (0l @@ e.at);
+      struct_get (0l @@ e.at);
     ];
     compile_coerce ctxt field_rep dst (Source.et e) e.at;
     None
 
   | AssignE (e1, e2) ->
-    let typ = lower_var_type ctxt e.at (Source.et e1) in
     compile_exp ctxt e1 rigid_rep;
     compile_exp ctxt e2 field_rep;
     emit ctxt W.[
-      struct_set (typ @@ e.at) (0l @@ e.at);
+      struct_set (0l @@ e.at);
     ];
     compile_coerce ctxt unit_rep dst (Source.et e) e.at;
     None
@@ -1026,7 +1021,7 @@ and compile_func_staged ctxt rec_xs f : func_loc * _ * _ =
             emit ctxt W.[local_get (tmp @@ f.at)];
             compile_val_var ctxt Source.(x @@ f.at) t (clos_rep ());
             emit ctxt W.[
-              struct_set (closNenv @@ f.at) (clos_env_idx +% int32 i @@ f.at)
+              struct_set (clos_env_idx +% int32 i @@ f.at)
             ];
           ) fixups
         end
@@ -1117,7 +1112,7 @@ and compile_mod_func_opt ctxt m : func_loc option =
       compile_coerce_mod ctxt (Source.et m2) s11 m2.at;
       emit ctxt W.[
         local_get (tmp @@ m1.at);
-        struct_get (clos1 @@ m1.at) (clos_code_idx @@ m1.at);
+        struct_get (clos_code_idx @@ m1.at);
         call_ref;
       ]
     );
@@ -1179,7 +1174,7 @@ and compile_coerce_mod ctxt s1 s2 at =
             local_get (clos @@ at);
             global_get (rttidx @@ at);
             ref_cast;
-            struct_get (closenv @@ at) (clos_env_idx @@ at);
+            struct_get (clos_env_idx @@ at);
             local_tee (tmp @@ at);
             ref_as_non_null;
             local_get (arg @@ at);
@@ -1187,7 +1182,7 @@ and compile_coerce_mod ctxt s1 s2 at =
           compile_coerce_mod ctxt s21 s11 at;
           emit ctxt W.[
             local_get (tmp @@ at);
-            struct_get (fidx @@ at) (clos_code_idx @@ at);
+            struct_get (clos_code_idx @@ at);
             call_ref;
           ];
           compile_coerce_mod ctxt s12 s22 at;
