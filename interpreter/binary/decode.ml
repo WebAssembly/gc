@@ -545,18 +545,18 @@ let rec instr s =
     (match vu32 s with
     | 0x01l -> struct_new (at var s)
     | 0x02l -> struct_new_default (at var s)
-    | 0x03l -> let x = at var s in let y = at var s in struct_get x y
-    | 0x04l -> let x = at var s in let y = at var s in struct_get_s x y
-    | 0x05l -> let x = at var s in let y = at var s in struct_get_u x y
-    | 0x06l -> let x = at var s in let y = at var s in struct_set x y
+    | 0x03l -> struct_get (at var s)
+    | 0x04l -> struct_get_s (at var s)
+    | 0x05l -> struct_get_u (at var s)
+    | 0x06l -> struct_set (at var s)
 
     | 0x11l -> array_new (at var s)
     | 0x12l -> array_new_default (at var s)
-    | 0x13l -> array_get (at var s)
-    | 0x14l -> array_get_s (at var s)
-    | 0x15l -> array_get_u (at var s)
-    | 0x16l -> array_set (at var s)
-    | 0x17l -> array_len (at var s)
+    | 0x13l -> array_get
+    | 0x14l -> array_get_s
+    | 0x15l -> array_get_u
+    | 0x16l -> array_set
+    | 0x17l -> array_len
 
     | 0x20l -> i31_new
     | 0x21l -> i31_get_s

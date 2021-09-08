@@ -54,23 +54,23 @@
   (type $vec (struct (field f32) (field $y (mut f32)) (field $z f32)))
 
   (func $get_0 (param $v (ref $vec)) (result f32)
-    (struct.get $vec 0 (local.get $v))
+    (struct.get 0 (local.get $v))
   )
   (func (export "get_0") (result f32)
     (call $get_0 (struct.new_default $vec (rtt.canon $vec)))
   )
 
   (func $set_get_y (param $v (ref $vec)) (param $y f32) (result f32)
-    (struct.set $vec $y (local.get $v) (local.get $y))
-    (struct.get $vec $y (local.get $v))
+    (struct.set $y (local.get $v) (local.get $y))
+    (struct.get $y (local.get $v))
   )
   (func (export "set_get_y") (param $y f32) (result f32)
     (call $set_get_y (struct.new_default $vec (rtt.canon $vec)) (local.get $y))
   )
 
   (func $set_get_1 (param $v (ref $vec)) (param $y f32) (result f32)
-    (struct.set $vec 1 (local.get $v) (local.get $y))
-    (struct.get $vec $y (local.get $v))
+    (struct.set 1 (local.get $v) (local.get $y))
+    (struct.get $y (local.get $v))
   )
   (func (export "set_get_1") (param $y f32) (result f32)
     (call $set_get_1 (struct.new_default $vec (rtt.canon $vec)) (local.get $y))
@@ -85,7 +85,7 @@
   (module
     (type $s (struct (field i64)))
     (func (export "struct.set-immutable") (param $s (ref $s))
-      (struct.set $s 0 (local.get $s) (i64.const 1))
+      (struct.set 0 (local.get $s) (i64.const 1))
     )
   )
   "field is immutable"
@@ -97,10 +97,10 @@
 (module
   (type $t (struct (field i32 (mut i32))))
   (func (export "struct.get-null")
-    (local (ref null $t)) (drop (struct.get $t 1 (local.get 0)))
+    (local (ref null $t)) (drop (struct.get 1 (local.get 0)))
   )
   (func (export "struct.set-null")
-    (local (ref null $t)) (struct.set $t 1 (local.get 0) (i32.const 0))
+    (local (ref null $t)) (struct.set 1 (local.get 0) (i32.const 0))
   )
 )
 

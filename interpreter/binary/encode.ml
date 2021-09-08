@@ -317,18 +317,18 @@ struct
 
     | StructNew (x, Explicit) -> op 0xfb; op 0x01; var x
     | StructNew (x, Implicit) -> op 0xfb; op 0x02; var x
-    | StructGet (x, y, None) -> op 0xfb; op 0x03; var x; var y
-    | StructGet (x, y, Some SX) -> op 0xfb; op 0x04; var x; var y
-    | StructGet (x, y, Some ZX) -> op 0xfb; op 0x05; var x; var y
-    | StructSet (x, y) -> op 0xfb; op 0x06; var x; var y
+    | StructGet (x, None) -> op 0xfb; op 0x03; var x
+    | StructGet (x, Some SX) -> op 0xfb; op 0x04; var x
+    | StructGet (x, Some ZX) -> op 0xfb; op 0x05; var x
+    | StructSet x -> op 0xfb; op 0x06; var x
 
     | ArrayNew (x, Explicit) -> op 0xfb; op 0x11; var x
     | ArrayNew (x, Implicit) -> op 0xfb; op 0x12; var x
-    | ArrayGet (x, None) -> op 0xfb; op 0x13; var x
-    | ArrayGet (x, Some SX) -> op 0xfb; op 0x14; var x
-    | ArrayGet (x, Some ZX) -> op 0xfb; op 0x15; var x
-    | ArraySet x -> op 0xfb; op 0x16; var x
-    | ArrayLen x -> op 0xfb; op 0x17; var x
+    | ArrayGet None -> op 0xfb; op 0x13
+    | ArrayGet (Some SX) -> op 0xfb; op 0x14
+    | ArrayGet (Some ZX) -> op 0xfb; op 0x15
+    | ArraySet -> op 0xfb; op 0x16
+    | ArrayLen -> op 0xfb; op 0x17
 
     | RttCanon x -> op 0xfb; op 0x30; var x
     | RttSub x -> op 0xfb; op 0x31; var x

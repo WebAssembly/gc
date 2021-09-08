@@ -255,15 +255,15 @@ This can compile to machine code that (1) reads the RTT from `$x`, (2) checks th
     - iff `$t = struct (mut t')*`
     - and all `t'*` are defaultable
 
-* `struct.get_<sx>? <typeidx> <fieldidx>` reads field `i` from a structure
-  - `struct.get_<sx>? $t i : [(ref null $t)] -> [t]`
+* `struct.get_<sx>? <fieldidx>` reads field `i` from a structure
+  - `struct.get_<sx>? i : [(ref null $t)] -> [t]`
     - iff `$t = struct (mut1 t1)^i (mut ti) (mut2 t2)*`
     - and `t = unpacked(ti)`
     - and `_<sx>` present iff `t =/= ti`
   - traps on `null`
 
-* `struct.set <typeidx> <fieldidx>` writes field `i` of a structure
-  - `struct.set $t i : [(ref null $t) ti] -> []`
+* `struct.set <fieldidx>` writes field `i` of a structure
+  - `struct.set i : [(ref null $t) ti] -> []`
     - iff `$t = struct (mut1 t1)^i (var ti) (mut2 t2)*`
     - and `t = unpacked(ti)`
   - traps on `null`
@@ -280,21 +280,21 @@ This can compile to machine code that (1) reads the RTT from `$x`, (2) checks th
     - iff `$t = array (var t')`
     - and `t'` is defaultable
 
-* `array.get_<sx>? <typeidx>` reads an element from an array
-  - `array.get_<sx>? $t : [(ref null $t) i32] -> [t]`
+* `array.get_<sx>?` reads an element from an array
+  - `array.get_<sx>? : [(ref null $t) i32] -> [t]`
     - iff `$t = array (mut t')`
     - and `t = unpacked(t')`
     - and `_<sx>` present iff `t =/= t'`
   - traps on `null` or if the dynamic index is out of bounds
 
-* `array.set <typeidx>` writes an element to an array
-  - `array.set $t : [(ref null $t) i32 t] -> []`
+* `array.set` writes an element to an array
+  - `array.set : [(ref null $t) i32 t] -> []`
     - iff `$t = array (var t')`
     - and `t = unpacked(t')`
   - traps on `null` or if the dynamic index is out of bounds
 
-* `array.len <typeidx>` inquires the length of an array
-  - `array.len $t : [(ref null $t)] -> [i32]`
+* `array.len` inquires the length of an array
+  - `array.len : [(ref null $t)] -> [i32]`
     - iff `$t = array (mut t)`
   - traps on `null`
 
@@ -512,17 +512,17 @@ The opcode for heap types is encoded as an `s33`.
 | 0xd6   | `br_on_non_null` | |
 | 0xfb01 | `struct.new_with_rtt $t` | `$t : typeidx` |
 | 0xfb02 | `struct.new_default_with_rtt $t` | `$t : typeidx` |
-| 0xfb03 | `struct.get $t i` | `$t : typeidx`, `i : fieldidx` |
-| 0xfb04 | `struct.get_s $t i` | `$t : typeidx`, `i : fieldidx` |
-| 0xfb05 | `struct.get_u $t i` | `$t : typeidx`, `i : fieldidx` |
-| 0xfb06 | `struct.set $t i` | `$t : typeidx`, `i : fieldidx` |
+| 0xfb03 | `struct.get i` | `i : fieldidx` |
+| 0xfb04 | `struct.get_s i` | `i : fieldidx` |
+| 0xfb05 | `struct.get_u i` | `i : fieldidx` |
+| 0xfb06 | `struct.set i` | `i : fieldidx` |
 | 0xfb11 | `array.new_with_rtt $t` | `$t : typeidx` |
 | 0xfb12 | `array.new_default_with_rtt $t` | `$t : typeidx` |
-| 0xfb13 | `array.get $t` | `$t : typeidx` |
-| 0xfb14 | `array.get_s $t` | `$t : typeidx` |
-| 0xfb15 | `array.get_u $t` | `$t : typeidx` |
-| 0xfb16 | `array.set $t` | `$t : typeidx` |
-| 0xfb17 | `array.len $t` | `$t : typeidx` |
+| 0xfb13 | `array.get` |  |
+| 0xfb14 | `array.get_s` |  |
+| 0xfb15 | `array.get_u` |  |
+| 0xfb16 | `array.set` |  |
+| 0xfb17 | `array.len` |  |
 | 0xfb20 | `i31.new` |  |
 | 0xfb21 | `i31.get_s` |  |
 | 0xfb22 | `i31.get_u` |  |
