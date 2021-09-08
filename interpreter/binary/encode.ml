@@ -95,8 +95,8 @@ struct
     | Immutable -> u8 0
     | Mutable -> u8 1
 
-  let var_type = function
-    | SynVar x -> vs33 x
+  let var_type var = function
+    | SynVar x -> var x
     | SemVar _ -> assert false
 
   let num_type = function
@@ -112,9 +112,9 @@ struct
     | DataHeapType -> vs7 (-0x19)
     | FuncHeapType -> vs7 (-0x10)
     | ExternHeapType -> vs7 (-0x11)
-    | DefHeapType x -> var_type x
-    | RttHeapType (x, None) -> vs7 (-0x18); var_type x
-    | RttHeapType (x, Some n) -> vs7 (-0x17); vs32 n; var_type x
+    | DefHeapType x -> var_type vs33 x
+    | RttHeapType (x, None) -> vs7 (-0x18); var_type vu32 x
+    | RttHeapType (x, Some n) -> vs7 (-0x17); vs32 n; var_type vu32 x
     | BotHeapType -> assert false
 
   let ref_type = function
@@ -215,7 +215,11 @@ struct
     | BrCast (x, DataOp) -> op 0xfb; op 0x61; var x
     | BrCast (x, FuncOp) -> op 0xfb; op 0x60; var x
     | BrCast (x, RttOp) -> op 0xfb; op 0x42; var x
-
+    | BrCastFail (x, NullOp) -> op 0xd6; var x
+    | BrCastFail (x, I31Op) -> op 0xfb; op 0x65; var x
+    | BrCastFail (x, DataOp) -> op 0xfb; op 0x64; var x
+    | BrCastFail (x, FuncOp) -> op 0xfb; op 0x63; var x
+    | BrCastFail (x, RttOp) -> op 0xfb; op 0x43; var x
     | Return -> op 0x0f
     | Call x -> op 0x10; var x
     | CallRef -> op 0x14

@@ -144,6 +144,9 @@ let mutability s =
   | 1 -> Mutable
   | _ -> error s (pos s - 1) "malformed mutability"
 
+let var_type s =
+  SynVar (vu32 s)
+
 let num_type s =
   match vs7 s with
   | -0x01 -> I32Type
@@ -160,8 +163,8 @@ let heap_type s =
   | -0x12l -> AnyHeapType
   | -0x13l -> EqHeapType
   | -0x16l -> I31HeapType
-  | -0x17l -> let n = vu32 s in RttHeapType (SynVar (vs33 s), Some n)
-  | -0x18l -> RttHeapType (SynVar (vs33 s), None)
+  | -0x17l -> let n = vu32 s in RttHeapType (var_type s, Some n)
+  | -0x18l -> RttHeapType (var_type s, None)
   | -0x19l -> DataHeapType
   | i when i >= 0l -> DefHeapType (SynVar i)
   | _ -> error s pos "malformed heap type"
@@ -176,6 +179,8 @@ let ref_type s =
   | -0x14l -> (Nullable, heap_type s)
   | -0x15l -> (NonNullable, heap_type s)
   | -0x16l -> (Nullable, I31HeapType)
+  | -0x17l -> let n = vu32 s in (NonNullable, RttHeapType (var_type s, Some n))
+  | -0x18l -> (NonNullable, RttHeapType (var_type s, None))
   | -0x19l -> (Nullable, DataHeapType)
   | _ -> error s pos "malformed reference type"
 
@@ -534,6 +539,7 @@ let rec instr s =
   | 0xd3 -> ref_as_non_null
   | 0xd4 -> br_on_null (at var s)
   | 0xd5 -> ref_eq
+  | 0xd6 -> br_on_non_null (at var s)
 
   | 0xfb as b ->
     (match vu32 s with
@@ -562,6 +568,7 @@ let rec instr s =
     | 0x40l -> ref_test
     | 0x41l -> ref_cast
     | 0x42l -> br_on_cast (at var s)
+    | 0x43l -> br_on_cast_fail (at var s)
 
     | 0x50l -> ref_is_func
     | 0x51l -> ref_is_data
@@ -573,6 +580,9 @@ let rec instr s =
     | 0x60l -> br_on_func (at var s)
     | 0x61l -> br_on_data (at var s)
     | 0x62l -> br_on_i31 (at var s)
+    | 0x63l -> br_on_non_func (at var s)
+    | 0x64l -> br_on_non_data (at var s)
+    | 0x65l -> br_on_non_i31 (at var s)
 
     | n -> illegal2 s pos b n
     )
