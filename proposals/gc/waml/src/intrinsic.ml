@@ -27,7 +27,7 @@ let compile_text_new ctxt : int32 =
       List.iter (emit_instr ctxt at) W.[
         local_get (len @@ at);
         rtt_canon (text @@ at);
-        array_new_default (text @@ at);
+        array_new_default;
         local_set (dst @@ at);
         block void (List.map (fun e -> e @@ at) [
           loop void (List.map (fun e -> e @@ at) [
@@ -108,7 +108,7 @@ let compile_text_cat ctxt : int32 =
         array_len;
         i32_add;
         rtt_canon (text @@ at);
-        array_new_default (text @@ at);
+        array_new_default;
         local_tee (tmp @@ at);
         ref_as_non_null;
         i32_const (0l @@ at);
@@ -202,7 +202,7 @@ let compile_push_args ctxt at n shift compile_eI =
       i31_new;
       i32_const (int32 n @@ at);
       rtt_canon (argv @@ at);
-      array_new (argv @@ at);
+      array_new;
       local_tee (tmp +% shift @@ at);
       ref_as_non_null;
     ];
@@ -341,7 +341,7 @@ let rec compile_apply ctxt arity =
         rtt_canon (anyclos @@ at);
         rtt_sub (clos1 @@ at);
         rtt_sub (curriedN @@ at);
-        struct_new (curriedN @@ at);
+        struct_new;
       ]
     )
   )
@@ -422,7 +422,7 @@ and compile_curry ctxt arity =
             i32_add;
             local_tee (len +% 1l @@ at);
             rtt_canon (argv @@ at);
-            array_new (argv @@ at);
+            array_new;
             local_tee (dst +% 1l @@ at);
             (* Initialise applied argument *)
             local_get (i +% 1l @@ at);
@@ -498,7 +498,7 @@ and compile_curry ctxt arity =
             rtt_canon (anyclos @@ at);
             rtt_sub (clos1 @@ at);
             rtt_sub (curriedN @@ at);
-            struct_new (curriedN @@ at);
+            struct_new;
           ]
         end
       )

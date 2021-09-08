@@ -542,7 +542,7 @@ let rec instr s =
   | 0xd6 -> br_on_non_null (at var s)
 
   | 0xfb as b ->
-    (match vu32 s with
+    (match u32 s with
     | 0x01l -> struct_new
     | 0x02l -> struct_new_default
     | 0x03l -> struct_get (at var s)

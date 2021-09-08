@@ -149,7 +149,7 @@ let compile_coerce ctxt src dst t at =
       let rttidx = lower_rtt_global ctxt at boxedfloat [] in
       emit ctxt W.[
         global_get (rttidx @@ at);
-        struct_new (boxedfloat @@ at);
+        struct_new;
       ]
     | _ -> non_null n1 n2
     )
@@ -430,7 +430,7 @@ let compile_alloc_clos ctxt fn arity vars rec_xs closN closNenv at =
     ]
   end;
   emit ctxt W.[
-    struct_new (closNenv @@ at);
+    struct_new;
   ]
 
 
@@ -636,7 +636,7 @@ and compile_exp_func_opt ctxt e dst : func_loc option =
               ) argts;
               compile_val_path ctxt q (T.as_mono (Source.et q)) rigid_rep;
               emit ctxt W.[
-                struct_new (con.typeidx @@ e.at);
+                struct_new;
               ]
             )
           in
@@ -647,7 +647,7 @@ and compile_exp_func_opt ctxt e dst : func_loc option =
             i32_const (int32 con.arity @@ e.at);
             ref_func (fn @@ e.at);
             global_get (rttidx @@ e.at);
-            struct_new (clos @@ e.at);
+            struct_new;
           ];
           Some {funcidx = fn; typeidx = clos; arity = con.arity}
 
@@ -773,7 +773,7 @@ and compile_exp_func_opt ctxt e dst : func_loc option =
     compile_exp ctxt e1 field_rep;
     emit ctxt W.[
       global_get (rttidx @@ e.at);
-      struct_new (typeidx @@ e.at);
+      struct_new;
     ];
     compile_coerce ctxt rigid_rep dst (Source.et e) e.at;
     None
@@ -805,7 +805,7 @@ and compile_exp_func_opt ctxt e dst : func_loc option =
     List.iter (fun e -> compile_exp ctxt e field_rep) es;
     emit ctxt W.[
       global_get (rttidx @@ e.at);
-      struct_new (typ @@ e.at);
+      struct_new;
     ];
     compile_coerce ctxt rigid_rep dst (Source.et e) e.at;
     None
@@ -831,7 +831,7 @@ and compile_exp_func_opt ctxt e dst : func_loc option =
           List.iter (fun e -> compile_exp ctxt e field_rep) es;
           compile_val_path ctxt q (T.as_mono (Source.et q)) rigid_rep;
           emit ctxt W.[
-            struct_new (con.typeidx @@ e1.at);
+            struct_new;
           ];
           compile_coerce ctxt rigid_rep dst (Source.et e) e.at;
 
@@ -1060,7 +1060,7 @@ and compile_mod_func_opt ctxt m : func_loc option =
     let rttidx = lower_rtt_global ctxt m.at str [] in
     emit ctxt W.[
       global_get (rttidx @@ m.at);
-      struct_new (str @@ m.at);
+      struct_new;
     ];
     None
 
@@ -1154,7 +1154,7 @@ and compile_coerce_mod ctxt s1 s2 at =
       let rttidx = lower_rtt_global ctxt at typeidx2 [] in
       emit ctxt W.[
         global_get (rttidx @@ at);
-        struct_new (typeidx2 @@ at);
+        struct_new;
       ];
 
     | T.Fct (_, s11, s12), T.Fct (_, s21, s22) ->
@@ -1198,7 +1198,7 @@ and compile_coerce_mod ctxt s1 s2 at =
         local_get (tmp @@ at);
         ref_as_non_null;
         global_get (rttidx @@ at);
-        struct_new (closenv @@ at);
+        struct_new;
       ]
 
     | _ ->
@@ -1401,7 +1401,7 @@ let compile_imp ctxt idx d =
   let vt, typeidx = lower_str_type ctxt x.at str in
   let rttidx = lower_rtt_global ctxt d.at typeidx [] in
   emit_instr ctxt d.at W.(global_get (rttidx @@ d.at));
-  emit_instr ctxt d.at W.(struct_new (typeidx @@ d.at));
+  emit_instr ctxt d.at W.(struct_new);
   compile_mod_var_bind ctxt x (T.Str ([], str)) None
 
 let compile_prog p : W.module_ =
