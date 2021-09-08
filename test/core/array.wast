@@ -68,7 +68,7 @@
   )
   (func (export "get") (param $i i32) (result f32)
     (call $get (local.get $i)
-      (array.new_default $vec (i32.const 3) (rtt.canon $vec))
+      (array.new_default (i32.const 3) (rtt.canon $vec))
     )
   )
 
@@ -78,7 +78,7 @@
   )
   (func (export "set_get") (param $i i32) (param $y f32) (result f32)
     (call $set_get (local.get $i)
-      (array.new_default $mvec (i32.const 3) (rtt.canon $mvec))
+      (array.new_default (i32.const 3) (rtt.canon $mvec))
       (local.get $y)
     )
   )
@@ -87,7 +87,7 @@
     (array.len (local.get $v))
   )
   (func (export "len") (result i32)
-    (call $len (array.new_default $vec (i32.const 3) (rtt.canon $vec)))
+    (call $len (array.new_default (i32.const 3) (rtt.canon $vec)))
   )
 )
 
@@ -128,7 +128,7 @@
   (module
     (type $t (array i32))
     (func (export "array.new-null")
-      (local (ref null (rtt $t))) (drop (array.new_default $t (i32.const 1) (i32.const 3) (local.get 0)))
+      (local (ref null (rtt $t))) (drop (array.new_default (i32.const 1) (i32.const 3) (local.get 0)))
     )
   )
   "type mismatch"
@@ -137,7 +137,7 @@
   (module
     (type $t (array (mut i32)))
     (func (export "array.new_default-null")
-      (local (ref null (rtt $t))) (drop (array.new_default $t (i32.const 3) (local.get 0)))
+      (local (ref null (rtt $t))) (drop (array.new_default (i32.const 3) (local.get 0)))
     )
   )
   "type mismatch"

@@ -315,15 +315,15 @@ struct
     | I31Get SX -> op 0xfb; op 0x21
     | I31Get ZX -> op 0xfb; op 0x22
 
-    | StructNew (x, Explicit) -> op 0xfb; op 0x01; var x
-    | StructNew (x, Implicit) -> op 0xfb; op 0x02; var x
+    | StructNew Explicit -> op 0xfb; op 0x01
+    | StructNew Implicit -> op 0xfb; op 0x02
     | StructGet (x, None) -> op 0xfb; op 0x03; var x
     | StructGet (x, Some SX) -> op 0xfb; op 0x04; var x
     | StructGet (x, Some ZX) -> op 0xfb; op 0x05; var x
     | StructSet x -> op 0xfb; op 0x06; var x
 
-    | ArrayNew (x, Explicit) -> op 0xfb; op 0x11; var x
-    | ArrayNew (x, Implicit) -> op 0xfb; op 0x12; var x
+    | ArrayNew Explicit -> op 0xfb; op 0x11
+    | ArrayNew Implicit -> op 0xfb; op 0x12
     | ArrayGet None -> op 0xfb; op 0x13
     | ArrayGet (Some SX) -> op 0xfb; op 0x14
     | ArrayGet (Some ZX) -> op 0xfb; op 0x15

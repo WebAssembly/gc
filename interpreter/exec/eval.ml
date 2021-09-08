@@ -98,8 +98,6 @@ let data (inst : module_inst) x = lookup "data segment" inst.datas x
 let local (frame : frame) x = lookup "local" frame.locals x
 
 let func_type (inst : module_inst) x = as_func_def_type (def_of (type_ inst x))
-let struct_type (inst : module_inst) x = as_struct_def_type (def_of (type_ inst x))
-let array_type (inst : module_inst) x = as_array_def_type (def_of (type_ inst x))
 
 let any_ref inst x i at =
   try Table.load (table inst x) i with Table.Bounds ->
@@ -670,22 +668,26 @@ let rec step (c : config) : config =
       | I31Get ext, Ref (I31.I31Ref i) :: vs' ->
         Num (I32 (I31.to_i32 ext i)) :: vs', []
 
-      | StructNew (x, initop), Ref (Rtt.RttRef rtt) :: vs' ->
-        let StructType fts = struct_type c.frame.inst x in
-        let args, vs'' =
-          match initop with
-          | Explicit ->
-            let args, vs'' = split (List.length fts) vs' e.at in
-            List.rev args, vs''
-          | Implicit ->
-            let ts = List.map unpacked_field_type fts in
-            try List.map default_value ts, vs'
-            with Failure _ -> Crash.error e.at "non-defaultable type"
-        in
-        let data = 
-          try Data.alloc_struct (type_ c.frame.inst x) rtt args
-          with Failure _ -> Crash.error e.at "type mismatch packing value"
-        in Ref (Data.DataRef data) :: vs'', []
+      | StructNew initop, Ref (Rtt.RttRef rtt) :: vs' ->
+        (match Rtt.def_type_of rtt with
+        | StructDefType (StructType fts) ->
+          let args, vs'' =
+            match initop with
+            | Explicit ->
+              let args, vs'' = split (List.length fts) vs' e.at in
+              List.rev args, vs''
+            | Implicit ->
+              let ts = List.map unpacked_field_type fts in
+              try List.map default_value ts, vs'
+              with Failure _ -> Crash.error e.at "non-defaultable type"
+          in
+          let data = 
+            try Data.alloc_struct (Rtt.type_inst_of rtt) rtt args
+            with Failure _ -> Crash.error e.at "type mismatch packing value"
+          in Ref (Data.DataRef data) :: vs'', []
+        | _ ->
+          Crash.error e.at "wrong RTT type"
+        )
 
       | StructGet (x, exto), Ref (NullRef _) :: vs' ->
         vs', [Trapping "null structure reference" @@ e.at]
@@ -709,19 +711,23 @@ let rec step (c : config) : config =
         (try Data.write_field f v; vs', []
         with Failure _ -> Crash.error e.at "type mismatch writing field")
 
-      | ArrayNew (x, initop), Ref (Rtt.RttRef rtt) :: Num (I32 n) :: vs' ->
-        let ArrayType (FieldType (st, _)) = array_type c.frame.inst x in
-        let arg, vs'' =
-          match initop with
-          | Explicit -> List.hd vs', List.tl vs'
-          | Implicit ->
-            try default_value (unpacked_storage_type st), vs'
-            with Failure _ -> Crash.error e.at "non-defaultable type"
-        in
-        let data = 
-          try Data.alloc_array (type_ c.frame.inst x) rtt n arg
-          with Failure _ -> Crash.error e.at "type mismatch packing value"
-        in Ref (Data.DataRef data) :: vs'', []
+      | ArrayNew initop, Ref (Rtt.RttRef rtt) :: Num (I32 n) :: vs' ->
+        (match Rtt.def_type_of rtt with
+        | ArrayDefType (ArrayType (FieldType (st, _))) ->
+          let arg, vs'' =
+            match initop with
+            | Explicit -> List.hd vs', List.tl vs'
+            | Implicit ->
+              try default_value (unpacked_storage_type st), vs'
+              with Failure _ -> Crash.error e.at "non-defaultable type"
+          in
+          let data = 
+            try Data.alloc_array (Rtt.type_inst_of rtt) rtt n arg
+            with Failure _ -> Crash.error e.at "type mismatch packing value"
+          in Ref (Data.DataRef data) :: vs'', []
+        | _ ->
+          Crash.error e.at "wrong RTT type"
+        )
 
       | ArrayGet exto, Num (I32 i) :: Ref (NullRef _) :: vs' ->
         vs', [Trapping "null array reference" @@ e.at]

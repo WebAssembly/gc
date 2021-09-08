@@ -254,7 +254,7 @@ let inline_func_type_explicit (c : context) x ft at =
 %token<Ast.instr'> I31_GET
 %token<Ast.idx -> Ast.instr'> STRUCT_GET
 %token<Ast.instr'> ARRAY_GET
-%token<Ast.idx -> Ast.instr'> STRUCT_NEW ARRAY_NEW
+%token<Ast.instr'> STRUCT_NEW ARRAY_NEW
 %token<string Source.phrase -> Ast.instr' * Value.num> CONST
 %token<Ast.instr'> UNARY
 %token<Ast.instr'> BINARY
@@ -507,10 +507,10 @@ plain_instr :
   | REF_EQ { fun c -> ref_eq }
   | I31_NEW { fun c -> i31_new }
   | I31_GET { fun c -> $1 }
-  | STRUCT_NEW var { fun c -> $1 ($2 c type_) }
+  | STRUCT_NEW { fun c -> $1 }
   | STRUCT_GET var { fun c -> $1 ($2 c field) }
   | STRUCT_SET var { fun c -> struct_set ($2 c field) }
-  | ARRAY_NEW var { fun c -> $1 ($2 c type_) }
+  | ARRAY_NEW { fun c -> $1 }
   | ARRAY_GET { fun c -> $1 }
   | ARRAY_SET { fun c -> array_set }
   | ARRAY_LEN { fun c -> array_len }
