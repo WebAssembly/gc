@@ -542,16 +542,16 @@ let rec instr s =
   | 0xd6 -> br_on_non_null (at var s)
 
   | 0xfb as b ->
-    (match u32 s with
-    | 0x01l -> struct_new (at var s)
-    | 0x02l -> struct_new_default (at var s)
+    (match vu32 s with
+    | 0x01l -> struct_new
+    | 0x02l -> struct_new_default
     | 0x03l -> struct_get (at var s)
     | 0x04l -> struct_get_s (at var s)
     | 0x05l -> struct_get_u (at var s)
     | 0x06l -> struct_set (at var s)
 
-    | 0x11l -> array_new (at var s)
-    | 0x12l -> array_new_default (at var s)
+    | 0x11l -> array_new
+    | 0x12l -> array_new_default
     | 0x13l -> array_get
     | 0x14l -> array_get_s
     | 0x15l -> array_get_u

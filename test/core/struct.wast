@@ -57,7 +57,7 @@
     (struct.get 0 (local.get $v))
   )
   (func (export "get_0") (result f32)
-    (call $get_0 (struct.new_default $vec (rtt.canon $vec)))
+    (call $get_0 (struct.new_default (rtt.canon $vec)))
   )
 
   (func $set_get_y (param $v (ref $vec)) (param $y f32) (result f32)
@@ -65,7 +65,7 @@
     (struct.get $y (local.get $v))
   )
   (func (export "set_get_y") (param $y f32) (result f32)
-    (call $set_get_y (struct.new_default $vec (rtt.canon $vec)) (local.get $y))
+    (call $set_get_y (struct.new_default (rtt.canon $vec)) (local.get $y))
   )
 
   (func $set_get_1 (param $v (ref $vec)) (param $y f32) (result f32)
@@ -73,7 +73,7 @@
     (struct.get $y (local.get $v))
   )
   (func (export "set_get_1") (param $y f32) (result f32)
-    (call $set_get_1 (struct.new_default $vec (rtt.canon $vec)) (local.get $y))
+    (call $set_get_1 (struct.new_default (rtt.canon $vec)) (local.get $y))
   )
 )
 
@@ -111,7 +111,7 @@
   (module
     (type $t (struct (field i32 (mut i32))))
     (func (export "struct.new-null")
-      (local (ref null (rtt $t))) (drop (struct.new $t (i32.const 1) (i32.const 2) (local.get 0)))
+      (local (ref null (rtt $t))) (drop (struct.new (i32.const 1) (i32.const 2) (local.get 0)))
     )
   )
   "type mismatch"
@@ -120,7 +120,7 @@
   (module
     (type $t (struct (field i32 (mut i32))))
     (func (export "struct.new_default-null")
-      (local (ref null (rtt $t))) (drop (struct.new_default $t (local.get 0)))
+      (local (ref null (rtt $t))) (drop (struct.new_default (local.get 0)))
     )
   )
   "type mismatch"

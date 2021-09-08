@@ -22,7 +22,7 @@ let compile_text_new ctxt : int32 =
       List.iter (emit_instr ctxt at) W.[
         local_get (lenidx @@ at);
         rtt_canon (typeidx @@ at);
-        array_new_default (typeidx @@ at);
+        array_new_default;
         local_set (dstidx @@ at);
         block void (List.map (fun e -> e @@ at) [
           loop void (List.map (fun e -> e @@ at) [
@@ -101,7 +101,7 @@ let compile_text_cat ctxt : int32 =
         array_len;
         i32_add;
         rtt_canon (typeidx @@ at);
-        array_new_default (typeidx @@ at);
+        array_new_default;
         local_tee (tmpidx @@ at);
         i32_const (0l @@ at);
         local_get (arg1idx @@ at);
