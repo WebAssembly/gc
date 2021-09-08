@@ -611,7 +611,7 @@ and compile_exp ctxt e =
     | _ ->
       let typeidx = lower_var_type ctxt e.at (Source.et e) in
       compile_coerce_value_type ctxt e1.at (Source.et e1);
-      emit ctxt W.[rtt_canon (typeidx @@ e.at); struct_new (typeidx @@ e.at)]
+      emit ctxt W.[rtt_canon (typeidx @@ e.at); struct_new]
     )
 
   | UnboxE e1 ->
@@ -638,7 +638,7 @@ and compile_exp ctxt e =
       compile_exp ctxt eI;
       compile_coerce_value_type ctxt eI.at (Source.et eI);
     ) es;
-    emit ctxt W.[rtt_canon (typeidx @@ e.at); struct_new (typeidx @@ e.at)]
+    emit ctxt W.[rtt_canon (typeidx @@ e.at); struct_new]
 
   | ProjE (e1, n) ->
     compile_exp ctxt e1;
@@ -655,7 +655,7 @@ and compile_exp ctxt e =
     emit ctxt W.[
       i32_const (i32 (List.length es) @@ e.at);
       rtt_canon (typeidx @@ e.at);
-      array_new_default (typeidx @@ e.at);
+      array_new_default;
     ];
     let tmpidx =
       if List.length es = 0 then 0l else begin
@@ -769,7 +769,7 @@ and compile_exp ctxt e =
     emit ctxt W.[
       local_get (tmpidx @@ e1.at);
       rtt_canon (typeidx @@ e.at);
-      array_new (typeidx @@ e.at);
+      array_new;
     ]
 
   | DotE (e1, x) ->
@@ -1142,7 +1142,7 @@ and compile_dec pass ctxt d =
     (* Third, allocate dispatch table (and leave on stack) *)
     emit ctxt W.[
       rtt_canon (cls.disp_idx @@ d.at);
-      struct_new (cls.disp_idx @@ d.at);
+      struct_new;
     ];
 
     (* Allocate RTT (and leave on stack) *)
@@ -1282,7 +1282,7 @@ and compile_dec pass ctxt d =
         emit ctxt W.[
           local_get (self @@ d.at);
           struct_get (cls_rtt @@ d.at);
-          struct_new (cls.inst_idx @@ d.at);
+          struct_new;
           local_tee (this @@ x.at);
         ];
 
@@ -1322,7 +1322,7 @@ and compile_dec pass ctxt d =
     );
     emit ctxt W.[
       rtt_canon (cls.cls_idx @@ d.at);
-      struct_new (cls.cls_idx @@ d.at);
+      struct_new;
     ];
 
     (* Store in target variable *)
