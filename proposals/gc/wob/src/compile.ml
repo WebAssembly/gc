@@ -620,13 +620,12 @@ and compile_exp ctxt e =
     | T.Bool | T.Byte ->
       emit ctxt W.[i31_get_u]
     | _ ->
-      let typeidx = lower_var_type ctxt e.at (Source.et e1) in
       let struct_get_sxopt =
         match Source.et e with
         | T.Bool | T.Byte -> W.struct_get_u
         | _ -> W.struct_get
       in
-      emit ctxt [struct_get_sxopt (typeidx @@ e.at) (0l @@ e.at)];
+      emit ctxt [struct_get_sxopt (0l @@ e.at)];
       compile_coerce_block_type ctxt e.at (Source.et e)
     )
 
@@ -642,14 +641,13 @@ and compile_exp ctxt e =
     emit ctxt W.[rtt_canon (typeidx @@ e.at); struct_new (typeidx @@ e.at)]
 
   | ProjE (e1, n) ->
-    let typeidx = lower_var_type ctxt e.at (Source.et e1) in
     compile_exp ctxt e1;
     let struct_get_sxopt =
       match Source.et e with
       | T.Bool | T.Byte -> W.struct_get_u
       | _ -> W.struct_get
     in
-    emit ctxt [struct_get_sxopt (typeidx @@ e.at) (i32 n @@ e.at)];
+    emit ctxt [struct_get_sxopt (i32 n @@ e.at)];
     compile_coerce_abs_block_type ctxt e.at (Source.et e)
 
   | ArrayE es ->
@@ -671,16 +669,14 @@ and compile_exp ctxt e =
       emit ctxt W.[local_get (tmpidx @@ e.at); i32_const (i32 i @@ e.at)];
       compile_exp ctxt eI;
       compile_coerce_value_type ctxt eI.at (Source.et eI);
-      emit ctxt W.[array_set (typeidx @@ e.at)];
+      emit ctxt W.[array_set];
     ) es
 
   | LenE e1 ->
-    let typeidx = lower_var_type ctxt e.at (Source.et e1) in
     compile_exp ctxt e1;
-    emit ctxt W.[array_len (typeidx @@ e.at)]
+    emit ctxt W.[array_len]
 
   | IdxE (e1, e2) ->
-    let typeidx = lower_var_type ctxt e.at (Source.et e1) in
     compile_exp ctxt e1;
     compile_exp ctxt e2;
     let array_get_sxopt =
@@ -688,7 +684,7 @@ and compile_exp ctxt e =
       | T.Bool | T.Byte -> W.array_get_u
       | _ -> W.array_get
     in
-    emit ctxt [array_get_sxopt (typeidx @@ e.at)];
+    emit ctxt [array_get_sxopt];
     compile_coerce_abs_block_type ctxt e.at (Source.et e)
 
   | CallE (e1, ts, es) ->
@@ -730,8 +726,8 @@ and compile_exp ctxt e =
         | T.FuncS ->
           emit ctxt W.[
             local_get (tmpidx @@ e11.at);
-            struct_get (cls.inst_idx @@ e11.at) (0l @@ x.at);
-            struct_get (cls.disp_idx @@ e11.at) (as_direct_loc loc @@ x.at);
+            struct_get (0l @@ x.at);
+            struct_get (as_direct_loc loc @@ x.at);
             call_ref;
           ];
         | T.LetS | T.VarS -> nyi e.at "indirect function calls"
@@ -752,14 +748,13 @@ and compile_exp ctxt e =
     if ts <> [] && not !Flags.parametric then
       nyi e.at "generic object construction";
     let tcls, _ = T.as_inst (Source.et e) in
-    let cls = lower_class ctxt e.at tcls in
     List.iter (fun eI ->
       compile_exp ctxt eI;
       compile_coerce_value_type ctxt eI.at (Source.et eI);
     ) es;
     compile_var ctxt x (T.Class tcls);
     emit ctxt W.[
-      struct_get (cls.cls_idx @@ x.at) (cls_new @@ x.at);
+      struct_get (cls_new @@ x.at);
       call_ref;
     ];
 
@@ -789,8 +784,7 @@ and compile_exp ctxt e =
         | T.Bool | T.Byte -> W.struct_get_u
         | _ -> W.struct_get
       in
-      emit ctxt [struct_get_sxopt (cls.inst_idx @@ e1.at)
-        (as_direct_loc loc @@ x.at)];
+      emit ctxt [struct_get_sxopt (as_direct_loc loc @@ x.at)];
       compile_coerce_abs_block_type ctxt e.at (Source.et e)
     | T.FuncS -> nyi e.at "closures"
     | T.ClassS -> nyi e.at "nested classes"
@@ -819,12 +813,11 @@ and compile_exp ctxt e =
       )
 
     | IdxE (e11, e12) ->
-      let typeidx = lower_var_type ctxt e11.at (Source.et e11) in
       compile_exp ctxt e11;
       compile_exp ctxt e12;
       compile_exp ctxt e2;
       compile_coerce_value_type ctxt e2.at (Source.et e2);
-      emit ctxt W.[array_set (typeidx @@ e.at)]
+      emit ctxt W.[array_set]
 
     | DotE (e11, x) ->
       let t11 = Source.et e11 in
@@ -834,8 +827,7 @@ and compile_exp ctxt e =
       compile_exp ctxt e11;
       compile_exp ctxt e2;
       compile_coerce_value_type ctxt e2.at (Source.et e2);
-      emit ctxt W.[struct_set (cls.inst_idx @@ e11.at)
-        (as_direct_loc loc @@ x.at)]
+      emit ctxt W.[struct_set (as_direct_loc loc @@ x.at)]
 
     | _ -> assert false
     )
@@ -1020,7 +1012,7 @@ and compile_dec pass ctxt d =
               ];
               compile_var ctxt Source.(ctxt.ext.self @@ x.at) (T.Class tcls);
               emit ctxt W.[
-                struct_get (cls.cls_idx @@ x.at) (cls_rtt @@ x.at);
+                struct_get (cls_rtt @@ x.at);
                 ref_cast;
                 local_set (this @@ x.at);
               ];
@@ -1118,7 +1110,7 @@ and compile_dec pass ctxt d =
           let disptmp = emit_local ctxt x2.at W.(RefType (Nullable, disp_ht)) in
           emit ctxt W.[
             local_tee (suptmp @@ x2.at);
-            struct_get (sup_cls.cls_idx @@ x2.at) (cls_disp @@ x2.at);
+            struct_get (cls_disp @@ x2.at);
             local_set (disptmp @@ x2.at);
           ];
           List.iteri (fun i _ ->
@@ -1126,7 +1118,7 @@ and compile_dec pass ctxt d =
             | None ->
               emit ctxt W.[
                 local_get (disptmp @@ x2.at);
-                struct_get (sup_cls.disp_idx @@ x2.at) (i32 i @@ x2.at);
+                struct_get (i32 i @@ x2.at);
               ];
             | Some (x, _) ->
               let _, loc = (E.find_val Source.(x @@ x2.at) func_env).it in
@@ -1161,7 +1153,7 @@ and compile_dec pass ctxt d =
     else begin
       emit ctxt W.[
         local_get (suptmp @@ sup_at);
-        struct_get (sup_cls.cls_idx @@ sup_at) (cls_rtt @@ sup_at);
+        struct_get (cls_rtt @@ sup_at);
       ]
     end;
     emit ctxt W.[
@@ -1188,8 +1180,8 @@ and compile_dec pass ctxt d =
             List.iter (compile_exp ctxt) es2;
             compile_var ctxt x sup_t;
             emit ctxt W.[
-              struct_get (cls.cls_idx @@ x2.at) (cls_sup @@ x2.at);
-              struct_get (sup_cls.cls_idx @@ d.at) (cls_pre_alloc @@ d.at);
+              struct_get (cls_sup @@ x2.at);
+              struct_get (cls_pre_alloc @@ d.at);
               call_ref;
             ];
             sup_cls.pre_vals, sup.at
@@ -1244,8 +1236,8 @@ and compile_dec pass ctxt d =
           ];
           compile_var ctxt x sup_t;
           emit ctxt W.[
-            struct_get (cls.cls_idx @@ d.at) (cls_sup @@ d.at);
-            struct_get (sup_cls.cls_idx @@ d.at) (cls_post_alloc @@ d.at);
+            struct_get (cls_sup @@ d.at);
+            struct_get (cls_post_alloc @@ d.at);
             call_ref;
           ];
         ) sup_opt;
@@ -1273,7 +1265,7 @@ and compile_dec pass ctxt d =
         (* Prepare dispatch table *)
         emit ctxt W.[
           local_tee (self @@ d.at);
-          struct_get (cls.cls_idx @@ d.at) (cls_disp @@ d.at);
+          struct_get (cls_disp @@ d.at);
         ];
 
         (* Call pre-alloc function *)
@@ -1282,14 +1274,14 @@ and compile_dec pass ctxt d =
         ) xts;
         emit ctxt W.[
           local_get (self @@ d.at);
-          struct_get (cls.cls_idx @@ d.at) (cls_pre_alloc @@ d.at);
+          struct_get (cls_pre_alloc @@ d.at);
           call_ref;
         ];
 
         (* Alloc instance *)
         emit ctxt W.[
           local_get (self @@ d.at);
-          struct_get (cls.cls_idx @@ d.at) (cls_rtt @@ d.at);
+          struct_get (cls_rtt @@ d.at);
           struct_new (cls.inst_idx @@ d.at);
           local_tee (this @@ x.at);
         ];
@@ -1297,7 +1289,7 @@ and compile_dec pass ctxt d =
         (* Call post-alloc function *)
         emit ctxt W.[
           local_get (self @@ d.at);
-          struct_get (cls.cls_idx @@ d.at) (cls_post_alloc @@ d.at);
+          struct_get (cls_post_alloc @@ d.at);
           call_ref;
         ];
 

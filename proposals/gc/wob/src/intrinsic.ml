@@ -38,7 +38,7 @@ let compile_text_new ctxt : int32 =
             local_get (srcidx @@ at);
             i32_add;
             i32_load8_u 0 0l;
-            array_set (typeidx @@ at);
+            array_set;
             br (0l @@ at);
           ])
         ]);
@@ -75,8 +75,8 @@ let compile_text_cpy ctxt : int32 =
             local_get (lenidx @@ at);
             local_get (srckidx @@ at);
             i32_add;
-            array_get_u (typeidx @@ at);
-            array_set (typeidx @@ at);
+            array_get_u;
+            array_set;
             br (0l @@ at);
           ])
         ])
@@ -96,9 +96,9 @@ let compile_text_cat ctxt : int32 =
       let tmpidx = emit_local ctxt at t' in
       List.iter (emit_instr ctxt at) W.[
         local_get (arg1idx @@ at);
-        array_len (typeidx @@ at);
+        array_len;
         local_get (arg2idx @@ at);
-        array_len (typeidx @@ at);
+        array_len;
         i32_add;
         rtt_canon (typeidx @@ at);
         array_new_default (typeidx @@ at);
@@ -107,15 +107,15 @@ let compile_text_cat ctxt : int32 =
         local_get (arg1idx @@ at);
         i32_const (0l @@ at);
         local_get (arg1idx @@ at);
-        array_len (typeidx @@ at);
+        array_len;
         call (text_cpy @@ at);
         local_get (tmpidx @@ at);
         local_get (arg1idx @@ at);
-        array_len (typeidx @@ at);
+        array_len;
         local_get (arg2idx @@ at);
         i32_const (0l @@ at);
         local_get (arg2idx @@ at);
-        array_len (typeidx @@ at);
+        array_len;
         call (text_cpy @@ at);
         local_get (tmpidx @@ at);
       ]
@@ -140,9 +140,9 @@ let compile_text_eq ctxt : int32 =
             i32_const (1l @@ at); return
           ]) [];
           local_get (arg1idx @@ at);
-          array_len (typeidx @@ at);
+          array_len;
           local_get (arg2idx @@ at);
-          array_len (typeidx @@ at);
+          array_len;
           local_tee (lenidx @@ at);
           i32_ne;
           br_if (0l @@ at);
@@ -156,10 +156,10 @@ let compile_text_eq ctxt : int32 =
               i32_const (1l @@ at);
               i32_sub;
               local_tee (lenidx @@ at);
-              array_get_u (typeidx @@ at);
+              array_get_u;
               local_get (arg2idx @@ at);
               local_get (lenidx @@ at);
-              array_get_u (typeidx @@ at);
+              array_get_u;
               i32_eq;
               br_if (0l @@ at);
             ])
