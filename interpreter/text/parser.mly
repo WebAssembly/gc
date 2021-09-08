@@ -252,8 +252,8 @@ let inline_func_type_explicit (c : context) x ft at =
 %token<Ast.instr'> REF_TEST REF_CAST
 %token<Ast.idx -> Ast.instr'> BR_CAST BR_CAST_FAIL
 %token<Ast.instr'> I31_GET
-%token<Ast.idx -> Ast.idx -> Ast.instr'> STRUCT_GET
-%token<Ast.idx -> Ast.instr'> ARRAY_GET
+%token<Ast.idx -> Ast.instr'> STRUCT_GET
+%token<Ast.instr'> ARRAY_GET
 %token<Ast.idx -> Ast.instr'> STRUCT_NEW ARRAY_NEW
 %token<string Source.phrase -> Ast.instr' * Value.num> CONST
 %token<Ast.instr'> UNARY
@@ -508,12 +508,12 @@ plain_instr :
   | I31_NEW { fun c -> i31_new }
   | I31_GET { fun c -> $1 }
   | STRUCT_NEW var { fun c -> $1 ($2 c type_) }
-  | STRUCT_GET var var { fun c -> $1 ($2 c type_) ($3 c field) }
-  | STRUCT_SET var var { fun c -> struct_set ($2 c type_) ($3 c field) }
+  | STRUCT_GET var { fun c -> $1 ($2 c field) }
+  | STRUCT_SET var { fun c -> struct_set ($2 c field) }
   | ARRAY_NEW var { fun c -> $1 ($2 c type_) }
-  | ARRAY_GET var { fun c -> $1 ($2 c type_) }
-  | ARRAY_SET var { fun c -> array_set ($2 c type_) }
-  | ARRAY_LEN var { fun c -> array_len ($2 c type_) }
+  | ARRAY_GET { fun c -> $1 }
+  | ARRAY_SET { fun c -> array_set }
+  | ARRAY_LEN { fun c -> array_len }
   | RTT_CANON var { fun c -> rtt_canon ($2 c type_) }
   | RTT_SUB var { fun c -> rtt_sub ($2 c type_) }
   | CONST num { fun c -> fst (num $1 $2) }

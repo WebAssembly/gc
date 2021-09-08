@@ -115,8 +115,8 @@ let rec instr (e : instr) =
   | RefFunc x -> funcs (idx x)
   | I31New | I31Get _ -> empty
   | StructNew (x, _) | ArrayNew (x, _) -> types (idx x)
-  | StructGet (x, _, _) | StructSet (x, _) -> types (idx x)
-  | ArrayGet (x, _) | ArraySet x | ArrayLen x -> types (idx x)
+  | StructGet _ | StructSet _ -> empty
+  | ArrayGet _ | ArraySet | ArrayLen -> empty
   | RttCanon x | RttSub x -> types (idx x)
   | Const _ | Test _ | Compare _ | Unary _ | Binary _ | Convert _ -> empty
   | Block (bt, es) | Loop (bt, es) -> block_type bt ++ block es
