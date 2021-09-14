@@ -246,12 +246,12 @@ This can compile to machine code that (1) reads the RTT from `$x`, (2) checks th
 
 #### Structures
 
-* `struct.new_with_rtt <typeidx>` allocates a structure with RTT information determining its [runtime type](#values) and initialises its fields with given values
-  - `struct.new_with_rtt $t : [t'* (rtt n $t)] -> [(ref $t)]`
+* `struct.new <typeidx>` allocates a structure with RTT information determining its [runtime type](#values) and initialises its fields with given values
+  - `struct.new $t : [t'* (rtt n $t)] -> [(ref $t)]`
     - iff `$t = struct (mut t')*`
 
-* `struct.new_default_with_rtt <typeidx>` allocates a structure of type `$t` and initialises its fields with default values
-  - `struct.new_default_with_rtt $t : [(rtt n $t)] -> [(ref $t)]`
+* `struct.new_default <typeidx>` allocates a structure of type `$t` and initialises its fields with default values
+  - `struct.new_default $t : [(rtt n $t)] -> [(ref $t)]`
     - iff `$t = struct (mut t')*`
     - and all `t'*` are defaultable
 
@@ -271,12 +271,12 @@ This can compile to machine code that (1) reads the RTT from `$x`, (2) checks th
 
 #### Arrays
 
-* `array.new_with_rtt <typeidx>` allocates an array with RTT information determining its [runtime type](#values)
-  - `array.new_with_rtt $t : [t' i32 (rtt n $t)] -> [(ref $t)]`
+* `array.new <typeidx>` allocates an array with RTT information determining its [runtime type](#values)
+  - `array.new $t : [t' i32 (rtt n $t)] -> [(ref $t)]`
     - iff `$t = array (var t')`
 
-* `array.new_default_with_rtt <typeidx>` allocates an array and initialises its fields with the default value
-  - `array.new_default_with_rtt $t : [i32 (rtt n $t)] -> [(ref $t)]`
+* `array.new_default <typeidx>` allocates an array and initialises its fields with the default value
+  - `array.new_default $t : [i32 (rtt n $t)] -> [(ref $t)]`
     - iff `$t = array (var t')`
     - and `t'` is defaultable
 
@@ -510,14 +510,14 @@ The opcode for heap types is encoded as an `s33`.
 | ------ | --------------- | ---------- |
 | 0xd5   | `ref.eq`        |            |
 | 0xd6   | `br_on_non_null` | |
-| 0xfb01 | `struct.new_with_rtt $t` | `$t : typeidx` |
-| 0xfb02 | `struct.new_default_with_rtt $t` | `$t : typeidx` |
+| 0xfb01 | `struct.new $t` | `$t : typeidx` |
+| 0xfb02 | `struct.new_default $t` | `$t : typeidx` |
 | 0xfb03 | `struct.get $t i` | `$t : typeidx`, `i : fieldidx` |
 | 0xfb04 | `struct.get_s $t i` | `$t : typeidx`, `i : fieldidx` |
 | 0xfb05 | `struct.get_u $t i` | `$t : typeidx`, `i : fieldidx` |
 | 0xfb06 | `struct.set $t i` | `$t : typeidx`, `i : fieldidx` |
-| 0xfb11 | `array.new_with_rtt $t` | `$t : typeidx` |
-| 0xfb12 | `array.new_default_with_rtt $t` | `$t : typeidx` |
+| 0xfb11 | `array.new $t` | `$t : typeidx` |
+| 0xfb12 | `array.new_default $t` | `$t : typeidx` |
 | 0xfb13 | `array.get $t` | `$t : typeidx` |
 | 0xfb14 | `array.get_s $t` | `$t : typeidx` |
 | 0xfb15 | `array.get_u $t` | `$t : typeidx` |
