@@ -134,13 +134,19 @@ ctxtype ::= <deftype> | (rec <deftype>*).<i>
   - `unpacked(t) = t`
   - `unpacked(pt) = i32`
 
+* Context lookup `C($t)` is extended to recursive type indices by ignoring the `rec` marker.
+  - `C(rec $t) = C($t)`
+
 * Unrolling a possibly recursive context type projects the respective item
+  - `unroll($t)                 = unroll(<ctxtype)`  iff `C($t) = <ctxtype>`
   - `unroll(<deftype>)          = <deftype>`
   - `unroll((rec <deftype>*).i) = (<deftype>*)[i]`
 
 * Expanding a type definition unrolls it and returns its plain definition
+  - `expand($t)                 = expand(<ctxtype)`  iff `C($t) = <ctxtype>`
   - `expand(<ctxtype>) = <strtype>`
     - where `unroll(<ctxttype>) = sub x* <strtype>`
+
 
 
 #### Type Validity
