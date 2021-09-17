@@ -27,18 +27,6 @@ All three proposals are prerequisites.
 
 ### Types
 
-#### Type Indices
-
-Type indices are extended with one bit of information that distinguishes regular from recursive type uses.
-
-* `typeidx` is optionally annotated with `rec`
-  - `typeidx ::= rec? <idx>`
-
-The annotation is only used in the internal representation of types and marks type indices used within the scope of their own recursive type definition, i.e., distinguishes recursive from regular uses of type indices. It does not occur in the binary or text format. It is merely a technical annotation that is trivially derived from the syntax of type definitions but makes the rules simpler to formulate.
-
-Note: A practical implementation can easily derive and insert this extra information during decoding.
-
-
 #### Heap Types
 
 [Heap types](https://github.com/WebAssembly/function-references/blob/master/proposals/function-references/Overview.md#types) classify reference types and are extended:
@@ -140,13 +128,12 @@ ctxtype ::= <subtype> | (rec <subtype>*).<i>
 * Unrolling a possibly recursive context type projects the respective item
   - `unroll($t)                 = unroll(<ctxtype>)`  iff `C($t) = <ctxtype>`
   - `unroll(<subtype>)          = <subtype>`
-  - `unroll((rec <subtype>*).i) = (<subtype>*)[i][rec $t:=$t,...]`
+  - `unroll((rec <subtype>*).i) = (<subtype>*)[i]`
 
 * Expanding a type definition unrolls it and returns its plain definition
   - `expand($t)                 = expand(<ctxtype>)`  iff `C($t) = <ctxtype>`
   - `expand(<ctxtype>) = <strtype>`
     - where `unroll(<ctxttype>) = sub x* <strtype>`
-
 
 
 #### Type Validity
@@ -167,15 +154,7 @@ Some of the rules define a type as `ok` for a certain index, written `ok(x)`. Th
     - iff `<subtype>* ok($t)` under the extended context(!)
     - where `$t` is the next unused (i.e., current) type index
     - and `N = |<subtype>*|-1`
-    - and `<subtype'>* = <subtype>*[$t:=rec $t, ..., $t+N:=rec $t+N]`
-    - and `<ctxtype>*  = (rec <subtype'>*).0, ..., (rec <subtype'>*).N`
-  - Note: `<subtype'>*` marks all recursive occurrences of type indices from within this group with `rec`; this is expressed here by a validation-time substitution, but an implementation could insert the annotations on the fly during decoding.
-  - Because rec type indices `rec $t`cannot occur in the source, the following are invariants that are established by these rules:
-    - (1) rec indices only occur in the context and inside a `(rec <subtype>*)`,
-    - (2) they only refer to indices from the same recursive group,
-    - (3) all internal indices within a recursive group are marked with rec,
-    - (4) all rec indices are bound by the same `(rec <subtype>*).i` in the context.
-    Together, these invariants ensure that [type equivalence](#type-equivalence) on recursive types is equivalent to an _iso-recursive_ interpretation.
+    - and `<ctxtype>*  = (rec <subtype>*).0, ..., (rec <subtype>*).N`
 
 * a sequence of subtype's is valid of each of them is valid for their respective index
   - `<subtype0> <subtype>* ok($t)`
@@ -207,53 +186,50 @@ $t2 = rect1t2.1
 where
 
 rect1t2 = (rec
-  (struct (field i32 (ref (rec $t2))))
-  (struct (field i64 (ref (rec $t1))))
+  (struct (field i32 (ref $t2)))
+  (struct (field i64 (ref $t1)))
 )
 ```
-That is, the recursive occurrences of type indices `$t1` and `$t2` are marked with `rec` and the types themselves are defined as projections from their respective recursion group, using their relative inner indices `0` and `1`.
-Morally, in type-theoretic terms, these bindings represent the higher-kinded iso-recursive types
-```
-t1 = (mu a. <(struct (field i32 (ref a.1))), (struct i64 (field (ref a.0)))>).0
-t2 = (mu a. <(struct (field i32 (ref a.1))), (struct i64 (field (ref a.0)))>).1
-```
-where `<...>` denotes a type tuple. Interestingly, in our case, a single syntactic type variable is enough for all types, because recursive types cannot nest by construction. Because it is unique, the variables hence do not actually need to be represented in the Wasm syntax.
-On the other hand, by representing a recursive reference by a global index, its definition can still be looked up in the context as usual and unrolling does not require subtitution.
+That is, the types are defined as projections from their respective recursion group, using their relative inner indices `0` and `1`.
 
 
 #### Equivalence
 
-Type equivalence, written `t == t'` here, is defined inductively, as before. All rules are simply the canonical structural pointwise congruences, with the exception of type indices.
+Type equivalence, written `t == t'` here, is essentially defined inductively. All rules are simply the canonical congruences, with the exception of the rule for recursive types.
 
-Even recursive and supertype definitions are just congruences:
+For the purpose of defining recursive type equivalence, type indices are extended with a special form that distinguishes regular from recursive type uses.
+
+* `rec.<i>` is a new form of type index
+  - `typeidx ::= ... | rec.<i>`
+
+This form is only used during equivalence checking, to identify and represent "back edges" inside a recursive type. It is merely a technical device for formulating the rules and cannot appear in source code. It is introduced by the following auxiliary meta-function:
+
+* Rolling a context type produces an _iso-recursive_ representation of its underlying recursion group
+  - `roll($t)                    = roll_$t(<ctxtype>)`  iff `$t = <ctxtype>`
+  - `roll_$t(<subtype>)          = <subtype>`
+  - `roll_$t((rec <subtype>*).i) = (rec <subtype>*).i[$t:=rec.0, ..., $t'+N:=rec.N]` iff `$t' = $t-i` and `N = |<subtype>*|`
+  - Note: If a type is not recursive, `roll` is just the identity.
+  - Note: This definition assumes that all projections of the recursive type are bound to consecutive type indices, so that `$t-i` is the first of them.
+
+With that:
+
+* two regular type indices are equivalent if they define equivalent rolled context types:
+  - `$t == $t'`
+    - iff `roll($t) == roll($t')`
+
+* two recursive type indices are equivalent if they project the same index
+  - `rec.i == rec.i'`
+    - iff `i = i'`
 
 * two recursive types are equivalent if they are equivalent pointwise
   - `(rec <subtype>*) == (rec <subtype'>*)`
     - iff `(<subtype> == <subtype'>)*`
-  - Note: This rule is only used on types looked up in the context, where [recursive type indices](#types) have been marked with `rec` accordingly. That way, all recursive references are compared using the rule below, which prevents looping.
+  - Note: This rule is only used on types that have been rolled, which prevents looping.
 
-* two subtypes are equivalent if their structure is equivalent and they have equivalent supertypes
+* notably, two subtypes are equivalent if their structure is equivalent and they have equivalent supertypes
   - `(sub $t* <strtype>) == (sub $t'* <strtype'>)`
     - iff `<strtype> == <strtype'>`
     - and `($t == $t')*`
-
-Type indices are only equivalent if they are either both non-recursive or both recursive. Regular non-recursive type indices are compared structurally.
-
-* as before, two non-recursive type indices are equivalent if they define equivalent types
-  - `$t == $t'`
-    - iff `$t = <ctxtype>` and `$t' = <ctxtype'>` and `<ctxtype> = <ctxtype'>`
-
-For type indices marked `rec`, the rules recursively assume that the respective pair of `(rec <subtype*>)` in their definitions is already equal and can be ignored.
-
-* two recursive type indices are equivalent if they project the same index
-  - `(rec $t) == (rec $t')`
-    - iff `$t = (rec <subtype>*).i`
-    - and `$t' = (rec <subtype'>*).i'`
-    - and `i = i'`
-
-This is the only interesting rule. It is sound due to the [invariants](#type-validity) established for recursive type indices.
-
-Note: Semantically, a type index `rec $t` is best thought of as being a self type variable bound by the enclosing recursive type (that has been alpha-renamed to be the same on both sides during the equivalence check), plus a projection determined by the definition of `$t`.
 
 Example: As explained above, the mutually recursive types
 ```
@@ -264,13 +240,8 @@ Example: As explained above, the mutually recursive types
 ```
 would be recorded in the context as
 ```
-$t1 = (rec (struct (field i32 (ref (rec $t2)))) (struct (field i64 (ref (rec $t1))))).0
-$t2 = (rec (struct (field i32 (ref (rec $t2)))) (struct (field i64 (ref (rec $t1))))).1
-```
-which morally represents the higher-kinded iso-recursive types
-```
-t1 = (mu a. <(struct (field i32 (ref a.1))), (struct i64 (field (ref a.0)))>).0
-t2 = (mu a. <(struct (field i32 (ref a.1))), (struct i64 (field (ref a.0)))>).1
+$t1 = (rec (struct (field i32 (ref $t2))) (struct (field i64 (ref $t1)))).0
+$t2 = (rec (struct (field i32 (ref $t2))) (struct (field i64 (ref $t1)))).1
 ```
 Consequently, if there was an equivalent pair of types,
 ```
@@ -281,17 +252,24 @@ Consequently, if there was an equivalent pair of types,
 ```
 recorded in the context as
 ```
-$u1 = (rec (struct (field i32 (ref (rec $u2)))) (struct (field i64 (ref (rec $u1))))).0
-$u2 = (rec (struct (field i32 (ref (rec $u2)))) (struct (field i64 (ref (rec $u1))))).1
+$u1 = (rec (struct (field i32 (ref $u2))) (struct (field i64 (ref $u1)))).0
+$u2 = (rec (struct (field i32 (ref $u2))) (struct (field i64 (ref $u1)))).1
 ```
-then they represent the iso-recursive types
+then to check the equivalence `$t1 == $u1`, both types are rolled into iso-recursive types first:
 ```
-u1 = (mu a. <(struct (field i32 (ref a.1))), (struct i64 (field (ref a.0)))>).0
-u2 = (mu a. <(struct (field i32 (ref a.1))), (struct i64 (field (ref a.0)))>).1
+roll($t1) = (rec (struct (field i32 (ref rec.1))) (struct (field i64 (ref rec.0)))).0
+roll($u1) = (rec (struct (field i32 (ref rec.1))) (struct (field i64 (ref rec.0)))).0
 ```
-which are structural identical to the previous ones. With that in mind, the rule for comparing `(rec $t1) == (rec $u1)` just compares the projections `.0` in the definition of both types, which amounts to checking `a.0 == a.0`.
+In this case, it is immediately apparent that these are equivalent types.
 
-Note 2: This semantics implies that type equivalence checks can be implemented in constant-time by representing all types as trees and canonicalising them bottom-up in linear time upfront. For this purpose, all `(rec $t)` are treated as leaves, only representing the projection index `i` (representing the semantic type `a.i`) and omitting the type index `$t` itself.
+Note: In type-theoretic terms, these are higher-kinded iso-recursive types:
+```
+roll($t1) ~ (mu a. <(struct (field i32 (ref a.1))), (struct i64 (field (ref a.0)))>).0
+roll($t2) ~ (mu a. <(struct (field i32 (ref a.1))), (struct i64 (field (ref a.0)))>).1
+```
+where `<...>` denotes a type tuple. However, in our case, a single syntactic type variable `rec` is enough for all types, because recursive types cannot nest by construction.
+
+Note 2: This semantics implies that type equivalence checks can be implemented in constant-time by representing all types as trees in rolled form and canonicalising them bottom-up in linear time upfront.
 
 Note 3: It's worth noting that the only observable difference to a nominal type system is the equivalence rule on (non-recursive) type indices: instead of looking at their definitions, a nominal system would require `$t = $t'` syntactically (at least as long as we ignore things like checking imports, where type indices become meaningless).
 
