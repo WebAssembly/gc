@@ -211,13 +211,13 @@ rect1t2 = (rec
   (struct (field i64 (ref (rec $t1))))
 )
 ```
-That is, the recursive occurrences of type indices `$t1` and `$t2` are marked with `rec` and the types themselves are defined as projections from the respective recursion group.
-Morally, these bindings represent the higher-kinded iso-recursive types
+That is, the recursive occurrences of type indices `$t1` and `$t2` are marked with `rec` and the types themselves are defined as projections from their respective recursion group, using their relative inner indices `0` and `1`.
+Morally, in type-theoretic terms, these bindings represent the higher-kinded iso-recursive types
 ```
 t1 = (mu a. <(struct (field i32 (ref a.1))), (struct i64 (field (ref a.0)))>).0
 t2 = (mu a. <(struct (field i32 (ref a.1))), (struct i64 (field (ref a.0)))>).1
 ```
-where `<...>` denotes a type tuple. Interestingly, a single syntactic type variable is enough for all types, because recursive types cannot nest by construction. Because it is unique, the variables do not actually need to be represented in the Wasm syntax.
+where `<...>` denotes a type tuple. Interestingly, in our case, a single syntactic type variable is enough for all types, because recursive types cannot nest by construction. Because it is unique, the variables hence do not actually need to be represented in the Wasm syntax.
 On the other hand, by representing a recursive reference by a global index, lookup is still possible as usual and unrolling does not require subtitution.
 
 
