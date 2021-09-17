@@ -122,9 +122,6 @@ ctxtype ::= <subtype> | (rec <subtype>*).<i>
   - `unpacked(t) = t`
   - `unpacked(pt) = i32`
 
-* Context lookup `C($t)` is extended to recursive type indices by ignoring the `rec` marker.
-  - `C(rec $t) = C($t)`
-
 * Unrolling a possibly recursive context type projects the respective item
   - `unroll($t)                 = unroll(<ctxtype>)`  iff `C($t) = <ctxtype>`
   - `unroll(<subtype>)          = <subtype>`
@@ -205,17 +202,17 @@ For the purpose of defining recursive type equivalence, type indices are extende
 This form is only used during equivalence checking, to identify and represent "back edges" inside a recursive type. It is merely a technical device for formulating the rules and cannot appear in source code. It is introduced by the following auxiliary meta-function:
 
 * Rolling a context type produces an _iso-recursive_ representation of its underlying recursion group
-  - `roll($t)                    = roll_$t(<ctxtype>)`  iff `$t = <ctxtype>`
-  - `roll_$t(<subtype>)          = <subtype>`
-  - `roll_$t((rec <subtype>*).i) = (rec <subtype>*).i[$t:=rec.0, ..., $t'+N:=rec.N]` iff `$t' = $t-i` and `N = |<subtype>*|`
-  - Note: If a type is not recursive, `roll` is just the identity.
+  - `tie($t)                    = tie_$t(<ctxtype>)`  iff `$t = <ctxtype>`
+  - `tie_$t(<subtype>)          = <subtype>`
+  - `tie_$t((rec <subtype>*).i) = (rec <subtype>*).i[$t:=rec.0, ..., $t'+N:=rec.N]` iff `$t' = $t-i` and `N = |<subtype>*|`
+  - Note: If a type is not recursive, `tie` is just the identity.
   - Note: This definition assumes that all projections of the recursive type are bound to consecutive type indices, so that `$t-i` is the first of them.
 
 With that:
 
-* two regular type indices are equivalent if they define equivalent rolled context types:
+* two regular type indices are equivalent if they define equivalent tied context types:
   - `$t == $t'`
-    - iff `roll($t) == roll($t')`
+    - iff `tie($t) == tie($t')`
 
 * two recursive type indices are equivalent if they project the same index
   - `rec.i == rec.i'`
@@ -224,7 +221,7 @@ With that:
 * two recursive types are equivalent if they are equivalent pointwise
   - `(rec <subtype>*) == (rec <subtype'>*)`
     - iff `(<subtype> == <subtype'>)*`
-  - Note: This rule is only used on types that have been rolled, which prevents looping.
+  - Note: This rule is only used on types that have been tied, which prevents looping.
 
 * notably, two subtypes are equivalent if their structure is equivalent and they have equivalent supertypes
   - `(sub $t* <strtype>) == (sub $t'* <strtype'>)`
@@ -255,21 +252,21 @@ recorded in the context as
 $u1 = (rec (struct (field i32 (ref $u2))) (struct (field i64 (ref $u1)))).0
 $u2 = (rec (struct (field i32 (ref $u2))) (struct (field i64 (ref $u1)))).1
 ```
-then to check the equivalence `$t1 == $u1`, both types are rolled into iso-recursive types first:
+then to check the equivalence `$t1 == $u1`, both types are tied into iso-recursive types first:
 ```
-roll($t1) = (rec (struct (field i32 (ref rec.1))) (struct (field i64 (ref rec.0)))).0
-roll($u1) = (rec (struct (field i32 (ref rec.1))) (struct (field i64 (ref rec.0)))).0
+tie($t1) = (rec (struct (field i32 (ref rec.1))) (struct (field i64 (ref rec.0)))).0
+tie($u1) = (rec (struct (field i32 (ref rec.1))) (struct (field i64 (ref rec.0)))).0
 ```
 In this case, it is immediately apparent that these are equivalent types.
 
 Note: In type-theoretic terms, these are higher-kinded iso-recursive types:
 ```
-roll($t1) ~ (mu a. <(struct (field i32 (ref a.1))), (struct i64 (field (ref a.0)))>).0
-roll($t2) ~ (mu a. <(struct (field i32 (ref a.1))), (struct i64 (field (ref a.0)))>).1
+tie($t1) ~ (mu a. <(struct (field i32 (ref a.1))), (struct i64 (field (ref a.0)))>).0
+tie($t2) ~ (mu a. <(struct (field i32 (ref a.1))), (struct i64 (field (ref a.0)))>).1
 ```
 where `<...>` denotes a type tuple. However, in our case, a single syntactic type variable `rec` is enough for all types, because recursive types cannot nest by construction.
 
-Note 2: This semantics implies that type equivalence checks can be implemented in constant-time by representing all types as trees in rolled form and canonicalising them bottom-up in linear time upfront.
+Note 2: This semantics implies that type equivalence checks can be implemented in constant-time by representing all types as trees in tied form and canonicalising them bottom-up in linear time upfront.
 
 Note 3: It's worth noting that the only observable difference to a nominal type system is the equivalence rule on (non-recursive) type indices: instead of looking at their definitions, a nominal system would require `$t = $t'` syntactically (at least as long as we ignore things like checking imports, where type indices become meaningless).
 
@@ -822,8 +819,7 @@ C |- dt ok(|C|)
 C |- dt -| C,dt
 
 x = |C|    N = |dt*|-1
-dt'* = dt*[x:=rec x,...,x+N:=rec x+N]
-C' = C,(rec dt'*).0,...,(rec dt'*).N
+C' = C,(rec dt*).0,...,(rec dt*).N
 C' |- dt* ok(x)
 -------------------------------------
 C |- rec dt* -| C'
@@ -854,14 +850,13 @@ C |- struct.get i : [(ref x)] -> [t]
 #### Type Indices (`C |- <typeidx> == <typeidx'>`)
 
 ```
-C |- C(x) == C(x')
-------------------
+C |- tie(x) == tie(x')
+----------------------
 C |- x == x'
 
-C(x)  = (rec dt*).i
-C(x') = (rec dt'*).i
+
 --------------------
-C |- rec x == rec x'
+C |- rec.i == rec.i
 ```
 
 #### Value Types (`C |- <valtype> == <valtype'>`)
