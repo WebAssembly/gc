@@ -140,7 +140,7 @@ ctxtype ::= <subtype> | (rec <subtype>*).<i>
 * Unrolling a possibly recursive context type projects the respective item
   - `unroll($t)                 = unroll(<ctxtype>)`  iff `C($t) = <ctxtype>`
   - `unroll(<subtype>)          = <subtype>`
-  - `unroll((rec <subtype>*).i) = (<subtype>*)[i]`
+  - `unroll((rec <subtype>*).i) = (<subtype>*)[i][rec $t:=$t,...]`
 
 * Expanding a type definition unrolls it and returns its plain definition
   - `expand($t)                 = expand(<ctxtype>)`  iff `C($t) = <ctxtype>`
