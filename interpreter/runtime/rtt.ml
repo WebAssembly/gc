@@ -10,7 +10,7 @@ type ref_ += RttRef of rtt
 let alloc x ro = Rtt (x, ro)
 
 let type_inst_of (Rtt (x, _)) = x
-let def_type_of d = def_of (type_inst_of d)
+let ctx_type_of d = def_of (type_inst_of d)
 
 let rec depth = function
   | Rtt (_, None) -> 0l
@@ -22,7 +22,8 @@ let rec eq_rtt rtt1 rtt2 =
   | Rtt (x1, None), Rtt (x2, None) ->
     Match.eq_var_type [] [] (SemVar x1) (SemVar x2) 
   | Rtt (x1, Some rtt1'), Rtt (x2, Some rtt2') ->
-    Match.eq_var_type [] [] (SemVar x1) (SemVar x2) && eq_rtt rtt1' rtt2'
+    Match.eq_var_type [] [] (SemVar x1) (SemVar x2) &&
+    eq_rtt rtt1' rtt2'
   | _, _ -> false
 
 let rec match_rtt rtt1 rtt2 =
@@ -42,7 +43,8 @@ let () =
 let () =
   let type_of_ref' = !Value.type_of_ref' in
   Value.type_of_ref' := function
-    | RttRef (Rtt (x, _) as rtt) -> RttHeapType (SemVar x, Some (depth rtt))
+    | RttRef (Rtt (x, _) as rtt) ->
+      RttHeapType (SemVar x, Some (depth rtt))
     | r -> type_of_ref' r
 
 let () =

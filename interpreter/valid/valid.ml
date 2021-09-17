@@ -17,7 +17,7 @@ let require b at s = if not b then error at s
 
 type context =
 {
-  types : def_type list;
+  types : ctx_type list;
   funcs : func_type list;
   tables : table_type list;
   memories : memory_type list;
@@ -52,17 +52,17 @@ let local (c : context) x = lookup "local" c.locals x
 let label (c : context) x = lookup "label" c.labels x
 
 let func_type (c : context) x =
-  match type_ c x with
+  match expand_ctx_type (type_ c x) with
   | FuncDefType ft -> ft
   | _ -> error x.at ("non-function type " ^ I32.to_string_u x.it)
 
 let struct_type (c : context) x =
-  match type_ c x with
+  match expand_ctx_type (type_ c x) with
   | StructDefType st -> st
   | _ -> error x.at ("non-structure type " ^ I32.to_string_u x.it)
 
 let array_type (c : context) x =
-  match type_ c x with
+  match expand_ctx_type (type_ c x) with
   | ArrayDefType at -> at
   | _ -> error x.at ("non-array type " ^ I32.to_string_u x.it)
 
@@ -94,8 +94,7 @@ let check_heap_type (c : context) (t : heap_type) at =
   | FuncHeapType | ExternHeapType -> ()
   | DefHeapType (SynVar x) -> ignore (type_ c (x @@ at))
   | RttHeapType (SynVar x, _) -> ignore (type_ c (x @@ at))
-  | DefHeapType (SemVar _) | RttHeapType (SemVar _, _) | BotHeapType ->
-    assert false
+  | DefHeapType _ | RttHeapType (_, _) | BotHeapType -> assert false
 
 let check_ref_type (c : context) (t : ref_type) at =
   match t with
@@ -148,13 +147,35 @@ let check_global_type (c : context) (gt : global_type) at =
   check_value_type c t at
 
 
-let check_def_type (c : context) (dt : def_type) at =
-  match dt with
+let check_str_type (c : context) (st : str_type) at =
+  match st with
   | StructDefType st -> check_struct_type c st at
   | ArrayDefType rt -> check_array_type c rt at
   | FuncDefType ft -> check_func_type c ft at
 
-let check_type (c : context) (t : type_) =
+let check_sub_type (c : context) (st : sub_type) x at =
+  let SubType (xs, st) = st in
+  check_str_type c st at;
+  List.iter (fun xi ->
+    let xi = as_syn_var xi in
+    require (xi < x) at
+      ("forward use of type " ^ I32.to_string_u xi ^  " in sub type definition");
+    require (match_str_type c.types [] st (expand_ctx_type (type_ c (xi @@ at)))) at
+      ("sub type " ^ I32.to_string_u x ^ " does not match super type " ^ I32.to_string_u xi)
+  ) xs
+
+let check_def_type (c : context) (dt : def_type) at : context =
+  let x = Lib.List32.length c.types in
+  match dt with
+  | DefType st ->
+    check_sub_type c st x at;
+    {c with types = c.types @ [CtxType st]}
+  | RecDefType sts ->
+    let c' = {c with types = c.types @ ctx_types_of_def_type x dt} in
+    ignore (List.fold_left (fun x st -> check_sub_type c' st x at; I32.add x 1l) x sts);
+    c'
+
+let check_type (c : context) (t : type_) : context =
   check_def_type c t.it t.at
 
 
@@ -330,7 +351,7 @@ let check_block_type (c : context) (bt : block_type) at : func_type =
   | ValBlockType None -> FuncType ([], [])
   | ValBlockType (Some t) -> check_value_type c t at; FuncType ([], [t])
   | VarBlockType (SynVar x) -> func_type c (x @@ at)
-  | VarBlockType (SemVar _) -> assert false
+  | VarBlockType _ -> assert false
 
 let check_local (c : context) (defaults : bool) (t : local) =
   check_value_type c t.it t.at;
@@ -642,7 +663,7 @@ let rec check_instr (c : context) (e : instr) (s : infer_result_type) : op_type 
 
   | RefFunc x ->
     let ft = func c x in
-    let y = Lib.Option.force (Lib.List32.index_of (FuncDefType ft) c.types) in
+    let y = Lib.Option.force (Lib.List32.index_where (fun ct -> expand_ctx_type ct = FuncDefType ft) c.types) in
     refer_func c x;
     [] --> [RefType (NonNullable, DefHeapType (SynVar y))]
 
@@ -746,13 +767,13 @@ let rec check_instr (c : context) (e : instr) (s : infer_result_type) : op_type 
     [] --> [RefType (NonNullable, RttHeapType (SynVar x.it, Some 0l))]
 
   | RttSub x ->
-    let dt = type_ c x in
+    let st = expand_ctx_type (type_ c x) in
     let rtt, _ht = peek_rtt 0 s e.at in
     let n'_opt =
       match rtt with
       | _, RttHeapType (x', n_opt) ->
-        let dt' = type_ c (as_syn_var x' @@ e.at) in
-        require (match_def_type c.types [] dt dt') e.at
+        let st' = expand_ctx_type (type_ c (as_syn_var x' @@ e.at)) in
+        require (match_str_type c.types [] st st') e.at
           ("type mismatch: instruction requires RTT supertype" ^
            " but stack has " ^ string_of_value_type (RefType rtt));
         Lib.Option.map (Int32.add 1l) n_opt
@@ -941,9 +962,8 @@ let check_module (m : module_) =
   in
   let c0 =
     List.fold_right check_import imports
-      { empty_context with
-        refs = Free.module_ ({m.it with funcs = []; start = None} @@ m.at);
-        types = List.map (fun ty -> ty.it) types;
+      { (List.fold_left check_type empty_context types) with
+        refs = Free.module_ ({m.it with funcs = []; start = None} @@ m.at)
       }
   in
   let c1 =
@@ -955,7 +975,6 @@ let check_module (m : module_) =
       datas = List.map (fun _data -> ()) datas;
     }
   in
-  List.iter (check_type c1) types;
   let c = List.fold_left check_global c1 globals in
   List.iter (check_table c) tables;
   List.iter (check_memory c) memories;

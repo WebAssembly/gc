@@ -97,7 +97,7 @@ struct
 
   let var_type var = function
     | SynVar x -> var x
-    | SemVar _ -> assert false
+    | _ -> assert false
 
   let num_type = function
     | I32Type -> vs7 (-0x01)
@@ -149,10 +149,18 @@ struct
   let func_type = function
     | FuncType (ts1, ts2) -> vec value_type ts1; vec value_type ts2
 
-  let def_type = function
+  let str_type = function
     | StructDefType st -> vs7 (-0x21); struct_type st
     | ArrayDefType at -> vs7 (-0x22); array_type at
     | FuncDefType ft -> vs7 (-0x20); func_type ft
+
+  let sub_type = function
+    | SubType ([], st) -> str_type st
+    | SubType (xs, st) -> vs7 (-0x30); vec (var_type vu32) xs; str_type st
+
+  let def_type = function
+    | DefType st -> sub_type st
+    | RecDefType sts -> vs7 (-0x31); vec sub_type sts
 
   let limits vu {min; max} =
     bool (max <> None); vu min; opt vu max
@@ -184,7 +192,7 @@ struct
     | ValBlockType None -> vs33 (-0x40l)
     | ValBlockType (Some t) -> value_type t
     | VarBlockType (SynVar x) -> vs33 x
-    | VarBlockType (SemVar _) -> assert false
+    | VarBlockType _ -> assert false
 
   let local (t, n) = len n; value_type t.it
   let locals locs =

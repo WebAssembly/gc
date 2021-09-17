@@ -222,12 +222,26 @@ let func_type s =
   let out = result_type s in
   FuncType (ins, out)
 
-let def_type s =
+let str_type s =
   match vs7 s with
   | -0x20 -> FuncDefType (func_type s)
   | -0x21 -> StructDefType (struct_type s)
   | -0x22 -> ArrayDefType (array_type s)
   | _ -> error s (pos s - 1) "malformed definition type"
+
+let sub_type s =
+  match peek s with
+  | Some i when i = -0x30 land 0x7f ->
+    skip 1 s;
+    let xs = vec var_type s in
+    SubType (xs, str_type s)
+  | _ -> SubType ([], str_type s)
+
+let def_type s =
+  match peek s with
+  | Some i when i = -0x31 land 0x7f -> skip 1 s; RecDefType (vec sub_type s)
+  | _ -> DefType (sub_type s)
+
 
 let limits vu s =
   let has_max = bool s in

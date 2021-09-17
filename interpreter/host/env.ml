@@ -39,10 +39,13 @@ let exit vs =
   exit (int (single vs))
 
 
+let alloc_func_type ft =
+  Types.alloc (CtxType (SubType ([], FuncDefType ft)))
+
 let lookup name et =
   match Utf8.encode name, et with
   | "abort", ExternFuncType ft ->
-    ExternFunc (Func.alloc_host (Types.alloc (FuncDefType ft)) abort)
+    ExternFunc (Func.alloc_host (alloc_func_type ft) abort)
   | "exit", ExternFuncType ft ->
-    ExternFunc (Func.alloc_host (Types.alloc (FuncDefType ft)) exit)
+    ExternFunc (Func.alloc_host (alloc_func_type ft) exit)
   | _ -> raise Not_found

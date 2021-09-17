@@ -1,12 +1,13 @@
 open Types
 
-type context = Types.def_type list
+type context = Types.ctx_type list
 type assump = (var * var) list
 
 
 let lookup c = function
   | SynVar x -> Lib.List32.nth c x
   | SemVar x -> def_of x
+  | RecVar _ -> assert false
 
 let equal_var x y =
   match x, y with
@@ -18,8 +19,23 @@ let assuming a (x1, x2) =
   List.find_opt (fun (y1, y2) -> equal_var x1 y1 && equal_var x2 y2) a <> None
 
 
+(* Recursion *)
+
+let tie_var_type xs x =
+  match Lib.List32.index_where (equal_var x) xs with
+  | Some i -> RecVar i
+  | None -> x
+
+let tie_rec_types rts =
+  let xs, sts = List.split rts in
+  List.map (subst_sub_type (tie_var_type xs)) sts
+
+
 (* Equivalence *)
 
+let eq_list eq c a as1 as2 =
+  List.length as1 = List.length as2 && List.for_all2 (eq c a) as1 as2
+  
 let eq_nullability c a nul1 nul2 =
   nul1 = nul2
 
@@ -50,9 +66,7 @@ and eq_value_type c a t1 t2 =
   | RefType t1', RefType t2' -> eq_ref_type c a t1' t2'
   | _, _ -> false
 
-and eq_result_type c a ts1 ts2 =
-  List.length ts1 = List.length ts2 &&
-  List.for_all2 (eq_value_type c a) ts1 ts2
+and eq_result_type c a ts1 ts2 = eq_list eq_value_type c a ts1 ts2
 
 and eq_packed_type c a t1 t2 =
   t1 = t2
@@ -67,8 +81,7 @@ and eq_field_type c a (FieldType (st1, mut1)) (FieldType (st2, mut2)) =
   eq_storage_type c a st1 st2 && eq_mutability c a mut1 mut2
 
 and eq_struct_type c a (StructType fts1) (StructType fts2) =
-  List.length fts1 = List.length fts2 &&
-  List.for_all2 (eq_field_type c a) fts1 fts2
+  eq_list eq_field_type c a fts1 fts2
 
 and eq_array_type c a (ArrayType ft1) (ArrayType ft2) =
   eq_field_type c a ft1 ft2
@@ -76,16 +89,35 @@ and eq_array_type c a (ArrayType ft1) (ArrayType ft2) =
 and eq_func_type c a (FuncType (ts11, ts12)) (FuncType (ts21, ts22)) =
   eq_result_type c a ts11 ts21 && eq_result_type c a ts12 ts22
 
-and eq_def_type c a dt1 dt2 =
+and eq_str_type c a dt1 dt2 =
   match dt1, dt2 with
   | StructDefType st1, StructDefType st2 -> eq_struct_type c a st1 st2
   | ArrayDefType at1, ArrayDefType at2 -> eq_array_type c a at1 at2
   | FuncDefType ft1, FuncDefType ft2 -> eq_func_type c a ft1 ft2
   | _, _ -> false
 
+and eq_sub_type c a (SubType (xs1, st1)) (SubType (xs2, st2)) =
+  eq_list eq_var_type c a xs1 xs2 && eq_str_type c a st1 st2
+
+and eq_def_type c a rt1 rt2 =
+  match rt1, rt2 with
+  | DefType st1, DefType st2 -> eq_sub_type c a st1 st2
+  | RecDefType sts1, RecDefType sts2 -> eq_list eq_sub_type c a sts1 sts2
+  | _, _ -> false
+
+and eq_ctx_type c a ct1 ct2 =
+  match ct1, ct2 with
+  | CtxType st1, CtxType st2 -> eq_sub_type c a st1 st2
+  | RecCtxType (rts1, i1), RecCtxType (rts2, i2) ->
+    eq_list eq_sub_type c a (tie_rec_types rts1) (tie_rec_types rts2) && i1 = i2
+  | _, _ -> false
+
 and eq_var_type c a x1 x2 =
-  equal_var x1 x2 || assuming a (x1, x2) ||
-  eq_def_type c ((x1, x2)::a) (lookup c x1) (lookup c x2)
+  is_rec_var x1 = is_rec_var x2 &&
+  ( is_rec_var x1 && x1 = x2 ||
+    equal_var x1 x2 || assuming a (x1, x2) ||
+    eq_ctx_type c ((x1, x2)::a) (lookup c x1) (lookup c x2)
+  )
 
 
 and eq_table_type c a (TableType (lim1, t1)) (TableType (lim2, t2)) =
@@ -130,17 +162,17 @@ and match_heap_type c a t1 t2 =
   | DataHeapType, EqHeapType -> true
   | RttHeapType _, EqHeapType -> true
   | DefHeapType x1, EqHeapType ->
-    (match lookup c x1 with
+    (match expand_ctx_type (lookup c x1) with
     | StructDefType _ | ArrayDefType _ -> true
     | _ -> false
     )
   | DefHeapType x1, DataHeapType ->
-    (match lookup c x1 with
+    (match expand_ctx_type (lookup c x1) with
     | StructDefType _ | ArrayDefType _ -> true
     | _ -> false
     )
   | DefHeapType x1, FuncHeapType ->
-    (match lookup c x1 with
+    (match expand_ctx_type (lookup c x1) with
     | FuncDefType _ -> true
     | _ -> false
     )
@@ -188,8 +220,8 @@ and match_struct_type c a (StructType fts1) (StructType fts2) =
 and match_array_type c a (ArrayType ft1) (ArrayType ft2) =
   match_field_type c a ft1 ft2
 
-and match_func_type c a ft1 ft2 =
-  eq_func_type c [] ft1 ft2
+and match_func_type c a (FuncType (ts11, ts12)) (FuncType (ts21, ts22)) =
+  match_result_type c a ts21 ts11 && match_result_type c a ts12 ts22
 
 and match_table_type c a (TableType (lim1, t1)) (TableType (lim2, t2)) =
   match_limits c a lim1 lim2 && eq_ref_type c [] t1 t2
@@ -211,7 +243,7 @@ and match_extern_type c a et1 et2 =
   | ExternGlobalType gt1, ExternGlobalType gt2 -> match_global_type c a gt1 gt2
   | _, _ -> false
 
-and match_def_type c a dt1 dt2 =
+and match_str_type c a dt1 dt2 =
   match dt1, dt2 with
   | StructDefType st1, StructDefType st2 -> match_struct_type c a st1 st2
   | ArrayDefType at1, ArrayDefType at2 -> match_array_type c a at1 at2
@@ -220,4 +252,6 @@ and match_def_type c a dt1 dt2 =
 
 and match_var_type c a x1 x2 =
   equal_var x1 x2 || assuming a (x1, x2) ||
-  match_def_type c ((x1, x2)::a) (lookup c x1) (lookup c x2)
+  eq_ctx_type c ((x1, x2)::a) (lookup c x1) (lookup c x2) ||
+  let SubType (xs, _) = unroll_ctx_type (lookup c x1) in
+  List.exists (fun x -> match_var_type c a x x2) xs

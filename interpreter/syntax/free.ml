@@ -63,7 +63,7 @@ let list free xs = List.fold_left union empty (List.map free xs)
 
 let var_type = function
   | SynVar x -> types (idx' x)
-  | SemVar _ -> assert false
+  | _ -> assert false
 
 let num_type = function
   | I32Type | I64Type | F32Type | F64Type -> empty
@@ -93,10 +93,15 @@ let struct_type (StructType fts) = list field_type fts
 let array_type (ArrayType ft) = field_type ft
 let func_type (FuncType (ins, out)) = list value_type ins ++ list value_type out
 
-let def_type = function
+let str_type = function
   | StructDefType st -> struct_type st
   | ArrayDefType at -> array_type at
   | FuncDefType ft -> func_type ft
+
+let sub_type (SubType (xs, st)) = list var_type xs ++ str_type st
+let def_type = function
+  | DefType st -> sub_type st
+  | RecDefType sts -> list sub_type sts
 
 let global_type (GlobalType (t, _mut)) = value_type t
 let table_type (TableType (_lim, t)) = ref_type t

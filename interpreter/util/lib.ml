@@ -110,6 +110,7 @@ struct
     | x::xs' -> index_where' p xs' (i+1)
 
   let index_of x = index_where ((=) x)
+  let index_ofq x = index_where ((==) x)
 
   let rec map_filter f = function
     | [] -> []
@@ -167,6 +168,7 @@ struct
     | x::xs' -> index_where' p xs' (Int32.add i 1l)
 
   let index_of x = index_where ((=) x)
+  let index_ofq x = index_where ((==) x)
 end
 
 module Array32 =

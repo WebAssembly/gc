@@ -1,6 +1,6 @@
 open Types
 
-type context = def_type list
+type context = ctx_type list
 type assump = (var * var) list
 
 
@@ -19,7 +19,10 @@ val eq_global_type : context -> assump -> global_type -> global_type -> bool
 
 val eq_extern_type : context -> assump -> extern_type -> extern_type -> bool
 
+val eq_str_type : context -> assump -> str_type -> str_type -> bool
+val eq_sub_type : context -> assump -> sub_type -> sub_type -> bool
 val eq_def_type : context -> assump -> def_type -> def_type -> bool
+val eq_ctx_type : context -> assump -> ctx_type -> ctx_type -> bool
 val eq_var_type : context -> assump -> var -> var -> bool
 
 
@@ -38,5 +41,5 @@ val match_global_type : context -> assump -> global_type -> global_type -> bool
 
 val match_extern_type : context -> assump -> extern_type -> extern_type -> bool
 
-val match_def_type : context -> assump -> def_type -> def_type -> bool
+val match_str_type : context -> assump -> str_type -> str_type -> bool
 val match_var_type : context -> assump -> var -> var -> bool

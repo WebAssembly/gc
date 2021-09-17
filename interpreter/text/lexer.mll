@@ -186,6 +186,8 @@ rule token = parse
   | "field" { FIELD }
   | "struct" { STRUCT }
   | "array" { ARRAY }
+  | "sub" { SUB }
+  | "rec" { REC }
 
   | (nxx as t)".const"
     { let open Source in
