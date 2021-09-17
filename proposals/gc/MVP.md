@@ -218,7 +218,7 @@ t1 = (mu a. <(struct (field i32 (ref a.1))), (struct i64 (field (ref a.0)))>).0
 t2 = (mu a. <(struct (field i32 (ref a.1))), (struct i64 (field (ref a.0)))>).1
 ```
 where `<...>` denotes a type tuple. Interestingly, in our case, a single syntactic type variable is enough for all types, because recursive types cannot nest by construction. Because it is unique, the variables hence do not actually need to be represented in the Wasm syntax.
-On the other hand, by representing a recursive reference by a global index, lookup is still possible as usual and unrolling does not require subtitution.
+On the other hand, by representing a recursive reference by a global index, its definition can still be looked up in the context as usual and unrolling does not require subtitution.
 
 
 #### Equivalence
