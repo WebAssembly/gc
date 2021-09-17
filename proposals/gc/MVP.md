@@ -93,13 +93,13 @@ New abbreviations are introduced for reference types in binary and text format, 
 
 #### Type Definitions
 
-* `typedef` is the syntax for an entry in the type section, generalising the existing syntax
-  - `typedef ::= <deftype> | rec <deftype>*`
-  - `module ::= {..., types vec(<typedef>)}`
+* `deftype` is the syntax for an entry in the type section, generalising the existing syntax
+  - `deftype ::= <subtype> | rec <subtype>*`
+  - `module ::= {..., types vec(<deftype>)}`
   - a `rec` definition defines a group of mutually recursive types that can refer to each other; it thereby defines several type indices at a time
 
-* `deftype` is a new category of type defining a single type, as a subtype of possible other types
-  - `deftype ::= sub <typeidx>* <strtype>`
+* `subtype` is a new category of type defining a single type, as a subtype of possible other types
+  - `subtype ::= sub <typeidx>* <strtype>`
   - the preexisting syntax with no `sub` clause is redefined to be a shorthand for a `sub` clause with empty `typeidx` list: `<strtype> == sub () <strtype>`
   - Note: This allows multiple supertypes. For the MVP, it could be restricted to at most one supertype.
 
@@ -125,7 +125,7 @@ TODO: Need to be able to use `i31` as a type definition.
 
 Validity of a module is checked under a context storing the definitions for each type. In the case of recursive types, this definition is given by a respective projection from the full type:
 ```
-ctxtype ::= <deftype> | (rec <deftype>*).<i>
+ctxtype ::= <subtype> | (rec <subtype>*).<i>
 ```
 
 #### Auxiliary Definitions
@@ -138,12 +138,12 @@ ctxtype ::= <deftype> | (rec <deftype>*).<i>
   - `C(rec $t) = C($t)`
 
 * Unrolling a possibly recursive context type projects the respective item
-  - `unroll($t)                 = unroll(<ctxtype)`  iff `C($t) = <ctxtype>`
-  - `unroll(<deftype>)          = <deftype>`
-  - `unroll((rec <deftype>*).i) = (<deftype>*)[i]`
+  - `unroll($t)                 = unroll(<ctxtype>)`  iff `C($t) = <ctxtype>`
+  - `unroll(<subtype>)          = <subtype>`
+  - `unroll((rec <subtype>*).i) = (<subtype>*)[i]`
 
 * Expanding a type definition unrolls it and returns its plain definition
-  - `expand($t)                 = expand(<ctxtype)`  iff `C($t) = <ctxtype>`
+  - `expand($t)                 = expand(<ctxtype>)`  iff `C($t) = <ctxtype>`
   - `expand(<ctxtype>) = <strtype>`
     - where `unroll(<ctxttype>) = sub x* <strtype>`
 
@@ -154,35 +154,35 @@ ctxtype ::= <deftype> | (rec <deftype>*).<i>
 Some of the rules define a type as `ok` for a certain index, written `ok(x)`. This controls uses of type indices as supertypes inside a recursive group: the subtype hierarchy must not be cyclic, and hence any type index used for a supertype is required to be smaller than the index `x` of the current type.
 
 * a sequence of type definitions is valid if each item is valid within the context containing the prior items
-  - `<typedef0> <typedef>* ok`
-    - iff `<typedef0> ok` and extends the context accordingly
-    - and `<typedef>* ok` under the extended context
+  - `<deftype0> <deftype>* ok`
+    - iff `<deftype0> ok` and extends the context accordingly
+    - and `<deftype>* ok` under the extended context
 
-* a plain type definition is valid if its `deftype` is at its type index
-  - `<deftype> ok` and extends the context with `<deftype>`
-    - iff `<deftype> ok($t)` where `$t` is the next unused (i.e., current) type index
+* a plain type definition is valid if its `subtype` is at its type index
+  - `<subtype> ok` and extends the context with `<subtype>`
+    - iff `<subtype> ok($t)` where `$t` is the next unused (i.e., current) type index
 
 * a recursive type definition is valid if its types are valid under the context containing all of them
-  - `rec <deftype>* ok` and extends the context with `<ctxtype>*`
-    - iff `<deftype>* ok($t)` under the extended context(!)
-    - where `x` is the next unused (i.e., current) type index
-    - and `N = |<deftype>*|-1`
-    - and `<deftype'>* = <deftype>*[$t:=rec $t, ..., $t+N:=rec $t+N]`
-    - and `<ctxtype>*  = (rec <deftype'>*).0, ..., (rec <deftype'>*).N`
-  - Note: `<deftype'>*` marks all recursive occurrences of type indices from within this group with `rec`; this is expressed here by a validation-time substitution, but an implementation could insert the annotations on the fly during decoding.
+  - `rec <subtype>* ok` and extends the context with `<ctxtype>*`
+    - iff `<subtype>* ok($t)` under the extended context(!)
+    - where `$t` is the next unused (i.e., current) type index
+    - and `N = |<subtype>*|-1`
+    - and `<subtype'>* = <subtype>*[$t:=rec $t, ..., $t+N:=rec $t+N]`
+    - and `<ctxtype>*  = (rec <subtype'>*).0, ..., (rec <subtype'>*).N`
+  - Note: `<subtype'>*` marks all recursive occurrences of type indices from within this group with `rec`; this is expressed here by a validation-time substitution, but an implementation could insert the annotations on the fly during decoding.
   - Because rec type indices `rec $t`cannot occur in the source, the following are invariants that are established by these rules:
-    - (1) rec indices only occur in the context and inside a `(rec <deftype>*)`,
+    - (1) rec indices only occur in the context and inside a `(rec <subtype>*)`,
     - (2) they only refer to indices from the same recursive group,
     - (3) all internal indices within a recursive group are marked with rec,
-    - (4) all rec indices are bound by the same `(rec <deftype>*).i` in the context.
+    - (4) all rec indices are bound by the same `(rec <subtype>*).i` in the context.
     Together, these invariants ensure that [type equivalence](#type-equivalence) on recursive types is equivalent to an _iso-recursive_ interpretation.
 
-* a sequence of deftype's is valid of each of them is valid for their respective index
-  - `<deftype0> <deftype>* ok($t)`
-    - iff `<deftype0> ok($t)`
-    - and `<deftype>* ok($t+1)`
+* a sequence of subtype's is valid of each of them is valid for their respective index
+  - `<subtype0> <subtype>* ok($t)`
+    - iff `<subtype0> ok($t)`
+    - and `<subtype>* ok($t+1)`
 
-* an individual deftype is valid if its definition is valid, matches every supertype, and no supertype has an index higher than its own
+* an individual subtype is valid if its definition is valid, matches every supertype, and no supertype has an index higher than its own
   - `sub $t* <strtype> ok($t')`
     - iff `<strtype> ok`
     - and `(<strtype> <: expand($t))*`
@@ -200,8 +200,8 @@ Type equivalence, written `t == t'` here, is defined inductively, as before. All
 Even recursive and supertype definitions are just congruences:
 
 * two recursive types are equivalent if they are equivalent pointwise
-  - `(rec <deftype>*) == (rec <deftype'>*)`
-    - iff `(<deftype> == <deftype'>)*`
+  - `(rec <subtype>*) == (rec <subtype'>*)`
+    - iff `(<subtype> == <subtype'>)*`
   - Note: This rule is only used on types looked up in the context, where [recursive type indices](#types) have been marked with `rec` accordingly. That way, all recursive references are compared using the rule below, which prevents looping.
 
 * two subtypes are equivalent if their structure is equivalent and they have equivalent supertypes
@@ -215,12 +215,12 @@ Type indices are only equivalent if they are either both non-recursive or both r
   - `$t == $t'`
     - iff `$t = <ctxtype>` and `$t' = <ctxtype'>` and `<ctxtype> = <ctxtype'>`
 
-For type indices marked `rec`, the rules recursively assume that the respective pair of `(rec <deftype*>)` in their definitions is already equal and can be ignored.
+For type indices marked `rec`, the rules recursively assume that the respective pair of `(rec <subtype*>)` in their definitions is already equal and can be ignored.
 
 * two recursive type indices are equivalent if they project the same index
   - `(rec $t) == (rec $t')`
-    - iff `$t = (rec <deftype>*).i`
-    - and `$t' = (rec <deftype'>*).i'`
+    - iff `$t = (rec <subtype>*).i`
+    - and `$t' = (rec <subtype'>*).i'`
     - and `i = i'`
 
 This is the only interesting rule. It is sound due to the [invariants](#type-validity) established for recursive type indices.
@@ -672,7 +672,7 @@ The opcode for heap types is encoded as an `s33`.
 | -0x21  | `struct ft*`    | `ft* : vec(fieldtype)` |
 | -0x22  | `array ft`      | `ft : fieldtype`       |
 | -0x30  | `sub $t* st`    | `$t* : vec(typeidx)`, `st : strtype` |
-| -0x31  | `rec dt*`       | `dt* : vec(deftype)` |
+| -0x31  | `rec dt*`       | `dt* : vec(subtype)` |
 
 #### Field Types
 
@@ -788,7 +788,7 @@ C |- ft ok
 C |- array ft ok
 ```
 
-#### Defined Types (`C |- <deftype>* ok(x)`)
+#### Defined Types (`C |- <subtype>* ok(x)`)
 
 ```
 C |- st ok
@@ -803,7 +803,7 @@ C |- dt'* ok(x+1)
 C |- dt dt'* ok(x)
 ```
 
-#### Type Definitions (`C |- <typedef>* -| C'`)
+#### Type Definitions (`C |- <deftype>* -| C'`)
 
 ```
 C |- dt ok(|C|)
@@ -893,7 +893,7 @@ C |- ft == ft'
 C |- arrat ft == array ft'
 ```
 
-#### Defined Types (`C |- <deftype> == <deftype'>`)
+#### Defined Types (`C |- <subtype> == <subtype'>`)
 
 ```
 (C |- x == x')*
