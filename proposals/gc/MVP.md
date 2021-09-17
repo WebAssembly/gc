@@ -227,15 +227,15 @@ This is the only interesting rule. It is sound due to the [invariants](#type-val
 
 Note: Semantically, a type index `rec $t` is best thought of as being a self type variable bound by the enclosing recursive type (that has been alpha-renamed to be the same on both sides during the equivalence check), plus a projection determined by the definition of `$t`. For example, the mutually recursive types
 ```
-(type (rec
-  $t1 (struct (field i32 (ref $t2)))
-  $t2 (struct (field i64 (ref $t1)))
-))
+(rec
+  (type $t1 (struct (field i32 (ref $t2))))
+  (type $t2 (struct (field i64 (ref $t1))))
+)
 ```
 which in the context are recorded as
 ```
-$t1 = (rec (struct (field i32 (ref (rec $t2))))).0
-$t2 = (rec (struct (field i64 (ref (rec $t1))))).1
+$t1 = (rec (struct (field i32 (ref (rec $t2)))) (struct (field i64 (ref $t1)))).0
+$t2 = (rec (struct (field i32 (ref (rec $t2)))) (struct (field i64 (ref $t1)))).1
 ```
 morally represent the higher-kinded iso-recursive types
 ```
@@ -246,17 +246,22 @@ where `<...>` denotes a type tuple. (A single syntactic type variable is enough 
 
 Consequently, if there was an equivalent pair of types,
 ```
-(type (rec
-  $u1 (struct (field i32 (ref $u2)))
-  $u2 (struct (field i64 (ref $u1)))
-))
+(rec
+  (type $u1 (struct (field i32 (ref $u2))))
+  (type $u2 (struct (field i64 (ref $u1))))
+)
 ```
 recorded in the context as
 ```
-$u1 = (rec (struct (field i32 (ref (rec $u2))))).0
-$u2 = (rec (struct (field i64 (ref (rec $u1))))).1
+$u1 = (rec (struct (field i32 (ref (rec $u2)))) (struct (field i64 (ref $u1)))).0
+$u2 = (rec (struct (field i32 (ref (rec $u2)))) (struct (field i64 (ref $u1)))).1
 ```
-then comparing `(rec $t1) == (rec $u1)` amounts to checking `a.0 == a.0`, as one would expect.
+representing the iso-recursive types
+```
+u1 = (mu a. <(struct (field i32 (ref a.1))), (struct i64 (field (ref a.0)))>).0
+u2 = (mu a. <(struct (field i32 (ref a.1))), (struct i64 (field (ref a.0)))>).1
+```
+which are structural identical to the previous ones. With that in mind, comparing `(rec $t1) == (rec $u1)` amounts to checking `a.0 == a.0`, and the above equivalence rule is defined to behave like that.
 
 Note 2: This semantics implies that type equivalence checks can be implemented in constant-time by representing all types as trees and canonicalising them bottom-up in linear time upfront. For this purpose, all `(rec $t)` are treated as leaves, only representing the projection index `i` (representing the semantic type `a.i`) and omitting the type index `$t` itself.
 
