@@ -192,6 +192,34 @@ Some of the rules define a type as `ok` for a certain index, written `ok(x)`. Th
 * as [before](https://github.com/WebAssembly/function-references/proposals/function-references/Overview.md#types), a strtype is valid if all the occurring value types are valid
   - specifically, a concrete reference type `(ref $t)` is valid when `$t` is defined in the context
 
+Example: Consider two mutually recursive types:
+```
+(rec
+  (type $t1 (struct (field i32 (ref $t2))))
+  (type $t2 (struct (field i64 (ref $t1))))
+)
+```
+In the context, these will be recorded as:
+```
+$t1 = rect1t2.0
+$t2 = rect1t2.1
+
+where
+
+rect1t2 = (rec
+  (struct (field i32 (ref (rec $t2))))
+  (struct (field i64 (ref (rec $t1))))
+)
+```
+That is, the recursive occurrences of type indices `$t1` and `$t2` are marked with `rec` and the types themselves are defined as projections from the respective recursion group.
+Morally, these bindings represent the higher-kinded iso-recursive types
+```
+t1 = (mu a. <(struct (field i32 (ref a.1))), (struct i64 (field (ref a.0)))>).0
+t2 = (mu a. <(struct (field i32 (ref a.1))), (struct i64 (field (ref a.0)))>).1
+```
+where `<...>` denotes a type tuple. Interestingly, a single syntactic type variable is enough for all types, because recursive types cannot nest by construction. Because it is unique, the variables do not actually need to be represented in the Wasm syntax.
+On the other hand, by representing a recursive reference by a global index, lookup is still possible as usual and unrolling does not require subtitution.
+
 
 #### Equivalence
 
@@ -225,25 +253,25 @@ For type indices marked `rec`, the rules recursively assume that the respective 
 
 This is the only interesting rule. It is sound due to the [invariants](#type-validity) established for recursive type indices.
 
-Note: Semantically, a type index `rec $t` is best thought of as being a self type variable bound by the enclosing recursive type (that has been alpha-renamed to be the same on both sides during the equivalence check), plus a projection determined by the definition of `$t`. For example, the mutually recursive types
+Note: Semantically, a type index `rec $t` is best thought of as being a self type variable bound by the enclosing recursive type (that has been alpha-renamed to be the same on both sides during the equivalence check), plus a projection determined by the definition of `$t`.
+
+Example: As explained above, the mutually recursive types
 ```
 (rec
   (type $t1 (struct (field i32 (ref $t2))))
   (type $t2 (struct (field i64 (ref $t1))))
 )
 ```
-which in the context are recorded as
+would be recorded in the context as
 ```
-$t1 = (rec (struct (field i32 (ref (rec $t2)))) (struct (field i64 (ref $t1)))).0
-$t2 = (rec (struct (field i32 (ref (rec $t2)))) (struct (field i64 (ref $t1)))).1
+$t1 = (rec (struct (field i32 (ref (rec $t2)))) (struct (field i64 (ref (rec $t1))))).0
+$t2 = (rec (struct (field i32 (ref (rec $t2)))) (struct (field i64 (ref (rec $t1))))).1
 ```
-morally represent the higher-kinded iso-recursive types
+which morally represents the higher-kinded iso-recursive types
 ```
 t1 = (mu a. <(struct (field i32 (ref a.1))), (struct i64 (field (ref a.0)))>).0
 t2 = (mu a. <(struct (field i32 (ref a.1))), (struct i64 (field (ref a.0)))>).1
 ```
-where `<...>` denotes a type tuple. (A single syntactic type variable is enough for all types, because recursive types cannot nest by construction. Because it is unique, the variable does not actually need to be represented.)
-
 Consequently, if there was an equivalent pair of types,
 ```
 (rec
@@ -253,19 +281,19 @@ Consequently, if there was an equivalent pair of types,
 ```
 recorded in the context as
 ```
-$u1 = (rec (struct (field i32 (ref (rec $u2)))) (struct (field i64 (ref $u1)))).0
-$u2 = (rec (struct (field i32 (ref (rec $u2)))) (struct (field i64 (ref $u1)))).1
+$u1 = (rec (struct (field i32 (ref (rec $u2)))) (struct (field i64 (ref (rec $u1))))).0
+$u2 = (rec (struct (field i32 (ref (rec $u2)))) (struct (field i64 (ref (rec $u1))))).1
 ```
-representing the iso-recursive types
+then they represent the iso-recursive types
 ```
 u1 = (mu a. <(struct (field i32 (ref a.1))), (struct i64 (field (ref a.0)))>).0
 u2 = (mu a. <(struct (field i32 (ref a.1))), (struct i64 (field (ref a.0)))>).1
 ```
-which are structural identical to the previous ones. With that in mind, comparing `(rec $t1) == (rec $u1)` amounts to checking `a.0 == a.0`, and the above equivalence rule is defined to behave like that.
+which are structural identical to the previous ones. With that in mind, the rule for comparing `(rec $t1) == (rec $u1)` just compares the projections `.0` in the definition of both types, which amounts to checking `a.0 == a.0`.
 
 Note 2: This semantics implies that type equivalence checks can be implemented in constant-time by representing all types as trees and canonicalising them bottom-up in linear time upfront. For this purpose, all `(rec $t)` are treated as leaves, only representing the projection index `i` (representing the semantic type `a.i`) and omitting the type index `$t` itself.
 
-Note 3: It's worth noting that the only relevant difference to a truly nominal type system is the equivalence rule on (non-recursive) type indices: instead of looking at their definitions, a nominal system would require `$t = $t'` syntactically (at least as long as we ignore things like checking imports, where type indices become meaningless).
+Note 3: It's worth noting that the only observable difference to a nominal type system is the equivalence rule on (non-recursive) type indices: instead of looking at their definitions, a nominal system would require `$t = $t'` syntactically (at least as long as we ignore things like checking imports, where type indices become meaningless).
 
 
 #### Subtyping
