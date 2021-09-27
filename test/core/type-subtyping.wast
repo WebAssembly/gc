@@ -1,16 +1,69 @@
-;; TODO: more tests
+;; Definitions
 
-;; Validation
+(module
+  (type $e0 (array i32))
+  (type $e1 (sub $e0 (array i32)))
+
+  (type $e2 (array anyref))
+  (type $e3 (sub (array (ref null $e0))))
+  (type $e4 (sub (array (ref $e1))))
+
+  (type $m1 (array (mut i32)))
+  (type $m2 (sub $m1 (array (mut i32))))
+)
+
+(module
+  (type $e0 (struct))
+  (type $e1 (sub $e0 (struct)))
+  (type $e2 (sub $e1 (struct (field i32))))
+  (type $e3 (sub $e2 (struct (field i32 (ref null $e0)))))
+  (type $e4 (sub $e3 (struct (field i32 (ref $e0) (mut i64)))))
+  (type $e5 (sub $e4 (struct (field i32 (ref $e1) (mut i64)))))
+)
+
+(module
+  (type $s (struct))
+  (type $s' (sub $s (struct)))
+
+  (type $f1 (func (param (ref $s')) (result anyref)))
+  (type $f2 (sub $f1 (func (param (ref $s)) (result (ref any)))))
+  (type $f3 (sub $f2 (func (param (ref null $s)) (result (ref $s)))))
+  (type $f4 (sub $f3 (func (param dataref) (result (ref $s')))))
+)
+
+
+;; Recursive definitions
+
+(module
+  (type $t (struct (field anyref)))
+  (rec (type $r (sub $t (struct (field (ref $r))))))
+  (type $t' (sub $r (struct (field (ref $r) i32))))
+)
 
 (module
   (rec
-    (type $t1 (struct (field i32 (ref $t1))))
+    (type $r1 (struct (field i32 (ref $r1))))
   )
   (rec
-    (type $t2 (sub $t1 (struct (field i32 (ref $t3)))))
-    (type $t3 (sub $t1 (struct (field i32 (ref $t2)))))
+    (type $r2 (sub $r1 (struct (field i32 (ref $r3)))))
+    (type $r3 (sub $r1 (struct (field i32 (ref $r2)))))
   )
 )
+
+(module
+  (rec
+    (type $a1 (struct (field i32 (ref $a2))))
+    (type $a2 (struct (field i64 (ref $a1))))
+  )
+  (rec
+    (type $b1 (sub $a2 (struct (field i64 (ref $a1) i32))))
+    (type $b2 (sub $a1 (struct (field i32 (ref $a2) i32))))
+    (type $b3 (sub $a2 (struct (field i64 (ref $b2) i32))))
+  )
+)
+
+
+;; Subsumption
 
 (module
   (rec
@@ -60,7 +113,7 @@
 )
 
 
-;; Recursive types.
+;; Runtime types
 
 (module
   (rec (type $t1 (func (result (ref null $t1)))))
