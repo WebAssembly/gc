@@ -204,7 +204,7 @@ This form is only used during equivalence checking, to identify and represent "b
 * Rolling a context type produces an _iso-recursive_ representation of its underlying recursion group
   - `tie($t)                    = tie_$t(<ctxtype>)`  iff `$t = <ctxtype>`
   - `tie_$t(<subtype>)          = <subtype>`
-  - `tie_$t((rec <subtype>*).i) = (rec <subtype>*).i[$t':=rec.0, ..., $t'+N:=rec.N]` iff `$t' = $t-i` and `N = |<subtype>*| - 1`
+  - `tie_$t((rec <subtype>*).i) = (rec <subtype>*).i[$t':=rec.0, ..., $t'+N:=rec.N]` iff `$t' = $t-i` and `N = |<subtype>*|-1`
   - Note: If a type is not recursive, `tie` is just the identity.
   - Note: This definition assumes that all projections of the recursive type are bound to consecutive type indices, so that `$t-i` is the first of them.
 
@@ -796,7 +796,7 @@ C |- ft ok
 C |- array ft ok
 ```
 
-#### Defined Types (`C |- <subtype>* ok(x)`)
+#### Sub Types (`C |- <subtype>* ok(x)`)
 
 ```
 C |- st ok
@@ -805,29 +805,29 @@ C |- st ok
 --------------------------
 C |- sub x* st ok(x')
 
-C |- dt ok(x)
-C |- dt'* ok(x+1)
+C |- st ok(x)
+C |- st'* ok(x+1)
 -------------------
-C |- dt dt'* ok(x)
+C |- st st'* ok(x)
 ```
 
-#### Type Definitions (`C |- <deftype>* -| C'`)
+#### Defined Types (`C |- <deftype>* -| C'`)
 
 ```
-C |- dt ok(|C|)
+C |- st ok(|C|)
 ---------------
-C |- dt -| C,dt
+C |- st -| C,st
 
-x = |C|    N = |dt*|-1
-C' = C,(rec dt*).0,...,(rec dt*).N
-C' |- dt* ok(x)
+x = |C|    N = |st*|-1
+C' = C,(rec st*).0,...,(rec st*).N
+C' |- st* ok(x)
 -------------------------------------
-C |- rec dt* -| C'
+C |- rec st* -| C'
 
-C |- td -| C'
-C' |- td'* ok
+C |- dt -| C'
+C' |- dt'* ok
 ---------------
-C |- td td'* ok
+C |- dt dt'* ok
 ```
 
 #### Instructions (`C |- <instr> : [t1*] -> [t2*]`)
