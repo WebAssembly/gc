@@ -896,7 +896,7 @@ C |- struct ft* == struct ft'*
 
 C |- ft == ft'
 --------------------------
-C |- arrat ft == array ft'
+C |- array ft == array ft'
 ```
 
 #### Defined Types (`C |- <subtype> == <subtype'>`)
