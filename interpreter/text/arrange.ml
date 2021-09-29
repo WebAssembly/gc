@@ -345,7 +345,6 @@ let rec instr e =
     | ArraySet x -> "array.set " ^ var x, []
     | ArrayLen x -> "array.len " ^ var x, []
     | RttCanon x -> "rtt.canon " ^ var x, []
-    | RttSub x -> "rtt.sub " ^ var x, []
     | Const n -> constop n ^ " " ^ num n, []
     | Test op -> testop op, []
     | Compare op -> relop op, []

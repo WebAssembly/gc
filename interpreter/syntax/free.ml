@@ -122,7 +122,7 @@ let rec instr (e : instr) =
   | StructNew (x, _) | ArrayNew (x, _) -> types (idx x)
   | StructGet (x, _, _) | StructSet (x, _) -> types (idx x)
   | ArrayGet (x, _) | ArraySet x | ArrayLen x -> types (idx x)
-  | RttCanon x | RttSub x -> types (idx x)
+  | RttCanon x -> types (idx x)
   | Const _ | Test _ | Compare _ | Unary _ | Binary _ | Convert _ -> empty
   | Block (bt, es) | Loop (bt, es) -> block_type bt ++ block es
   | If (bt, es1, es2) -> block_type bt ++ block es1 ++ block es2

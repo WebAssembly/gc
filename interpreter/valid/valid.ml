@@ -766,21 +766,6 @@ let rec check_instr (c : context) (e : instr) (s : infer_result_type) : op_type 
     ignore (type_ c x);
     [] --> [RefType (NonNullable, RttHeapType (SynVar x.it, Some 0l))]
 
-  | RttSub x ->
-    let st = expand_ctx_type (type_ c x) in
-    let rtt, _ht = peek_rtt 0 s e.at in
-    let n'_opt =
-      match rtt with
-      | _, RttHeapType (x', n_opt) ->
-        let st' = expand_ctx_type (type_ c (as_syn_var x' @@ e.at)) in
-        require (match_str_type c.types st st') e.at
-          ("type mismatch: instruction requires RTT supertype" ^
-           " but stack has " ^ string_of_value_type (RefType rtt));
-        Lib.Option.map (Int32.add 1l) n_opt
-      | _ -> None (* TODO: not principal, would have to be any depth *)
-    in
-    [RefType rtt] --> [RefType (NonNullable, RttHeapType (SynVar x.it, n'_opt))]
-
   | Const v ->
     let t = NumType (type_num v.it) in
     [] --> [t]
@@ -859,8 +844,7 @@ let is_const (c : context) (e : instr) =
   | Const _
   | RefNull _
   | RefFunc _
-  | RttCanon _
-  | RttSub _ -> true
+  | RttCanon _ -> true
   | GlobalGet x -> let GlobalType (_, mut) = global c x in mut = Immutable
   | _ -> false
 

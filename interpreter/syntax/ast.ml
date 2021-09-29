@@ -140,7 +140,6 @@ and instr' =
   | ArraySet of idx                   (* write array slot *)
   | ArrayLen of idx                   (* read array length *)
   | RttCanon of idx                   (* allocate RTT *)
-  | RttSub of idx                     (* alllocate sub-RTT *)
 
 
 (* Globals & Functions *)

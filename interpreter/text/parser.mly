@@ -235,7 +235,7 @@ let inline_func_type_explicit (c : context) x ft at =
 %token REF_NULL REF_FUNC REF_I31 REF_DATA REF_EXTERN REF_TEST REF_CAST REF_EQ
 %token I31_NEW I32_GET
 %token STRUCT_NEW STRUCT_GET STRUCT_SET ARRAY_NEW ARRAY_GET ARRAY_SET ARRAY_LEN
-%token RTT_CANON RTT_SUB
+%token RTT_CANON
 %token FUNC START TYPE PARAM RESULT LOCAL GLOBAL
 %token TABLE ELEM MEMORY DATA DECLARE OFFSET ITEM IMPORT EXPORT
 %token MODULE BIN QUOTE
@@ -524,7 +524,6 @@ plain_instr :
   | ARRAY_SET var { fun c -> array_set ($2 c type_) }
   | ARRAY_LEN var { fun c -> array_len ($2 c type_) }
   | RTT_CANON var { fun c -> rtt_canon ($2 c type_) }
-  | RTT_SUB var { fun c -> rtt_sub ($2 c type_) }
   | CONST num { fun c -> fst (num $1 $2) }
   | TEST { fun c -> $1 }
   | COMPARE { fun c -> $1 }

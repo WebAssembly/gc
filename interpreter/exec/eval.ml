@@ -756,12 +756,8 @@ let rec step (c : config) : config =
         Num (I32 (Lib.List32.length svs)) :: vs', []
 
       | RttCanon x, vs ->
-        let rtt = Rtt.alloc (type_ c.frame.inst x) None in
+        let rtt = Rtt.alloc (type_ c.frame.inst x) in
         Ref (Rtt.RttRef rtt) :: vs, []
-
-      | RttSub x, Ref (Rtt.RttRef rtt') :: vs' ->
-        let rtt = Rtt.alloc (type_ c.frame.inst x) (Some rtt') in
-        Ref (Rtt.RttRef rtt) :: vs', []
 
       | Const n, vs ->
         Num n.it :: vs, []

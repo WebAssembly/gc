@@ -339,7 +339,6 @@ struct
     | ArrayLen x -> op 0xfb; op 0x17; var x
 
     | RttCanon x -> op 0xfb; op 0x30; var x
-    | RttSub x -> op 0xfb; op 0x31; var x
 
     | Const {it = I32 c; _} -> op 0x41; vs32 c
     | Const {it = I64 c; _} -> op 0x42; vs64 c

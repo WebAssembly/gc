@@ -583,7 +583,6 @@ let rec instr s =
     | 0x22l -> i31_get_u
 
     | 0x30l -> rtt_canon (at var s)
-    | 0x31l -> rtt_sub (at var s)
 
     | 0x40l -> ref_test
     | 0x41l -> ref_cast
