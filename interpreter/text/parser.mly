@@ -306,11 +306,7 @@ heap_type :
   | FUNC { fun c -> FuncHeapType }
   | EXTERN { fun c -> ExternHeapType }
   | var { fun c -> DefHeapType (SynVar ($1 c type_).it) }
-  | LPAR RTT var RPAR  /* Sugar */
-    { fun c -> RttHeapType (SynVar ($3 c type_).it, None) }
-  | LPAR RTT NAT var RPAR  /* Sugar */
-    { let n = nat32 $3 (ati 3) in
-      fun c -> RttHeapType (SynVar ($4 c type_).it, Some n) }
+  | LPAR RTT var RPAR { fun c -> RttHeapType (SynVar ($3 c type_).it) }
 
 ref_type :
   | LPAR REF null_opt heap_type RPAR { fun c -> ($3, $4 c) }
@@ -321,10 +317,7 @@ ref_type :
   | FUNCREF { fun c -> (Nullable, FuncHeapType) }  /* Sugar */
   | EXTERNREF { fun c -> (Nullable, ExternHeapType) }  /* Sugar */
   | LPAR RTT var RPAR  /* Sugar */
-    { fun c -> (NonNullable, RttHeapType (SynVar ($3 c type_).it, None)) }
-  | LPAR RTT NAT var RPAR  /* Sugar */
-    { let n = nat32 $3 (ati 3) in
-      fun c -> (NonNullable, RttHeapType (SynVar ($4 c type_).it, Some n)) }
+    { fun c -> (NonNullable, RttHeapType (SynVar ($3 c type_).it)) }
 
 value_type :
   | NUM_TYPE { fun c -> NumType $1 }

@@ -48,8 +48,7 @@ let rec eq_num_type c t1 t2 =
 and eq_heap_type c t1 t2 =
   match t1, t2 with
   | DefHeapType x1, DefHeapType x2 -> eq_var_type c x1 x2
-  | RttHeapType (x1, no1), RttHeapType (x2, no2) ->
-    eq_var_type c x1 x2 && no1 = no2
+  | RttHeapType x1, RttHeapType x2 -> eq_var_type c x1 x2
   | _, _ -> t1 = t2
 
 and eq_ref_type c t1 t2 =
@@ -171,7 +170,6 @@ and match_heap_type c t1 t2 =
     | _ -> false
     )
   | DefHeapType x1, DefHeapType x2 -> match_var_type c x1 x2
-  | RttHeapType (x1, Some _), RttHeapType (x2, None) -> eq_var_type c x1 x2
   | BotHeapType, _ -> true
   | _, _ -> eq_heap_type c t1 t2
 

@@ -113,8 +113,7 @@ struct
     | FuncHeapType -> vs7 (-0x10)
     | ExternHeapType -> vs7 (-0x11)
     | DefHeapType x -> var_type vs33 x
-    | RttHeapType (x, None) -> vs7 (-0x18); var_type vu32 x
-    | RttHeapType (x, Some n) -> vs7 (-0x17); vs32 n; var_type vu32 x
+    | RttHeapType x -> vs7 (-0x18); var_type vu32 x
     | BotHeapType -> assert false
 
   let ref_type = function

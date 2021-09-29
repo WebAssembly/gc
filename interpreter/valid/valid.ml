@@ -93,8 +93,8 @@ let check_heap_type (c : context) (t : heap_type) at =
   | AnyHeapType | EqHeapType | I31HeapType | DataHeapType
   | FuncHeapType | ExternHeapType -> ()
   | DefHeapType (SynVar x) -> ignore (type_ c (x @@ at))
-  | RttHeapType (SynVar x, _) -> ignore (type_ c (x @@ at))
-  | DefHeapType _ | RttHeapType (_, _) | BotHeapType -> assert false
+  | RttHeapType (SynVar x) -> ignore (type_ c (x @@ at))
+  | DefHeapType _ | RttHeapType _ | BotHeapType -> assert false
 
 let check_ref_type (c : context) (t : ref_type) at =
   match t with
@@ -241,7 +241,7 @@ let peek_ref i (ell, ts) at =
 let peek_rtt i s at =
   let rt = peek_ref i s at in
   match rt with
-  | _, RttHeapType (x, _) -> rt, DefHeapType x
+  | _, RttHeapType x -> rt, DefHeapType x
   | _, BotHeapType -> rt, BotHeapType
   | _ ->
     error at
@@ -713,7 +713,7 @@ let rec check_instr (c : context) (e : instr) (s : infer_result_type) : op_type 
           defaultable_value_type (unpacked_field_type ft)) fts ) e.at
       ("field type is not defaultable");
     let ts = if initop = Implicit then [] else List.map unpacked_field_type fts in
-    (ts @ [RefType (NonNullable, RttHeapType (SynVar x.it, None))]) -->
+    (ts @ [RefType (NonNullable, RttHeapType (SynVar x.it))]) -->
       [RefType (NonNullable, DefHeapType (SynVar x.it))]
 
   | StructGet (x, y, exto) ->
@@ -742,7 +742,7 @@ let rec check_instr (c : context) (e : instr) (s : infer_result_type) : op_type 
         defaultable_value_type (unpacked_field_type ft) ) e.at
       ("array type is not defaultable");
     let ts = if initop = Implicit then [] else [unpacked_field_type ft] in
-    (ts @ [NumType I32Type; RefType (NonNullable, RttHeapType (SynVar x.it, None))]) -->
+    (ts @ [NumType I32Type; RefType (NonNullable, RttHeapType (SynVar x.it))]) -->
       [RefType (NonNullable, DefHeapType (SynVar x.it))]
 
   | ArrayGet (x, exto) ->
@@ -764,7 +764,7 @@ let rec check_instr (c : context) (e : instr) (s : infer_result_type) : op_type 
 
   | RttCanon x ->
     ignore (type_ c x);
-    [] --> [RefType (NonNullable, RttHeapType (SynVar x.it, Some 0l))]
+    [] --> [RefType (NonNullable, RttHeapType (SynVar x.it))]
 
   | Const v ->
     let t = NumType (type_num v.it) in

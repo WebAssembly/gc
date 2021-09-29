@@ -12,7 +12,7 @@
   (type (array (ref 0)))
   (type (array (ref null 1)))
   (type (array (rtt 1)))
-  (type (array (rtt 10 1)))
+  (type (array (rtt 10)))
   (type (array (mut i8)))
   (type (array (mut i16)))
   (type (array (mut i32)))
@@ -24,7 +24,7 @@
   (type (array (mut (ref 0))))
   (type (array (mut (ref null i31))))
   (type (array (mut (rtt 0))))
-  (type (array (mut (rtt 10 0))))
+  (type (array (mut (rtt 10))))
 )
 
 

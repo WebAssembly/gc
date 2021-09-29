@@ -71,7 +71,7 @@ let num_type = function
 let heap_type = function
   | AnyHeapType | EqHeapType | I31HeapType | DataHeapType
   | FuncHeapType | ExternHeapType | BotHeapType -> empty
-  | DefHeapType x | RttHeapType (x, _) -> var_type x
+  | DefHeapType x | RttHeapType x -> var_type x
 
 let ref_type = function
   | (_, t) -> heap_type t

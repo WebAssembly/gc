@@ -165,8 +165,7 @@ let heap_type s =
     | -0x12 -> AnyHeapType
     | -0x13 -> EqHeapType
     | -0x16 -> I31HeapType
-    | -0x17 -> let n = vu32 s in RttHeapType (var_type s, Some n)
-    | -0x18 -> RttHeapType (var_type s, None)
+    | -0x18 -> RttHeapType (var_type s)
     | -0x19 -> DataHeapType
     | _ -> error s pos "malformed heap type"
     )
@@ -185,8 +184,7 @@ let ref_type s =
   | -0x14 -> (Nullable, heap_type s)
   | -0x15 -> (NonNullable, heap_type s)
   | -0x16 -> (Nullable, I31HeapType)
-  | -0x17 -> let n = vu32 s in (NonNullable, RttHeapType (var_type s, Some n))
-  | -0x18 -> (NonNullable, RttHeapType (var_type s, None))
+  | -0x18 -> (NonNullable, RttHeapType (var_type s))
   | -0x19 -> (Nullable, DataHeapType)
   | _ -> error s pos "malformed reference type"
 

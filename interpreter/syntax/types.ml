@@ -22,7 +22,7 @@ and heap_type =
   | FuncHeapType
   | ExternHeapType
   | DefHeapType of var
-  | RttHeapType of var * int32 option
+  | RttHeapType of var
   | BotHeapType
 
 and value_type = NumType of num_type | RefType of ref_type | BotType
@@ -169,7 +169,7 @@ let subst_heap_type s = function
   | FuncHeapType -> FuncHeapType
   | ExternHeapType -> ExternHeapType
   | DefHeapType x -> DefHeapType (s x)
-  | RttHeapType (x, no) -> RttHeapType (s x, no)
+  | RttHeapType x -> RttHeapType (s x)
   | BotHeapType -> BotHeapType
 
 let subst_ref_type s = function
@@ -353,9 +353,7 @@ and string_of_heap_type = function
   | FuncHeapType -> "func"
   | ExternHeapType -> "extern"
   | DefHeapType x -> string_of_var x
-  | RttHeapType (x, None) -> "(rtt " ^ string_of_var x ^ ")"
-  | RttHeapType (x, Some n) ->
-    "(rtt " ^ Int32.to_string n ^ " " ^ string_of_var x ^ ")"
+  | RttHeapType x -> "(rtt " ^ string_of_var x ^ ")"
   | BotHeapType -> "something"
 
 and string_of_ref_type = function
