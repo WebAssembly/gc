@@ -25,7 +25,6 @@ sig
   val split_last : 'a list -> 'a list * 'a (* raises Failure *)
 
   val index_of : 'a -> 'a list -> int option
-  val index_ofq : 'a -> 'a list -> int option
   val index_where : ('a -> bool) -> 'a list -> int option
   val map_filter : ('a -> 'b option) -> 'a list -> 'b list
   val concat_map : ('a -> 'b list) -> 'a list -> 'b list
@@ -41,7 +40,6 @@ sig
   val mapi : (int32 -> 'a -> 'b) -> 'a list -> 'b list
 
   val index_of : 'a -> 'a list -> int32 option
-  val index_ofq : 'a -> 'a list -> int32 option
   val index_where : ('a -> bool) -> 'a list -> int32 option
 end
 
