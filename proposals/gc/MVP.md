@@ -47,10 +47,9 @@ All three proposals are prerequisites.
   - `heaptype ::= ... | i31`
   - the type of unboxed scalars
 
-* `rtt <n>? <typeidx>` is a new heap type that is a runtime representation of the static type `<typeidx>`
-  - `heaptype ::= ... | rtt <n>? <typeidx>`
-  - `rtt n? t ok` iff `t ok`
-  - the constant `n`, if present, encodes the static knowledge that this type has `n` dynamic supertypes (see [Runtime types](#runtime-types))
+* `rtt <typeidx>` is a new heap type that is a runtime representation of the static type `<typeidx>`
+  - `heaptype ::= ... | rtt <typeidx>`
+  - `rtt t ok` iff `t ok`
 
 * Note: heap types `func` and `extern` already exist via [reference types proposal](https://github.com/WebAssembly/reference-types), and `(ref null? $t)` via [typed references](https://github.com/WebAssembly/function-references)
 
@@ -75,8 +74,8 @@ New abbreviations are introduced for reference types in binary and text format, 
 * `i31ref` is a new reference type
   - `i31ref == (ref i31)`
 
-* `rtt <n>? <typeidx>` is a new reference type
-  - `(rtt <n>? $t) == (ref (rtt <n>? $t))`
+* `rtt <typeidx>` is a new reference type
+  - `(rtt $t) == (ref (rtt $t))`
 
 
 #### Type Definitions
@@ -306,13 +305,9 @@ In addition to the [existing rules](https://github.com/WebAssembly/function-refe
      - if `$t = <functype>`
      - or `$t = type ht` and `ht <: func` (imports)
 
-* `rtt n? $t` is a subtype of `eq`
-  - `rtt n? $t <: eq`
-
-* `rtt n $t` is a subtype of `rtt $t`
-  - `rtt n $t1 <: rtt $t2`
-    - if `$t1 == $t2`
-  - Note: `rtt n? $t1` is *not* a subtype of `rtt n? $t2`, if `$t1` is merely a subtype of `$t2`; such covariant subtyping would be unsound, since RTTs are used in both co- and contravariant roles (e.g., both when constructing and consuming a reference)
+* `rtt $t` is a subtype of `eq`
+  - `rtt $t <: eq`
+  - Note: `rtt $t1` is *not* a subtype of `rtt $t2`, unless `$t1` and `$t2` are equivalent; covariant subtyping would be unsound, since RTTs are used in both co- and contravariant roles (e.g., both when constructing and consuming a reference)
 
 Note: This creates a hierarchy of *abstract* Wasm heap types that looks as follows.
 ```
@@ -363,39 +358,29 @@ Subtyping is not defined on type definitions.
 
 #### Runtime Types
 
-* Runtime types (RTTs) are explicit values representing concrete types at runtime; a value of type `rtt <n>? <typeidx>` is a dynamic representative of the static type `<typeidx>`.
+* Runtime types (RTTs) are explicit values representing concrete types at runtime; a value of type `rtt <typeidx>` is a dynamic representative of the static type `<typeidx>`.
 
 * All RTTs are explicitly created and all operations involving dynamic type information (like casts) operate on explicit RTT operands. This allows maximum flexibility and custom choices wrt which RTTs to represent a source type.
 
-* There is a runtime subtyping hierarchy on RTTs; creating an RTT allows providing a *parent type* in the form of an existing RTT.
+* An RTT value r1 is *equal* to another RTT value r2 iff they both represent the same static type.
 
-* An RTT value r1 is *equal* to another RTT value r2 iff they both represent the same static type and either of the following holds:
-  - r1 and r2 both have no parents, or
-  - r1 and r2 both have equal RTT values as parents.
+* An RTT value r1 is a *subtype* of another RTT value r2 iff they represent static types that are in a respective subtype relation.
 
-* An RTT value r1 is a *sub-RTT* of another RTT value r2 iff either of the following holds:
-  - r1 and r2 are equal RTT values, or
-  - r1 has a parent that is a sub-RTT of r2.
-
-* The count `<n>` in the static type of an RTT value, if present, denotes the length of the supertype chain, i.e., its "inheritance depth" of _concrete types_ (not counting abstract supertypes like `dataref` or `anyref`, which are always at the top of the hierarchy). If this information is present, it enables more efficient implementation of runtime casts in an engine; if it is absent (e.g., to abstract the depth of a subtype graph), then the engine has to read it from the dynamic RTT value.
-
-* Validation requires that each RTT's parent type is a representative of a static supertype; runtime subtyping hence is a sub-relation of static subtyping (a graph with fewer nodes and edges).
-
-* At the same time, runtime subtyping forms a linear hierarchy such that the relation can be checked efficiently using standard implementation techniques (the runtime subtype hierarchy is a tree-shaped graph).
-
-Note: RTT values correspond to type descriptors or "shape" objects as they exist in various engines. RTT equality can be implemented as a single pointer test by memoising RTT values. More interestingly, runtime casts along the hierachy encoded in these values can be implemented in an engine efficiently by using well-known techniques such as including a vector of its (direct and indirect) super-RTTs in each RTT value (with itself as the last entry). The value `<n>` then denotes the length of this vector. A subtype check between two RTT values can be implemented as follows using such a representation. Assume RTT value v1 has static type `(rtt n1? $t1)` and v2 has type `(rtt n2? $t2)`. To check whether v1 denotes a sub-RTT of v2, first verify that `n1 >= n2` -- if both `n1` and `n2` are known statically, this can be performed at compile time; if either is not statically known, it has to be read from the respective RTT value dynamically, and `n1 >= n2` becomes a dynamic check. Then compare v2 to the n2-th entry in v1's supertype vector. If they are equal, v1 is a sub-RTT.
+Note: RTT values correspond to type descriptors or "shape" objects as they exist in various engines. RTT equality can be implemented as a single pointer test by memoising RTT values. More interestingly, runtime casts along the hierachy encoded in these values can be implemented in an engine efficiently by using well-known techniques such as including a vector of its (direct and indirect) super-RTTs in each RTT value (with itself as the last entry). A subtype check between two RTT values can be implemented as follows using such a representation. Assume RTT value v1 has static type `(rtt $t1)` and v2 has type `(rtt $t2)`. Let `n1` and `n2` be the lenghts of the respective supertype vectors. To check whether v1 denotes a subtype RTT of v2, first verify that `n1 >= n2` -- if both `n1` and `n2` are known statically, this can be performed at compile time; if either is not statically known, it has to be read from the respective RTT value dynamically, and `n1 >= n2` becomes a dynamic check. Then compare v2 to the n2-th entry in v1's supertype vector. If they are equal, v1 is a subtype RTT.
 In the case of actual casts, the static type of RTT v1 (obtained from the value to cast) is not known at compile time, so `n1` is dynamic as well.
 (Note that `$t1` and `$t2` are not relevant for the dynamic semantics, but merely for validation.)
+
+Note: This assumes that there is at most one supertype. For hierarchies with multiple supertypes, more complex tests would be necessary.
 
 Example: Consider three types and corresponding RTTs:
 ```
 (type $A (struct))
-(type $B (struct (field i32)))
-(type $C (struct (field i32 i64)))
+(type $B (sub $A (struct (field i32))))
+(type $C (sub $B (struct (field i32 i64))))
 
 (global $rttA (rtt 0 $A) (rtt.canon $A))
-(global $rttB (rtt 1 $B) (rtt.sub $B (global.get $rttA)))
-(global $rttC (rtt 2 $C) (rtt.sub $C (global.get $rttB)))
+(global $rttB (rtt 1 $B) (rtt.canon $B))
+(global $rttC (rtt 2 $C) (rtt.canon $C))
 ```
 Here, `$rttA` would carry supertype vector `[$rttA]`, `$rttB` has `[$rttA, $rttB]`, and `$rttC` has `[$rttA, $rttB, $rttC]`.
 
@@ -414,7 +399,7 @@ This can compile to machine code that (1) reads the RTT from `$x`, (2) checks th
 
 * Reference values of data or function type have an associated runtime type:
   - for structures or arrays, it is the RTT value provided upon creation,
-  - for functions, it is the RTT value for the function's type.
+  - for functions, it is the RTT value for the function's type (which may be recursive).
 
 * Note: as a future extension, we could allow a value's RTT to be a supertype of the value's actual type. For example, a structure or array with RTT `any` would become fully opaque to runtime type checks, and an implementation may choose to optimize away its RTT.
 
@@ -430,11 +415,11 @@ This can compile to machine code that (1) reads the RTT from `$x`, (2) checks th
 #### Structures
 
 * `struct.new_with_rtt <typeidx>` allocates a structure with RTT information determining its [runtime type](#values) and initialises its fields with given values
-  - `struct.new_with_rtt $t : [t'* (rtt n $t)] -> [(ref $t)]`
+  - `struct.new_with_rtt $t : [t'* (rtt $t)] -> [(ref $t)]`
     - iff `expand($t) = struct (mut t')*`
 
 * `struct.new_default_with_rtt <typeidx>` allocates a structure of type `$t` and initialises its fields with default values
-  - `struct.new_default_with_rtt $t : [(rtt n $t)] -> [(ref $t)]`
+  - `struct.new_default_with_rtt $t : [(rtt $t)] -> [(ref $t)]`
     - iff `expand($t) = struct (mut t')*`
     - and all `t'*` are defaultable
 
@@ -455,11 +440,11 @@ This can compile to machine code that (1) reads the RTT from `$x`, (2) checks th
 #### Arrays
 
 * `array.new_with_rtt <typeidx>` allocates an array with RTT information determining its [runtime type](#values)
-  - `array.new_with_rtt $t : [t' i32 (rtt n $t)] -> [(ref $t)]`
+  - `array.new_with_rtt $t : [t' i32 (rtt $t)] -> [(ref $t)]`
     - iff `expand($t) = array (var t')`
 
 * `array.new_default_with_rtt <typeidx>` allocates an array and initialises its fields with the default value
-  - `array.new_default_with_rtt $t : [i32 (rtt n $t)] -> [(ref $t)]`
+  - `array.new_default_with_rtt $t : [i32 (rtt $t)] -> [(ref $t)]`
     - iff `expand($t) = array (var t')`
     - and `t'` is defaultable
 
@@ -572,14 +557,8 @@ Note: The `br_on_*` instructions allow an operand of unrelated reference type, e
 #### Runtime Types
 
 * `rtt.canon <typeidx>` returns the RTT of the specified type
-  - `rtt.canon $t : [] -> [(rtt 0 $t)]`
+  - `rtt.canon $t : [] -> [(rtt $t)]`
   - multiple invocations of this instruction yield the same observable RTTs
-  - this is a *constant instruction*
-
-* `rtt.sub <typeidx>` returns an RTT for `typeidx` as a sub-RTT of a the parent RTT operand
-  - `rtt.sub $t : [(rtt n? $t')] -> [(rtt (n+1)? $t)]`
-    - iff `(type $t) <: (type $t')`
-  - multiple invocations of this instruction with the same operand yield the same observable RTTs
   - this is a *constant instruction*
 
 TODO: Add the ability to generate new (non-canonical) RTT values to implement casting in nominal type hierarchies?
@@ -590,19 +569,19 @@ TODO: Add the ability to generate new (non-canonical) RTT values to implement ca
 RTT-based casts can only be performed with respect to concrete types, and require a data or function reference as input, which are known to carry an RTT.
 
 * `ref.test` tests whether a reference value's [runtime type](#values) is a [runtime subtype](#runtime) of a given RTT
-  - `ref.test : [t' (rtt n? $t)] -> [i32]`
+  - `ref.test : [t' (rtt $t)] -> [i32]`
     - iff `t' <: (ref null data)` or `t' <: (ref null func)`
   - returns 1 if the first operand is not null and its runtime type is a sub-RTT of the RTT operand, 0 otherwise
 
 * `ref.cast` casts a reference value down to a type given by a RTT representation
-  - `ref.cast : [(ref null1? ht) (rtt n? $t)] -> [(ref null2? $t)]`
+  - `ref.cast : [(ref null1? ht) (rtt $t)] -> [(ref null2? $t)]`
     - iff `ht <: data` or `ht <: func`
     - and `null1? = null2?`
   - returns null if the first operand is null
   - traps if the first operand is not null and its runtime type is not a sub-RTT of the RTT operand
 
 * `br_on_cast <labelidx>` branches if a value can be cast down to a given reference type
-  - `br_on_cast $l : [t0* t (rtt n? $t')] -> [t0* t]`
+  - `br_on_cast $l : [t0* t (rtt $t')] -> [t0* t]`
     - iff `$l : [t0* t']`
     - and `t <: (ref null data)` or `t <: (ref null func)`
     - and `(ref $t') <: t'`
@@ -610,7 +589,7 @@ RTT-based casts can only be performed with respect to concrete types, and requir
   - passes cast operand along with branch, plus possible extra args
 
 * `br_on_cast_fail <labelidx>` branches if a value can not be cast down to a given reference type
-  - `br_on_cast_fail $l : [t0* t (rtt n? $t')] -> [t0* (ref $t')]`
+  - `br_on_cast_fail $l : [t0* t (rtt $t')] -> [t0* (ref $t')]`
     - iff `$l : [t0* t']`
     - and `t <: (ref null data)` or `t <: (ref null func)`
     - and `t <: t'`
@@ -625,7 +604,6 @@ Note: These instructions allow an operand of unrelated reference type, even thou
 In order to allow RTTs to be initialised as globals, the following extensions are made to the definition of *constant expressions*:
 
 * `rtt.canon` is a constant instruction
-* `rtt.sub` is a constant instruction
 * `global.get` is a constant instruction and can access preceding (immutable) global definitions, not just imports as in the MVP
 
 
@@ -653,7 +631,6 @@ This extends the [encodings](https://github.com/WebAssembly/function-references/
 | -0x14  | `(ref null ht)` | `ht : heaptype (s33)` | from funcref proposal |
 | -0x15  | `(ref ht)`      | `ht : heaptype (s33)` | from funcref proposal |
 | -0x16  | `i31ref`        |            | shorthand |
-| -0x17  | `(rtt n $t)`    | `n : u32`, `i : typeidx` | shorthand |
 | -0x18  | `(rtt $t)`      | `i : typeidx` | shorthand |
 | -0x19  | `dataref`       |            | shorthand |
 
@@ -669,7 +646,6 @@ The opcode for heap types is encoded as an `s33`.
 | -0x12  | `any`           |            | |
 | -0x13  | `eq`            |            | |
 | -0x16  | `i31`           |            | |
-| -0x17  | `(rtt n i)`     | `n : u32`, `i : typeidx` | |
 | -0x18  | `(rtt i)`       | `i : typeidx` | |
 | -0x19  | `data`          |            | |
 
@@ -712,7 +688,6 @@ The opcode for heap types is encoded as an `s33`.
 | 0xfb21 | `i31.get_s` |  |
 | 0xfb22 | `i31.get_u` |  |
 | 0xfb30 | `rtt.canon $t` | `$t : typeidx` |
-| 0xfb31 | `rtt.sub $t` | `$t : typeidx` |
 | 0xfb40 | `ref.test $t` | `$t : typeidx` |
 | 0xfb41 | `ref.cast $t` | `$t : typeidx` |
 | 0xfb42 | `br_on_cast $l` | `$l : labelidx` |
