@@ -191,6 +191,14 @@ let rec sub t1 t2 =
   | Box t1', Box t2' -> sub t1' t2'
   | Tup ts1, Tup ts2 ->
     List.length ts1 = List.length ts2 && List.for_all2 sub ts1 ts2
+  | Func (ys1, ts11, t12), Func (ys2, ts21, t22) ->
+    List.length ys1 = List.length ys2 &&
+    List.length ts11 = List.length ts21 &&
+    let ys' = List.map var (List.map fresh ys1) in
+    let s1 = typ_subst ys1 ys' in
+    let s2 = typ_subst ys2 ys' in
+    List.for_all2 eq (List.map (subst s1) ts11) (List.map (subst s2) ts21) &&
+    sub (subst s1 t12) (subst s2 t22)
   | Inst (c1, ts1), Inst (c2, ts2) ->
     eq_cls c1 c2 && List.for_all2 eq ts1 ts2 || sub (sup_cls c1 ts1) t2
   | t1, t2 -> eq t1 t2

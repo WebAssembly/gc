@@ -30,6 +30,11 @@ struct
   let extend_typ_abs env y = extend_typ_gnd env y (T.var y.it)
   let extend_typs_gnd env ys ts = List.fold_left2 extend_typ_gnd env ys ts
   let extend_typs_abs env ys = List.fold_left extend_typ_abs env ys
+
+  let to_vals env =
+    fold_vals (fun x {it = (s, v); _} xvs -> Map.add x (s, !v) xvs) env Map.empty
+  let of_vals xvs at =
+    Map.fold (fun x sv env -> extend_val env (x @@ at) sv) xvs empty
 end
 
 type pass = Full | Pre | Post
@@ -211,7 +216,7 @@ let rec eval_exp env e : V.value =
     let vs = List.map (eval_exp env) es in
     (match v1 with
     | V.Null -> trap e1.at "null reference at function call"
-    | V.Func f -> f (List.map (eval_typ env) ts) vs
+    | V.Func f -> f E.Map.empty (List.map (eval_typ env) ts) vs
     | _ -> crash e.at "runtime type error at function call"
     )
 
@@ -220,7 +225,7 @@ let rec eval_exp env e : V.value =
     let vs = List.map (eval_exp env) es in
     (match v1 with
     | V.Null -> trap x.at "null reference at class instantiation"
-    | V.Class (_, f, _) -> f (List.map (eval_typ env) ts) vs
+    | V.Class (_, f, _) -> f E.Map.empty (List.map (eval_typ env) ts) vs
     | _ -> crash e.at "runtime type error at class instantiation"
     )
 
@@ -289,7 +294,7 @@ let rec eval_exp env e : V.value =
     raise (Return v)
 
   | BlockE ds ->
-    fst (eval_block Full env ds)
+    fst (eval_block env ds)
 
 
 and eval_exp_ref env e : V.value ref =
@@ -323,15 +328,17 @@ and eval_exp_ref env e : V.value ref =
 
 (* Declarations *)
 
-and eval_dec pass env d : V.value * env =
-  let this x = DotE (VarE ("this" @@ d.at) @@ d.at, x) @@ d.at in
+and local x = VarE x @@ x.at
+and this x = DotE (VarE ("this" @@ x.at) @@ x.at, x) @@ x.at
+
+and eval_dec pass local env d : V.value * env =
   match d.it with
   | ExpD e ->
     let v = if pass = Pre then V.Tup [] else eval_exp env e in
     v, E.empty
 
   | LetD (x, e) ->
-    let v = if pass = Post then eval_exp env (this x) else eval_exp env e in
+    let v = if pass = Post then eval_exp env (local x) else eval_exp env e in
     V.Tup [], E.singleton_val x (T.LetS, v)
 
   | VarD (x, t, e) ->
@@ -345,13 +352,15 @@ and eval_dec pass env d : V.value * env =
 
   | FuncD (x, ys, xts, _t, e) ->
     let xs = List.map fst xts in
-    let rec f ts vs =
-      let env' = E.extend_val env x (T.FuncS, V.Func f) in
+    let rec f envR ts vs =
+      let envR' = E.Map.map (fun (s, v) -> s, V.fix envR v) envR in
+      let env' = E.adjoin env (E.of_vals envR' d.at) in
+      let env' = E.extend_val env' x (T.FuncS, V.fix envR (V.Func f)) in
       let env' = E.extend_typs_gnd env' ys ts in
       let env' = E.extend_vals_let env' xs vs in
       try eval_exp env' e with Return v -> v
     in
-    let v = if pass = Post then eval_exp env (this x) else V.Func f in
+    let v = if pass = Post then eval_exp env (local x) else V.Func f in
     V.Tup [], E.singleton_val x (T.FuncS, v)
 
   | ClassD (x, ys, xts, sup_opt, ds) ->
@@ -359,7 +368,7 @@ and eval_dec pass env d : V.value * env =
     let xs = List.map fst xts in
     let cls =
       if pass <> Post then T.gen_cls d x.it ys' else
-      match eval_exp env (this x) with
+      match eval_exp env (local x) with
       | V.Class (cls, _, _) -> cls
       | _ -> assert false
     in
@@ -370,11 +379,13 @@ and eval_dec pass env d : V.value * env =
       cls.T.sup <- eval_typ env'' (VarT (x2, ts2) @@ x2.at)
     ) sup_opt;
     let rec v_class = V.Class (cls, inst, alloc)
-    and inst ts vs =
-      let v_inst, init = alloc (con ts) ts vs in
+    and inst envR ts vs =
+      let v_inst, init = alloc envR (con ts) ts vs in
       init (); v_inst
-    and alloc t_inst ts vs =
-      let env'' = E.extend_val env' x (T.ClassS, v_class) in
+    and alloc envR t_inst ts vs =
+      let envR' = E.Map.map (fun (s, v) -> s, V.fix envR v) envR in
+      let env'' = E.adjoin env' (E.of_vals envR' d.at) in
+      let env'' = E.extend_val env'' x (T.ClassS, V.fix envR v_class) in
       let env'' = E.extend_typs_gnd env'' ys ts in
       let env'' = E.extend_vals_let env'' xs vs in
       let v_inst, init', env''' =
@@ -387,7 +398,7 @@ and eval_dec pass env d : V.value * env =
           (match v2 with
           | V.Null -> trap x2.at "null reference at class instantiation"
           | V.Class (_, _, alloc') ->
-            let v_inst, init' = alloc' t_inst ts2' vs2 in
+            let v_inst, init' = alloc' E.Map.empty t_inst ts2' vs2 in
             v_inst, init', E.Map.fold (fun x v env ->
               Env.extend_val env (x @@ x2.at) v) !(V.as_obj v_inst) env''
           | _ -> crash x2.at "runtime type error at class instantiation"
@@ -397,7 +408,7 @@ and eval_dec pass env d : V.value * env =
       let env''' = E.extend_val env''' x (T.ClassS, v_class) in
       let env''' = E.extend_vals_let env''' xs vs in
       let env''' = E.extend_val_let env''' ("this" @@ x.at) v_inst in
-      let _, oenv = eval_block Pre env''' ds in
+      let _, oenv = eval_decs Pre this Fun.id env''' ds V.Null in
       let obj = V.as_obj v_inst in
       obj := E.fold_vals (fun x sv obj ->
         match E.Map.find_opt x obj with
@@ -405,31 +416,56 @@ and eval_dec pass env d : V.value * env =
         | Some (s, v') -> v' := !(snd sv.it); obj
       ) oenv !obj;
       v_inst,
-      fun () -> init' (); ignore (eval_block Post env''' ds)
+      fun () ->
+        init' ();
+        ignore (eval_decs Post this (init_fields env''') env''' ds V.Null)
     in
     V.Tup [],
     E.adjoin (E.singleton_typ x con) (E.singleton_val x (T.ClassS, v_class))
 
+and init_fields env env1 : env =
+  let obj =
+    match !(snd (E.find_val ("this" @@ no_region) env).it) with
+    | V.Obj (_, obj) -> obj
+    | _ -> assert false
+  in
+  E.mapi_vals (fun x (s, v) ->
+    let s, v' = E.Map.find x !obj in v' := !v; (s, v')
+  ) env1
 
-and eval_decs pass env ds v : V.value * env =
+and eval_decs pass local init env ds v : V.value * env =
   match ds with
   | [] -> v, E.empty
   | d::ds' ->
-    let v', env1 = eval_dec pass env d in
-    let env' =
-      if pass <> Post then env1 else
-      match !(snd (E.find_val ("this" @@ no_region) env).it) with
-      | V.Obj (_, obj) ->
-        E.mapi_vals (fun x (s, v) ->
-          let s, v' = E.Map.find x !obj in v' := !v; (s, v')
-        ) env1
-      | _ -> assert false
-    in
-    let v'', env2 = eval_decs pass (E.adjoin env env') ds' v' in
+    let v', env1 = eval_dec pass local env d in
+    let env' = if pass <> Post then env1 else init env1 in
+    let v'', env2 = eval_decs pass local init (E.adjoin env env') ds' v' in
     v'', E.adjoin env1 env2
 
-and eval_block pass env ds : V.value * env =
-  eval_decs pass env ds (V.Tup [])
+and eval_block env ds : V.value * env =
+  (* TODO: enable more general recursion among functions and classes *)
+  eval_recdecs env ds (V.Tup [])
+
+and eval_recdecs env ds v : V.value * env =
+  match take_recgroup ds with
+  | [], [] -> v, E.empty
+  | [], d::ds' ->
+    let v', env1 = eval_decs Full local Fun.id env [d] v in
+    let v'', env2 = eval_recdecs (E.adjoin env env1) ds' v' in
+    v'', E.adjoin env1 env2
+  | ds1, ds' ->
+    let _, env1 = eval_decs Pre local Fun.id env ds1 V.Null in
+    let v', env1' = eval_decs Post local Fun.id (E.adjoin env env1) ds1 v in
+    let envR = E.to_vals env1' in
+    let env1'' = E.map_vals (fun (s, v) -> s, ref (V.fix envR !v)) env1' in
+    let v'', env2 = eval_recdecs (E.adjoin env env1'') ds' v' in
+    v'', E.adjoin env1'' env2
+
+and take_recgroup ds : dec list * dec list =
+  match ds with
+  | ({it = FuncD _ | ClassD _ | TypD _; _} as d)::ds' ->
+    let ds1, ds2 = take_recgroup ds' in d::ds1, ds2
+  | _ -> [], ds
 
 
 (* Programs *)
@@ -469,5 +505,5 @@ let eval_prog env p : V.value * env =
   let Prog (is, ds) = p.it in
   let env' = Env.adjoin env0 env in
   let env1 = List.fold_left (eval_imp env') E.empty is in
-  let v, env2 = eval_block Full (E.adjoin env' env1) ds in
+  let v, env2 = eval_block (E.adjoin env' env1) ds in
   v, E.adjoin env1 env2
