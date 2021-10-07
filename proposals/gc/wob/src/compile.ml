@@ -238,9 +238,7 @@ let rec lower_value_type ctxt at t : W.value_type =
 
 and lower_heap_type ctxt at t : W.heap_type =
   match t with
-  | T.Var _ -> W.AnyHeapType
-  | T.Null -> W.EqHeapType
-  | T.Tup [] | T.Bot -> W.AnyHeapType
+  | T.Var _ | T.Null | T.Tup [] | T.Bot -> W.EqHeapType
   | T.Box (T.Bool | T.Byte) -> W.I31HeapType
   | t -> W.(DefHeapType (SynVar (lower_var_type ctxt at t)))
 
@@ -272,7 +270,7 @@ and lower_storage_type ctxt at t : W.storage_type =
   match t with
   | T.Bool | T.Byte -> W.(PackedStorageType Pack8)
   | T.Int | T.Float -> W.(ValueStorageType (lower_value_type ctxt at t))
-  | t -> W.(ValueStorageType (RefType (Nullable, AnyHeapType)))
+  | t -> W.(ValueStorageType (RefType (Nullable, EqHeapType)))
 
 and lower_field_type ctxt at mut t : W.field_type =
   W.(FieldType (lower_storage_type ctxt at t, mut))
@@ -464,7 +462,7 @@ let compile_coerce_abs_value_type ctxt at t =
   | T.Text | T.Box _ | T.Tup _ | T.Obj
   | T.Inst _ | T.Array _ | T.Func _ | T.Class _ ->
     let t' = lower_value_type ctxt at t in
-    let tmpidx = emit_local ctxt at W.(RefType (Nullable, AnyHeapType)) in
+    let tmpidx = emit_local ctxt at W.(RefType (Nullable, EqHeapType)) in
     let typeidx = lower_var_type ctxt at t in
     emit ctxt W.[
       local_tee (tmpidx @@ at);
