@@ -122,6 +122,7 @@ and ctxt_ext =
     funcs : func_env ref;
     self : string;
     tcls : T.cls option;
+    ret : T.typ;
   }
 
 let make_ext_ctxt () : ctxt_ext =
@@ -130,6 +131,7 @@ let make_ext_ctxt () : ctxt_ext =
     funcs = ref FuncEnv.empty;
     self = "";
     tcls = None;
+    ret = T.Tup [];
   }
 
 let make_ctxt () : ctxt =
@@ -497,6 +499,14 @@ let compile_coerce_abs_block_type ctxt at t =
   | _ -> compile_coerce_abs_value_type ctxt at t
 
 
+let compile_coerce_null_type ctxt at t1 t2 =
+  if t1 = T.Null && t2 <> T.Null then
+  List.iter (emit_instr ctxt at) W.[
+    drop;
+    ref_null (lower_heap_type ctxt at t2);
+  ]
+
+
 (* Expressions *)
 
 let compile_lit ctxt l at =
@@ -748,10 +758,13 @@ and compile_exp ctxt e =
         (match scope, s with
         | PreScope, _ -> assert false
         | GlobalScope, T.FuncS ->
-          List.iter (fun eI ->
+          let ys, ts1, _ = T.as_func (Source.et e1) in
+          let s = T.typ_subst ys (List.map Source.et ts) in
+          List.iter2 (fun eI tI->
             compile_exp ctxt eI;
             compile_coerce_value_type ctxt eI.at (Source.et eI);
-          ) es;
+            compile_coerce_null_type ctxt eI.at (Source.et eI) (T.subst s tI);
+          ) es ts1;
           emit ctxt W.[call (as_direct_loc loc @@ x.at)]
         | ClassScope this_t, T.FuncS ->
           let this = Source.(VarE ("this" @@ x.at) @@ x.at) in
@@ -771,10 +784,13 @@ and compile_exp ctxt e =
         let tmpidx = emit_local ctxt e11.at (lower_value_type ctxt e11.at t11) in
         compile_exp ctxt e11;
         emit ctxt W.[local_tee (tmpidx @@ e.at)];
-        List.iter (fun eI ->
+        let ys, ts1, _ = T.as_func (Source.et e1) in
+        let subst = T.typ_subst ys (List.map Source.et ts) in
+        List.iter2 (fun eI tI ->
           compile_exp ctxt eI;
           compile_coerce_value_type ctxt eI.at (Source.et eI);
-        ) es;
+          compile_coerce_null_type ctxt eI.at (Source.et eI) (T.subst subst tI);
+        ) es ts1;
         (match s with
         | T.FuncS ->
           emit ctxt W.[
@@ -807,17 +823,19 @@ and compile_exp ctxt e =
       nyi e.at "generic object construction with casts allowed";
     let tcls, _ = T.as_inst (Source.et e) in
     let cls = lower_class ctxt e.at tcls in
-    List.iter (fun eI ->
+    let subst = T.typ_subst tcls.T.tparams (List.map Source.et ts) in
+    List.iter2 (fun eI tI ->
       compile_exp ctxt eI;
       compile_coerce_value_type ctxt eI.at (Source.et eI);
-    ) es;
+      compile_coerce_null_type ctxt eI.at (Source.et eI) (T.subst subst tI);
+    ) es tcls.T.vparams;
     compile_var ctxt x (T.Class tcls);
     emit ctxt W.[
       struct_get (cls.cls_idx @@ x.at) (cls_new @@ x.at);
       call_ref;
     ];
 
-  | NewArrayE (_t, e1, e2) ->
+  | NewArrayE (t, e1, e2) ->
     let typeidx = lower_var_type ctxt e.at (Source.et e) in
     let t' = lower_value_type ctxt e1.at (Source.et e1) in
     let tmpidx = emit_local ctxt e1.at t' in
@@ -825,6 +843,7 @@ and compile_exp ctxt e =
     emit ctxt W.[local_set (tmpidx @@ e1.at)];
     compile_exp ctxt e2;
     compile_coerce_value_type ctxt e2.at (Source.et e2);
+    compile_coerce_null_type ctxt e2.at (Source.et e2) (Source.et t);
     emit ctxt W.[
       local_get (tmpidx @@ e1.at);
       rtt_canon (typeidx @@ e.at);
@@ -861,10 +880,12 @@ and compile_exp ctxt e =
       | BlockScope | FuncScope ->
         compile_exp ctxt e2;
         compile_coerce_value_type ctxt e2.at (Source.et e2);
+        compile_coerce_null_type ctxt e2.at (Source.et e2) (Source.et e1);
         emit_instr ctxt x.at W.(local_set (as_direct_loc loc @@ x.at))
       | GlobalScope ->
         compile_exp ctxt e2;
         compile_coerce_value_type ctxt e2.at (Source.et e2);
+        compile_coerce_null_type ctxt e2.at (Source.et e2) (Source.et e1);
         emit_instr ctxt x.at W.(global_set (as_direct_loc loc @@ x.at))
       | ClassScope this_t ->
         let this = Source.(VarE ("this" @@ x.at) @@ x.at) in
@@ -879,17 +900,20 @@ and compile_exp ctxt e =
       compile_exp ctxt e12;
       compile_exp ctxt e2;
       compile_coerce_value_type ctxt e2.at (Source.et e2);
+      compile_coerce_null_type ctxt e2.at (Source.et e2) (T.as_array (Source.et e11));
       emit ctxt W.[array_set (typeidx @@ e.at)]
 
     | DotE (e11, x) ->
       let t11 = Source.et e11 in
-      let cls = lower_class ctxt e1.at (fst (T.as_inst t11)) in
+      let tcls, _ = T.as_inst t11 in
+      let cls = lower_class ctxt e1.at tcls in
       let lazy cls_def = cls.def in
       let s, loc = (E.find_val x cls_def.env).it in
       assert (s = T.VarS);
       compile_exp ctxt e11;
       compile_exp ctxt e2;
       compile_coerce_value_type ctxt e2.at (Source.et e2);
+      compile_coerce_null_type ctxt e2.at (Source.et e2) (snd (List.assoc x.it tcls.T.def));
       emit ctxt W.[struct_set (cls.inst_idx @@ e11.at)
         (as_direct_loc loc @@ x.at)]
 
@@ -898,14 +922,7 @@ and compile_exp ctxt e =
 
   | AnnotE (e1, t) ->
     compile_exp ctxt e1;
-    (* Hack to handle annotated null *)
-    if T.sub (Source.et e1) T.Null then begin
-      let ht = lower_heap_type ctxt e.at (Source.et t) in
-      emit ctxt W.[
-        drop;
-        ref_null ht;
-      ]
-    end
+    compile_coerce_null_type ctxt e1.at (Source.et e1) (Source.et t);
 
   | CastE (e1, t) ->
     nyi e.at "casts"
@@ -945,8 +962,9 @@ and compile_exp ctxt e =
       );
     )
 
-  | RetE e ->
-    compile_exp ctxt e;
+  | RetE e1 ->
+    compile_exp ctxt e1;
+    compile_coerce_null_type ctxt e1.at (Source.et e1) ctxt.ext.ret;
     emit ctxt W.[return]
 
   | BlockE ds ->
@@ -1073,7 +1091,7 @@ and compile_dec pass ctxt d =
   | FuncD (x, _ys, _xts, _t, _e) when pass = VarPass ->
     env := E.extend_val !env x (T.FuncS, InstanceLoc x.it)
 
-  | FuncD (x, ys, xts, _t, e) ->
+  | FuncD (x, ys, xts, tr, e) ->
     if ys <> [] && not !Flags.parametric then
       nyi d.at "generic function definitions with casts allowed";
     let t = snd (Source.et d) in
@@ -1099,6 +1117,7 @@ and compile_dec pass ctxt d =
         let _, env' = current_scope ctxt in
         env' := E.extend_val !env' x (T.FuncS, DirectLoc idx);
         let ctxt = enter_scope ctxt FuncScope in
+        let ctxt = {ctxt with ext = {ctxt.ext with ret = Source.et tr}} in
         let _, env = current_scope ctxt in
         let this_param = if pass = FuncPass then emit_param ctxt x.at else -1l in
         List.iter (fun (x, _) ->

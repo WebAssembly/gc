@@ -18,19 +18,19 @@ assert (new Even(4)).test();
 assert (new Odd(7)).test();
 
 class Stepper() {
-  func step() : Stepper { return null : Stepper };
+  func step() : Stepper { return null };
 };
 
 class Ping(n : Int) <: Stepper() {
   func step() : Stepper {
-    if (n == 0) { return null : Stepper };
+    if (n == 0) { return null };
     return new Pong(n - 1);
   };
 };
 
 class Pong(n : Int) <: Stepper() {
   func step() : Stepper {
-    if (n == 0) { return null : Stepper };
+    if (n == 0) { return null };
     return new Ping(n - 1);
   };
 };
