@@ -92,13 +92,20 @@ let make_ctxt ext = {ext; int = make_internal ()}
 
 (* Lookup *)
 
+let lookup_def_type_opt ctxt idx : W.def_type option =
+  Option.map W.Source.it !(W.Lib.List32.nth (List.rev ctxt.int.types.list) idx)
+
 let lookup_def_type ctxt idx : W.def_type =
   (Option.get !(W.Lib.List32.nth (List.rev ctxt.int.types.list) idx)).W.Source.it
 
-let lookup_param_type ctxt idx i : W.value_type =
+let lookup_func_type ctxt idx : W.func_type =
   match lookup_def_type ctxt idx with
-  | W.(FuncDefType (FuncType (ts, _))) -> List.nth ts i
+  | W.(FuncDefType ft) -> ft
   | _ -> assert false
+
+let lookup_param_type ctxt idx i : W.value_type =
+  let W.(FuncType (ts, _)) = lookup_func_type ctxt idx in
+  W.Lib.List32.nth ts i
 
 let lookup_field_type ctxt idx i : W.value_type =
   match lookup_def_type ctxt idx with
@@ -196,19 +203,26 @@ let emit_let ctxt at bt ts f =
   let locals = List.map (fun t -> t @@ at) ts in
   emit_instr ctxt at (W.let_ bt locals (get_entities ctxt'.int.instrs))
 
-let emit_func ctxt at ts1' ts2' f : int32 =
-  let ft = W.(FuncType (ts1', ts2')) in
-  let typeidx = emit_type ctxt at W.(FuncDefType ft) in
+let emit_func_deferred ctxt at
+  : int32 * ('a ctxt -> W.value_type list -> W.value_type list ->
+('a ctxt -> int32 -> unit) -> unit) =
   let idx, func = alloc_entity ctxt.int.funcs in
-  let ctxt' = {ctxt with int =
-    {ctxt.int with locals = make_entities (); instrs = make_entities ()}} in
-  f ctxt' idx;
-  define_entity func (
-    { W.ftype = typeidx @@ at;
-      W.locals = get_entities ctxt'.int.locals;
-      W.body = get_entities ctxt'.int.instrs;
-    } @@ at
-  );
+  idx, fun ctxt ts1' ts2' f ->
+    let ft = W.(FuncType (ts1', ts2')) in
+    let typeidx = emit_type ctxt at W.(FuncDefType ft) in
+    let ctxt' = {ctxt with int =
+      {ctxt.int with locals = make_entities (); instrs = make_entities ()}} in
+    f ctxt' idx;
+    define_entity func (
+      { W.ftype = typeidx @@ at;
+        W.locals = get_entities ctxt'.int.locals;
+        W.body = get_entities ctxt'.int.instrs;
+      } @@ at
+    )
+
+let emit_func ctxt at ts1' ts2' f : int32 =
+  let idx, define = emit_func_deferred ctxt at in
+  define ctxt ts1' ts2' f;
   idx
 
 let emit_func_ref ctxt _at idx =

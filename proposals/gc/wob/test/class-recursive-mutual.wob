@@ -1,7 +1,5 @@
-// @FAIL-WASM
-
 // Simple mutual recursive classes
-
+/*
 class Even(n : Int) {
   func test() : Bool {
     if (n == 0) { return true };
@@ -19,33 +17,32 @@ class Odd(n : Int) {
 assert (new Even(4)).test();
 assert (new Odd(7)).test();
 
-
 class Stepper() {
-  func step() : Stepper { return null };
+  func step() : Stepper { return null : Stepper };
 };
 
-class EvenStepper(n : Int) <: Stepper() {
-  func step() : OddStepper {
-    if (n == 0) { return null };
-    return new OddStepper(n - 1);
+class Ping(n : Int) <: Stepper() {
+  func step() : Stepper {
+    if (n == 0) { return null : Stepper };
+    return new Pong(n - 1);
   };
 };
 
-class OddStepper(n : Int) <: Stepper() {
-  func step() : EvenStepper {
-    if (n == 0) { return null };
-    return new EvenStepper(n - 1);
+class Pong(n : Int) <: Stepper() {
+  func step() : Stepper {
+    if (n == 0) { return null : Stepper };
+    return new Ping(n - 1);
   };
 };
 
 var n : Int = 7;
-var stepper : Stepper = new EvenStepper(n);
+var stepper : Stepper = new Ping(n);
 while (stepper != null) {
   stepper := stepper.step();
   n := n-1;
 };
 assert (n == -1);
-
+*/
 
 // Expression evaluator and derivatives
 

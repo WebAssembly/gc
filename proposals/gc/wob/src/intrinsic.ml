@@ -160,8 +160,9 @@ let compile_text_eq ctxt : int32 =
               local_get (arg2idx @@ at);
               local_get (lenidx @@ at);
               array_get_u (typeidx @@ at);
-              i32_eq;
-              br_if (0l @@ at);
+              i32_ne;
+              br_if (2l @@ at);
+              br (0l @@ at);
             ])
           ]);
           i32_const (1l @@ at);

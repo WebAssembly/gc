@@ -40,9 +40,13 @@ assert foo == "foo";
 assert barb == "barb";
 assert foobarb == "foobarb";
 assert barbfoo == "barbfoo";
+assert "x" == "x";
 
 assert empty != foo;
 assert foo != foobarb;
+assert "x" != "y";
+
+assert ! ("x" == "y");
 
 assert ! (empty != empty);
 assert ! (foo != foo);
@@ -51,3 +55,4 @@ assert ! (foo != "foo");
 assert ! (barb != "barb");
 assert ! (foobarb != "foobarb");
 assert ! (barbfoo != "barbfoo");
+assert ! ("x" != "x");

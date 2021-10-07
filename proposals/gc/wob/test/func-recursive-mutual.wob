@@ -1,5 +1,3 @@
-// @FAIL-WASM
-
 func even(n : Int) : Bool {
   if (n == 0) { return true };
   return odd(n - 1);

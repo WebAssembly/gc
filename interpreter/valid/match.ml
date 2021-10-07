@@ -188,8 +188,8 @@ and match_struct_type c a (StructType fts1) (StructType fts2) =
 and match_array_type c a (ArrayType ft1) (ArrayType ft2) =
   match_field_type c a ft1 ft2
 
-and match_func_type c a ft1 ft2 =
-  eq_func_type c [] ft1 ft2
+and match_func_type c a (FuncType (ts11, ts12)) (FuncType (ts21, ts22)) =
+  match_result_type c a ts21 ts11 && match_result_type c a ts12 ts22
 
 and match_table_type c a (TableType (lim1, t1)) (TableType (lim2, t2)) =
   match_limits c a lim1 lim2 && eq_ref_type c [] t1 t2

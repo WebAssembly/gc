@@ -20,8 +20,10 @@ val make_ctxt : 'a -> 'a ctxt
 
 (* Lookup *)
 
+val lookup_def_type_opt : 'a ctxt -> int32 -> W.def_type option
 val lookup_def_type : 'a ctxt -> int32 -> W.def_type
-val lookup_param_type : 'a ctxt -> int32 -> int -> W.value_type
+val lookup_func_type : 'a ctxt -> int32 -> W.func_type
+val lookup_param_type : 'a ctxt -> int32 -> int32 -> W.value_type
 val lookup_field_type : 'a ctxt -> int32 -> int32 -> W.value_type
 val lookup_ref_field_type : 'a ctxt -> int32 -> int32 -> int32
 
@@ -58,6 +60,8 @@ val emit_let : 'a ctxt -> W.region -> W.block_type -> W.value_type list ->
 
 val emit_func : 'a ctxt -> W.region -> W.value_type list -> W.value_type list ->
   ('a ctxt -> int32 -> unit) -> int32
+val emit_func_deferred : 'a ctxt -> W.region -> 
+  int32 * ('a ctxt -> W.value_type list -> W.value_type list -> ('a ctxt -> int32 -> unit) -> unit)
 
 val emit_func_ref : 'a ctxt -> W.region -> int32 -> unit
 val emit_start : 'a ctxt -> W.region -> int32 -> unit
