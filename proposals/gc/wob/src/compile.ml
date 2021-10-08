@@ -60,7 +60,7 @@ let make_env () =
   ) Prelude.vals;
   env
 
-type pass = AllocPass | FullPass | FuncPass | LetPass | VarPass
+type pass = FullPass | FuncPass | LetPass | VarPass
 
 
 (* Class table *)
@@ -975,28 +975,66 @@ and compile_exp ctxt e =
 
 (*
  * Block and function scopes are compiled in two passes:
- * 1. AllocPass, assigning function indices
+ * 1. alloc funcs, assigning function indices (to deal with mutual recursion)
  * 2. FullPass, actually compiling everything
  *
  * Class scopes are compiled in four passes:
- * 1. AllocPass, assigning function indices
+ * 1. alloc funcs, assigning function indices
  * 2. FuncPass, compiling the methods (invoked as part of class declaration)
  * 3. LetPass, compiling let initialisation (invoked when compiling the constructor)
  * 4. VarPass, compiling var initialisation and exp (likewise)
  *)
 
+and alloc_funcdec ctxt d =
+  let scope, env = current_scope ctxt in
+  match d.it with
+  | ExpD _ | LetD _ | VarD _ | TypD _ ->
+    ()
+
+  | FuncD (x, _, _, _, _) ->
+    let idx, define = emit_func_deferred ctxt d.at in
+    ctxt.ext.funcs := FuncEnv.add idx define !(ctxt.ext.funcs);
+    env := E.extend_val !env x (T.FuncS, DirectLoc idx)
+
+  | ClassD (x, _, _, _, _) ->
+    let tcls = T.as_class (snd (Source.et d)) in
+    let cls = lower_class ctxt d.at tcls in
+    let cls_ht = W.(DefHeapType (SynVar cls.cls_idx)) in
+    let cls_vt = W.(RefType (Nullable, cls_ht)) in
+    let idx =
+      match scope with
+      | BlockScope | FuncScope -> emit_local ctxt x.at cls_vt
+      | GlobalScope ->
+        let const = W.[ref_null cls_ht @@ d.at] @@ d.at in
+        emit_global ctxt x.at W.Mutable cls_vt const
+      | ClassScope _ -> nyi d.at "nested class definitions"
+      | PreScope -> assert false
+    in
+
+    let new_idx, define_new = emit_func_deferred ctxt d.at in
+    let pre_alloc_idx, define_pre_alloc = emit_func_deferred ctxt d.at in
+    let post_alloc_idx, define_post_alloc = emit_func_deferred ctxt d.at in
+    let lazy cls_def = cls.def in
+    cls_def.new_idx <- new_idx;
+    cls_def.pre_alloc_idx <- pre_alloc_idx;
+    cls_def.post_alloc_idx <- post_alloc_idx;
+    ctxt.ext.funcs := !(ctxt.ext.funcs)
+      |> FuncEnv.add new_idx define_new
+      |> FuncEnv.add pre_alloc_idx define_pre_alloc
+      |> FuncEnv.add post_alloc_idx define_post_alloc;
+
+    env := E.extend_val !env x (T.ClassS, DirectLoc idx);
+
+
 and compile_dec pass ctxt d =
   let emit ctxt = List.iter (emit_instr ctxt d.at) in
   let scope, env = current_scope ctxt in
   match d.it with
-  | ExpD _ when pass = AllocPass || pass = FuncPass || pass = LetPass ->
+  | ExpD _ when pass = FuncPass || pass = LetPass ->
     ()
 
   | ExpD e ->
     compile_exp ctxt e
-
-  | LetD (x, _e) when pass = AllocPass ->
-    ()
 
   | LetD (x, _e) when pass = FuncPass || pass = VarPass ->
     env := E.extend_val !env x (T.LetS, InstanceLoc x.it)
@@ -1030,9 +1068,6 @@ and compile_dec pass ctxt d =
         DirectLoc idx
     in
     env := E.extend_val !env x (T.LetS, loc)
-
-  | VarD _ when pass = AllocPass ->
-    ()
 
   | VarD (x, _, _e) when pass = LetPass ->
     emit ctxt (default_exp ctxt x.at (snd (Source.et d)))
@@ -1079,11 +1114,6 @@ and compile_dec pass ctxt d =
 
   | TypD _ ->
     ()
-
-  | FuncD (x, _ys, _xts, _t, _e) when pass = AllocPass ->
-    let idx, define = emit_func_deferred ctxt d.at in
-    ctxt.ext.funcs := FuncEnv.add idx define !(ctxt.ext.funcs);
-    env := E.extend_val !env x (T.FuncS, DirectLoc idx)
 
   | FuncD _ when pass = LetPass ->
     ()
@@ -1165,35 +1195,6 @@ and compile_dec pass ctxt d =
         compile_exp ctxt e
       )
 
-  | ClassD (x, _ys, _xts, _sup_opt, _ds) when pass = AllocPass ->
-    let tcls = T.as_class (snd (Source.et d)) in
-    let cls = lower_class ctxt d.at tcls in
-    let cls_ht = W.(DefHeapType (SynVar cls.cls_idx)) in
-    let cls_vt = W.(RefType (Nullable, cls_ht)) in
-    let idx =
-      match scope with
-      | BlockScope | FuncScope -> emit_local ctxt x.at cls_vt
-      | GlobalScope ->
-        let const = W.[ref_null cls_ht @@ d.at] @@ d.at in
-        emit_global ctxt x.at W.Mutable cls_vt const
-      | ClassScope _ -> nyi d.at "nested class definitions"
-      | PreScope -> assert false
-    in
-
-    let new_idx, define_new = emit_func_deferred ctxt d.at in
-    let pre_alloc_idx, define_pre_alloc = emit_func_deferred ctxt d.at in
-    let post_alloc_idx, define_post_alloc = emit_func_deferred ctxt d.at in
-    let lazy cls_def = cls.def in
-    cls_def.new_idx <- new_idx;
-    cls_def.pre_alloc_idx <- pre_alloc_idx;
-    cls_def.post_alloc_idx <- post_alloc_idx;
-    ctxt.ext.funcs := !(ctxt.ext.funcs)
-      |> FuncEnv.add new_idx define_new
-      |> FuncEnv.add pre_alloc_idx define_pre_alloc
-      |> FuncEnv.add post_alloc_idx define_post_alloc;
-
-    env := E.extend_val !env x (T.ClassS, DirectLoc idx);
-
   | ClassD _ when pass <> FullPass ->
     nyi d.at "nested class definitions"
 
@@ -1241,7 +1242,7 @@ and compile_dec pass ctxt d =
 
     (* Compile own functions *)
     let ctxt = {ctxt with ext = {ctxt.ext with self = x.it; tcls = Some tcls}} in
-    compile_decs AllocPass ctxt ds;
+    List.iter (alloc_funcdec ctxt) ds;
     compile_decs FuncPass ctxt ds;
     let func_env = !env in
     env := save_env;
@@ -1500,13 +1501,12 @@ and compile_decs pass ctxt ds =
   | [d] -> compile_dec pass ctxt d
   | d::ds' ->
     compile_dec pass ctxt d;
-    if pass <> AllocPass && fst (Source.et d) <> T.Tup [] then
-      emit_instr ctxt d.at W.(drop);
+    if fst (Source.et d) <> T.Tup [] then emit_instr ctxt d.at W.(drop);
     compile_decs pass ctxt ds'
 
 
 and compile_block ctxt ds =
-  compile_decs AllocPass ctxt ds;
+  List.iter (alloc_funcdec ctxt) ds;
   compile_decs FullPass ctxt ds
 
 
