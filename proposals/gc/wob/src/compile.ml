@@ -16,6 +16,10 @@ let nyi at s = raise (NYI (at, s))
 
 (* Helpers *)
 
+let type_of = Source.et
+let result_type_of d = fst (type_of d)
+let bind_type_of d = snd (type_of d)
+
 let (@@) = W.Source.(@@)
 
 let i32 = W.I32.of_int_s
@@ -574,19 +578,19 @@ and compile_exp ctxt e =
   let emit ctxt = List.iter (emit_instr ctxt e.at) in
   match e.it with
   | VarE x ->
-    compile_var ctxt x (Source.et e)
+    compile_var ctxt x (type_of e)
 
   | LitE l ->
     compile_lit ctxt l e.at
 
   | UnE (op, e1) ->
-    (match op, Source.et e with
+    (match op, type_of e with
     | NegOp, T.Int -> emit ctxt W.[i32_const (0l @@ e.at)]
     | InvOp, T.Int -> emit ctxt W.[i32_const (-1l @@ e.at)]
     | _ -> ()
     );
     compile_exp ctxt e1;
-    (match op, Source.et e with
+    (match op, type_of e with
     | PosOp, T.Int -> ()
     | PosOp, T.Float -> ()
     | NegOp, T.Int -> emit ctxt W.[i32_sub]
@@ -599,7 +603,7 @@ and compile_exp ctxt e =
   | BinE (e1, op, e2) ->
     compile_exp ctxt e1;
     compile_exp ctxt e2;
-    (match op, Source.et e with
+    (match op, type_of e with
     | AddOp, T.Int -> emit ctxt W.[i32_add]
     | SubOp, T.Int -> emit ctxt W.[i32_sub]
     | MulOp, T.Int -> emit ctxt W.[i32_mul]
@@ -622,7 +626,7 @@ and compile_exp ctxt e =
   | RelE (e1, op, e2) ->
     compile_exp ctxt e1;
     compile_exp ctxt e2;
-    (match op, T.lub (Source.et e1) (Source.et e2) with
+    (match op, T.lub (type_of e1) (type_of e2) with
     | EqOp, (T.Int | T.Byte | T.Bool) -> emit ctxt W.[i32_eq]
     | NeOp, (T.Int | T.Byte | T.Bool) -> emit ctxt W.[i32_ne]
     | LtOp, (T.Int | T.Byte | T.Bool) -> emit ctxt W.[i32_lt_s]
@@ -662,55 +666,55 @@ and compile_exp ctxt e =
 
   | BoxE e1 ->
     compile_exp ctxt e1;
-    (match Source.et e1 with
+    (match type_of e1 with
     | T.Bool | T.Byte ->
       emit ctxt W.[i31_new]
     | _ ->
-      let typeidx = lower_var_type ctxt e.at (Source.et e) in
-      compile_coerce_value_type ctxt e1.at (Source.et e1);
+      let typeidx = lower_var_type ctxt e.at (type_of e) in
+      compile_coerce_value_type ctxt e1.at (type_of e1);
       emit ctxt W.[rtt_canon (typeidx @@ e.at); struct_new (typeidx @@ e.at)]
     )
 
   | UnboxE e1 ->
     compile_exp ctxt e1;
-    (match Source.et e with
+    (match type_of e with
     | T.Bool | T.Byte ->
       emit ctxt W.[i31_get_u]
     | _ ->
-      let typeidx = lower_var_type ctxt e.at (Source.et e1) in
+      let typeidx = lower_var_type ctxt e.at (type_of e1) in
       let struct_get_sxopt =
-        match Source.et e with
+        match type_of e with
         | T.Bool | T.Byte -> W.struct_get_u
         | _ -> W.struct_get
       in
       emit ctxt [struct_get_sxopt (typeidx @@ e.at) (0l @@ e.at)];
-      compile_coerce_block_type ctxt e.at (Source.et e)
+      compile_coerce_block_type ctxt e.at (type_of e)
     )
 
   | TupE [] ->
     ()
 
   | TupE es ->
-    let typeidx = lower_var_type ctxt e.at (Source.et e) in
+    let typeidx = lower_var_type ctxt e.at (type_of e) in
     List.iter (fun eI ->
       compile_exp ctxt eI;
-      compile_coerce_value_type ctxt eI.at (Source.et eI);
+      compile_coerce_value_type ctxt eI.at (type_of eI);
     ) es;
     emit ctxt W.[rtt_canon (typeidx @@ e.at); struct_new (typeidx @@ e.at)]
 
   | ProjE (e1, n) ->
-    let typeidx = lower_var_type ctxt e.at (Source.et e1) in
+    let typeidx = lower_var_type ctxt e.at (type_of e1) in
     compile_exp ctxt e1;
     let struct_get_sxopt =
-      match Source.et e with
+      match type_of e with
       | T.Bool | T.Byte -> W.struct_get_u
       | _ -> W.struct_get
     in
     emit ctxt [struct_get_sxopt (typeidx @@ e.at) (i32 n @@ e.at)];
-    compile_coerce_abs_block_type ctxt e.at (Source.et e)
+    compile_coerce_abs_block_type ctxt e.at (type_of e)
 
   | ArrayE es ->
-    let typeidx = lower_var_type ctxt e.at (Source.et e) in
+    let typeidx = lower_var_type ctxt e.at (type_of e) in
     emit ctxt W.[
       i32_const (i32 (List.length es) @@ e.at);
       rtt_canon (typeidx @@ e.at);
@@ -727,26 +731,26 @@ and compile_exp ctxt e =
     List.iteri (fun i eI ->
       emit ctxt W.[local_get (tmpidx @@ e.at); i32_const (i32 i @@ e.at)];
       compile_exp ctxt eI;
-      compile_coerce_value_type ctxt eI.at (Source.et eI);
+      compile_coerce_value_type ctxt eI.at (type_of eI);
       emit ctxt W.[array_set (typeidx @@ e.at)];
     ) es
 
   | LenE e1 ->
-    let typeidx = lower_var_type ctxt e.at (Source.et e1) in
+    let typeidx = lower_var_type ctxt e.at (type_of e1) in
     compile_exp ctxt e1;
     emit ctxt W.[array_len (typeidx @@ e.at)]
 
   | IdxE (e1, e2) ->
-    let typeidx = lower_var_type ctxt e.at (Source.et e1) in
+    let typeidx = lower_var_type ctxt e.at (type_of e1) in
     compile_exp ctxt e1;
     compile_exp ctxt e2;
     let array_get_sxopt =
-      match Source.et e with
+      match type_of e with
       | T.Bool | T.Byte -> W.array_get_u
       | _ -> W.array_get
     in
     emit ctxt [array_get_sxopt (typeidx @@ e.at)];
-    compile_coerce_abs_block_type ctxt e.at (Source.et e)
+    compile_coerce_abs_block_type ctxt e.at (type_of e)
 
   | CallE (e1, ts, es) ->
     if ts <> [] && not !Flags.parametric then
@@ -758,12 +762,12 @@ and compile_exp ctxt e =
         (match scope, s with
         | PreScope, _ -> assert false
         | GlobalScope, T.FuncS ->
-          let ys, ts1, _ = T.as_func (Source.et e1) in
-          let s = T.typ_subst ys (List.map Source.et ts) in
+          let ys, ts1, _ = T.as_func (type_of e1) in
+          let s = T.typ_subst ys (List.map type_of ts) in
           List.iter2 (fun eI tI->
             compile_exp ctxt eI;
-            compile_coerce_value_type ctxt eI.at (Source.et eI);
-            compile_coerce_null_type ctxt eI.at (Source.et eI) (T.subst s tI);
+            compile_coerce_value_type ctxt eI.at (type_of eI);
+            compile_coerce_null_type ctxt eI.at (type_of eI) (T.subst s tI);
           ) es ts1;
           emit ctxt W.[call (as_direct_loc loc @@ x.at)]
         | ClassScope this_t, T.FuncS ->
@@ -774,22 +778,22 @@ and compile_exp ctxt e =
         | _, T.FuncS -> nyi x.at "local function calls"
         | _ -> nyi e.at "indirect function calls"
         );
-        Source.et e1
+        type_of e1
 
       | DotE (e11, x) ->
-        let t11 = Source.et e11 in
+        let t11 = type_of e11 in
         let cls = lower_class ctxt e11.at (fst (T.as_inst t11)) in
         let lazy cls_def = cls.def in
         let s, loc = (E.find_val x cls_def.env).it in
         let tmpidx = emit_local ctxt e11.at (lower_value_type ctxt e11.at t11) in
         compile_exp ctxt e11;
         emit ctxt W.[local_tee (tmpidx @@ e.at)];
-        let ys, ts1, _ = T.as_func (Source.et e1) in
-        let subst = T.typ_subst ys (List.map Source.et ts) in
+        let ys, ts1, _ = T.as_func (type_of e1) in
+        let subst = T.typ_subst ys (List.map type_of ts) in
         List.iter2 (fun eI tI ->
           compile_exp ctxt eI;
-          compile_coerce_value_type ctxt eI.at (Source.et eI);
-          compile_coerce_null_type ctxt eI.at (Source.et eI) (T.subst subst tI);
+          compile_coerce_value_type ctxt eI.at (type_of eI);
+          compile_coerce_null_type ctxt eI.at (type_of eI) (T.subst subst tI);
         ) es ts1;
         (match s with
         | T.FuncS ->
@@ -803,7 +807,7 @@ and compile_exp ctxt e =
         | T.ClassS -> nyi e.at "nested classes"
         | T.ProhibitedS -> assert false
         );
-        let tcls, _ = T.as_inst (Source.et e11) in
+        let tcls, _ = T.as_inst (type_of e11) in
         (* Find root type *)
         let rec find_root tcls =
           match Option.join (Option.map find_root (T.sup_cls tcls)) with
@@ -816,18 +820,18 @@ and compile_exp ctxt e =
     (* TODO: this isn't enough once we have closures or nested classes *)
     let _, _, t = T.as_func t1 in
     if T.is_var t then
-      compile_coerce_abs_block_type ctxt e.at (Source.et e)
+      compile_coerce_abs_block_type ctxt e.at (type_of e)
 
   | NewE (x, ts, es) ->
     if ts <> [] && not !Flags.parametric then
       nyi e.at "generic object construction with casts allowed";
-    let tcls, _ = T.as_inst (Source.et e) in
+    let tcls, _ = T.as_inst (type_of e) in
     let cls = lower_class ctxt e.at tcls in
-    let subst = T.typ_subst tcls.T.tparams (List.map Source.et ts) in
+    let subst = T.typ_subst tcls.T.tparams (List.map type_of ts) in
     List.iter2 (fun eI tI ->
       compile_exp ctxt eI;
-      compile_coerce_value_type ctxt eI.at (Source.et eI);
-      compile_coerce_null_type ctxt eI.at (Source.et eI) (T.subst subst tI);
+      compile_coerce_value_type ctxt eI.at (type_of eI);
+      compile_coerce_null_type ctxt eI.at (type_of eI) (T.subst subst tI);
     ) es tcls.T.vparams;
     compile_var ctxt x (T.Class tcls);
     emit ctxt W.[
@@ -836,14 +840,14 @@ and compile_exp ctxt e =
     ];
 
   | NewArrayE (t, e1, e2) ->
-    let typeidx = lower_var_type ctxt e.at (Source.et e) in
-    let t' = lower_value_type ctxt e1.at (Source.et e1) in
+    let typeidx = lower_var_type ctxt e.at (type_of e) in
+    let t' = lower_value_type ctxt e1.at (type_of e1) in
     let tmpidx = emit_local ctxt e1.at t' in
     compile_exp ctxt e1;
     emit ctxt W.[local_set (tmpidx @@ e1.at)];
     compile_exp ctxt e2;
-    compile_coerce_value_type ctxt e2.at (Source.et e2);
-    compile_coerce_null_type ctxt e2.at (Source.et e2) (Source.et t);
+    compile_coerce_value_type ctxt e2.at (type_of e2);
+    compile_coerce_null_type ctxt e2.at (type_of e2) (type_of t);
     emit ctxt W.[
       local_get (tmpidx @@ e1.at);
       rtt_canon (typeidx @@ e.at);
@@ -851,7 +855,7 @@ and compile_exp ctxt e =
     ]
 
   | DotE (e1, x) ->
-    let t1 = Source.et e1 in
+    let t1 = type_of e1 in
     let cls = lower_class ctxt e1.at (fst (T.as_inst t1)) in
     let lazy cls_def = cls.def in
     let s, loc = (E.find_val x cls_def.env).it in
@@ -859,13 +863,13 @@ and compile_exp ctxt e =
     (match s with
     | T.LetS | T.VarS ->
       let struct_get_sxopt =
-        match Source.et e with
+        match type_of e with
         | T.Bool | T.Byte -> W.struct_get_u
         | _ -> W.struct_get
       in
       emit ctxt [struct_get_sxopt (cls.inst_idx @@ e1.at)
         (as_direct_loc loc @@ x.at)];
-      compile_coerce_abs_block_type ctxt e.at (Source.et e)
+      compile_coerce_abs_block_type ctxt e.at (type_of e)
     | T.FuncS -> nyi e.at "closures"
     | T.ClassS -> nyi e.at "nested classes"
     | T.ProhibitedS -> assert false
@@ -879,13 +883,13 @@ and compile_exp ctxt e =
       | PreScope -> assert false
       | BlockScope | FuncScope ->
         compile_exp ctxt e2;
-        compile_coerce_value_type ctxt e2.at (Source.et e2);
-        compile_coerce_null_type ctxt e2.at (Source.et e2) (Source.et e1);
+        compile_coerce_value_type ctxt e2.at (type_of e2);
+        compile_coerce_null_type ctxt e2.at (type_of e2) (type_of e1);
         emit_instr ctxt x.at W.(local_set (as_direct_loc loc @@ x.at))
       | GlobalScope ->
         compile_exp ctxt e2;
-        compile_coerce_value_type ctxt e2.at (Source.et e2);
-        compile_coerce_null_type ctxt e2.at (Source.et e2) (Source.et e1);
+        compile_coerce_value_type ctxt e2.at (type_of e2);
+        compile_coerce_null_type ctxt e2.at (type_of e2) (type_of e1);
         emit_instr ctxt x.at W.(global_set (as_direct_loc loc @@ x.at))
       | ClassScope this_t ->
         let this = Source.(VarE ("this" @@ x.at) @@ x.at) in
@@ -895,16 +899,16 @@ and compile_exp ctxt e =
       )
 
     | IdxE (e11, e12) ->
-      let typeidx = lower_var_type ctxt e11.at (Source.et e11) in
+      let typeidx = lower_var_type ctxt e11.at (type_of e11) in
       compile_exp ctxt e11;
       compile_exp ctxt e12;
       compile_exp ctxt e2;
-      compile_coerce_value_type ctxt e2.at (Source.et e2);
-      compile_coerce_null_type ctxt e2.at (Source.et e2) (T.as_array (Source.et e11));
+      compile_coerce_value_type ctxt e2.at (type_of e2);
+      compile_coerce_null_type ctxt e2.at (type_of e2) (T.as_array (type_of e11));
       emit ctxt W.[array_set (typeidx @@ e.at)]
 
     | DotE (e11, x) ->
-      let t11 = Source.et e11 in
+      let t11 = type_of e11 in
       let tcls, _ = T.as_inst t11 in
       let cls = lower_class ctxt e1.at tcls in
       let lazy cls_def = cls.def in
@@ -912,8 +916,8 @@ and compile_exp ctxt e =
       assert (s = T.VarS);
       compile_exp ctxt e11;
       compile_exp ctxt e2;
-      compile_coerce_value_type ctxt e2.at (Source.et e2);
-      compile_coerce_null_type ctxt e2.at (Source.et e2) (snd (List.assoc x.it tcls.T.def));
+      compile_coerce_value_type ctxt e2.at (type_of e2);
+      compile_coerce_null_type ctxt e2.at (type_of e2) (snd (List.assoc x.it tcls.T.def));
       emit ctxt W.[struct_set (cls.inst_idx @@ e11.at)
         (as_direct_loc loc @@ x.at)]
 
@@ -922,7 +926,7 @@ and compile_exp ctxt e =
 
   | AnnotE (e1, t) ->
     compile_exp ctxt e1;
-    compile_coerce_null_type ctxt e1.at (Source.et e1) (Source.et t);
+    compile_coerce_null_type ctxt e1.at (type_of e1) (type_of t);
 
   | CastE (e1, t) ->
     nyi e.at "casts"
@@ -941,7 +945,7 @@ and compile_exp ctxt e =
     emit ctxt W.[i32_eqz; if_ W.voidbt [unreachable @@ e.at] []]
 
   | IfE (e1, e2, e3) ->
-    let bt = lower_block_type ctxt e.at (Source.et e) in
+    let bt = lower_block_type ctxt e.at (type_of e) in
     emit_block ctxt e.at W.block bt (fun ctxt ->
       emit_block ctxt e.at W.block W.voidbt (fun ctxt ->
         compile_exp ctxt e1;
@@ -964,7 +968,7 @@ and compile_exp ctxt e =
 
   | RetE e1 ->
     compile_exp ctxt e1;
-    compile_coerce_null_type ctxt e1.at (Source.et e1) ctxt.ext.ret;
+    compile_coerce_null_type ctxt e1.at (type_of e1) ctxt.ext.ret;
     emit ctxt W.[return]
 
   | BlockE ds ->
@@ -997,7 +1001,7 @@ and alloc_funcdec ctxt d =
     env := E.extend_val !env x (T.FuncS, DirectLoc idx)
 
   | ClassD (x, _, _, _, _) ->
-    let tcls = T.as_class (snd (Source.et d)) in
+    let tcls = T.as_class (bind_type_of d) in
     let cls = lower_class ctxt d.at tcls in
     let cls_ht = W.(DefHeapType (SynVar cls.cls_idx)) in
     let cls_vt = W.(RefType (Nullable, cls_ht)) in
@@ -1029,6 +1033,7 @@ and alloc_funcdec ctxt d =
 and compile_dec pass ctxt d =
   let emit ctxt = List.iter (emit_instr ctxt d.at) in
   let scope, env = current_scope ctxt in
+  let t = bind_type_of d in
   match d.it with
   | ExpD _ when pass = FuncPass || pass = LetPass ->
     ()
@@ -1040,7 +1045,6 @@ and compile_dec pass ctxt d =
     env := E.extend_val !env x (T.LetS, InstanceLoc x.it)
 
   | LetD (x, e) ->
-    let t = snd (Source.et d) in
     let t' = lower_value_type ctxt x.at t in
     compile_exp ctxt e;
     compile_coerce_value_type ctxt e.at t;
@@ -1070,13 +1074,12 @@ and compile_dec pass ctxt d =
     env := E.extend_val !env x (T.LetS, loc)
 
   | VarD (x, _, _e) when pass = LetPass ->
-    emit ctxt (default_exp ctxt x.at (snd (Source.et d)))
+    emit ctxt (default_exp ctxt x.at t)
 
   | VarD (x, _, _e) when pass = FuncPass ->
     env := E.extend_val !env x (T.VarS, InstanceLoc x.it)
 
   | VarD (x, _, e) ->
-    let t = snd (Source.et d) in
     let t' = lower_value_type ctxt x.at t in
     let loc =
       match scope with
@@ -1106,7 +1109,7 @@ and compile_dec pass ctxt d =
         let assign = Source.(AssignE (dot, e) @@ d.at) in
         this.et <- Some this_t;
         dot.et <- Some t;
-        assign.et <- Some (fst (Source.et d));
+        assign.et <- Some (result_type_of d);
         compile_exp ctxt assign;
         InstanceLoc x.it
     in
@@ -1124,7 +1127,6 @@ and compile_dec pass ctxt d =
   | FuncD (x, ys, xts, tr, e) ->
     if ys <> [] && not !Flags.parametric then
       nyi d.at "generic function definitions with casts allowed";
-    let t = snd (Source.et d) in
     let W.FuncType (ts1, ts2) = lower_func_type ctxt d.at t in
     let ts1', ts2', override_opt =
       if pass <> FuncPass then ts1, ts2, None else
@@ -1147,7 +1149,7 @@ and compile_dec pass ctxt d =
         let _, env' = current_scope ctxt in
         env' := E.extend_val !env' x (T.FuncS, DirectLoc idx);
         let ctxt = enter_scope ctxt FuncScope in
-        let ctxt = {ctxt with ext = {ctxt.ext with ret = Source.et tr}} in
+        let ctxt = {ctxt with ext = {ctxt.ext with ret = type_of tr}} in
         let _, env = current_scope ctxt in
         let this_param = if pass = FuncPass then emit_param ctxt x.at else -1l in
         List.iter (fun (x, _) ->
@@ -1173,14 +1175,14 @@ and compile_dec pass ctxt d =
               (* Downcast params if necessary (non-generic override of generic method) *)
               let i = ref 1 in
               List.iter2 (fun (x, t) param_t ->
-                let t' = lower_value_type ctxt t.at (Source.et t) in
+                let t' = lower_value_type ctxt t.at (type_of t) in
                 if t' <> param_t then begin
                   let local = emit_local ctxt x.at t' in
                   env := E.extend_val !env x (T.LetS, DirectLoc local);
                   emit ctxt W.[
                     local_get (i32 !i @@ x.at);
                   ];
-                  compile_coerce_abs_value_type ctxt x.at (Source.et t);
+                  compile_coerce_abs_value_type ctxt x.at (type_of t);
                   emit ctxt W.[
                     local_set (local @@ x.at);
                   ]
@@ -1201,7 +1203,7 @@ and compile_dec pass ctxt d =
   | ClassD (x, ys, xts, sup_opt, ds) ->
     if ys <> [] && not !Flags.parametric then
       nyi d.at "generic class definitions with casts allowed";
-    let tcls = T.as_class (snd (Source.et d)) in
+    let tcls = T.as_class t in
     let cls = lower_class ctxt d.at tcls in
     let lazy cls_def = cls.def in
     let cls_ht = W.(DefHeapType (SynVar cls.cls_idx)) in
@@ -1254,9 +1256,9 @@ and compile_dec pass ctxt d =
       | None -> -1l, no_region, cls, cls_def, T.Bot, W.i32t
       | Some sup ->
         let (x2, _, _) = sup.it in
-        let sup_cls = lower_class ctxt x2.at (Source.et sup) in
+        let sup_cls = lower_class ctxt x2.at (type_of sup) in
         let lazy sup_def = sup_cls.def in
-        let sup_t = T.Class (Source.et sup) in
+        let sup_t = T.Class (type_of sup) in
         let sup_ht = W.(DefHeapType (SynVar sup_cls.cls_idx)) in
         let sup_vt = W.(RefType (Nullable, sup_ht)) in
 
@@ -1501,7 +1503,7 @@ and compile_decs pass ctxt ds =
   | [d] -> compile_dec pass ctxt d
   | d::ds' ->
     compile_dec pass ctxt d;
-    if fst (Source.et d) <> T.Tup [] then emit_instr ctxt d.at W.(drop);
+    if result_type_of d <> T.Tup [] then emit_instr ctxt d.at W.(drop);
     compile_decs pass ctxt ds'
 
 
@@ -1534,20 +1536,20 @@ let compile_imp ctxt d =
             (lower_value_type ctxt xI.at t)
         | T.ProhibitedS -> assert false
       in env := E.extend_val !env x' (sort, DirectLoc idx)
-  ) xs (Source.et d)
+  ) xs (type_of d)
 
 let compile_prog p : W.module_ =
   let Prog (is, ds) = p.it in
   let emit ctxt = emit_instr ctxt p.at in
   let ctxt = enter_scope (make_ctxt ()) GlobalScope in
   List.iter (compile_imp ctxt) is;
-  let t' = lower_value_type ctxt p.at (Source.et p) in
-  let const = default_const ctxt p.at (Source.et p) in
+  let t' = lower_value_type ctxt p.at (type_of p) in
+  let const = default_const ctxt p.at (type_of p) in
   let result_idx = emit_global ctxt p.at W.Mutable t' const in
   let start_idx =
     emit_func ctxt p.at [] [] (fun ctxt _ ->
       compile_block ctxt ds;
-      compile_coerce_value_type ctxt p.at (Source.et p);
+      compile_coerce_value_type ctxt p.at (type_of p);
       emit ctxt W.(global_set (result_idx @@ p.at));
     )
   in
