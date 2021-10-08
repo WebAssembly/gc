@@ -611,17 +611,25 @@ and check_block env ds : T.typ * env =
   t, E.adjoin env1 env2
 
 and check_recdecs env ds t : T.typ * env =
-  match take_recgroup ds with
-  | [], [] -> t, E.empty
-  | [], d::ds' ->
-    let t', env1 = check_decs Full Fun.id env [d] t in
-    let t'', env2 = check_recdecs (E.adjoin env env1) ds' t' in
-    t'', E.adjoin env1 env2
-  | ds1, ds' ->
-    let _, env1 = check_decs Pre Fun.id env ds1 T.Bot in
-    let t', _ = check_decs Post Fun.id (E.adjoin env env1) ds1 t in
-    let t'', env2 = check_recdecs (E.adjoin env env1) ds' t' in
-    t'', E.adjoin env1 env2
+  let t2, env1, env2 =
+    match take_recgroup ds with
+    | [], [] -> t, E.empty, E.empty
+    | [], d::ds' ->
+      let t1, env1 = check_decs Full Fun.id env [d] t in
+      let t2, env2 = check_recdecs (E.adjoin env env1) ds' t1 in
+      t2, env1, env2
+    | ds1, ds' ->
+      let _, env1 = check_decs Pre Fun.id env ds1 T.Bot in
+      let t1, _ = check_decs Post Fun.id (E.adjoin env env1) ds1 t in
+      let t2, env2 = check_recdecs (E.adjoin env env1) ds' t1 in
+      t2, env1, env2
+  in
+  try t2, E.disjoint_union env1 env2 with E.Clash x ->
+    let at =
+      if E.Map.mem x env1.E.typs && E.Map.mem x env2.E.typs
+      then (E.Map.find x env2.E.typs).at
+      else (E.Map.find x env2.E.vals).at
+    in error at "duplicate definition for `%s`" x
 
 and take_recgroup ds : dec list * dec list =
   match ds with

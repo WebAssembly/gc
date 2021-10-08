@@ -1194,7 +1194,8 @@ and compile_dec pass ctxt d =
           env :=
             E.extend_val !env Source.("this" @@ x.at) (T.LetS, DirectLoc this)
         end;
-        compile_exp ctxt e
+        compile_exp ctxt e;
+        compile_coerce_null_type ctxt e.at (type_of e) (type_of tr)
       )
 
   | ClassD _ when pass <> FullPass ->
