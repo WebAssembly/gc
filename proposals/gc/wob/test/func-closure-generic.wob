@@ -1,4 +1,3 @@
-// @FLAGS -b
 // @FAIL-WASM
 
 // Generic functions
@@ -11,11 +10,11 @@ func foreach<T>(a : T[], f : T -> ()) {
   }
 };
 
-let a = [1, 2, 5, 6, -8];
+let a = [1$, 2$, 5$, 6$, (-8)$];
 
-var sum : Int = 0;
-foreach<Int>(a, func(k : Int) { sum := sum + k });
-assert sum == 6;
+var sum : Int$ = 0$;
+foreach<Int$>(a, func(k : Int$) { sum := (sum.$ + k.$)$ });
+assert sum.$ == 6;
 
 func fold<T, R>(a : T[], x : R, f : (Int, T, R) -> R) : R {
   var i : Int = 0;
@@ -27,18 +26,19 @@ func fold<T, R>(a : T[], x : R, f : (Int, T, R) -> R) : R {
   return r;
 };
 
-let sum2 = fold<Int, Int>(a, 0, func(i : Int, k : Int, r : Int) : Int { r + k });
-assert sum2 == 6;
+let sum2 = fold<Int$, Int$>(a, 0$,
+  func(i : Int, k : Int$, r : Int$) : Int$ { (r.$ + k.$)$ });
+assert sum2.$ == 6;
 
 
 // Generic closure
 
 func f<X>(x : X, f : <Y>(Y) -> Y) : (Int, X, Float) {
-  let t = (1, x, 1e100);
-  (f<Int>(t.0), f<X>(t.1), f<Float>(t.2));
+  let t = (1$, x, 1e100$);
+  (f<Int$>(t.0).$, f<X>(t.1), f<Float$>(t.2).$);
 };
 
-let t = f<Bool>(false, func<T>(x : T) : T { x });
+let t = f<Bool$>(false$, func<T>(x : T) : T { x });
 assert t.0 == 1;
-assert !t.1;
+assert !t.1.$;
 assert t.2 == 1e100;

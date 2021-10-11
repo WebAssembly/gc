@@ -1,21 +1,26 @@
-// @FAIL-WASM
-
 // Casts
 
 class C() {};
 class D() <: C() {};
-class E() <: D() {};
+class E() <: D() { func f() {}; };
 class F() <: D() {};
 
+let n = null;
 let c = new C();
 let d = new D();
 let e = new E();
 let f = new F();
 
+let no : Object = n;
 let co : Object = c;
 let do : Object = d;
 let eo : Object = e;
 let fo : Object = f;
+
+assert (no :> C == n);
+assert (no :> D == null);
+assert (no :> E == null);
+assert (no :> F == null);
 
 assert (co :> C == c);
 assert (co :> D == null);

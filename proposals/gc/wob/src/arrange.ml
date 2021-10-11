@@ -95,7 +95,7 @@ let rec exp e = match e.it with
   | DotE (e1, x) -> "DotE" $$ [exp e1; var x]
   | AssignE (e1, e2) -> "AssignE" $$ [exp e1; exp e2]
   | AnnotE (e1, t) -> "AnnotE"  $$ [exp e1; typ t]
-  | CastE (e1, t) -> "CastE"  $$ [exp e1; typ t]
+  | CastE (e1, y, ts) -> "CastE"  $$ [exp e1; var y] @ list typ ts
   | AssertE e1 -> "AssertE" $$ [exp e1]
   | IfE (e1, e2, e3) -> "IfE" $$ [exp e1; exp e2; exp e3]
   | WhileE (e1, e2) -> "WhileE" $$ [exp e1; exp e2]

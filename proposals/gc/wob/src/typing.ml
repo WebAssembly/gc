@@ -310,13 +310,21 @@ and check_exp' env e : T.typ =
         (T.to_string t2) (T.to_string t1);
     t2
 
-  | CastE (e1, t) ->
+  | CastE (e1, x, ts) ->
     let t1 = check_exp env e1 in
-    let t2 = check_typ env t in
+    let t2 =
+      match check_var env x with
+      | T.Class cls ->
+        let ts' = List.map (check_typ_boxed env) ts in
+        if List.length ts' <> List.length cls.T.tparams then
+          error x.at "wrong number of type arguments at class instantiation";
+        T.Inst (cls, ts')
+      | _ -> error x.at "class type expected but got %s" (T.to_string t1)
+    in
     if not (T.sub t1 T.Obj) then
       error e1.at "object type expected but got %s" (T.to_string t1);
     if not (T.sub t2 T.Obj) then
-      error t.at "object type expected as cast target";
+      error x.at "object type expected as cast target";
     t2
 
   | AssertE e1 ->

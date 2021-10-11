@@ -29,7 +29,7 @@ The `wob` implementation encompasses:
 * Compiler to Wasm (WIP)
 * A read-eval-print-loop that can run either interpreted or compiled code
 
-The language is fully implemented in the interpreter, but the compiler does not yet support closures and casts. It does, however, implement garbage-collected objects, tuples, arrays, text strings, classes, and generics, making use of [most of the constructs](#under-the-hood) in the GC proposal's MVP.
+The language is fully implemented in the interpreter, but the compiler does not yet support (1) closures and (2) casts over generic types. It does, however, implement garbage-collected objects, tuples, arrays, text strings, classes, casts, and generics, making use of [most of the constructs](#under-the-hood) in the GC proposal's MVP.
 
 For example, here is a short transcript of a REPL session with [`wob -c -x`](#invocation):
 ```
@@ -403,9 +403,41 @@ Wob bindings are compiled to Wasm as follows.
 | `class`         | immutable `global`| not supported yet | not supported yet |
 
 
-### Object and Class representation
+### Object representation
 
-Objects are represented in the obvious manner, as a struct whose first field is a reference to the dispatch table, while the rest of the fields represent the parameter, `let`, and `var` bindings of the class and its super classes, in definition order. Paremeter and `let` fields are immutable.
+Objects are represented in the obvious manner, as a struct whose first field is a reference to the dispatch table, while the rest of the fields represent:
+
+* arguments (immutable)
+* `let` fields (immutable)
+* `var` fields (mutable)
+
+of the class and its super classes, in definition order. Parameter and `let` fields are immutable.
+
+The dispatch table contains references to the function of the class and its super classes, in definition order. In addition, the last field of each dispatch table is a pointer to itself. This is also duplicated in place by dispatch tables for subclasses, so that each dispatch table is interleaved with references to the dispatch tables of all its super classes. The type of these references is `eqref`, and it is used to implement the class check for explicit casts. That is, the identity of dispatch tables is used as a proxy for class identities.
+
+For example, the dispatch tables for the classes in the following snippet,
+```
+class C() {
+  func f() {};
+};
+class D() <: C() {
+  func g() {};
+  func h() {};
+};
+class E() <: D() {
+  func f() {};  // override
+};
+```
+are:
+```
+$disp_C = [ $f_C | $disp_C ]
+$disp_D = [ $f_C | $disp_C | $g_D | $h_D | $disp_D ]
+$disp_E = [ $f_E | $disp_C | $g_D | $h_D | $disp_D | $disp_E ]
+```
+To check that an object's class is a subclass of `D`, the code first uses `br_on_cast` to down cast the object to the expected representation, which also implies that its dispatch table contains a slot for `$disp_D`. It then checks that the reference in that slot is equal to class `D`'s dispatch table.
+
+
+### Class representation
 
 Class declarations translate to a global binding a class _descriptor_, which is represented as a struct with the following fields:
 

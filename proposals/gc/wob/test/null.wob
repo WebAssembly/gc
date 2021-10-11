@@ -1,3 +1,5 @@
+// Flexible uses of null
+
 class C() {};
 func f<A>(x : C, y : Int$, z : Int[], u : (), v : (Int, Int), w : A) {};
 

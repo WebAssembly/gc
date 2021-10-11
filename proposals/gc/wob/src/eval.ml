@@ -256,11 +256,11 @@ let rec eval_exp env e : V.value =
   | AnnotE (e1, _t) ->
     eval_exp env e1
 
-  | CastE (e1, t) ->
+  | CastE (e1, x, ts) ->
     let v1 = eval_exp env e1 in
     (match v1 with
     | V.Null -> V.Null
-    | V.Obj (t', _) when T.sub t' (eval_typ env t) -> v1
+    | V.Obj (t', _) when T.sub t' (eval_typ env (VarT (x, ts) @@ e.at)) -> v1
     | V.Obj _ -> V.Null
     | _ -> crash e.at "runtime type error at cast"
     )

@@ -251,10 +251,12 @@ and lower_heap_type ctxt at t : W.heap_type =
 and lower_var_type ctxt at t : int32 =
   match t with
   | T.Obj ->
-    emit_type ctxt at W.(StructDefType (StructType []))
+    let disp_idx = emit_type ctxt at W.(StructDefType (StructType [])) in
+    let disp_vt = W.(RefType (NonNullable, DefHeapType (SynVar disp_idx))) in
+    let disp_ft = W.(FieldType (ValueStorageType disp_vt, Immutable)) in
+    emit_type ctxt at W.(StructDefType (StructType [disp_ft]))
   | T.Inst (tcls, ts) ->
-    if ts <> [] && not !Flags.parametric then
-      nyi at "generic instance types with casts allowed";
+    (* TODO: reify generic parameters *)
     (lower_class ctxt at tcls).inst_idx
   | T.Text ->
     let ft = W.(FieldType (PackedStorageType Pack8, Mutable)) in
@@ -289,11 +291,11 @@ and lower_block_value_type ctxt at t : W.value_type option =
 and lower_block_type ctxt at t : W.block_type =
   W.ValBlockType (lower_block_value_type ctxt at t)
 
-and _lower_block_type2 ctxt at t1 t2 : W.block_type =
-  let t1' = lower_value_type ctxt at t1 in
-  let t2' = lower_value_type ctxt at t1 in
+and lower_block_type_func ctxt at ts1 ts2 : W.block_type =
+  let ts1' = List.map (lower_value_type ctxt at) ts1 in
+  let ts2' = List.map (lower_value_type ctxt at) ts2 in
   W.(VarBlockType (SynVar
-    (emit_type ctxt at (FuncDefType (FuncType ([t1'], [t2']))))))
+    (emit_type ctxt at (FuncDefType (FuncType (ts1', ts2'))))))
 
 and lower_stack_type ctxt at t : W.value_type list =
   Option.to_list (lower_block_value_type ctxt at t)
@@ -301,15 +303,13 @@ and lower_stack_type ctxt at t : W.value_type list =
 and lower_func_type ctxt at t : W.func_type =
   match t with
   | T.Func (ys, ts1, t2) ->
-    if ys <> [] && not !Flags.parametric then
-      nyi at "generic functions with casts allowed";
+    (* TODO: reify generic parameters *)
     W.FuncType (
       List.map (lower_value_type ctxt at) ts1,
       lower_stack_type ctxt at t2
     )
   | T.Class tcls ->
-    if tcls.T.tparams <> [] && not !Flags.parametric then
-      nyi at "generic classes with casts allowed";
+    (* TODO: reify generic parameters *)
     W.FuncType (
       List.map (lower_value_type ctxt at) tcls.T.vparams,
       [lower_value_type ctxt at (T.Inst (tcls, List.map T.var tcls.T.tparams))]
@@ -386,9 +386,12 @@ and lower_class ctxt at tcls =
         (W.Lib.List.drop (List.length tsup_def) tcls.T.def)
     in
 
+    let ty_vt = W.(RefType (Nullable, EqHeapType)) in
+    let ty_ft = W.(FieldType (ValueStorageType ty_vt, Mutable)) in
+    let ty_fts = if !Flags.parametric then [] else [ty_ft] in
     let pre_binds = sup_def.pre_vals @ param_binds @ List.rev pre_binds_r in
     let inst_fts = sup_def.inst_flds @ param_fts @ List.rev inst_fts_r in
-    let disp_fts = sup_def.disp_flds @ List.rev disp_fts_r in
+    let disp_fts = sup_def.disp_flds @ List.rev disp_fts_r @ ty_fts in
     let disp_vt = W.(RefType (NonNullable, DefHeapType (SynVar cls.disp_idx))) in
     let disp_ft = W.(FieldType (ValueStorageType disp_vt, Immutable)) in
     let rtt_ht = W.(RttHeapType (SynVar cls.inst_idx,
@@ -753,8 +756,7 @@ and compile_exp ctxt e =
     compile_coerce_abs_block_type ctxt e.at (type_of e)
 
   | CallE (e1, ts, es) ->
-    if ts <> [] && not !Flags.parametric then
-      nyi e.at "generic function calls with casts allowed";
+    (* TODO: reify generic parameters *)
     let t1 =
       match e1.it with
       | VarE x ->
@@ -823,8 +825,7 @@ and compile_exp ctxt e =
       compile_coerce_abs_block_type ctxt e.at (type_of e)
 
   | NewE (x, ts, es) ->
-    if ts <> [] && not !Flags.parametric then
-      nyi e.at "generic object construction with casts allowed";
+    (* TODO: reify generic parameters *)
     let tcls, _ = T.as_inst (type_of e) in
     let cls = lower_class ctxt e.at tcls in
     let subst = T.typ_subst tcls.T.tparams (List.map type_of ts) in
@@ -928,21 +929,70 @@ and compile_exp ctxt e =
     compile_exp ctxt e1;
     compile_coerce_null_type ctxt e1.at (type_of e1) (type_of t);
 
-  | CastE (e1, t) ->
-    nyi e.at "casts"
-  (*
-    let v1 = eval_exp env e1 in
-    (match v1 with
-    | V.Null -> V.Null
-    | V.Obj (t', _) when T.sub t' (eval_typ env t) -> v1
-    | V.Obj _ -> V.Null
-    | _ -> crash e.at "runtime type error at cast"
-    )
-  *)
+  | CastE (e1, x, ts) ->
+    assert (not !Flags.parametric);
+    if ts <> [] then
+      nyi e.at "casts to generic types";
+    if T.eq (type_of e) T.Obj then begin
+      compile_exp ctxt e1;
+      compile_coerce_null_type ctxt e1.at (type_of e1) (type_of e);
+    end else begin
+      let t1' = lower_value_type ctxt e1.at (type_of e1) in
+      let t' = lower_value_type ctxt e.at (type_of e) in
+      let tcls, _ = T.as_inst (type_of e) in
+      let cls = lower_class ctxt e.at tcls in
+      let tmpidx = emit_local ctxt e1.at t1' in
+      let tmpidx2 = emit_local ctxt e1.at t' in
+      let clsidx = emit_local ctxt x.at (lower_value_type ctxt x.at (T.Class tcls)) in
+      let bt = lower_block_type ctxt e.at (type_of e) in
+      emit_block ctxt e.at W.block bt (fun ctxt ->
+        emit ctxt W.[
+          ref_null (lower_heap_type ctxt e.at (type_of e));
+        ];
+        compile_exp ctxt e1;
+        compile_coerce_null_type ctxt e1.at (type_of e1) (type_of e);
+        emit ctxt W.[
+          local_tee (tmpidx @@ e1.at);
+          ref_is_null;
+          br_if (0l @@ e.at);
+        ];
+        let bt2 = lower_block_type_func ctxt e.at [type_of e] [type_of e; type_of e] in
+        emit_block ctxt e.at W.block bt2 (fun ctxt ->
+          emit ctxt W.[
+            local_get (tmpidx @@ e1.at);
+          ];
+          compile_var ctxt x (T.Class tcls);
+          emit ctxt W.[
+            local_tee (clsidx @@ x.at);
+            struct_get (cls.cls_idx @@ x.at) (cls_rtt @@ x.at);
+            br_on_cast (0l @@ e.at);
+            drop;
+            br (1l @@ e.at);
+          ];
+        );
+        let lazy cls_def = cls.def in
+        let offset = List.length cls_def.disp_flds - 1 in
+        emit ctxt W.[
+          local_tee (tmpidx2 @@ e1.at);
+          struct_get (cls.inst_idx @@ e1.at) (0l @@ e1.at);
+          struct_get (cls.disp_idx @@ x.at) (i32 offset @@ x.at);
+          local_get (clsidx @@ x.at);
+          struct_get (cls.cls_idx @@ x.at) (cls_disp @@ x.at);
+          ref_eq;
+          i32_eqz;
+          br_if (0l @@ e.at);
+          drop;
+          local_get (tmpidx2 @@ e1.at);
+        ]
+      )
+    end
 
   | AssertE e1 ->
     compile_exp ctxt e1;
-    emit ctxt W.[i32_eqz; if_ W.voidbt [unreachable @@ e.at] []]
+    emit ctxt W.[
+      i32_eqz;
+      if_ W.voidbt [unreachable @@ e.at] []
+    ]
 
   | IfE (e1, e2, e3) ->
     let bt = lower_block_type ctxt e.at (type_of e) in
@@ -1127,8 +1177,7 @@ and compile_dec pass ctxt d =
     env := E.extend_val !env x (T.FuncS, InstanceLoc x.it)
 
   | FuncD (x, ys, xts, tr, e) ->
-    if ys <> [] && not !Flags.parametric then
-      nyi d.at "generic function definitions with casts allowed";
+    (* TODO: reify generic parameters *)
     let W.FuncType (ts1, ts2) = lower_func_type ctxt d.at t in
     let ts1', ts2', override_opt =
       if pass <> FuncPass then ts1, ts2, None else
@@ -1204,8 +1253,7 @@ and compile_dec pass ctxt d =
     nyi d.at "nested class definitions"
 
   | ClassD (x, ys, xts, sup_opt, ds) ->
-    if ys <> [] && not !Flags.parametric then
-      nyi d.at "generic class definitions with casts allowed";
+    (* TODO: reify generic parameters *)
     let tcls = T.as_class t in
     let cls = lower_class ctxt d.at tcls in
     let lazy cls_def = cls.def in
@@ -1269,7 +1317,7 @@ and compile_dec pass ctxt d =
         let suptmp = emit_local ctxt x2.at sup_vt in
         compile_var ctxt x2 sup_t;
 
-        (* Push all functions from dispatch table *)
+        (* Push all entries from dispatch table and table itself *)
         if sup_def.disp_flds = [] then
           emit ctxt W.[
             local_set (suptmp @@ x2.at);
@@ -1282,6 +1330,7 @@ and compile_dec pass ctxt d =
             struct_get (sup_cls.cls_idx @@ x2.at) (cls_disp @@ x2.at);
             local_set (disptmp @@ x2.at);
           ];
+
           List.iteri (fun i _ ->
             match List.assoc_opt (i32 i) cls_def.overrides with
             | None ->
@@ -1293,8 +1342,9 @@ and compile_dec pass ctxt d =
               let _, loc = (E.find_val Source.(x @@ x2.at) func_env).it in
               emit_func_ref ctxt d.at (as_direct_loc loc);
               emit ctxt W.[ref_func (as_direct_loc loc @@ d.at)]
-          ) sup_def.disp_flds
+          ) sup_def.disp_flds;
         end;
+
         suptmp, x2.at, sup_cls, sup_def, sup_t, sup_vt
     in
 
@@ -1308,11 +1358,32 @@ and compile_dec pass ctxt d =
       | _ -> ()
     ) (E.sorted_vals func_env);
 
-    (* Third, allocate dispatch table (and leave on stack) *)
+    (* Third, push place holder for own class *)
+    let disp_ht = W.(DefHeapType (SynVar cls.disp_idx)) in
+    if not !Flags.parametric then
+      emit ctxt W.[
+        ref_null disp_ht;
+      ];
+
+    (* Fourth, allocate dispatch table (and leave on stack) *)
     emit ctxt W.[
       rtt_canon (cls.disp_idx @@ d.at);
       struct_new (cls.disp_idx @@ d.at);
     ];
+
+    (* Finally, tie knot for dispatch table *)
+    if not !Flags.parametric then begin
+      let disptmp = emit_local ctxt d.at W.(RefType (Nullable, disp_ht)) in
+      let lazy cls_def = cls.def in
+      let offset = List.length cls_def.disp_flds - 1 in
+      emit ctxt W.[
+        local_tee (disptmp @@ d.at);
+        local_get (disptmp @@ d.at);
+        struct_set (cls.disp_idx @@ d.at) (i32 offset @@ d.at);
+        local_get (disptmp @@ d.at);
+        ref_as_non_null;
+      ]
+    end;
 
     (* Allocate RTT (and leave on stack) *)
     if sup_opt = None then
@@ -1344,8 +1415,7 @@ and compile_dec pass ctxt d =
           | None -> [], no_region
           | Some sup ->
             let (x2, ts2, es2) = sup.it in
-            if ts2 <> [] && not !Flags.parametric then
-              nyi x2.at "generic super classes with casts allowed";
+            (* TODO: reify generic parameters *)
             List.iter (compile_exp ctxt) es2;
             compile_var ctxt x sup_t;
             emit ctxt W.[
