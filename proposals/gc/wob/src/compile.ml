@@ -1090,6 +1090,7 @@ and compile_dec pass ctxt d =
         let idx = emit_local ctxt x.at t' in
         compile_exp ctxt e;
         compile_coerce_value_type ctxt e.at t;
+        compile_coerce_null_type ctxt e.at (type_of e) t;
         emit ctxt W.[local_set (idx @@ d.at)];
         DirectLoc idx
 
@@ -1099,6 +1100,7 @@ and compile_dec pass ctxt d =
         let idx = emit_global ctxt x.at W.Mutable t' const in
         compile_exp ctxt e;
         compile_coerce_value_type ctxt e.at t;
+        compile_coerce_null_type ctxt e.at (type_of e) t;
         emit ctxt W.[global_set (idx @@ d.at)];
         DirectLoc idx
 
