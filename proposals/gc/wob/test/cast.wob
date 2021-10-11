@@ -1,3 +1,5 @@
+// @FAIL-PARAMETRIC
+
 // Casts
 
 class C() {};

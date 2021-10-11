@@ -1,4 +1,5 @@
 // @FAIL-WASM
+// @FAIL-PARAMETRIC
 
 // Generic classes
 
