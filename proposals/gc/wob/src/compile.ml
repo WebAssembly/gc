@@ -186,6 +186,8 @@ let string_of_loc = function
   | InstanceLoc x -> "." ^ x
 
 let print_env env =
+  E.iter_typs (fun x sl -> let s, l = sl.it in
+    Printf.printf " type %s(%s)=%s" (string_of_sort s) x (string_of_loc l)) env;
   E.iter_vals (fun x sl -> let s, l = sl.it in
     Printf.printf " %s(%s)=%s" (string_of_sort s) x (string_of_loc l)) env;
   Printf.printf "\n"
@@ -208,7 +210,7 @@ let rec _print_cls ctxt cls =
   printf "new : %s\n" (string_of_field_type ctxt cls.cls_idx cls_new);
   printf "pre : %s\n" (string_of_field_type ctxt cls.cls_idx cls_pre_alloc);
   printf "post : %s\n" (string_of_field_type ctxt cls.cls_idx cls_post_alloc);
-  if Lazy.is_val cls.def then printf "(under definition)\n" else begin
+  if not (Lazy.is_val cls.def) then printf "(under definition)\n" else begin
     let lazy def = cls.def in
     printf "inst_flds =";
       List.iter (printf " %s") (List.map W.string_of_field_type def.inst_flds);
@@ -228,7 +230,7 @@ let rec _print_cls ctxt cls =
         printf " %s/%ld:%s" x i (W.string_of_func_type ft)
       ) def.overrides;
       printf "\n";
-    printf "env.vals ="; print_env def.env
+    printf "env ="; print_env def.env
   end;
   if cls.sup = None then printf "sup = none\n%!" else printf "sup =\n";
   Option.iter (_print_cls ctxt) cls.sup
@@ -324,7 +326,6 @@ and lower_func_type ctxt at t : W.func_type =
     )
   | _ -> assert false
 
-
 and lower_class ctxt at tcls =
   match ClsEnv.find_opt tcls.T.id !(ctxt.ext.clss) with Some cls -> cls | None ->
 
@@ -347,16 +348,18 @@ and lower_class ctxt at tcls =
     let lazy sup_def = sup.def in
     let offset = if !Flags.parametric then 0 else List.length tcls.T.tparams in
     let start = i32 (List.length sup_def.inst_flds + 1) in
-    let param_binds =
-      (if !Flags.parametric then [] else
-        List.mapi (fun i _ ->
-          hidden (i32 i +% start), lower_value_rtt ctxt at
-        ) tcls.T.tparams
-      ) @
+    let param_tbinds =
+      if !Flags.parametric then [] else
+      List.mapi (fun i _ ->
+        hidden (i32 i +% start), lower_value_rtt ctxt at
+      ) tcls.T.tparams
+    in
+    let param_vbinds =
       List.mapi (fun i t ->
         hidden (i32 (i + offset) +% start), lower_value_type ctxt at t
       ) tcls.T.vparams
     in
+    let param_binds = param_tbinds @ param_vbinds in
     let param_vts = List.map snd param_binds in
     let param_fts =
       List.map (fun vtI -> W.(FieldType (ValueStorageType vtI, Immutable)))
@@ -437,13 +440,19 @@ and lower_class ctxt at tcls =
     let disp_dt = W.(StructDefType (StructType disp_fts)) in
     let cls_dt = W.(StructDefType (StructType cls_fts)) in
     let clsenv' =
+      if !Flags.parametric then clsenv else
+      List.fold_left (fun clsenv (x, _) ->
+        E.extend_typ clsenv (Source.(@@) x at) (T.LetS, DirectLoc (as_hidden x))
+      ) clsenv param_tbinds
+    in
+    let clsenv'' =
       List.fold_left (fun clsenv (x, _) ->
         E.extend_val clsenv (Source.(@@) x at) (T.LetS, DirectLoc (as_hidden x))
-      ) clsenv param_binds
+      ) clsenv' param_vbinds
     in
     define_cls inst_dt disp_dt cls_dt;
     { (make_cls_def ()) with
-      env = clsenv';
+      env = clsenv'';
       inst_flds = inst_fts;
       disp_flds = disp_fts;
       param_vals = param_vts;
@@ -452,68 +461,6 @@ and lower_class ctxt at tcls =
     }
   );
   cls
-
-
-(* Types *)
-
-let compile_typ_var ctxt y =
-  let emit ctxt = List.iter (emit_instr ctxt y.at) in
-  (* TODO: compile type variables *)
-  emit ctxt W.[
-    i32_const (0l @@ y.at); i31_new
-  ]
-
-let rec compile_typ ctxt t =
-  assert (not !Flags.parametric);
-  let emit ctxt = List.iter (emit_instr ctxt t.at) in
-  let ts =
-    match t.it with
-    | VarT (y, ts) -> compile_typ_var ctxt y; ts
-    | BoxT t1 ->
-      (match t1.it with
-      | BoolT -> emit ctxt W.[i32_const (1l @@ t.at); i31_new]; []
-      | ByteT -> emit ctxt W.[i32_const (2l @@ t.at); i31_new]; []
-      | IntT -> emit ctxt W.[i32_const (3l @@ t.at); i31_new]; []
-      | FloatT -> emit ctxt W.[i32_const (4l @@ t.at); i31_new]; []
-      | _ -> emit ctxt W.[i32_const (7l @@ t.at); i31_new]; [t1]
-      )
-    | BoolT | ByteT | IntT | FloatT -> assert false
-    | TextT -> emit ctxt W.[i32_const (5l @@ t.at); i31_new]; []
-    | ObjT -> emit ctxt W.[i32_const (6l @@ t.at); i31_new]; []
-    | TupT ts -> emit ctxt W.[i32_const (8l @@ t.at); i31_new]; ts
-    | ArrayT t1 -> emit ctxt W.[i32_const (9l @@ t.at); i31_new]; [t1]
-    | FuncT (ys, ts1, t2) -> nyi t.at "function types"
-  in
-  if ts <> [] then begin
-    let rtt_idx = lower_var_rtt ctxt t.at in
-    let tagtmp = emit_local ctxt t.at W.(RefType (Nullable, EqHeapType)) in
-    let arrtmp =
-      emit_local ctxt t.at W.(RefType (Nullable, DefHeapType (SynVar rtt_idx))) in
-    emit ctxt W.[
-      local_set (tagtmp @@ t.at);
-      i32_const (i32 (List.length ts + 1) @@ t.at);
-      rtt_canon (rtt_idx @@ t.at);
-      array_new_default (rtt_idx @@ t.at);
-      local_tee (arrtmp @@ t.at);
-      i32_const (0l @@ t.at);
-      local_get (tagtmp @@ t.at);
-      array_set (rtt_idx @@ t.at);
-    ];
-    List.iteri (fun i tI ->
-      emit ctxt W.[
-        local_get (arrtmp @@ t.at);
-        i32_const (i32 (i + 1) @@ tI.at);
-      ];
-      compile_typ ctxt tI;
-      emit ctxt W.[
-        array_set (rtt_idx @@ tI.at);
-      ]
-    ) ts;
-    emit ctxt W.[
-      local_get (arrtmp @@ t.at);
-      ref_as_non_null;
-    ]
-  end
 
 
 (* Coercions *)
@@ -595,9 +542,160 @@ let compile_coerce_null_type ctxt at t1 t2 =
   ]
 
 
+(* Variables *)
+
+let rec find_var find_opt ctxt x envs : scope * T.sort * loc =
+  match envs with
+  | [] ->
+    Printf.printf "[find_var `%s` @@ %s]\n%!" x.it (Source.string_of_region x.at);
+    assert false
+  | (scope, env)::envs' ->
+    match find_opt x !env with
+    | None ->
+      let (scope', _, _) as result = find_var find_opt ctxt x envs' in
+      (match scope', scope with
+      | (PreScope | GlobalScope), _
+      | (FuncScope | BlockScope), BlockScope
+      | ClassScope _, (FuncScope | BlockScope) -> ()
+      | _ -> nyi x.at "outer scope type access"
+      );
+      result
+    | Some {it = (s, l); _} ->
+      assert (match scope, l with
+        ClassScope _, _ | _, DirectLoc _ -> true | _ -> false);
+      scope, s, l
+
+let find_typ_var ctxt x envs : scope * T.sort * loc =
+  find_var E.find_opt_typ ctxt x envs
+
+let find_var ctxt x envs : scope * T.sort * loc =
+  find_var E.find_opt_val ctxt x envs
+
+
+(* Types *)
+
+let rec compile_typ_var ctxt x ts t' : typ list =
+  let emit ctxt = List.iter (emit_instr ctxt x.at) in
+  let scope, s, loc = find_typ_var ctxt x ctxt.ext.envs in
+  match s with
+  | T.LetS ->
+    (match scope, loc with
+    | PreScope, DirectLoc idx ->
+      let t = Source.(@@) (snd (List.nth Prelude.typs (Int32.to_int idx))) x.at in
+      t.et <- Some t';
+      compile_typ ctxt t
+    | (BlockScope | FuncScope), DirectLoc idx ->
+      emit_instr ctxt x.at W.(local_get (idx @@ x.at));
+    | GlobalScope, DirectLoc idx ->
+      emit_instr ctxt x.at W.(global_get (idx @@ x.at));
+    | ClassScope _, DirectLoc idx ->  (* in constructor, we have let binding *)
+      emit_instr ctxt x.at W.(local_get (idx @@ x.at));
+    | ClassScope this_t, InstanceLoc x' ->
+      compile_var ctxt (Source.(@@) "this" x.at) this_t;
+      let cls = lower_class ctxt x.at (fst (T.as_inst this_t)) in
+      let lazy cls_def = cls.def in
+      let s, loc = (E.find_typ (Source.(@@) x' x.at) cls_def.env).it in
+      assert (s = T.LetS);
+      emit ctxt W.[
+        struct_get (cls.inst_idx @@ x.at) (as_direct_loc loc @@ x.at)
+      ];
+    | _ -> assert false
+    );
+    ts
+  | T.FuncS ->
+    (match scope with
+    | PreScope -> assert false
+    | GlobalScope ->
+      List.iter (fun tI ->
+        compile_typ ctxt tI;
+      ) ts;
+      emit ctxt W.[call (as_direct_loc loc @@ x.at)]
+    | BlockScope | FuncScope | ClassScope _ ->
+      nyi x.at "nested type definitions"
+(*
+      let this = Source.(VarE ("this" @@ x.at) @@ x.at) in
+      this.et <- Some this_t;
+      compile_exp ctxt
+        {e with it = CallE ({e1 with it = DotE (this, x)}, ts, es)}
+*)
+    );
+    []
+  | T.ClassS ->
+    (match t' with
+    | T.Inst (cls, _) ->
+      compile_var ctxt x (T.Class cls);
+      let idx = lower_var_type ctxt x.at (T.Class cls) in
+      emit ctxt W.[
+        struct_get (idx @@ x.at) (cls_disp @@ x.at);
+      ];
+      ts
+    | _ -> assert false
+    )
+  | T.VarS | T.ProhibitedS ->
+    assert false
+
+and compile_typ ctxt t =
+  assert (not !Flags.parametric);
+  let emit ctxt = List.iter (emit_instr ctxt t.at) in
+  let ts =
+    match type_of t with
+    | T.Bool -> emit ctxt W.[i32_const (1l @@ t.at); i31_new]; []
+    | T.Byte -> emit ctxt W.[i32_const (2l @@ t.at); i31_new]; []
+    | T.Int -> emit ctxt W.[i32_const (3l @@ t.at); i31_new]; []
+    | T.Float -> emit ctxt W.[i32_const (4l @@ t.at); i31_new]; []
+    | T.Text -> emit ctxt W.[i32_const (5l @@ t.at); i31_new]; []
+    | T.Obj -> emit ctxt W.[i32_const (6l @@ t.at); i31_new]; []
+    | _ ->
+    match t.it with
+    | VarT (y, ts) -> compile_typ_var ctxt y ts (type_of t)
+    | BoxT t1 ->
+      (match type_of t1 with
+      | T.Bool -> emit ctxt W.[i32_const (1l @@ t.at); i31_new]; []
+      | T.Byte -> emit ctxt W.[i32_const (2l @@ t.at); i31_new]; []
+      | T.Int -> emit ctxt W.[i32_const (3l @@ t.at); i31_new]; []
+      | T.Float -> emit ctxt W.[i32_const (4l @@ t.at); i31_new]; []
+      | _ -> emit ctxt W.[i32_const (7l @@ t.at); i31_new]; [t1]
+      )
+    | TupT ts -> emit ctxt W.[i32_const (8l @@ t.at); i31_new]; ts
+    | ArrayT t1 -> emit ctxt W.[i32_const (9l @@ t.at); i31_new]; [t1]
+    | FuncT (ys, ts1, t2) -> nyi t.at "function types"
+    | BoolT | ByteT | IntT | FloatT | TextT | ObjT -> assert false
+  in
+  if ts <> [] then begin
+    let rtt_idx = lower_var_rtt ctxt t.at in
+    let tagtmp = emit_local ctxt t.at W.(RefType (Nullable, EqHeapType)) in
+    let arrtmp =
+      emit_local ctxt t.at W.(RefType (Nullable, DefHeapType (SynVar rtt_idx))) in
+    emit ctxt W.[
+      local_set (tagtmp @@ t.at);
+      i32_const (i32 (List.length ts + 1) @@ t.at);
+      rtt_canon (rtt_idx @@ t.at);
+      array_new_default (rtt_idx @@ t.at);
+      local_tee (arrtmp @@ t.at);
+      i32_const (0l @@ t.at);
+      local_get (tagtmp @@ t.at);
+      array_set (rtt_idx @@ t.at);
+    ];
+    List.iteri (fun i tI ->
+      emit ctxt W.[
+        local_get (arrtmp @@ t.at);
+        i32_const (i32 (i + 1) @@ tI.at);
+      ];
+      compile_typ ctxt tI;
+      emit ctxt W.[
+        array_set (rtt_idx @@ tI.at);
+      ]
+    ) ts;
+    emit ctxt W.[
+      local_get (arrtmp @@ t.at);
+      ref_as_non_null;
+    ]
+  end
+
+
 (* Expressions *)
 
-let compile_lit ctxt l at =
+and compile_lit ctxt l at =
   let emit ctxt = List.iter (emit_instr ctxt at) in
   match l with
   | NullL -> emit ctxt W.[ref_null (lower_heap_type ctxt at T.Null)]
@@ -612,29 +710,7 @@ let compile_lit ctxt l at =
       call (Intrinsic.compile_text_new ctxt @@ at);
     ]
 
-
-let rec find_var ctxt x envs : scope * T.sort * loc =
-  match envs with
-  | [] ->
-    Printf.printf "[find_var `%s` @@ %s]\n%!" x.it (Source.string_of_region x.at);
-    assert false
-  | (scope, env)::envs' ->
-    match E.find_opt_val x !env with
-    | None ->
-      let (scope', _, _) as result = find_var ctxt x envs' in
-      (match scope', scope with
-      | (PreScope | GlobalScope), _
-      | (FuncScope | BlockScope), BlockScope
-      | ClassScope _, (FuncScope | BlockScope) -> ()
-      | _ -> nyi x.at "outer scope variable access"
-      );
-      result
-    | Some {it = (s, l); _} ->
-      assert (match scope, l with
-        ClassScope _, _ | _, DirectLoc _ -> true | _ -> false);
-      scope, s, l
-
-let rec compile_var ctxt x t =
+and compile_var ctxt x t =
   let scope, s, loc = find_var ctxt x ctxt.ext.envs in
   if s <> T.LetS && s <> T.VarS && s <> T.ClassS then nyi x.at "closures";
   (match scope, loc with
@@ -962,8 +1038,9 @@ and compile_exp ctxt e =
         | T.Bool | T.Byte -> W.struct_get_u
         | _ -> W.struct_get
       in
-      emit ctxt [struct_get_sxopt (cls.inst_idx @@ e1.at)
-        (as_direct_loc loc @@ x.at)];
+      emit ctxt [
+        struct_get_sxopt (cls.inst_idx @@ e1.at) (as_direct_loc loc @@ x.at)
+      ];
       compile_coerce_abs_block_type ctxt e.at (type_of e)
     | T.FuncS -> nyi e.at "closures"
     | T.ClassS -> nyi e.at "nested classes"
@@ -1013,8 +1090,9 @@ and compile_exp ctxt e =
       compile_exp ctxt e2;
       compile_coerce_value_type ctxt e2.at (type_of e2);
       compile_coerce_null_type ctxt e2.at (type_of e2) (snd (List.assoc x.it tcls.T.def));
-      emit ctxt W.[struct_set (cls.inst_idx @@ e11.at)
-        (as_direct_loc loc @@ x.at)]
+      emit ctxt W.[
+        struct_set (cls.inst_idx @@ e11.at) (as_direct_loc loc @@ x.at)
+      ]
 
     | _ -> assert false
     )
