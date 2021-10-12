@@ -51,5 +51,7 @@ assert e :> B<Int$, Float$> == e;
 assert e :> B<Int$, Bool$> == null;
 assert e :> D == e;
 assert e :> E<A<Int$, C<D>>> == e;
+type AA = A<Int$, C<D>>;
+assert e :> E<AA> == e;
 assert e :> E<A<Float$, C<D>>> == null;
 assert e :> E<A<Int$, C<B<Int$, Float$>>>> == null;

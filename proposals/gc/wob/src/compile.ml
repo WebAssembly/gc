@@ -664,10 +664,10 @@ and compile_typ ctxt t =
     | VarT (y, ts) -> compile_typ_var ctxt y ts (type_of t)
     | BoxT t1 ->
       (match type_of t1 with
-      | T.Bool -> emit ctxt W.[i32_const (1l @@ t.at); i31_new]; []
-      | T.Byte -> emit ctxt W.[i32_const (2l @@ t.at); i31_new]; []
-      | T.Int -> emit ctxt W.[i32_const (3l @@ t.at); i31_new]; []
-      | T.Float -> emit ctxt W.[i32_const (4l @@ t.at); i31_new]; []
+      | T.Bool -> emit ctxt W.[i32_const (-1l @@ t.at); i31_new]; []
+      | T.Byte -> emit ctxt W.[i32_const (-2l @@ t.at); i31_new]; []
+      | T.Int -> emit ctxt W.[i32_const (-3l @@ t.at); i31_new]; []
+      | T.Float -> emit ctxt W.[i32_const (-4l @@ t.at); i31_new]; []
       | _ -> emit ctxt W.[i32_const (7l @@ t.at); i31_new]; [t1]
       )
     | TupT ts -> emit ctxt W.[i32_const (8l @@ t.at); i31_new]; ts
