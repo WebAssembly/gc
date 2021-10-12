@@ -494,6 +494,8 @@ Checking type equivalence is a simple parallel tree recursion, short-cut by refe
 
 Type definitions (with the `type` keyword) are implemented as functions returning a runtime type.
 
+All runtime representations (including reified generic type parameters) are omitted in "parametric" compilation mode (command line flag `-p`). In that mode, casts are forbidden.
+
 
 ### Modules
 
