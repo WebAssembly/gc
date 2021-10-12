@@ -30,7 +30,7 @@ let (-%) = Int32.sub
 (* Environment *)
 
 type loc = DirectLoc of int32 | InstanceLoc of string
-type env = (T.sort * loc, loc) E.env
+type env = (T.sort * loc, T.sort * loc) E.env
 type scope =
   PreScope | GlobalScope | BlockScope | FuncScope | ClassScope of T.typ
 
@@ -57,7 +57,7 @@ let cls_sup = 5l
 let make_env () =
   let env = ref Env.empty in
   List.iteri (fun i (y, _) ->
-    env := E.extend_typ !env Source.(y @@ Prelude.region) (DirectLoc (i32 i))
+    env := E.extend_typ !env Source.(y @@ Prelude.region) (T.LetS, DirectLoc (i32 i))
   ) Prelude.typs;
   List.iteri (fun i (x, _) ->
     env := E.extend_val !env Source.(x @@ Prelude.region) (T.LetS, DirectLoc (i32 i))
@@ -1136,8 +1136,15 @@ and compile_exp ctxt e =
 and alloc_funcdec ctxt d =
   let scope, env = current_scope ctxt in
   match d.it with
-  | ExpD _ | LetD _ | VarD _ | TypD _ ->
+  | ExpD _ | LetD _ | VarD _ ->
     ()
+
+  | TypD (x, _, _) ->
+    if not !Flags.parametric then begin
+      let idx, define = emit_func_deferred ctxt d.at in
+      ctxt.ext.funcs := FuncEnv.add idx define !(ctxt.ext.funcs);
+      env := E.extend_typ !env x (T.FuncS, DirectLoc idx)
+    end
 
   | FuncD (x, _, _, _, _) ->
     let idx, define = emit_func_deferred ctxt d.at in
@@ -1171,7 +1178,10 @@ and alloc_funcdec ctxt d =
       |> FuncEnv.add pre_alloc_idx define_pre_alloc
       |> FuncEnv.add post_alloc_idx define_post_alloc;
 
-    env := E.extend_val !env x (T.ClassS, DirectLoc idx);
+    if not !Flags.parametric then begin
+      env := E.extend_typ !env x (T.ClassS, DirectLoc idx)
+    end;
+    env := E.extend_val !env x (T.ClassS, DirectLoc idx)
 
 
 and compile_dec pass ctxt d =
@@ -1189,9 +1199,9 @@ and compile_dec pass ctxt d =
     env := E.extend_val !env x (T.LetS, InstanceLoc x.it)
 
   | LetD (x, e) ->
-    let t' = lower_value_type ctxt x.at t in
     compile_exp ctxt e;
     compile_coerce_value_type ctxt e.at t;
+    let t' = lower_value_type ctxt x.at t in
     let loc =
       match scope with
       | PreScope -> assert false
@@ -1199,20 +1209,20 @@ and compile_dec pass ctxt d =
       | BlockScope | FuncScope ->
         assert (pass = FullPass);
         let idx = emit_local ctxt x.at t' in
-        emit ctxt W.[local_set (idx @@ d.at)];
+        emit ctxt W.[local_set (idx @@ x.at)];
         DirectLoc idx
 
       | GlobalScope ->
         assert (pass = FullPass);
         let const = default_const ctxt x.at t in
         let idx = emit_global ctxt x.at W.Mutable t' const in
-        emit ctxt W.[global_set (idx @@ d.at)];
+        emit ctxt W.[global_set (idx @@ x.at)];
         DirectLoc idx
 
       | ClassScope _ ->
         assert (pass = LetPass);
         let idx = emit_local ctxt x.at t' in
-        emit ctxt W.[local_tee (idx @@ d.at)];
+        emit ctxt W.[local_tee (idx @@ x.at)];
         DirectLoc idx
     in
     env := E.extend_val !env x (T.LetS, loc)
@@ -1261,8 +1271,47 @@ and compile_dec pass ctxt d =
     in
     env := E.extend_val !env x (T.VarS, loc)
 
-  | TypD _ ->
+  | TypD _ when pass = LetPass ->
     ()
+
+  | TypD (x, _ys, _t) when pass = VarPass ->
+    if not !Flags.parametric then begin
+      env := E.extend_typ !env x (T.FuncS, InstanceLoc x.it)
+    end
+
+  | TypD (x, ys, t) ->
+    if not !Flags.parametric then begin
+      let t2' = lower_value_rtt ctxt x.at in
+      let ts1 = List.map (fun _ -> t2') ys in
+      let ts1' =
+        if pass <> FuncPass then ts1 else
+        let tcls = Option.get ctxt.ext.tcls in
+        let cls = lower_class ctxt x.at tcls in
+        W.(RefType (Nullable, DefHeapType (SynVar cls.inst_idx))) :: ts1
+      in
+      let idx =
+        match (E.find_typ x !env).it with
+        | (T.FuncS, DirectLoc idx) -> idx
+        | _ -> assert false
+      in
+      FuncEnv.find idx !(ctxt.ext.funcs) ctxt ts1' [t2']
+        (fun ctxt idx ->
+          let _, env' = current_scope ctxt in
+          env' := E.extend_typ !env' x (T.FuncS, DirectLoc idx);
+          let ctxt = enter_scope ctxt FuncScope in
+          let _, env = current_scope ctxt in
+          let this = if pass = FuncPass then emit_param ctxt x.at else -1l in
+          List.iter (fun yI ->
+            let idx = emit_param ctxt yI.at in
+            env := E.extend_typ !env yI (T.LetS, DirectLoc idx)
+          ) ys;
+          if pass = FuncPass then begin
+            env :=
+              E.extend_val !env Source.("this" @@ x.at) (T.LetS, DirectLoc this)
+          end;
+          compile_typ ctxt t
+        )
+    end
 
   | FuncD _ when pass = LetPass ->
     ()
@@ -1299,7 +1348,7 @@ and compile_dec pass ctxt d =
         if not !Flags.parametric then begin
           List.iter (fun yI ->
             let idx = emit_param ctxt yI.at in
-            env := E.extend_typ !env yI (DirectLoc idx);
+            env := E.extend_typ !env yI (T.LetS, DirectLoc idx);
           ) ys
         end;
         List.iter (fun (xI, _) ->
@@ -1388,8 +1437,8 @@ and compile_dec pass ctxt d =
       List.iteri (fun i yI ->
         let i' = i32 (own_start + i) in
         let y' = hidden i' in
-        env := E.extend_typ !env Source.(y' @@ x.at) (DirectLoc i');
-        env := E.extend_typ !env yI (InstanceLoc y');
+        env := E.extend_typ !env Source.(y' @@ x.at) (T.LetS, DirectLoc i');
+        env := E.extend_typ !env yI (T.LetS, InstanceLoc y');
       ) ys
     end;
     List.iteri (fun i (xI, _) ->
@@ -1515,7 +1564,7 @@ and compile_dec pass ctxt d =
         if not !Flags.parametric then begin
           List.iter (fun yI ->
             let idx = emit_param ctxt yI.at in
-            env := E.extend_typ !env yI (DirectLoc idx);
+            env := E.extend_typ !env yI (T.LetS, DirectLoc idx);
           ) ys
         end;
         List.iter (fun (xI, _) ->
@@ -1575,7 +1624,7 @@ and compile_dec pass ctxt d =
             if not !Flags.parametric then begin
               List.iteri (fun i yI ->
                 let loc = DirectLoc (i32 (i + sup_let_depth)) in
-                env := E.extend_typ !env yI loc;
+                env := E.extend_typ !env yI (T.LetS, loc);
                 emit ctxt W.[local_get (i32 (i + sup_let_depth) @@ yI.at)]
               ) ys;
             end;
@@ -1731,24 +1780,43 @@ let compile_imp ctxt d =
   let ImpD (xo, xs, url) = d.it in
   let _, env = current_scope ctxt in
   let x = (match xo with None -> "" | Some x -> x.it ^ "_") in
-  List.iter2 (fun xI stat_opt ->
-    match stat_opt with
-    | None -> ()
-    | Some (sort, t) ->
-      let x' = Source.((x ^ xI.it) @@ xI.at) in
-      let idx =
-        match sort with
-        | T.LetS | T.VarS ->
-          emit_global_import ctxt xI.at url xI.it W.Mutable
-            (lower_value_type ctxt xI.at t)
-        | T.FuncS ->
-          emit_func_import ctxt xI.at url xI.it
-            (lower_func_type ctxt xI.at t)
-        | T.ClassS ->
-          emit_global_import ctxt xI.at url xI.it W.Mutable
-            (lower_value_type ctxt xI.at t)
-        | T.ProhibitedS -> assert false
-      in env := E.extend_val !env x' (sort, DirectLoc idx)
+  List.iter2 (fun xI (st_opt, k_opt) ->
+    let x' = Source.((x ^ xI.it) @@ xI.at) in
+    let class_opt =
+      match st_opt with
+      | None -> None
+      | Some (sort, t) ->
+        let idx =
+          match sort with
+          | T.LetS | T.VarS ->
+            emit_global_import ctxt xI.at url xI.it W.Mutable
+              (lower_value_type ctxt xI.at t);
+          | T.FuncS ->
+            emit_func_import ctxt xI.at url xI.it
+              (lower_func_type ctxt xI.at t);
+          | T.ClassS ->
+            emit_global_import ctxt xI.at url xI.it W.Mutable
+              (lower_value_type ctxt xI.at t)
+          | T.ProhibitedS -> assert false
+        in
+        env := E.extend_val !env x' (sort, DirectLoc idx);
+        if sort = T.ClassS then Some idx else None
+    in
+    if not !Flags.parametric then begin
+      match k_opt with
+      | None -> ()
+      | Some k ->
+        let idx, sort =
+          match class_opt with
+          | Some idx -> idx, T.ClassS
+          | None ->
+            let t2' = lower_value_rtt ctxt xI.at in
+            let ts1' = List.init k (fun _ -> t2') in
+            let ft = W.FuncType (ts1', [t2']) in
+            emit_func_import ctxt xI.at url ("type " ^ xI.it) ft, T.FuncS
+        in
+        env := E.extend_typ !env x' (sort, DirectLoc idx)
+    end
   ) xs (type_of d)
 
 let compile_prog p : W.module_ =
@@ -1769,6 +1837,16 @@ let compile_prog p : W.module_ =
   emit_start ctxt p.at start_idx;
   emit_global_export ctxt p.at "return" result_idx;
   let _, env = current_scope ctxt in
+  if not !Flags.parametric then begin
+    E.iter_typs (fun x sl ->
+      let sort, loc = sl.it in
+      let idx = as_direct_loc loc in
+      match sort with
+      | T.FuncS -> emit_func_export ctxt sl.at ("type " ^ x) idx
+      | T.ClassS -> ()
+      | T.LetS | T.VarS | T.ProhibitedS -> assert false
+    ) !env;
+  end;
   E.iter_vals (fun x sl ->
     let sort, loc = sl.it in
     let idx = as_direct_loc loc in

@@ -654,8 +654,8 @@ let check_imp env env' d : env =
   let ImpD (xo, xs, url) = d.it in
   let menv = !get_env d.at url in
   let x = (match xo with None -> "" | Some x -> x.it ^ "_") in
-  let env', stos =
-    List.fold_left (fun (env', stos) xI ->
+  let env', stats =
+    List.fold_left (fun (env', stats) xI ->
       if not (E.mem_val xI menv || E.mem_typ xI menv) then
         error xI.at "unknown export `%s` in \"%s\"" xI.it url;
       let x' = (x ^ xI.it) @@ xI.at in
@@ -665,15 +665,15 @@ let check_imp env env' d : env =
         | None -> env', None
         | Some st -> E.extend_val env' x' st.it, Some st.it
       in
-      let env' =
+      let env', ko =
         match E.find_opt_typ xI menv with
-        | None -> env'
-        | Some kc -> E.extend_typ env' x' kc.it
+        | None -> env', None
+        | Some kc -> E.extend_typ env' x' kc.it, Some (fst kc.it)
       in
-      env', sto::stos
+      env', (sto, ko)::stats
     ) (env', []) xs
   in
-  d.et <- Some (List.rev stos);
+  d.et <- Some (List.rev stats);
   env'
 
 let env0 =

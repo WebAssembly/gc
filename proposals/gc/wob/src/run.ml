@@ -224,12 +224,12 @@ let inject_env senv prog =
   let senv' = Env.fold_vals (fun x st senv' ->
     Env.remove_typ (x @@ st.at) senv') senv senv in
   let ys = Env.fold_typs (fun y kc ys -> (y @@ kc.at)::ys) senv' [] in
-  let nos = Env.fold_typs (fun _ _ nos -> None::nos) senv' [] in
+  let ks = Env.fold_typs (fun _ kc ks -> (None, Some (fst kc.it)) :: ks) senv' [] in
   let xs = Env.fold_vals (fun x st xs -> (x @@ st.at)::xs) senv [] in
-  let sts = Env.fold_vals (fun _ st sts -> Some (st.it) :: sts) senv [] in
+  let sts = Env.fold_vals (fun _ st sts -> (Some (st.it), None) :: sts) senv [] in
   let imp = ImpD (None, ys @ xs, env_name) @@ prog.at in
   let prog' = Prog (imp :: imps, decs) @@ prog.at in
-  imp.et <- Some (nos @ sts);
+  imp.et <- Some (ks @ sts);
   prog'.et <- prog.et;
   prog'
 
