@@ -113,6 +113,20 @@ let make_cls_def () =
     post_alloc_idx = -1l;
   }
 
+let cls_first_inst_idx cls =
+  match cls.sup with
+  | None -> 1
+  | Some sup ->
+    let lazy sup_def = sup.def in
+    1 + List.length sup_def.inst_flds
+
+let _cls_first_disp_idx cls =
+  match cls.sup with
+  | None -> 0
+  | Some sup ->
+    let lazy sup_def = sup.def in
+    List.length sup_def.disp_flds
+
 
 (* Compilation context *)
 
@@ -557,7 +571,7 @@ let rec find_var find_opt ctxt x envs : scope * T.sort * loc =
       | (PreScope | GlobalScope), _
       | (FuncScope | BlockScope), BlockScope
       | ClassScope _, (FuncScope | BlockScope) -> ()
-      | _ -> nyi x.at "outer scope type access"
+      | _ -> nyi x.at "outer scope access"
       );
       result
     | Some {it = (s, l); _} ->
@@ -1103,8 +1117,6 @@ and compile_exp ctxt e =
 
   | CastE (e1, x, ts) ->
     assert (not !Flags.parametric);
-    if ts <> [] then
-      nyi e.at "casts to generic types";
     if T.eq (type_of e) T.Obj then begin
       compile_exp ctxt e1;
       compile_coerce_null_type ctxt e1.at (type_of e1) (type_of e);
@@ -1118,16 +1130,20 @@ and compile_exp ctxt e =
       let clsidx = emit_local ctxt x.at (lower_value_type ctxt x.at (T.Class tcls)) in
       let bt = lower_block_type ctxt e.at (type_of e) in
       emit_block ctxt e.at W.block bt (fun ctxt ->
+        (* Push default null result *)
         emit ctxt W.[
           ref_null (lower_heap_type ctxt e.at (type_of e));
         ];
+        (* Compile operand *)
         compile_exp ctxt e1;
         compile_coerce_null_type ctxt e1.at (type_of e1) (type_of e);
+        (* Check for null *)
         emit ctxt W.[
           local_tee (tmpidx @@ e1.at);
           ref_is_null;
           br_if (0l @@ e.at);
         ];
+        (* Cast down representation type *)
         let bt2 = lower_block_type_func ctxt e.at [type_of e] [type_of e; type_of e] in
         emit_block ctxt e.at W.block bt2 (fun ctxt ->
           emit ctxt W.[
@@ -1142,6 +1158,7 @@ and compile_exp ctxt e =
             br (1l @@ e.at);
           ];
         );
+        (* Check class *)
         let lazy cls_def = cls.def in
         let offset = List.length cls_def.disp_flds - 1 in
         emit ctxt W.[
@@ -1153,6 +1170,21 @@ and compile_exp ctxt e =
           ref_eq;
           i32_eqz;
           br_if (0l @@ e.at);
+        ];
+        (* Check generic arguments *)
+        let start = cls_first_inst_idx cls in
+        List.iteri (fun i t ->
+          compile_typ ctxt t;
+          emit ctxt W.[
+            local_get (tmpidx2 @@ e1.at);
+            struct_get (cls.inst_idx @@ x.at) (i32 (i + start) @@ x.at);
+            call (Intrinsic.compile_rtt_eq ctxt @@ t.at);
+            i32_eqz;
+            br_if (0l @@ e.at);
+          ];
+        ) ts;
+        (* Return result *)
+        emit ctxt W.[
           drop;
           local_get (tmpidx2 @@ e1.at);
         ]
@@ -1501,7 +1533,9 @@ and compile_dec pass ctxt d =
     Option.iter (fun sup ->
       let lazy sup_def = sup.def in
       env := E.adjoin !env
-        (E.mapi_vals (fun x (s, _) -> (s, InstanceLoc x)) sup_def.env);
+        (E.mapi_typs (fun x (s, _) -> (s, InstanceLoc x))
+          (E.mapi_vals (fun x (s, _) -> (s, InstanceLoc x))
+            sup_def.env));
     ) cls.sup;
     let own_start =
       match cls.sup with

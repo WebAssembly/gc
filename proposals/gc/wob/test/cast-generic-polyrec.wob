@@ -1,4 +1,3 @@
-// @FAIL-WASM
 // @FAIL-PARAMETRIC
 
 // Polymorphic recursion
@@ -44,7 +43,7 @@ assert p[2] :> C<C<C<Bool$>>> == null;
   }
 };
 
-{
+//{
   var i : Int = 0;
   func check<X>(j : Int) {
     if j < n {
@@ -59,4 +58,4 @@ assert p[2] :> C<C<C<Bool$>>> == null;
     check<Int$>(0);
     i := i + 1;
   }
-};
+//};

@@ -1,7 +1,11 @@
-// @FAIL-WASM
 // @FAIL-PARAMETRIC
 
 // Generic classes
+
+class Z<Y>() {};
+
+let x : Object = new Z<Bool$>();
+assert x :> Z<Bool$> == x;
 
 class A<T, U>() {};
 class B<T, U>() <: A<T, U>() {};
@@ -13,21 +17,21 @@ let a : Object = new A<Int$, Float$>();
 let b : Object = new B<Int$, Float$>();
 let c : Object = new C<Text>();
 let d : Object = new D();
-let e : Object = new E<Int$>();
+let e : Object = new E<A<Int$, C<D>>>();
 
 assert a :> A<Int$, Float$> == a;
 assert a :> A<Int$, Bool$> == null;
 assert a :> B<Int$, Float$> == null;
 assert a :> B<Int$, Bool$> == null;
 assert a :> D == null;
-assert a :> E<Int$> == null;
+assert a :> E<A<Int$, C<D>>> == null;
 
 assert b :> A<Int$, Float$> == b;
 assert b :> A<Int$, Bool$> == null;
 assert b :> B<Int$, Float$> == b;
 assert b :> B<Int$, Bool$> == null;
 assert b :> D == null;
-assert b :> E<Int$> == null;
+assert b :> E<A<Int$, C<D>>> == null;
 
 assert c :> A<Bool$, (Text, Text)> == c;
 assert c :> A<Bool$, (Int$, Int$)> == null;
@@ -39,12 +43,13 @@ assert d :> A<Int$, Bool$> == null;
 assert d :> B<Int$, Float$> == d;
 assert d :> B<Int$, Bool$> == null;
 assert d :> D == d;
-assert d :> E<Int$> == null;
+assert d :> E<A<Int$, C<D>>> == null;
 
 assert e :> A<Int$, Float$> == e;
 assert e :> A<Int$, Bool$> == null;
 assert e :> B<Int$, Float$> == e;
 assert e :> B<Int$, Bool$> == null;
 assert e :> D == e;
-assert e :> E<Int$> == e;
-assert e :> E<Float$> == null;
+assert e :> E<A<Int$, C<D>>> == e;
+assert e :> E<A<Float$, C<D>>> == null;
+assert e :> E<A<Int$, C<B<Int$, Float$>>>> == null;
