@@ -2,7 +2,7 @@
 
 type typ = Type.typ
 
-and func = typ list -> value list -> value
+and func = (Type.sort * value) Env.Map.t -> typ list -> value list -> value
 
 and value =
   | Null
@@ -19,12 +19,17 @@ and value =
   | Class of Type.cls * func * cls
 
 and obj = (Type.sort * value ref) Env.Map.t ref
-and cls = typ -> typ list -> value list -> value * (unit -> unit)
+and cls = (Type.sort * value) Env.Map.t -> typ -> typ list -> value list -> value * (unit -> unit)
 
 
 (* Accessors *)
 
 val as_obj : value -> obj
+
+
+(* Recursive closure *)
+
+val fix : (Type.sort * value) Env.Map.t -> value -> value
 
 
 (* Operations *)

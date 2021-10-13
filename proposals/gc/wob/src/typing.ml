@@ -107,7 +107,9 @@ let check_lit _env lit : T.typ =
 
 
 let rec check_exp env e : T.typ =
+(*
   assert (e.et = None);
+*)
   let t = check_exp' env e in
   e.et <- Some t;
   t
@@ -308,13 +310,21 @@ and check_exp' env e : T.typ =
         (T.to_string t2) (T.to_string t1);
     t2
 
-  | CastE (e1, t) ->
+  | CastE (e1, x, ts) ->
     let t1 = check_exp env e1 in
-    let t2 = check_typ env t in
+    let t2 =
+      match check_var env x with
+      | T.Class cls ->
+        let ts' = List.map (check_typ_boxed env) ts in
+        if List.length ts' <> List.length cls.T.tparams then
+          error x.at "wrong number of type arguments at class instantiation";
+        T.Inst (cls, ts')
+      | _ -> error x.at "class type expected but got %s" (T.to_string t1)
+    in
     if not (T.sub t1 T.Obj) then
       error e1.at "object type expected but got %s" (T.to_string t1);
     if not (T.sub t2 T.Obj) then
-      error t.at "object type expected as cast target";
+      error x.at "object type expected as cast target";
     t2
 
   | AssertE e1 ->
@@ -354,7 +364,7 @@ and check_exp' env e : T.typ =
     T.Bot
 
   | BlockE ds ->
-    let t, env' = check_block Full env ds in
+    let t, env' = check_block env ds in
     let escape = E.Set.inter (T.free t) (E.dom_typ env') in
     Option.iter (fun y ->
       error (E.find_typ (y @@ no_region) env').at
@@ -394,6 +404,47 @@ and check_exp_ref env e : T.typ =
 
 (* Declarations *)
 
+and check_typdec env d : env =
+  match d.it with
+  | ExpD _ | LetD _ | VarD _ | FuncD _ ->
+    E.empty
+
+  | TypD (y, ys, t) ->
+    let ys' = List.map it ys in
+    let env' = E.extend_typs_abs env ys in
+    let t' = check_typ env' t in
+    let con ts = T.subst (T.typ_subst ys' ts) t' in
+    E.singleton_typ y (List.length ys, con)
+
+  | ClassD (x, ys, xts, sup_opt, _ds) ->
+    let k = List.length ys in
+    let ys' = List.map it ys in
+    let cls = T.gen_cls d x.it ys' in
+    let con ts = T.Inst (cls, ts) in
+    let env' = E.extend_typ env x (k, con) in
+    let env' = E.extend_typs_abs env' ys in
+    Option.iter (fun {it = (x2, ts2, _); at; _} ->
+      cls.T.sup <- check_typ env' (VarT (x2, ts2) @@ x2.at);
+      let rec cyclic t_sup =
+        match t_sup with
+        | T.Inst (sup, _) -> sup.T.id = cls.T.id || cyclic sup.T.sup
+        | _ -> false
+      in
+      if cyclic cls.T.sup then
+        error at "superclass is cyclic";
+    ) sup_opt;
+    E.singleton_typ x (k, con)
+
+and check_typdecs env ds : env =
+  match ds with
+  | [] -> E.empty
+  | d::ds' ->
+    let env1 = check_typdec env d in
+    let env2 = check_typdecs (E.adjoin env env1) ds' in
+    try E.disjoint_union env1 env2 with E.Clash x ->
+      error d.at "duplicate definition for type `%s`" x
+
+
 and check_dec pass env d : T.typ * env =
   assert (d.et = None || fst (Option.get d.et) = T.Tup []);
   let t_res, t_bind, env' = check_dec' pass env d in
@@ -421,11 +472,14 @@ and check_dec' pass env d : T.typ * T.typ * env =
     T.Tup [], t', E.singleton_val x (T.VarS, t')
 
   | TypD (y, ys, t) ->
+(*
     let ys' = List.map it ys in
     let env' = E.extend_typs_abs env ys in
     let t' = check_typ env' t in
     let con ts = T.subst (T.typ_subst ys' ts) t' in
     T.Tup [], T.Bot, E.singleton_typ y (List.length ys, con)
+*)
+    T.Tup [], T.Bot, E.empty
 
   | FuncD (x, ys, xts, t, e) ->
     let ys' = List.map it ys in
@@ -445,6 +499,7 @@ and check_dec' pass env d : T.typ * T.typ * env =
     T.Tup [], t, E.singleton_val x (T.FuncS, t)
 
   | ClassD (x, ys, xts, sup_opt, ds) ->
+(*
     let k = List.length ys in
     let ys' = List.map it ys in
     let cls =
@@ -456,37 +511,54 @@ and check_dec' pass env d : T.typ * T.typ * env =
     let con ts = T.Inst (cls, ts) in
     let env' = E.extend_typ env x (k, con) in
     let env' = E.extend_typs_abs env' ys in
+*)
+    let env' = E.extend_typs_abs env ys in
+    let k, con = check_typ_var env x in
+    let t_inst = con (List.map T.var (List.map it ys)) in
+    let cls =
+      match t_inst with
+      | T.Inst (cls, _) -> cls
+      | _ -> assert false
+    in
     let ts1 = List.map (check_typ env') (List.map snd xts) in
     cls.T.vparams <- ts1;
     Option.iter (fun {it = (x2, ts2, _); _} ->
       cls.T.sup <- check_typ env' (VarT (x2, ts2) @@ x2.at)) sup_opt;
     let t = T.Class cls in
+(*
     if pass <> Pre then begin
       let t_inst = con (List.map T.var ys') in
+*)
       let xs1 = List.map fst xts in
       let env'' = E.extend_val env' x (T.ClassS, t) in
       let env'' = E.extend_vals_let env'' xs1 ts1 in
       let env'' = E.extend_val env'' ("this" @@ x.at) (T.ProhibitedS, t_inst) in
-      let sup_obj, env''' =
+      let sup_obj, env''', subst =
         match sup_opt with
-        | None -> [], env''
+        | None -> [], env'', T.empty_subst
         | Some sup ->
           let (x2, ts2, es2) = sup.it in
           match check_exp env'' (NewE (x2, ts2, es2) @@ sup.at) with
-          | T.Inst (cls, _) ->
+          | T.Inst (cls, ts2') ->
+            let subst = T.typ_subst cls.T.tparams ts2' in
+            let def' =
+              List.map (fun (x, (s, t)) -> (x, (s, T.subst subst t))) cls.T.def in
             sup.et <- Some cls;
-            cls.T.def,
+            def',
             List.fold_left (fun env'' (x, (s, t)) ->
               let s' = if s = T.LetS then s else T.ProhibitedS in
               E.extend_val env'' (x @@ x2.at) (s', t)
-            ) env'' cls.T.def
+            ) env'' def',
+            subst
           | _ -> assert false
       in
+      let tenv = check_typdecs env''' ds in
+      let env''' = E.adjoin env''' tenv in
       (* Rebind local vars to shadow parent fields *)
       let env''' = E.extend_val env''' x (T.ClassS, t) in
       let env''' = E.extend_vals_let env''' xs1 ts1 in
       let env''' = E.extend_val env''' ("this" @@ x.at) (T.ProhibitedS, t_inst) in
-      let _, oenv = check_block Pre env''' ds in
+      let _, oenv = check_decs Pre prohibit_nonlet env''' ds T.Bot in
       E.iter_vals (fun x {it = (s, t); at; _} ->
         (match List.assoc_opt x sup_obj with
         | None -> ()
@@ -495,13 +567,14 @@ and check_dec' pass env d : T.typ * T.typ * env =
             error at "overriding superclass member `%s` that is not a function" x;
           if s <> T.FuncS then
             error at "overriding superclass function `%s` with a non-function" x;
-          if not (T.sub t t') then
+          if not (T.sub t (T.subst subst t')) then
             error at "overriding superclass function `%s` of type %s with incompatible type %s"
               x (T.to_string t') (T.to_string t)
         )
       ) oenv;
       let obj = List.map (fun (x, st) -> (x, st.it)) (E.sorted_vals oenv) in
       cls.T.def <- sup_obj @ obj;
+if pass <> Pre then begin
       (* Rebind unprohibited *)
       let env'''' = List.fold_left (fun env (x, (s, t)) ->
         E.extend_val env
@@ -510,7 +583,7 @@ and check_dec' pass env d : T.typ * T.typ * env =
       let env'''' = E.extend_val env'''' x (T.ClassS, t) in
       let env'''' = E.extend_vals_let env'''' xs1 ts1 in
       let env'''' = E.extend_val env'''' ("this" @@ x.at) (T.LetS, t_inst) in
-      ignore (check_block Post env'''' ds);
+      ignore (check_decs Post Fun.id env'''' ds T.Bot);
       E.iter_vals (fun x {it = (_, t); _} ->
         let escape = E.Set.inter (T.free t) (E.dom_typ oenv) in
         Option.iter (fun y ->
@@ -521,25 +594,56 @@ and check_dec' pass env d : T.typ * T.typ * env =
       ) oenv
     end;
     T.Tup [], t,
+(*
     E.adjoin (E.singleton_typ x (k, con)) (E.singleton_val x (T.ClassS, t))
+*)
+    E.singleton_val x (T.ClassS, t)
 
+and prohibit_nonlet env1 =
+  E.map_vals (fun (s, t) -> (if s = T.LetS then s else T.ProhibitedS), t) env1
 
-and check_decs pass env ds t : T.typ * env =
+and check_decs pass prohibit env ds t : T.typ * env =
   match ds with
   | [] -> t, E.empty
   | d::ds' ->
     let t', env1 = check_dec pass env d in
-    let env' =
-      if pass <> Pre then env1 else
-      E.map_vals (fun (s, t) -> (if s = T.LetS then s else T.ProhibitedS), t) env1
-    in
-    let t'', env2 = check_decs pass (E.adjoin env env') ds' t' in
+    let env' = if pass <> Pre then env1 else prohibit env1 in
+    let t'', env2 = check_decs pass prohibit (E.adjoin env env') ds' t' in
     try t'', E.disjoint_union env1 env2 with E.Clash x ->
       error d.at "duplicate definition for `%s`" x
 
-and check_block pass env ds : T.typ * env =
-  (* TODO: enable recursion among functions and among classes *)
-  check_decs pass env ds (T.Tup [])
+and check_block env ds : T.typ * env =
+  (* TODO: enable more general recursion among functions and classes *)
+  let env1 = check_typdecs env ds in
+  let t, env2 = check_recdecs (E.adjoin env env1) ds (T.Tup []) in
+  t, E.adjoin env1 env2
+
+and check_recdecs env ds t : T.typ * env =
+  let t2, env1, env2 =
+    match take_recgroup ds with
+    | [], [] -> t, E.empty, E.empty
+    | [], d::ds' ->
+      let t1, env1 = check_decs Full Fun.id env [d] t in
+      let t2, env2 = check_recdecs (E.adjoin env env1) ds' t1 in
+      t2, env1, env2
+    | ds1, ds' ->
+      let _, env1 = check_decs Pre Fun.id env ds1 T.Bot in
+      let t1, _ = check_decs Post Fun.id (E.adjoin env env1) ds1 t in
+      let t2, env2 = check_recdecs (E.adjoin env env1) ds' t1 in
+      t2, env1, env2
+  in
+  try t2, E.disjoint_union env1 env2 with E.Clash x ->
+    let at =
+      if E.Map.mem x env1.E.typs && E.Map.mem x env2.E.typs
+      then (E.Map.find x env2.E.typs).at
+      else (E.Map.find x env2.E.vals).at
+    in error at "duplicate definition for `%s`" x
+
+and take_recgroup ds : dec list * dec list =
+  match ds with
+  | ({it = FuncD _ | ClassD _ | TypD _; _} as d)::ds' ->
+    let ds1, ds2 = take_recgroup ds' in d::ds1, ds2
+  | _ -> [], ds
 
 
 (* Programs *)
@@ -550,8 +654,8 @@ let check_imp env env' d : env =
   let ImpD (xo, xs, url) = d.it in
   let menv = !get_env d.at url in
   let x = (match xo with None -> "" | Some x -> x.it ^ "_") in
-  let env', stos =
-    List.fold_left (fun (env', stos) xI ->
+  let env', stats =
+    List.fold_left (fun (env', stats) xI ->
       if not (E.mem_val xI menv || E.mem_typ xI menv) then
         error xI.at "unknown export `%s` in \"%s\"" xI.it url;
       let x' = (x ^ xI.it) @@ xI.at in
@@ -561,15 +665,15 @@ let check_imp env env' d : env =
         | None -> env', None
         | Some st -> E.extend_val env' x' st.it, Some st.it
       in
-      let env' =
+      let env', ko =
         match E.find_opt_typ xI menv with
-        | None -> env'
-        | Some kc -> E.extend_typ env' x' kc.it
+        | None -> env', None
+        | Some kc -> E.extend_typ env' x' kc.it, Some (fst kc.it)
       in
-      env', sto::stos
+      env', (sto, ko)::stats
     ) (env', []) xs
   in
-  d.et <- Some (List.rev stos);
+  d.et <- Some (List.rev stats);
   env'
 
 let env0 =
@@ -587,6 +691,6 @@ let check_prog env p : T.typ * env =
   let Prog (is, ds) = p.it in
   let env' = E.adjoin env0 env in
   let env1 = List.fold_left (check_imp env') E.empty is in
-  let t, env2 = check_block Full (E.adjoin env' env1) ds in
+  let t, env2 = check_block (E.adjoin env' env1) ds in
   p.et <- Some t;
   t, Env.adjoin env1 env2

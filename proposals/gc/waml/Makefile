@@ -91,7 +91,8 @@ TESTS =		$(TESTFILES:%.$(EXT)=%)
 
 .PHONY:		test debugtest partest
 
-test:		$(TESTFILES:%.$(EXT)=test/%)
+test:	evaltest wasmtest
+evaltest:		$(TESTFILES:%.$(EXT)=test/%)
 wasmtest:		cleantest $(TESTFILES:%.$(EXT)=wasmtest/%)
 		make cleantest
 debugtest:	$(TESTFILES:%.$(EXT)=debugtest/%)

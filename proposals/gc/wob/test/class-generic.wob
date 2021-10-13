@@ -37,7 +37,6 @@ class PAG<T, U>(n : Int, x : T, y : U) <: PAS<T, U>(n, x, y) {
     };
     return r;
   };
-
 };
 
 let pag = new PAG<Int$, Float$>(10, 7$, 3.14$);

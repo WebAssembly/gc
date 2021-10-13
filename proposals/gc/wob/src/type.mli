@@ -62,6 +62,7 @@ val to_string : typ -> string
 val gen_cls : 'id -> var -> var list -> cls
 val eq_cls : cls -> cls -> bool
 
+val sup_cls : cls -> cls option
 val cls_depth : cls -> int
 
 

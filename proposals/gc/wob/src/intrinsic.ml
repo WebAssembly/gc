@@ -160,8 +160,85 @@ let compile_text_eq ctxt : int32 =
               local_get (arg2idx @@ at);
               local_get (lenidx @@ at);
               array_get_u (typeidx @@ at);
-              i32_eq;
-              br_if (0l @@ at);
+              i32_ne;
+              br_if (2l @@ at);
+              br (0l @@ at);
+            ])
+          ]);
+          i32_const (1l @@ at);
+          return;
+        ]);
+        i32_const (0l @@ at);
+      ]
+    )
+  )
+
+
+let lower_rtt_type ctxt at : int32 =
+  let rtt_vt = W.(RefType (Nullable, EqHeapType)) in
+  let rtt_ft = W.(FieldType (ValueStorageType rtt_vt, Mutable)) in
+  emit_type ctxt at W.(ArrayDefType (ArrayType rtt_ft))
+
+let compile_rtt_eq ctxt : int32 =
+  Emit.lookup_intrinsic ctxt "rtt_eq" (fun () ->
+    let at = Prelude.region in
+    let typeidx = lower_rtt_type ctxt at in
+    let rtt_t' = W.(RefType (Nullable, DefHeapType (SynVar typeidx))) in
+    let t' = W.(RefType (Nullable, EqHeapType)) in
+    emit_func ctxt at [t'; t'] W.[i32] (fun ctxt selfidx ->
+      let arg1idx = emit_param ctxt at in
+      let arg2idx = emit_param ctxt at in
+      let rtt1idx = emit_local ctxt at rtt_t' in
+      let rtt2idx = emit_local ctxt at rtt_t' in
+      let lenidx = emit_local ctxt at W.i32 in
+      List.iter (emit_instr ctxt at) W.[
+        block void (List.map (fun e -> e @@ at) [
+          local_get (arg1idx @@ at);
+          local_get (arg2idx @@ at);
+          ref_eq;
+          if_ void (List.map (fun e -> e @@ at) [
+            i32_const (1l @@ at);
+            return;
+          ]) [];
+          block void (List.map (fun e -> e @@ at) [
+            block (result t') (List.map (fun e -> e @@ at) [
+              local_get (arg1idx @@ at);
+              br_on_non_data (0l @@ at);
+              rtt_canon (typeidx @@ at);
+              br_on_cast_fail (0l @@ at);
+              local_set (rtt1idx @@ at);
+              local_get (arg2idx @@ at);
+              br_on_non_data (0l @@ at);
+              rtt_canon (typeidx @@ at);
+              br_on_cast_fail (0l @@ at);
+              local_set (rtt2idx @@ at);
+              br (1l @@ at);
+            ]);
+            drop;
+            i32_const (0l @@ at);
+            return;
+          ]);
+          local_get (rtt1idx @@ at);
+          array_len (typeidx @@ at);
+          local_set (lenidx @@ at);
+          block void (List.map (fun e -> e @@ at) [
+            loop void (List.map (fun e -> e @@ at) [
+              local_get (lenidx @@ at);
+              i32_eqz;
+              br_if (1l @@ at);
+              local_get (rtt1idx @@ at);
+              local_get (lenidx @@ at);
+              i32_const (1l @@ at);
+              i32_sub;
+              local_tee (lenidx @@ at);
+              array_get (typeidx @@ at);
+              local_get (rtt2idx @@ at);
+              local_get (lenidx @@ at);
+              array_get (typeidx @@ at);
+              call (selfidx @@ at);
+              i32_eqz;
+              br_if (2l @@ at);
+              br (0l @@ at);
             ])
           ]);
           i32_const (1l @@ at);

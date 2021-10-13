@@ -1,0 +1,44 @@
+// Flexible uses of null
+
+class C() {};
+func f<A>(x : C, y : Int$, z : Int[], u : (), v : (Int, Int), w : A) {};
+
+f<C>(null, null, null, null, null, null);
+func g() : C { null };
+func h() : C { return null };
+let x0 = null;
+let x1 : C = null;
+let x2 = null : C;
+var x3 : C = null;
+x3 := null;
+let a1 = [null];
+let a2 = [null, new C()];
+let a3 = [new C(), null];
+
+let n = null;
+f<()>(n, n, n, n, n, n);
+func gn() : C { n };
+func hn() : C { return n };
+let x1n : C = n;
+let x2n = n : C;
+var x3n : C = n;
+x3n := n;
+let a1n = [n];
+let a2n = [n, new C()];
+let a3n = [new C(), n];
+
+let tn = (1, [null, null], 2);
+f<Int[]>(tn.1[0], tn.1[0], tn.1[1], tn.1[0], tn.1[1], tn.1[0]);
+func gtn() : C { tn.1[0] };
+func htn() : C { return tn.1[1] };
+let x1tn : C = tn.1[0];
+let x2tn = tn.1[1] : C;
+var x3tn : C = tn.1[1];
+x3tn := tn.1[0];
+let a1tn = [tn.1[0]];
+let a2tn = [tn.1[0], new C()];
+let a3tn = [new C(), tn.1[0]];
+
+func ft<A>(x : (C, Int$, Int[], (), (Int, Int), A)) {};
+let nt = (null, null, null, null, null, null);
+ft<C>(nt);

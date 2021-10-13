@@ -1,5 +1,21 @@
 // Inheritance
 
+class C() {};
+class D() <: C() {};
+class E() <: D() {};
+class F() <: E() {
+  func f() {};
+};
+class G() <: F() {
+  func g() {};
+  func h() {};
+};
+class H() <: G() {};
+class I() <: H() {
+  func i() {};
+};
+
+
 class Counter(x : Int) {
   let a = x;
   var c : Int = a;

@@ -217,6 +217,12 @@ let gen_cls id y ys =
     def = [];
   }
 
+let sup_cls c =
+  match c.sup with
+  | Obj -> None
+  | Inst (c', _) -> Some c'
+  | _ -> assert false
+
 let rec cls_depth c =
   match c.sup with
   | Obj -> 1

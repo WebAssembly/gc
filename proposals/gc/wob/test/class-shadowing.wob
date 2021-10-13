@@ -4,7 +4,7 @@ let x = 1;
 
 // Shadowing parent field with parameters or self
 
-class A(x : Int) { let x = x; type B = Int; };
+class A(x : Int) { let x = x; type BB = Int; };
 class B(x : Int) <: A(x + 1) { let y = x; func b() : B { new B(9) } };
 
 let b = new B(3);

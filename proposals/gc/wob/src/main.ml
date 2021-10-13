@@ -34,7 +34,7 @@ let argspec = Arg.align
   "-b", Arg.Set Flags.boxed,
     " universal generics, box everything";
   "-p", Arg.Set Flags.parametric,
-    " parametric generics, disallows casts (currently implied by -c)";
+    " parametric generics, disallows casts";
   "-x", Arg.Set Flags.textual,
     " output textual Wasm";
   "-w", Arg.Int (fun n -> Flags.width := n),
@@ -56,7 +56,6 @@ let () =
     if !args = [] then Flags.prompt := true;
     if !Flags.prompt then Flags.interpret := true;  (* TODO: for now *)
     if !Flags.compile then Flags.unchecked := false;
-    if !Flags.compile then Flags.parametric := true;
     if !Flags.interpret then
     (
       List.iter (fun arg -> if not (Run.run_file arg) then exit 1) !args;

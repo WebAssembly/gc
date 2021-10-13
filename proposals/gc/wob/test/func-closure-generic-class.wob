@@ -1,4 +1,3 @@
-// @FLAGS -b
 // @FAIL-WASM
 
 // Generic higher-order methods
@@ -26,12 +25,11 @@ class PAG<T, U>(n : Int, x : T, y : U) <: PAS<T, U>(n, x, y) {
   };
 };
 
-let pag = new PAG<Int, Float>(10, 7, 3.14);
+let pag = new PAG<Int$, Float$>(10, 7$, 3.14$);
 
-type I = Int;
-type F = Float;
-let l = pag.fold<I>(0, func(i : I, l : I, r : F, s : I) : I { s + l });
-let r = pag.fold<F>(0.0, func(i : I, l : I, r : F, s : F) : F { s + r });
-assert l == 10*7;
-assert r == 10.0*3.14;
-
+type I = Int$;
+type F = Float$;
+let l = pag.fold<I>(0$, func(i : Int, l : I, r : F, s : I) : I { (s.$ + l.$)$ });
+let r = pag.fold<F>(0.0$, func(i : Int, l : I, r : F, s : F) : F { (s.$ + r.$)$ });
+assert l.$ == 10*7;
+assert r.$ == 10.0*3.14;

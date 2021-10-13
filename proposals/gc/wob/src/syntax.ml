@@ -62,7 +62,7 @@ and exp' =
   | DotE of exp * var
   | AssignE of exp * exp
   | AnnotE of exp * typ
-  | CastE of exp * typ
+  | CastE of exp * var * typ list
   | BlockE of dec list
   | IfE of exp * exp * exp
   | WhileE of exp * exp
@@ -87,7 +87,7 @@ and sup' = var * typ list * exp list
 
 (* Modules *)
 
-type imp = (imp', (T.sort * T.typ) option list) Source.phrase
+type imp = (imp', ((T.sort * T.typ) option * T.kind option) list) Source.phrase
 and imp' =
   | ImpD of var option * var list * string
 

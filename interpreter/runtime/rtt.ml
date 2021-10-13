@@ -31,21 +31,13 @@ let rec match_rtt rtt1 rtt2 =
   | Rtt (_, None) -> false
   | Rtt (_, Some rtt1') -> match_rtt rtt1' rtt2
 
-(* TODO
-let rec pr_rtt = function
-| None -> ()
-| Some (Rtt (x, rtt_opt)) ->
-pr_rtt rtt_opt;
-Printf.printf "  %d = %s\n" (Hashtbl.hash x) (string_of_var (SemVar x))
-let match_rtt rtt1 rtt2 =
-Printf.printf "[match_rtt] rtt1 =\n";
-pr_rtt (Some rtt1);
-Printf.printf "[match_rtt] rtt2 =\n";
-pr_rtt (Some rtt2);
-let b = match_rtt rtt1 rtt2 in
-Printf.printf "[match_rtt] => %b\n%!" b;
-b
-*)
+let rec string_of_rtt (Rtt (x, sup)) =
+  string_of_var (SemVar x) ^
+  (match sup with
+  | None -> ""
+  | Some rtt' -> " (sub " ^ string_of_rtt rtt' ^ ")"
+  )
+
 
 let () =
   let eq_ref' = !Value.eq_ref' in

@@ -1,0 +1,12 @@
+func even(n : Int) : Bool {
+  if (n == 0) { return true };
+  return odd(n - 1);
+};
+
+func odd(n : Int) : Bool {
+  if (n == 0) { return false };
+  return even(n - 1);
+};
+
+assert even(4);
+assert odd(7);

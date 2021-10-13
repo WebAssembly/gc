@@ -428,9 +428,9 @@ RTT-based casts can only be performed with respect to concrete types, and requir
 
 * `br_on_cast_fail <labelidx>` branches if a value can not be cast down to a given reference type
   - `br_on_cast_fail $l : [t0* t (rtt n? $t')] -> [t0* (ref $t')]`
-    - iff `$l : [t0* t']`
+    - iff `$l : [t0* tl]`
     - and `t <: (ref null data)` or `t <: (ref null func)`
-    - and `t <: t'`
+    - and `t <: tl`
   - branches iff the first operand is null or its runtime type is not a sub-RTT of the RTT operand
   - passes operand along with branch, plus possible extra args
 

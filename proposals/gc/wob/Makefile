@@ -91,8 +91,11 @@ TESTS =		$(TESTFILES:%.$(EXT)=%)
 
 .PHONY:		test debugtest partest
 
-test:		$(TESTFILES:%.$(EXT)=test/%)
+test:	evaltest wasmptest wasmtest
+evaltest:		$(TESTFILES:%.$(EXT)=test/%)
 wasmtest:		cleantest $(TESTFILES:%.$(EXT)=wasmtest/%)
+		make cleantest
+wasmptest:		cleantest $(TESTFILES:%.$(EXT)=wasmptest/%)
 		make cleantest
 debugtest:	$(TESTFILES:%.$(EXT)=debugtest/%)
 
@@ -102,6 +105,12 @@ test/%:		$(OPT)
 wasmtest/%:		$(OPT)
 	  @ if ! grep -q "@FAIL-WASM" $(TESTDIR)/$(@F).$(EXT); \
 		  then ./$(NAME) -r -c -v $(shell grep "@FLAGS" $(TESTDIR)/$(@F).$(EXT) | sed 's/.*@FLAGS//g') $(TESTDIR)/$(@F).$(EXT); \
+		  else echo Skipping $(@F).$(EXT); \
+		fi
+
+wasmptest/%:		$(OPT)
+	  @ if ! grep -q "@FAIL-WASM\|@FAIL-PARAMETRIC" $(TESTDIR)/$(@F).$(EXT); \
+		  then ./$(NAME) -r -c -v -p $(shell grep "@FLAGS" $(TESTDIR)/$(@F).$(EXT) | sed 's/.*@FLAGS//g') $(TESTDIR)/$(@F).$(EXT); \
 		  else echo Skipping $(@F).$(EXT); \
 		fi
 

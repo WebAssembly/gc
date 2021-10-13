@@ -1,0 +1,44 @@
+// Simple mutual recursive classes
+
+class Even(n : Int) {
+  func test() : Bool {
+    if (n == 0) { return true };
+    return (new Odd(n - 1)).test();
+  };
+};
+
+class Odd(n : Int) {
+  func test() : Bool {
+    if (n == 0) { return false };
+    return (new Even(n - 1)).test();
+  };
+};
+
+assert (new Even(4)).test();
+assert (new Odd(7)).test();
+
+class Stepper() {
+  func step() : Stepper { return null };
+};
+
+class Ping(n : Int) <: Stepper() {
+  func step() : Stepper {
+    if (n == 0) { return null };
+    return new Pong(n - 1);
+  };
+};
+
+class Pong(n : Int) <: Stepper() {
+  func step() : Stepper {
+    if (n == 0) { return null };
+    return new Ping(n - 1);
+  };
+};
+
+var n : Int = 7;
+var stepper : Stepper = new Ping(n);
+while (stepper != null) {
+  stepper := stepper.step();
+  n := n-1;
+};
+assert (n == -1);

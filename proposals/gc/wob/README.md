@@ -29,7 +29,7 @@ The `wob` implementation encompasses:
 * Compiler to Wasm (WIP)
 * A read-eval-print-loop that can run either interpreted or compiled code
 
-The language is fully implemented in the interpreter, but the compiler does not yet support closures and casts. It does, however, implement garbage-collected objects, tuples, arrays, text strings, classes, and generics, making use of [most of the constructs](#under-the-hood) in the GC proposal's MVP.
+The language is fully implemented in the interpreter, but the compiler does not yet support closures. It does, however, fully implement garbage-collected objects, tuples, arrays, text strings, classes, casts, and generics, making use of [most of the constructs](#under-the-hood) in the GC proposal's MVP.
 
 For example, here is a short transcript of a REPL session with [`wob -c -x`](#invocation):
 ```
@@ -360,35 +360,21 @@ Wob types are lowered to Wasm as shown in the following table.
 | Byte     | i32             | i8              |
 | Int      | i32             | i32             |
 | Float    | f64             | f64             |
-| Bool$    | i31ref          | anyref          |
-| Byte$    | i31ref          | anyref          |
-| Int$     | ref (struct i32)| anyref          |
-| Float$   | ref (struct f64)| anyref          |
-| Text     | ref (array i8)  | anyref          |
-| Object   | ref (struct)    | anyref          |
-| (Float,Text)|ref (struct f64 anyref)| anyref |
-| Float[]  | ref (array f64) | anyref          |
-| Text[]   | ref (array anyref)| anyref        |
-| C        | ref (struct (ref $vt) ...)|anyref |
-| <T>      | anyref          | anyref          |
+| Bool$    | i31ref          | eqref           |
+| Byte$    | i31ref          | eqref           |
+| Int$     | ref (struct i32)| eqref           |
+| Float$   | ref (struct f64)| eqref           |
+| Text     | ref (array i8)  | eqref           |
+| Object   | ref (struct)    | eqref           |
+| (Float,Text)|ref (struct f64 eqref)| eqref   |
+| Float[]  | ref (array f64) | eqref           |
+| Text[]   | ref (array eqref)| eqref          |
+| C        | ref (struct (ref $vt) ...)| eqref |
+| <T>      | eqref           | eqref           |
 
-Notably, all fields of boxed type have to be represented as `anyref`, in order to be compatible with [generics](#generics).
+Notably, all fields of boxed type have to be represented as `eqref`, in order to be compatible with [generics](#generics).
 
-
-### Generics
-
-Generics require boxed types and use `anyref` as a universal representation for any value of variable type.
-
-References returned from a generic function call are cast back to their concrete type when that type is known at the call site.
-
-Moreover, arrays and tuples likewise represent all fields of boxed type with `anyref`, i.e., they are treated like generic types as well. This is necessary to enable passing them to generic functions that abstract some of their types, for example:
-```
-func fst<X, Y>(p : (X, Y)) : X { p.0 };
-
-let p = ("foo", "bar");
-fst<Text, Text>(p);
-```
-If `p` was not represented as `ref (struct anyref anyref)`, then the call to `fst` would produce invalid Wasm.
+Types and type parameters have a [runtime representation](#runtime-type-represetation) as well, in order to enable casts over generic types.
 
 
 ### Bindings
@@ -404,9 +390,42 @@ Wob bindings are compiled to Wasm as follows.
 
 Note that all global declarations have to be compiled into mutable globals, since they could not be initialised otherwise.
 
-### Object and Class representation
+### Object representation
 
-Objects are represented in the obvious manner, as a struct whose first field is a reference to the dispatch table, while the rest of the fields represent the parameter, `let`, and `var` bindings of the class and its super classes, in definition order. Paremeter and `let` fields are immutable.
+Objects are represented in the obvious manner, as a struct whose first field is a reference to the dispatch table, while the rest of the fields represent:
+
+* class type arguments (immutable)
+* constructor arguments (immutable)
+* `let` fields (immutable)
+* `var` fields (mutable)
+
+of the class and its super classes, in definition order. All fields but `var` ones are immutable. Type arguments are represented as [runtime type](#runtime-type-representation), and used to check casts. Identical (type or value) arguments just passed forward to a super class are not currently deduped, but could be.
+
+The dispatch table contains references to the function of the class and its super classes, in definition order. In addition, the last field of each dispatch table is a pointer to itself. This is also duplicated in place by dispatch tables for subclasses, so that each dispatch table is interleaved with references to the dispatch tables of all its super classes. The type of these references is `eqref`, and it is used to implement the class check for explicit casts. That is, the identity of dispatch tables is used as a proxy for class identities.
+
+For example, the dispatch tables for the classes in the following snippet,
+```
+class C() {
+  func f() {};
+};
+class D() <: C() {
+  func g() {};
+  func h() {};
+};
+class E() <: D() {
+  func f() {};  // override
+};
+```
+are:
+```
+$disp_C = [ $f_C | $disp_C ]
+$disp_D = [ $f_C | $disp_C | $g_D | $h_D | $disp_D ]
+$disp_E = [ $f_E | $disp_C | $g_D | $h_D | $disp_D | $disp_E ]
+```
+To check that an object's class is a subclass of `D`, the code first uses `br_on_cast` to down cast the object to the expected representation, which also implies that its dispatch table contains a slot for `$disp_D`. It then checks that the reference in that slot is equal to class `D`'s dispatch table. Finally, it checks that the [runtime types](#runtime-type-representation) for generic parameters match up.
+
+
+### Class representation
 
 Class declarations translate to a global binding a class _descriptor_, which is represented as a struct with the following fields:
 
@@ -428,6 +447,55 @@ Objects are allocated by a class'es constructor function with a 2-phase initiali
 * The second phase invokes the post-alloc hook, which evaluates expression declarations and `var` fields, after possibly invoking the post-alloc hook of the super class to do the same; this initialises var fields via mutation.
 
 * Finally, the instance struct is returned.
+
+
+### Generics
+
+Generics require boxed types and use `eqref` as a universal representation for any value of variable type.
+
+References returned from a generic function call are cast back to their concrete type when that type is known at the call site.
+
+Moreover, arrays and tuples likewise represent all fields of boxed type with `eqref`, i.e., they are treated like generic types as well. This is necessary to enable passing them to generic functions that abstract some of their types, for example:
+```
+func fst<X, Y>(p : (X, Y)) : X { p.0 };
+
+let p = ("foo", "bar");
+fst<Text, Text>(p);
+```
+If `p` was not represented as `ref (struct eqref eqref)`, then the call to `fst` would produce invalid Wasm.
+
+
+### Runtime type representation
+
+All type parameters to a function or class are reified as value parameters of type `eqref`, representing a runtime description of the source-level type. Similarly, an object of generic class stores each of the class'es type parameter instantiations as hidden fields.
+
+When invoking a generic function or constructor, a suitable representation is built dynamically for the type arguments (possibly using surrounding type parameters) and passed along.
+
+The type representation is a fairly simple tree structure, where non-generic types are the leaves, which are a reference that is either an `i31ref` representing a primitive type (or a box thereof), or a reference to a class'es dispatch table representing that class. Generic types or any other structural types are represented by an array whose first slot is the tag, again an `i31ref` for built-in types or a reference to a class'es dispatch table, and the remaining slots are the representations of the type arguments.
+
+| Wob type | Runtime type |
+| -------- | ------------ |
+| Bool     | ref.i31 1    |
+| Byte     | ref.i31 2    |
+| Int      | ref.i31 3    |
+| Float    | ref.i31 4    |
+| Text     | ref.i31 5    |
+| Object   | ref.i31 6    |
+| Bool$    | ref.i31 -1   |
+| Byte$    | ref.i31 -2   |
+| Int$     | ref.i31 -3   |
+| Float$   | ref.i31 -4   |
+| Text$    | array [ref.i31 7; ref.i31 5] |
+| (Float$,Text) | array [ref.i31 8; ref.i31 -4; ref.i31 5] |
+| Object[] | array [ref.i31 9; ref.i31 6] |
+| C        | struct {...} |
+| C<Int$,Text> | array [struct {...}; ref.i31 -3; ref.i31 5]
+
+Checking type equivalence is a simple parallel tree recursion, short-cut by reference equality. The runtime does not currently perform type canonicalisation.
+
+Type definitions (with the `type` keyword) are implemented as functions returning a runtime type.
+
+All runtime representations (including reified generic type parameters) are omitted in "parametric" compilation mode (command line flag `-p`). In that mode, casts are forbidden.
 
 
 ### Modules
