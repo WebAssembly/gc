@@ -1,0 +1,6 @@
+// Recursive class import
+
+import {Sub} from "test/export-class-recursive";
+
+let sub = new Sub();
+sub.r(20);

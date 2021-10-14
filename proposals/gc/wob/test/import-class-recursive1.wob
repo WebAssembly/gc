@@ -1,0 +1,6 @@
+// Recursive class import
+
+import {Ping} from "test/export-class-recursive";
+
+let ping = new Ping();
+ping.r(11);

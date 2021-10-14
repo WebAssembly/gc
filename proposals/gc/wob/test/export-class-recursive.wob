@@ -1,0 +1,35 @@
+// Recursive class export
+
+class Sup() {
+  var a : Int = 0;
+};
+
+class Ping() {
+  var x : Int = 0;
+  func f(p : Pong, n : Int) { if n > 0 { p.g(this, n-1) } };
+  func r(n : Int) { f(new Pong(), n) };
+};
+
+class Pong() <: Sup() {
+  var y : Float = 0.0;
+  func g(p : Ping, n : Int) { if n > 0 { p.f(this, n-1) } };
+  func r(n : Int) { g(new Ping(), n) };
+};
+
+class Sub() <: Ping() {
+  var z : Bool = false;
+  func f(p : Pong, n : Int) { if n > 1 { p.g(this, n-2) } };
+  func r(n : Int) { f(new Pong(), n) };
+};
+
+let sup = new Sup();
+let sub = new Sub();
+let ping = new Ping();
+let pong = new Pong();
+
+ping.f(pong, 11);
+pong.g(ping, 13);
+sub.f(pong, 5);
+ping.r(12);
+pong.r(10);
+sub.r(7);

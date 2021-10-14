@@ -185,6 +185,16 @@ let emit_let ctxt at bt ts f =
     env := E.map_vals (shift_loc (0l -% shift)) !env;
   )
 
+let rec ctxt_flush ctxt =
+  let triggered = ref false in
+  ClsEnv.iter (fun _ cls ->
+    if not (Lazy.is_val cls.def) then begin
+      ignore (Lazy.force cls.def);
+      triggered := true
+    end
+  ) !(ctxt.ext.clss);
+  if !triggered then ctxt_flush ctxt
+
 
 (* Debug printing *)
 
@@ -1936,6 +1946,7 @@ let compile_prog p : W.module_ =
   let emit ctxt = emit_instr ctxt p.at in
   let ctxt = enter_scope (make_ctxt ()) GlobalScope in
   List.iter (compile_imp ctxt) is;
+  ctxt_flush ctxt;
   let t' = lower_value_type ctxt p.at (type_of p) in
   let const = default_const ctxt p.at (type_of p) in
   let result_idx = emit_global ctxt p.at W.Mutable t' const in
