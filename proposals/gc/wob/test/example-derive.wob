@@ -1,7 +1,7 @@
 // Expression derivatives
 
-import {Exp, Lit, Var, Add, Mul, Visitor} from "test/example-exp";
-import {Evaluator, Env, Entry} from "test/example-eval";
+import {Visitor, Lit, Var, Add, Mul, Exp} from "test/example-exp";
+import {Entry, Env, Evaluator} from "test/example-eval";
 
 class Derive(x : Text) <: Visitor<(), Exp>() {
   func visitLit(exp : Lit, _ : ()) : Exp {
