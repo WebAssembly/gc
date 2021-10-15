@@ -212,7 +212,7 @@ Notes:
 
 * For simplicity, there is no access control beyond using blocks, that is, all top-level declarations are exported.
 
-* Imports are loaded eagerly and recursively. When an import specifies a qualifying identifier `M`, then all names from the import list are renamed to include the prefix `M_` -- this is a hack to avoid the introduction of name spacing constructs.
+* Imports are loaded eagerly and recursively. When an import specifies a qualifying identifier `M`, then all names from the import list are renamed to include the prefix `M` -- this is a hack to avoid the introduction of name spacing constructs.
 
 * With batch compilation, modifying a module generally requires recompiling its dependencies, otherwise Wasm linking may fail.
 
@@ -316,7 +316,7 @@ func snd(p : IntPair) : Int { p.1 };
 ```
 A client:
 ```
-import IP {pair, fst} from "intpair";
+import IP_{pair, fst} from "intpair";
 
 let p = IP_pair(4, 5);
 assert IP_fst(p) == 4;
@@ -475,21 +475,21 @@ The type representation is a fairly simple tree structure, where non-generic typ
 
 | Wob type | Runtime type |
 | -------- | ------------ |
-| Bool     | ref.i31 1    |
-| Byte     | ref.i31 2    |
-| Int      | ref.i31 3    |
-| Float    | ref.i31 4    |
-| Text     | ref.i31 5    |
-| Object   | ref.i31 6    |
-| Bool$    | ref.i31 -1   |
-| Byte$    | ref.i31 -2   |
-| Int$     | ref.i31 -3   |
-| Float$   | ref.i31 -4   |
-| Text$    | array [ref.i31 7; ref.i31 5] |
-| (Float$,Text) | array [ref.i31 8; ref.i31 -4; ref.i31 5] |
-| Object[] | array [ref.i31 9; ref.i31 6] |
-| C        | struct {...} |
-| C<Int$,Text> | array [struct {...}; ref.i31 -3; ref.i31 5]
+| Bool     | i31 1    |
+| Byte     | i31 2    |
+| Int      | i31 3    |
+| Float    | i31 4    |
+| Text     | i31 5    |
+| Object   | i31 6    |
+| Bool$    | i31 -1   |
+| Byte$    | i31 -2   |
+| Int$     | i31 -3   |
+| Float$   | i31 -4   |
+| Text$    | [i31 7; i31 5] |
+| (Float$,Text) | [i31 8; i31 -4; i31 5] |
+| Object[] | [i31 9; i31 6] |
+| C        | $disp_C |
+| C<Int$,Text> | array [$disp_C; i31 -3; i31 5]
 
 Checking type equivalence is a simple parallel tree recursion, short-cut by reference equality. The runtime does not currently perform type canonicalisation.
 

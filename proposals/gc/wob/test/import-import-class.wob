@@ -1,7 +1,7 @@
 // Transitive class imports
 
 import {C, D} from "test/import-class";
-import M {C} from "test/export-class";
+import M_{C} from "test/export-class";
 
 
 // Type generativity

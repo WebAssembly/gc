@@ -1,7 +1,7 @@
 // Imports
 
-import M {T, x, v, s, p, f, g, t, a} from "test/export";
-import M2 {q, a} from "test/export2";
+import M_{T, x, v, s, p, f, g, t, a} from "test/export";
+import M2_{q, a} from "test/export2";
 
 type U = M_T<Bool$, Int$>;
 
