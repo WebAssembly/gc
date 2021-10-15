@@ -475,21 +475,21 @@ The type representation is a fairly simple tree structure, where non-generic typ
 
 | Wob type | Runtime type |
 | -------- | ------------ |
-| Bool     | i31 1    |
-| Byte     | i31 2    |
-| Int      | i31 3    |
-| Float    | i31 4    |
-| Text     | i31 5    |
-| Object   | i31 6    |
-| Bool$    | i31 -1   |
-| Byte$    | i31 -2   |
-| Int$     | i31 -3   |
-| Float$   | i31 -4   |
-| Text$    | [i31 7; i31 5] |
-| (Float$,Text) | [i31 8; i31 -4; i31 5] |
-| Object[] | [i31 9; i31 6] |
-| C        | $disp_C |
-| C<Int$,Text> | array [$disp_C; i31 -3; i31 5]
+| Bool     | i31(1)       |
+| Byte     | i31(2)       |
+| Int      | i31(3)       |
+| Float    | i31(4)       |
+| Text     | i31(5)       |
+| Object   | i31(6)       |
+| Bool$    | i31(-1)      |
+| Byte$    | i31(-2)      |
+| Int$     | i31(-3)      |
+| Float$   | i31(-4)      |
+| Text$    | [i31(7); i31(5)] |
+| (Float$,Text) | [i31(8); i31(-4); i31(5)] |
+| Object[] | [i31(9); i31(6)] |
+| C        | $disp_C      |
+| C<Int$,Text> | array [$disp_C; i31(-3); i31(5)]
 
 Checking type equivalence is a simple parallel tree recursion, short-cut by reference equality. The runtime does not currently perform type canonicalisation.
 
