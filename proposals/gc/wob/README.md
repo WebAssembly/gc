@@ -78,7 +78,9 @@ See `wob -h` for further options.
 
 Points of note:
 
-* The Wasm code produced is self-contained with no imports (unless the source declares explicit imports of other Wob modules). Consequently, it can run in any Wasm environment supporting the GC proposal.
+* The Wasm code produced is self-contained with no imports except the small Wob runtime system (unless the source declares explicit imports of other Wob modules). Consequently, it can run in any Wasm environment supporting the GC proposal.
+
+* The compiler even supports a *headless* mode in which the relevant parts of the runtime system is included into each module.
 
 * That measn that there is no I/O. However, a program can communicate results via module exports or run assertions.
 
@@ -497,6 +499,20 @@ Type definitions (with the `type` keyword) are implemented as functions returnin
 All runtime representations (including reified generic type parameters) are omitted in "parametric" compilation mode (command line flag `-p`). In that mode, casts are forbidden.
 
 
+### Runtime system
+
+Wob requires a tiny runtime system containing a handful of instrinsic operations, such as for `Text` type and for comparing runtime types. It is imported by each output module under the name `"wob-runtime".`And it comes in the form of a little Wasm module that is generated internally on the fly when using the interpreter.
+
+When running outside the interpreter, the `"wob-runtime"` module has to be provided externally. A suitable standalone runtime module can be *generated* with the compiler invocation
+```
+wob -g wob-runtime.wasm
+```
+
+#### Headless mode
+
+Using option `-n` when compiling sources, the compiler also allows producing *headless* Wasm modules that do not import a runtime. Instead they, include all necessary intrinisics in the produced module.
+
+
 ### Modules
 
 Each Wob module compiles into a Wasm module. The body of a Wob module is compiled into the Wasm start function.
@@ -508,7 +524,7 @@ Import declarations directly map to Wasm imports of the same name. No other impo
 
 #### Linking
 
-A Wob program can be executed by _linking_ its main module. Linking does not require any magic, it simply locates all imported modules (by appending `.wasm` to the URL, which is interpreted as file path), recursively links them (using a simple registry to share instantiations), and maps exports to imports by name.
+A Wob program can be executed by _linking_ its main module. Linking does not require any magic, it simply locates the [runime](#runtime-system) (if used) and all imported modules (by appending `.wasm` to the URL, which is interpreted as file path), recursively links them (using a simple registry to share instantiations), and maps exports to imports by name.
 
 
 #### Batch compilation
@@ -527,7 +543,7 @@ Furthermore, before compilation, each input is preprocessed by injecting imports
 
 Wob's linking model is as straightforward as it can get, and requires no language-specific support. It merely assumes that modules are loaded and instantiated in a bottom-up manner.
 
-Here is a template for minimal glue code to run Wob programs in an environment like node.js. Invoking `run("name")` should suffice to run a compiled `name.wasm` and return its result, provided the dependencies are also avaliable in the right place.
+Here is a template for minimal glue code to run Wob programs in an environment like node.js. Invoking `run("name")` should suffice to run a compiled `name.wasm` and return its result, provided the dependencies are also avaliable in the right place (imported modules and the Wob [runtime system](#runtime-system), if not running headless).
 ```
 'use strict';
 

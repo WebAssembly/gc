@@ -42,6 +42,7 @@ let emit_entity ents ent : int32 =
   idx
 
 let implicit_entity ents : int32 =
+  assert (ents.list = []);
   let idx = ents.cnt in
   ents.cnt <- idx +% 1l;
   idx

@@ -15,8 +15,8 @@ let rec handle f =
   | Parse.Error (at, msg) -> error at "syntax error" msg
   | Typing.Error (at, msg) -> error at "type error" msg
   | Eval.Trap (at, msg) -> error at "runtime error" msg
-(*  | Eval.Crash (at, msg) -> error at "crash" msg
-*)  | Compile.NYI (at, msg) ->
+  | Eval.Crash (at, msg) -> error at "crash" msg
+  | Compile.NYI (at, msg) ->
     error at "compilation error" (msg ^ " not yet implemented")
   | Link.Error (at, msg) -> error at "linking error" msg
   | Wasm.Valid.Invalid (at, msg) ->
@@ -35,8 +35,9 @@ let rec handle f =
 
 (* Input *)
 
-(* Let's hope this is build-dependen enough *)
-let marshal_tag = Hashtbl.hash (Marshal.to_string handle [Marshal.Closures])
+(* Let's hope this is build-dependent enough *)
+let fingerprint = Flags.(!boxed, !parametric, handle)
+let marshal_tag () = Hashtbl.hash (Marshal.to_string fingerprint [Marshal.Closures])
 
 let with_in_file open_in_mode file f =
   let ic = open_in_mode file in
@@ -100,8 +101,8 @@ let read_binary_file file =
   | [s] ->
     try
       let bs = Bytes.of_string s in
-      if Marshal.from_string s 0 <> marshal_tag then
-        raise (WasmFormat (at, "wasm binary is from incompatible build"));
+      if Marshal.from_string s 0 <> marshal_tag () then
+        raise (WasmFormat (at, "wasm binary is from incompatible build or compilation options"));
       let off1 = Marshal.total_size bs 0 in
       if Marshal.from_string s off1 <> (!Flags.boxed, !Flags.parametric) then
         raise (WasmFormat (at, "wasm binary has incompatible language mode"));
@@ -119,16 +120,21 @@ let with_out_file open_out_mode file f =
     f oc; close_out oc
   with exn -> close_out oc; raise exn
 
-let write_binary_file file m (senv : Typing.env) =
+let write_binary_file file m (senv_opt : Typing.env option) =
   let file' = file ^ ".wasm" in
   trace "Encoding...";
   let s1 = Wasm.Encode.encode m in
-  let custom =
-    Marshal.to_string marshal_tag [] ^
-    Marshal.to_string (!Flags.boxed, !Flags.parametric) [] ^
-    Marshal.to_string senv [Marshal.Closures]
+  let s2 =
+    match senv_opt with
+    | None -> ""
+    | Some senv ->
+      let custom =
+        Marshal.to_string (marshal_tag ()) [] ^
+        Marshal.to_string (!Flags.boxed, !Flags.parametric) [] ^
+        Marshal.to_string senv [Marshal.Closures]
+      in
+      Wasm.Encode.encode_custom (Wasm.Utf8.decode "wob-sig") custom
   in
-  let s2 = Wasm.Encode.encode_custom (Wasm.Utf8.decode "wob-sig") custom in
   trace ("Writing (" ^ file' ^ ")...");
   with_out_file open_out_bin file' (fun oc ->
     output_string oc s1;
@@ -145,11 +151,45 @@ let write_file file m senv =
   if !Flags.textual then
     write_textual_file file' m
   else
-    write_binary_file file' m senv
+    write_binary_file file' m (Some senv)
 
 let write_stdout m =
   trace "Printing Wasm...";
   Wasm.Print.module_ stdout !Flags.width m
+
+
+(* Runtime System *)
+
+let runtime_module : Wasm.Ast.module_ option ref = ref None
+let runtime_instance : Wasm.Instance.module_inst option ref = ref None
+
+let gen_runtime () =
+  trace ("generating runtime system...");
+  let runtime = Runtime.compile_runtime () in
+  if !Flags.validate then begin
+    trace "Validating runtime system...";
+    Wasm.Valid.check_module runtime
+  end;
+  runtime_module := Some runtime;
+  if not !Flags.headless then
+  (
+    trace ("instantiating runtime system...");
+    runtime_instance := Some (Wasm.Eval.init runtime [])
+  )
+
+let write_runtime file =
+  if !runtime_module = None then gen_runtime ();
+  let m = Option.get !runtime_module in
+  try
+    match Filename.extension file with
+    | ".wasm" -> write_binary_file (Filename.chop_extension file) m None
+    | ".wat" -> write_textual_file (Filename.chop_extension file) m
+    | ext -> prerr_endline (file ^ ": unknown output file type")
+  with Sys_error msg ->
+    prerr_endline (file ^ ": i/o error: " ^ msg)
+
+let init () =
+  if not !Flags.headless then gen_runtime ()
 
 
 (* Compilation pipeline *)
@@ -337,12 +377,15 @@ let load_file url at : entry =
   with exn -> raise (Recursive (at, exn, Printexc.get_raw_backtrace ()))
 
 let find_entry url at =
-  match Reg.find_opt url !reg with
-  | Some entry -> entry
-  | None ->
-    let entry = load_file url at in
-    reg := Reg.add url entry !reg;
-    entry
+  if url = Runtime.module_name then
+    {stat = Env.empty; dyn = Env.empty; inst = !runtime_instance}
+  else
+    match Reg.find_opt url !reg with
+    | Some entry -> entry
+    | None ->
+      let entry = load_file url at in
+      reg := Reg.add url entry !reg;
+      entry
 
 let _ = Typing.get_env := fun at url -> (find_entry url at).stat
 let _ = Eval.get_env := fun at url -> (find_entry url at).dyn

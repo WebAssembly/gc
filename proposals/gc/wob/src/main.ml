@@ -1,5 +1,5 @@
 let name = "wob"
-let version = "0.1"
+let version = "0.2"
 
 let banner () =
   print_endline (name ^ " " ^ version ^ " interpreter")
@@ -12,6 +12,7 @@ let add_arg source = args := !args @ [source]
 
 let quote s = "\"" ^ String.escaped s ^ "\""
 
+let runtime = ref ""
 let argspec = Arg.align
 [
   "-", Arg.Set Flags.prompt,
@@ -20,6 +21,10 @@ let argspec = Arg.align
     " interpret input (default when interactive)";  (* TODO: for now *)
   "-c", Arg.Set Flags.compile,
     " compile input to Wasm (default when files given)";
+  "-n", Arg.Set Flags.headless,
+    " no runtime system, compile headless";
+  "-g", Arg.Set_string runtime,
+    " generate runtime system";
   "-d", Arg.Set Flags.dry,
     " dry, do not run program" ^
     " (default when compiling non-interactively)";
@@ -53,9 +58,11 @@ let () =
   Printexc.record_backtrace true;
   try
     Arg.parse argspec add_arg usage;
-    if !args = [] then Flags.prompt := true;
+    if !args = [] && !runtime = "" then Flags.prompt := true;
     if !Flags.prompt then Flags.interpret := true;  (* TODO: for now *)
     if !Flags.compile then Flags.unchecked := false;
+    Run.init ();
+    if !runtime <> "" then Run.write_runtime !runtime;
     if !Flags.interpret then
     (
       List.iter (fun arg -> if not (Run.run_file arg) then exit 1) !args;
