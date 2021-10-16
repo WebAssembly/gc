@@ -10,6 +10,7 @@ NAME =		wob
 EXT =			$(NAME)
 UNOPT = 	$(NAME).debug
 OPT =   	$(NAME)
+RUNTIME =	$(NAME)-runtime
 
 WASMBASE = ../../../interpreter
 WASMDIRS =	util syntax binary script text valid runtime exec host main
@@ -103,7 +104,7 @@ wasmntest:		cleantest titletest/Test-wasm-headless $(TESTFILES:%.$(EXT)=wasmntes
 		@make cleantest
 wasmptest:		cleantest titletest/Test-wasm-parametric $(TESTFILES:%.$(EXT)=wasmptest/%)
 		@make cleantest
-nodetest:		cleantest titletest/Test-node $(TESTFILES:%.$(EXT)=nodetest/%)
+nodetest:		cleantest titletest/Test-node $(RUNTIME).wasm $(TESTFILES:%.$(EXT)=nodetest/%)
 		@make cleantest
 
 titletest/%:	$(OPT)
@@ -154,13 +155,16 @@ nodetest/%:		$(OPT)
 		  else echo '**' Skipping $(@F).$(EXT); \
 		fi
 
+$(RUNTIME).wasm:
+		@./$(NAME) -g $@
+
 
 # Miscellaneous targets
 
 .PHONY:		clean
 
 clean: cleantest
-		rm -rf $(WASMDIR) _tags
+		rm -rf $(WASMDIR) $(RUNTIME).wasm _tags
 		$(OCB) -clean
 
 cleantest:
