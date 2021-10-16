@@ -24,6 +24,8 @@ INCLS =		$(PWD)/_wasm/_build
 FLAGS = 	-lexflags -ml -cflags '-w +a-4-27-37-42-44-45 -warn-error +a-3'
 OCB =		ocamlbuild -verbose 8 $(FLAGS) $(DIRS:%=-I %) $(LIBS:%=-lib %) -cflags '$(INCLS:%=-I %)' -lflags '$(INCLS:%=-I %)'
 
+NODE =		node --experimental-wasm-gc
+
 
 # Main targets
 
@@ -91,7 +93,7 @@ TESTS =		$(TESTFILES:%.$(EXT)=%)
 
 .PHONY:		test evaltest debugtest wasmtest wasmntest wasmptest runtimetest
 
-test: runtimetest evaltest wasmtest wasmptest wasmntest
+test: runtimetest evaltest wasmtest wasmptest wasmntest nodetest
 
 evaltest:		titletest/Test-eval $(TESTFILES:%.$(EXT)=evaltest/%)
 debugtest:	titletest/Test-debug $(TESTFILES:%.$(EXT)=debugtest/%)
@@ -100,6 +102,8 @@ wasmtest:		cleantest titletest/Test-wasm $(TESTFILES:%.$(EXT)=wasmtest/%)
 wasmntest:		cleantest titletest/Test-wasm-headless $(TESTFILES:%.$(EXT)=wasmntest/%)
 		@make cleantest
 wasmptest:		cleantest titletest/Test-wasm-parametric $(TESTFILES:%.$(EXT)=wasmptest/%)
+		@make cleantest
+nodetest:		cleantest titletest/Test-node $(TESTFILES:%.$(EXT)=nodetest/%)
 		@make cleantest
 
 titletest/%:	$(OPT)
@@ -119,19 +123,34 @@ runtimetest:	$(OPT) titletest/Test-runtime
 
 wasmtest/%:		$(OPT)
 	  @ if ! grep -q "@FAIL-WASM" $(TESTDIR)/$(@F).$(EXT); \
-		  then /bin/echo -n '$(@F).$(EXT)> '; ./$(NAME) -r -c -v $(shell grep "@FLAGS" $(TESTDIR)/$(@F).$(EXT) | sed 's/.*@FLAGS//g') $(TESTDIR)/$(@F).$(EXT); \
+		  then \
+		    /bin/echo -n '$(@F).$(EXT)> '; \
+		    ./$(NAME) -r -c -v $(shell grep "@FLAGS" $(TESTDIR)/$(@F).$(EXT) | sed 's/.*@FLAGS//g') $(TESTDIR)/$(@F).$(EXT); \
 		  else echo '**' Skipping $(@F).$(EXT); \
 		fi
 
 wasmntest/%:		$(OPT)
 	  @ if ! grep -q "@FAIL-WASM\|@FAIL-HEADLESS" $(TESTDIR)/$(@F).$(EXT); \
-		  then /bin/echo -n '$(@F).$(EXT)> '; ./$(NAME) -r -c -v -n $(shell grep "@FLAGS" $(TESTDIR)/$(@F).$(EXT) | sed 's/.*@FLAGS//g') $(TESTDIR)/$(@F).$(EXT); \
+		  then \
+		    /bin/echo -n '$(@F).$(EXT)> '; \
+		    ./$(NAME) -r -c -v -n $(shell grep "@FLAGS" $(TESTDIR)/$(@F).$(EXT) | sed 's/.*@FLAGS//g') $(TESTDIR)/$(@F).$(EXT); \
 		  else echo '**' Skipping $(@F).$(EXT); \
 		fi
 
 wasmptest/%:		$(OPT)
 	  @ if ! grep -q "@FAIL-WASM\|@FAIL-PARAMETRIC" $(TESTDIR)/$(@F).$(EXT); \
-		  then /bin/echo -n '$(@F).$(EXT)> '; ./$(NAME) -r -c -v -p $(shell grep "@FLAGS" $(TESTDIR)/$(@F).$(EXT) | sed 's/.*@FLAGS//g') $(TESTDIR)/$(@F).$(EXT); \
+		  then \
+		    /bin/echo -n '$(@F).$(EXT)> '; \
+		    ./$(NAME) -r -c -v -p $(shell grep "@FLAGS" $(TESTDIR)/$(@F).$(EXT) | sed 's/.*@FLAGS//g') $(TESTDIR)/$(@F).$(EXT); \
+		  else echo '**' Skipping $(@F).$(EXT); \
+		fi
+
+nodetest/%:		$(OPT)
+	  @ if ! grep -q "@FAIL-WASM\|@FAIL-V8" $(TESTDIR)/$(@F).$(EXT); \
+		  then \
+		    echo $(@F).$(EXT); \
+		    ./$(NAME) -c -v $(shell grep "@FLAGS" $(TESTDIR)/$(@F).$(EXT) | sed 's/.*@FLAGS//g') $(TESTDIR)/$(@F).$(EXT); \
+		    $(NODE) js/$(NAME).js $(TESTDIR)/$(@F); \
 		  else echo '**' Skipping $(@F).$(EXT); \
 		fi
 

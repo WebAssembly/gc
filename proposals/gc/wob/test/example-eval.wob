@@ -1,3 +1,5 @@
+// @FAIL-V8
+
 // Expression evaluator
 
 import {Exp, Lit, Var, Add, Mul, Visitor} from "test/example-exp";

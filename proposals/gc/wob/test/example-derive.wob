@@ -1,3 +1,5 @@
+// @FAIL-V8
+
 // Expression derivatives
 
 import {Visitor, Lit, Var, Add, Mul, Exp} from "test/example-exp";
