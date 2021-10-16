@@ -56,3 +56,58 @@ type AA = A<Int$, C<D>>;
 assert e :> E<AA> == e;
 assert e :> E<A<Float$, C<D>>> == null;
 assert e :> E<A<Int$, C<B<Int$, Float$>>>> == null;
+
+
+func makeA<X, Y>() : Object { new A<X, Y>() };
+func makeB<X, Y>() : Object { new B<X, Y>() };
+func makeC<X>() : Object { new C<X>() };
+func makeD() : Object { new D() };
+func makeE<X>() : Object { new E<X>() };
+
+func castA<X, Y>(o : Object) : A<X, Y> { o :> A<X, Y> };
+func castB<X, Y>(o : Object) : B<X, Y> { o :> B<X, Y> };
+func castC<X>(o : Object) : C<X> { o :> C<X> };
+func castD(o : Object) : D { o :> D };
+func castE<X>(o : Object) : E<X> { o :> E<X> };
+
+let aa = makeA<Int$, Float$>();
+let bb = makeB<Int$, Float$>();
+let cc = makeC<Text>();
+let dd = makeD();
+let ee = makeE<A<Int$, C<D>>>();
+
+assert castA<Int$, Float$>(aa) == aa;
+assert castA<Int$, Bool$>(aa) == null;
+assert castB<Int$, Float$>(aa) == null;
+assert castB<Int$, Bool$>(aa) == null;
+assert castD(aa) == null;
+assert castE<A<Int$, C<D>>>(aa) == null;
+
+assert castA<Int$, Float$>(bb) == bb;
+assert castA<Int$, Bool$>(bb) == null;
+assert castB<Int$, Float$>(bb) == bb;
+assert castB<Int$, Bool$>(bb) == null;
+assert castD(bb) == null;
+assert castE<A<Int$, C<D>>>(bb) == null;
+
+assert castA<Bool$, (Text, Text)>(cc) == cc;
+assert castA<Bool$, (Int$, Int$)>(cc) == null;
+assert castC<Text>(cc) == cc;
+assert castC<Bool$>(cc) == null;
+
+assert castA<Int$, Float$>(dd) == dd;
+assert castA<Int$, Bool$>(dd) == null;
+assert castB<Int$, Float$>(dd) == dd;
+assert castB<Int$, Bool$>(dd) == null;
+assert castD(dd) == dd;
+assert castE<A<Int$, C<D>>>(dd) == null;
+
+assert castA<Int$, Float$>(ee) == ee;
+assert castA<Int$, Bool$>(ee) == null;
+assert castB<Int$, Float$>(ee) == ee;
+assert castB<Int$, Bool$>(ee) == null;
+assert castD(ee) == ee;
+assert castE<A<Int$, C<D>>>(ee) == ee;
+assert castE<AA>(ee) == ee;
+assert castE<A<Float$, C<D>>>(ee) == null;
+assert castE<A<Int$, C<B<Int$, Float$>>>>(ee) == null;
