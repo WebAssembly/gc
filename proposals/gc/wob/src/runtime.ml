@@ -21,8 +21,10 @@ let funcs =
     (* name_text_cpy, (compile_text_cpy, ty [text; i32; text; i32; i32] []); *)
     name_text_cat, (compile_text_cat, ty [text; text] [text]);
     name_text_eq, (compile_text_eq, ty [text; text] [i32]);
+  ] @
+  (if !Flags.parametric then [] else [
     name_rtt_eq, (compile_rtt_eq, ty [rtt; rtt] [i32]);
-  ]
+  ])
 
 let compile_runtime () : Wasm.Ast.module_ =
   let ctxt = Emit.make_ctxt () in

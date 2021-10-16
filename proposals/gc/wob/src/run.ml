@@ -163,8 +163,8 @@ let write_stdout m =
 let runtime_module : Wasm.Ast.module_ option ref = ref None
 let runtime_instance : Wasm.Instance.module_inst option ref = ref None
 
-let gen_runtime () =
-  trace ("generating runtime system...");
+let generate_runtime () =
+  trace ("Compiling runtime system...");
   let runtime = Runtime.compile_runtime () in
   if !Flags.validate then begin
     trace "Validating runtime system...";
@@ -173,23 +173,20 @@ let gen_runtime () =
   runtime_module := Some runtime;
   if not !Flags.headless then
   (
-    trace ("instantiating runtime system...");
+    trace ("Instantiating runtime system...");
     runtime_instance := Some (Wasm.Eval.init runtime [])
   )
 
-let write_runtime file =
-  if !runtime_module = None then gen_runtime ();
-  let m = Option.get !runtime_module in
-  try
-    match Filename.extension file with
-    | ".wasm" -> write_binary_file (Filename.chop_extension file) m None
-    | ".wat" -> write_textual_file (Filename.chop_extension file) m
-    | ext -> prerr_endline (file ^ ": unknown output file type")
-  with Sys_error msg ->
-    prerr_endline (file ^ ": i/o error: " ^ msg)
-
 let init () =
-  if not !Flags.headless then gen_runtime ()
+  if not !Flags.headless then generate_runtime ()
+
+let compile_runtime file =
+  if !runtime_module = None then generate_runtime ();
+  let m = Option.get !runtime_module in
+  match Filename.extension file with
+  | ".wasm" -> write_binary_file (Filename.chop_extension file) m None; true
+  | ".wat" -> write_textual_file (Filename.chop_extension file) m; true
+  | ext -> prerr_endline (file ^ ": Unknown output file type"); false
 
 
 (* Compilation pipeline *)

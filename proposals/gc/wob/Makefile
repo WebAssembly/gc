@@ -89,41 +89,51 @@ TESTDIR =	test
 TESTFILES =	$(shell cd $(TESTDIR); ls *.$(EXT))
 TESTS =		$(TESTFILES:%.$(EXT)=%)
 
-.PHONY:		test debugtest partest
+.PHONY:		test evaltest debugtest wasmtest wasmntest wasmptest runtimetest
 
-test:	evaltest wasmntest wasmptest wasmtest
-evaltest:		$(TESTFILES:%.$(EXT)=test/%)
-wasmtest:		cleantest $(TESTFILES:%.$(EXT)=wasmtest/%)
-		make cleantest
-wasmntest:		cleantest $(TESTFILES:%.$(EXT)=wasmntest/%)
-		make cleantest
-wasmptest:		cleantest $(TESTFILES:%.$(EXT)=wasmptest/%)
-		make cleantest
-debugtest:	$(TESTFILES:%.$(EXT)=debugtest/%)
+test: runtimetest evaltest wasmtest wasmptest wasmntest
 
-test/%:		$(OPT)
+evaltest:		titletest/Test-eval $(TESTFILES:%.$(EXT)=evaltest/%)
+debugtest:	titletest/Test-debug $(TESTFILES:%.$(EXT)=debugtest/%)
+wasmtest:		cleantest titletest/Test-wasm $(TESTFILES:%.$(EXT)=wasmtest/%)
+		@make cleantest
+wasmntest:		cleantest titletest/Test-wasm-headless $(TESTFILES:%.$(EXT)=wasmntest/%)
+		@make cleantest
+wasmptest:		cleantest titletest/Test-wasm-parametric $(TESTFILES:%.$(EXT)=wasmptest/%)
+		@make cleantest
+
+titletest/%:	$(OPT)
+		@echo ==== $(@F) ====
+
+evaltest/%:		$(OPT)
+		@echo -n '$(@F).$(EXT)> '
 		@ ./$(NAME) -r $(shell grep "@FLAGS" $(TESTDIR)/$(@F).$(EXT) | sed 's/.*@FLAGS//g') $(TESTDIR)/$(@F).$(EXT)
+
+debugtest/%:	$(UNOPT)
+		@echo -n '$(@F).$(EXT)> '
+		@ ./$(NAME) -r $(shell grep "@FLAGS" $(TESTDIR)/$(@F).$(EXT) | sed 's/.*@FLAGS//g') $(TESTDIR)/$(@F).$(EXT)
+
+runtimetest:	$(OPT) titletest/Test-runtime
+		@./$(NAME) -v -g $(TESTDIR)/wob-runtime.wasm -g $(TESTDIR)/wob-runtime.wat
+		@make cleantest
 
 wasmtest/%:		$(OPT)
 	  @ if ! grep -q "@FAIL-WASM" $(TESTDIR)/$(@F).$(EXT); \
-		  then ./$(NAME) -r -c -v $(shell grep "@FLAGS" $(TESTDIR)/$(@F).$(EXT) | sed 's/.*@FLAGS//g') $(TESTDIR)/$(@F).$(EXT); \
-		  else echo Skipping $(@F).$(EXT); \
+		  then /bin/echo -n '$(@F).$(EXT)> '; ./$(NAME) -r -c -v $(shell grep "@FLAGS" $(TESTDIR)/$(@F).$(EXT) | sed 's/.*@FLAGS//g') $(TESTDIR)/$(@F).$(EXT); \
+		  else echo '**' Skipping $(@F).$(EXT); \
 		fi
 
 wasmntest/%:		$(OPT)
 	  @ if ! grep -q "@FAIL-WASM\|@FAIL-HEADLESS" $(TESTDIR)/$(@F).$(EXT); \
-		  then ./$(NAME) -r -c -v -n $(shell grep "@FLAGS" $(TESTDIR)/$(@F).$(EXT) | sed 's/.*@FLAGS//g') $(TESTDIR)/$(@F).$(EXT); \
-		  else echo Skipping $(@F).$(EXT); \
+		  then /bin/echo -n '$(@F).$(EXT)> '; ./$(NAME) -r -c -v -n $(shell grep "@FLAGS" $(TESTDIR)/$(@F).$(EXT) | sed 's/.*@FLAGS//g') $(TESTDIR)/$(@F).$(EXT); \
+		  else echo '**' Skipping $(@F).$(EXT); \
 		fi
 
 wasmptest/%:		$(OPT)
 	  @ if ! grep -q "@FAIL-WASM\|@FAIL-PARAMETRIC" $(TESTDIR)/$(@F).$(EXT); \
-		  then ./$(NAME) -r -c -v -p $(shell grep "@FLAGS" $(TESTDIR)/$(@F).$(EXT) | sed 's/.*@FLAGS//g') $(TESTDIR)/$(@F).$(EXT); \
-		  else echo Skipping $(@F).$(EXT); \
+		  then /bin/echo -n '$(@F).$(EXT)> '; ./$(NAME) -r -c -v -p $(shell grep "@FLAGS" $(TESTDIR)/$(@F).$(EXT) | sed 's/.*@FLAGS//g') $(TESTDIR)/$(@F).$(EXT); \
+		  else echo '**' Skipping $(@F).$(EXT); \
 		fi
-
-debugtest/%:	$(UNOPT)
-		@ ./$(NAME) -r $(shell grep "@FLAGS" $(TESTDIR)/$(@F).$(EXT) | sed 's/.*@FLAGS//g') $(TESTDIR)/$(@F).$(EXT)
 
 
 # Miscellaneous targets
