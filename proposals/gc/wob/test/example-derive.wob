@@ -1,0 +1,35 @@
+// @FAIL-V8
+
+// Expression derivatives
+
+import {Visitor, Lit, Var, Add, Mul, Exp} from "test/example-exp";
+import {Entry, Env, Evaluator} from "test/example-eval";
+
+class Derive(x : Text) <: Visitor<(), Exp>() {
+  func visitLit(exp : Lit, _ : ()) : Exp {
+    new Lit(0);
+  };
+  func visitVar(exp : Var, _ : ()) : Exp {
+    new Lit(if (x == exp.name()) { 1 } else { 0 });
+  };
+  func visitAdd(exp : Add, _ : ()) : Exp {
+    let e1 = exp.left().accept<(), Exp>(this, ());
+    let e2 = exp.right().accept<(), Exp>(this, ());
+    new Add(e1, e2);
+  };
+  func visitMul(exp : Mul, _ : ()) : Exp {
+    let e1 = exp.left().accept<(), Exp>(this, ());
+    let e2 = exp.right().accept<(), Exp>(this, ());
+    new Add(new Mul(e1, exp.right()), new Mul(exp.left(), e2));
+  };
+};
+
+let exp = new Mul(new Add(new Var("x"), new Lit(3)), new Lit(5));
+let derive = new Derive("x");
+let expD = derive.visit(exp, ());
+let env1 = new Entry<Int$>("x", 0$, new Env<Int$>());
+let env2 = new Entry<Int$>("y", 1$, new Entry<Int$>("x", 2$, new Env<Int$>()));
+let eval = new Evaluator();
+assert eval.visit(exp, env1).$ == 15;
+assert eval.visit(exp, env2).$ == 25;
+assert eval.visit(expD, env2).$ == 5;

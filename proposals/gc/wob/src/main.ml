@@ -1,5 +1,5 @@
 let name = "wob"
-let version = "0.1"
+let version = "0.2"
 
 let banner () =
   print_endline (name ^ " " ^ version ^ " interpreter")
@@ -8,7 +8,8 @@ let usage = "Usage: " ^ name ^ " [option] [file ...]"
 let help = ref (fun _ -> failwith "help")
 
 let args = ref []
-let add_arg source = args := !args @ [source]
+let gens = ref []
+let add_list xs x = xs := !xs @ [x]
 
 let quote s = "\"" ^ String.escaped s ^ "\""
 
@@ -20,6 +21,10 @@ let argspec = Arg.align
     " interpret input (default when interactive)";  (* TODO: for now *)
   "-c", Arg.Set Flags.compile,
     " compile input to Wasm (default when files given)";
+  "-n", Arg.Set Flags.headless,
+    " no runtime system, compile headless";
+  "-g", Arg.String (add_list gens),
+    " generate runtime system";
   "-d", Arg.Set Flags.dry,
     " dry, do not run program" ^
     " (default when compiling non-interactively)";
@@ -49,16 +54,24 @@ let argspec = Arg.align
 
 let () = help := fun () -> Arg.usage argspec usage; exit 0
 
+let io f file =
+  try
+    if not (f file) then exit 1
+  with Sys_error msg ->
+    prerr_endline msg; exit 1
+
 let () =
   Printexc.record_backtrace true;
   try
-    Arg.parse argspec add_arg usage;
-    if !args = [] then Flags.prompt := true;
+    Arg.parse argspec (add_list args) usage;
+    if !args = [] && !gens = [] then Flags.prompt := true;
     if !Flags.prompt then Flags.interpret := true;  (* TODO: for now *)
     if !Flags.compile then Flags.unchecked := false;
+    Run.init ();
+    List.iter (io Run.compile_runtime) !gens;
     if !Flags.interpret then
     (
-      List.iter (fun arg -> if not (Run.run_file arg) then exit 1) !args;
+      List.iter (io Run.run_file) !args;
       if !Flags.prompt then
       (
         Flags.print_sig := true;
@@ -67,7 +80,7 @@ let () =
       )
     )
     else
-      List.iter (fun arg -> if not (Run.compile_file arg) then exit 1) !args;
+      List.iter (io Run.compile_file) !args;
   with exn ->
     flush_all ();
     prerr_endline

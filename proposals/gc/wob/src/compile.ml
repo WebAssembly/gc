@@ -185,6 +185,16 @@ let emit_let ctxt at bt ts f =
     env := E.map_vals (shift_loc (0l -% shift)) !env;
   )
 
+let rec ctxt_flush ctxt =
+  let triggered = ref false in
+  ClsEnv.iter (fun _ cls ->
+    if not (Lazy.is_val cls.def) then begin
+      ignore (Lazy.force cls.def);
+      triggered := true
+    end
+  ) !(ctxt.ext.clss);
+  if !triggered then ctxt_flush ctxt
+
 
 (* Debug printing *)
 
@@ -248,6 +258,17 @@ let rec _print_cls ctxt cls =
   end;
   if cls.sup = None then printf "sup = none\n%!" else printf "sup =\n";
   Option.iter (_print_cls ctxt) cls.sup
+
+
+(* Intrinsics *)
+
+let intrinsic compile import =
+  (if !Flags.headless then compile else import)
+
+let intrinsic_text_new c = Intrinsic.compile_text_new c (* needs local memory *)
+let intrinsic_text_cat c = intrinsic Intrinsic.compile_text_cat Runtime.import_text_cat c
+let intrinsic_text_eq c = intrinsic Intrinsic.compile_text_eq Runtime.import_text_eq c
+let intrinsic_rtt_eq c = intrinsic Intrinsic.compile_rtt_eq Runtime.import_rtt_eq c
 
 
 (* Lowering types *)
@@ -721,7 +742,7 @@ and compile_lit ctxt l at =
     emit ctxt W.[
       i32_const (addr @@ at);
       i32_const (int32 (String.length s) @@ at);
-      call (Intrinsic.compile_text_new ctxt @@ at);
+      call (intrinsic_text_new ctxt @@ at);
     ]
 
 and compile_var ctxt x t =
@@ -793,7 +814,7 @@ and compile_exp ctxt e =
     | MulOp, T.Float -> emit ctxt W.[f64_mul]
     | DivOp, T.Float -> emit ctxt W.[f64_div]
     | AddOp, T.Text ->
-      emit ctxt W.[call (Intrinsic.compile_text_cat ctxt @@ e.at)]
+      emit ctxt W.[call (intrinsic_text_cat ctxt @@ e.at)]
     | _ -> assert false
     )
 
@@ -816,9 +837,9 @@ and compile_exp ctxt e =
     | EqOp, (T.Null | T.Obj | T.Box _ | T.Array _ | T.Inst _) -> emit ctxt W.[ref_eq]
     | NeOp, (T.Null | T.Obj | T.Box _ | T.Array _ | T.Inst _) -> emit ctxt W.[ref_eq; i32_eqz]
     | EqOp, T.Text ->
-      emit ctxt W.[call (Intrinsic.compile_text_eq ctxt @@ e.at)]
+      emit ctxt W.[call (intrinsic_text_eq ctxt @@ e.at)]
     | NeOp, T.Text ->
-      emit ctxt W.[call (Intrinsic.compile_text_eq ctxt @@ e.at); i32_eqz]
+      emit ctxt W.[call (intrinsic_text_eq ctxt @@ e.at); i32_eqz]
     | _ -> assert false
     )
 
@@ -1178,7 +1199,7 @@ and compile_exp ctxt e =
           emit ctxt W.[
             local_get (tmpidx2 @@ e1.at);
             struct_get (cls.inst_idx @@ x.at) (int32 (i + start) @@ x.at);
-            call (Intrinsic.compile_rtt_eq ctxt @@ t.at);
+            call (intrinsic_rtt_eq ctxt @@ t.at);
             i32_eqz;
             br_if (0l @@ e.at);
           ];
@@ -1935,7 +1956,9 @@ let compile_prog p : W.module_ =
   let Prog (is, ds) = p.it in
   let emit ctxt = emit_instr ctxt p.at in
   let ctxt = enter_scope (make_ctxt ()) GlobalScope in
+  if not !Flags.headless then Runtime.compile_runtime_import ctxt;
   List.iter (compile_imp ctxt) is;
+  ctxt_flush ctxt;
   let t' = lower_value_type ctxt p.at (type_of p) in
   let const = default_const ctxt p.at (type_of p) in
   let result_idx = emit_global ctxt p.at W.Mutable t' const in

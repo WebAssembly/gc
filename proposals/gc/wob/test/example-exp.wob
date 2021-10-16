@@ -1,4 +1,4 @@
-// Expression evaluator and derivatives
+// Expression representation and visitor
 
 class Exp() {
   func accept<A, R>(v : Visitor<A, R>, a : A) : R { accept<A, R>(v, a) };
@@ -44,62 +44,3 @@ class Visitor<A, R>() {
   func visitAdd(exp : Add, a : A) : R { visitAdd(exp, a) };
   func visitMul(exp : Mul, a : A) : R { visitMul(exp, a) };
 };
-
-
-class Env<T>() {
-  func lookup(x : Text) : T { null };
-};
-
-class Entry<T>(y : Text, v : T, parent : Env<T>) <: Env<T>() {
-  func lookup(x : Text) : T { if (x == y) { v } else { parent.lookup(x) } };
-};
-
-class Evaluator() <: Visitor<Env<Int$>, Int$>() {
-  func visitLit(exp : Lit, env : Env<Int$>) : Int$ {
-    exp.value()$;
-  };
-  func visitVar(exp : Var, env : Env<Int$>) : Int$ {
-    env.lookup(exp.name());
-  };
-  func visitAdd(exp : Add, env : Env<Int$>) : Int$ {
-    let i1 = exp.left().accept<Env<Int$>, Int$>(this, env).$;
-    let i2 = exp.right().accept<Env<Int$>, Int$>(this, env).$;
-    (i1 + i2)$;
-  };
-  func visitMul(exp : Mul, env : Env<Int$>) : Int$ {
-    let i1 = exp.left().accept<Env<Int$>, Int$>(this, env).$;
-    let i2 = exp.right().accept<Env<Int$>, Int$>(this, env).$;
-    (i1 * i2)$;
-  };
-};
-
-let exp = new Mul(new Add(new Var("x"), new Lit(3)), new Lit(5));
-let env1 = new Entry<Int$>("x", 0$, new Env<Int$>());
-let env2 = new Entry<Int$>("y", 1$, new Entry<Int$>("x", 2$, new Env<Int$>()));
-let eval = new Evaluator();
-assert eval.visit(exp, env1).$ == 15;
-assert eval.visit(exp, env2).$ == 25;
-
-
-class Derive(x : Text) <: Visitor<(), Exp>() {
-  func visitLit(exp : Lit, _ : ()) : Exp {
-    new Lit(0);
-  };
-  func visitVar(exp : Var, _ : ()) : Exp {
-    new Lit(if (x == exp.name()) { 1 } else { 0 });
-  };
-  func visitAdd(exp : Add, _ : ()) : Exp {
-    let e1 = exp.left().accept<(), Exp>(this, ());
-    let e2 = exp.right().accept<(), Exp>(this, ());
-    new Add(e1, e2);
-  };
-  func visitMul(exp : Mul, _ : ()) : Exp {
-    let e1 = exp.left().accept<(), Exp>(this, ());
-    let e2 = exp.right().accept<(), Exp>(this, ());
-    new Add(new Mul(e1, exp.right()), new Mul(exp.left(), e2));
-  };
-};
-
-let derive = new Derive("x");
-let expD = derive.visit(exp, ());
-assert eval.visit(expD, env2).$ == 5;

@@ -5,7 +5,7 @@ let (@@) = W.Source.(@@)
 
 (* Intrinsics *)
 
-let lower_text_type ctxt : int32 =
+let compile_text_type ctxt : int32 =
   let ft = W.(FieldType (PackedStorageType Pack8, Mutable)) in
   emit_type ctxt Prelude.region W.(ArrayDefType (ArrayType ft))
 
@@ -13,7 +13,7 @@ let lower_text_type ctxt : int32 =
 let compile_text_new ctxt : int32 =
   Emit.lookup_intrinsic ctxt "text_new" (fun () ->
     let at = Prelude.region in
-    let typeidx = lower_text_type ctxt in
+    let typeidx = compile_text_type ctxt in
     let t' = W.(RefType (Nullable, DefHeapType (SynVar typeidx))) in
     emit_func ctxt at W.[i32; i32] [t'] (fun ctxt _ ->
       let srcidx = emit_param ctxt at in
@@ -50,7 +50,7 @@ let compile_text_new ctxt : int32 =
 let compile_text_cpy ctxt : int32 =
   Emit.lookup_intrinsic ctxt "text_cpy" (fun () ->
     let at = Prelude.region in
-    let typeidx = lower_text_type ctxt in
+    let typeidx = compile_text_type ctxt in
     let t' = W.(RefType (Nullable, DefHeapType (SynVar typeidx))) in
     emit_func ctxt at W.[t'; i32; t'; i32; i32] [] (fun ctxt _ ->
       let dstidx = emit_param ctxt at in
@@ -88,7 +88,7 @@ let compile_text_cat ctxt : int32 =
   Emit.lookup_intrinsic ctxt "text_cat" (fun () ->
     let text_cpy = compile_text_cpy ctxt in
     let at = Prelude.region in
-    let typeidx = lower_text_type ctxt in
+    let typeidx = compile_text_type ctxt in
     let t' = W.(RefType (Nullable, DefHeapType (SynVar typeidx))) in
     emit_func ctxt at [t'; t'] [t'] (fun ctxt _ ->
       let arg1idx = emit_param ctxt at in
@@ -125,7 +125,7 @@ let compile_text_cat ctxt : int32 =
 let compile_text_eq ctxt : int32 =
   Emit.lookup_intrinsic ctxt "text_eq" (fun () ->
     let at = Prelude.region in
-    let typeidx = lower_text_type ctxt in
+    let typeidx = compile_text_type ctxt in
     let t' = W.(RefType (Nullable, DefHeapType (SynVar typeidx))) in
     emit_func ctxt at [t'; t'] W.[i32] (fun ctxt _ ->
       let arg1idx = emit_param ctxt at in
@@ -174,15 +174,15 @@ let compile_text_eq ctxt : int32 =
   )
 
 
-let lower_rtt_type ctxt at : int32 =
+let compile_rtt_type ctxt : int32 =
   let rtt_vt = W.(RefType (Nullable, EqHeapType)) in
   let rtt_ft = W.(FieldType (ValueStorageType rtt_vt, Mutable)) in
-  emit_type ctxt at W.(ArrayDefType (ArrayType rtt_ft))
+  emit_type ctxt Prelude.region W.(ArrayDefType (ArrayType rtt_ft))
 
 let compile_rtt_eq ctxt : int32 =
   Emit.lookup_intrinsic ctxt "rtt_eq" (fun () ->
     let at = Prelude.region in
-    let typeidx = lower_rtt_type ctxt at in
+    let typeidx = compile_rtt_type ctxt in
     let rtt_t' = W.(RefType (Nullable, DefHeapType (SynVar typeidx))) in
     let t' = W.(RefType (Nullable, EqHeapType)) in
     emit_func ctxt at [t'; t'] W.[i32] (fun ctxt selfidx ->

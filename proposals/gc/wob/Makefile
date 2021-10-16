@@ -10,6 +10,7 @@ NAME =		wob
 EXT =			$(NAME)
 UNOPT = 	$(NAME).debug
 OPT =   	$(NAME)
+RUNTIME =	$(NAME)-runtime
 
 WASMBASE = ../../../interpreter
 WASMDIRS =	util syntax binary script text valid runtime exec host main
@@ -23,6 +24,8 @@ LIBS =		bigarray wasm
 INCLS =		$(PWD)/_wasm/_build
 FLAGS = 	-lexflags -ml -cflags '-w +a-4-27-37-42-44-45 -warn-error +a-3'
 OCB =		ocamlbuild -verbose 8 $(FLAGS) $(DIRS:%=-I %) $(LIBS:%=-lib %) -cflags '$(INCLS:%=-I %)' -lflags '$(INCLS:%=-I %)'
+
+NODE =		node --experimental-wasm-gc
 
 
 # Main targets
@@ -89,33 +92,71 @@ TESTDIR =	test
 TESTFILES =	$(shell cd $(TESTDIR); ls *.$(EXT))
 TESTS =		$(TESTFILES:%.$(EXT)=%)
 
-.PHONY:		test debugtest partest
+.PHONY:		test evaltest debugtest wasmtest wasmntest wasmptest runtimetest
 
-test:	evaltest wasmptest wasmtest
-evaltest:		$(TESTFILES:%.$(EXT)=test/%)
-wasmtest:		cleantest $(TESTFILES:%.$(EXT)=wasmtest/%)
-		make cleantest
-wasmptest:		cleantest $(TESTFILES:%.$(EXT)=wasmptest/%)
-		make cleantest
-debugtest:	$(TESTFILES:%.$(EXT)=debugtest/%)
+test: runtimetest evaltest wasmtest wasmptest wasmntest nodetest
 
-test/%:		$(OPT)
+evaltest:		titletest/Test-eval $(TESTFILES:%.$(EXT)=evaltest/%)
+debugtest:	titletest/Test-debug $(TESTFILES:%.$(EXT)=debugtest/%)
+wasmtest:		cleantest titletest/Test-wasm $(TESTFILES:%.$(EXT)=wasmtest/%)
+		@make cleantest
+wasmntest:		cleantest titletest/Test-wasm-headless $(TESTFILES:%.$(EXT)=wasmntest/%)
+		@make cleantest
+wasmptest:		cleantest titletest/Test-wasm-parametric $(TESTFILES:%.$(EXT)=wasmptest/%)
+		@make cleantest
+nodetest:		cleantest titletest/Test-node $(RUNTIME).wasm $(TESTFILES:%.$(EXT)=nodetest/%)
+		@make cleantest
+
+titletest/%:	$(OPT)
+		@echo ==== $(@F) ====
+
+evaltest/%:		$(OPT)
+		@echo -n '$(@F).$(EXT)> '
 		@ ./$(NAME) -r $(shell grep "@FLAGS" $(TESTDIR)/$(@F).$(EXT) | sed 's/.*@FLAGS//g') $(TESTDIR)/$(@F).$(EXT)
+
+debugtest/%:	$(UNOPT)
+		@echo -n '$(@F).$(EXT)> '
+		@ ./$(NAME) -r $(shell grep "@FLAGS" $(TESTDIR)/$(@F).$(EXT) | sed 's/.*@FLAGS//g') $(TESTDIR)/$(@F).$(EXT)
+
+runtimetest:	$(OPT) titletest/Test-runtime
+		@./$(NAME) -v -g $(TESTDIR)/wob-runtime.wasm -g $(TESTDIR)/wob-runtime.wat
+		@make cleantest
 
 wasmtest/%:		$(OPT)
 	  @ if ! grep -q "@FAIL-WASM" $(TESTDIR)/$(@F).$(EXT); \
-		  then ./$(NAME) -r -c -v $(shell grep "@FLAGS" $(TESTDIR)/$(@F).$(EXT) | sed 's/.*@FLAGS//g') $(TESTDIR)/$(@F).$(EXT); \
-		  else echo Skipping $(@F).$(EXT); \
+		  then \
+		    /bin/echo -n '$(@F).$(EXT)> '; \
+		    ./$(NAME) -r -c -v $(shell grep "@FLAGS" $(TESTDIR)/$(@F).$(EXT) | sed 's/.*@FLAGS//g') $(TESTDIR)/$(@F).$(EXT); \
+		  else echo '**' Skipping $(@F).$(EXT); \
+		fi
+
+wasmntest/%:		$(OPT)
+	  @ if ! grep -q "@FAIL-WASM\|@FAIL-HEADLESS" $(TESTDIR)/$(@F).$(EXT); \
+		  then \
+		    /bin/echo -n '$(@F).$(EXT)> '; \
+		    ./$(NAME) -r -c -v -n $(shell grep "@FLAGS" $(TESTDIR)/$(@F).$(EXT) | sed 's/.*@FLAGS//g') $(TESTDIR)/$(@F).$(EXT); \
+		  else echo '**' Skipping $(@F).$(EXT); \
 		fi
 
 wasmptest/%:		$(OPT)
 	  @ if ! grep -q "@FAIL-WASM\|@FAIL-PARAMETRIC" $(TESTDIR)/$(@F).$(EXT); \
-		  then ./$(NAME) -r -c -v -p $(shell grep "@FLAGS" $(TESTDIR)/$(@F).$(EXT) | sed 's/.*@FLAGS//g') $(TESTDIR)/$(@F).$(EXT); \
-		  else echo Skipping $(@F).$(EXT); \
+		  then \
+		    /bin/echo -n '$(@F).$(EXT)> '; \
+		    ./$(NAME) -r -c -v -p $(shell grep "@FLAGS" $(TESTDIR)/$(@F).$(EXT) | sed 's/.*@FLAGS//g') $(TESTDIR)/$(@F).$(EXT); \
+		  else echo '**' Skipping $(@F).$(EXT); \
 		fi
 
-debugtest/%:	$(UNOPT)
-		@ ./$(NAME) -r $(shell grep "@FLAGS" $(TESTDIR)/$(@F).$(EXT) | sed 's/.*@FLAGS//g') $(TESTDIR)/$(@F).$(EXT)
+nodetest/%:		$(OPT)
+	  @ if ! grep -q "@FAIL-WASM\|@FAIL-V8" $(TESTDIR)/$(@F).$(EXT); \
+		  then \
+		    echo $(@F).$(EXT); \
+		    ./$(NAME) -c -v $(shell grep "@FLAGS" $(TESTDIR)/$(@F).$(EXT) | sed 's/.*@FLAGS//g') $(TESTDIR)/$(@F).$(EXT); \
+		    $(NODE) js/$(NAME).js $(TESTDIR)/$(@F); \
+		  else echo '**' Skipping $(@F).$(EXT); \
+		fi
+
+$(RUNTIME).wasm:
+		@./$(NAME) -g $@
 
 
 # Miscellaneous targets
@@ -123,7 +164,7 @@ debugtest/%:	$(UNOPT)
 .PHONY:		clean
 
 clean: cleantest
-		rm -rf $(WASMDIR) _tags
+		rm -rf $(WASMDIR) $(RUNTIME).wasm _tags
 		$(OCB) -clean
 
 cleantest:

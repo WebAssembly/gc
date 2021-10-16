@@ -3,6 +3,7 @@ let interpret = ref false
 let compile = ref false
 let boxed = ref false
 let parametric = ref false
+let headless = ref false
 let unchecked = ref false
 let validate = ref false
 let print_ast = ref false

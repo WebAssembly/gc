@@ -1,0 +1,39 @@
+// @FAIL-V8
+
+// Expression evaluator
+
+import {Exp, Lit, Var, Add, Mul, Visitor} from "test/example-exp";
+
+class Env<T>() {
+  func lookup(x : Text) : T { null };
+};
+
+class Entry<T>(y : Text, v : T, parent : Env<T>) <: Env<T>() {
+  func lookup(x : Text) : T { if (x == y) { v } else { parent.lookup(x) } };
+};
+
+class Evaluator() <: Visitor<Env<Int$>, Int$>() {
+  func visitLit(exp : Lit, env : Env<Int$>) : Int$ {
+    exp.value()$;
+  };
+  func visitVar(exp : Var, env : Env<Int$>) : Int$ {
+    env.lookup(exp.name());
+  };
+  func visitAdd(exp : Add, env : Env<Int$>) : Int$ {
+    let i1 = exp.left().accept<Env<Int$>, Int$>(this, env).$;
+    let i2 = exp.right().accept<Env<Int$>, Int$>(this, env).$;
+    (i1 + i2)$;
+  };
+  func visitMul(exp : Mul, env : Env<Int$>) : Int$ {
+    let i1 = exp.left().accept<Env<Int$>, Int$>(this, env).$;
+    let i2 = exp.right().accept<Env<Int$>, Int$>(this, env).$;
+    (i1 * i2)$;
+  };
+};
+
+let exp = new Mul(new Add(new Var("x"), new Lit(3)), new Lit(5));
+let env1 = new Entry<Int$>("x", 0$, new Env<Int$>());
+let env2 = new Entry<Int$>("y", 1$, new Entry<Int$>("x", 2$, new Env<Int$>()));
+let eval = new Evaluator();
+assert eval.visit(exp, env1).$ == 15;
+assert eval.visit(exp, env2).$ == 25;

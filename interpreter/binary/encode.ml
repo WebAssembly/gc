@@ -121,6 +121,8 @@ struct
     | (Nullable, FuncHeapType) -> s7 (-0x10)
     | (Nullable, ExternHeapType) -> s7 (-0x11)
     | (Nullable, t) -> s7 (-0x14); heap_type t
+    | (NonNullable, RttHeapType (x, None)) -> s7 (-0x18); var_type u32 x
+    | (NonNullable, RttHeapType (x, Some n)) -> s7 (-0x17); s32 n; var_type u32 x
     | (NonNullable, t) -> s7 (-0x15); heap_type t
 
   let value_type = function
