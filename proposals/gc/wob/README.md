@@ -543,11 +543,16 @@ Furthermore, before compilation, each input is preprocessed by injecting imports
 
 Wob's linking model is as straightforward as it can get, and requires no language-specific support. It merely assumes that modules are loaded and instantiated in a bottom-up manner.
 
-Here is a template for minimal glue code to run Wob programs in an environment like node.js. Invoking `run("name")` should suffice to run a compiled `name.wasm` and return its result, provided the dependencies are also avaliable in the right place (imported modules and the Wob [runtime system](#runtime-system), if not running headless).
+The simple template for runner glue code for node.js is provided in `js/wob.js` and shown below. With that, invoking
+```
+node js/wob.js name
+```
+suffices to run a compiled module `name.wasm`, provided the dependencies are avaliable in the right place. The Wob [runtime system](#runtime-system) is assumed to be found (as `wob-runtime.wasm`) in the current working directory (if not running headless), and imported modules (in compiled form) at their respective import paths, again relative to the current directory.
+
 ```
 'use strict';
 
-let fs = require('fs').promises;
+let fs = require('fs');
 
 function arraybuffer(bytes) {
   let buffer = new ArrayBuffer(bytes.length);
@@ -561,7 +566,7 @@ function arraybuffer(bytes) {
 let registry = {};
 
 async function link(name) {
-  let bytes = await fs.readFile(name + ".wasm", "binary");
+  let bytes = fs.readFileSync(name + ".wasm", "binary");
   let binary = arraybuffer(bytes);
   let module = await WebAssembly.compile(binary);
   for (let im of WebAssembly.Module.imports(module)) {
@@ -575,5 +580,10 @@ async function link(name) {
 async function run(name) {
   let instance = await link(name);
   return instance.return;
+}
+
+process.argv.splice(0, 2);
+for (let file of process.argv) {
+  run(file);
 }
 ```
