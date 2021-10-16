@@ -475,7 +475,7 @@ let get_env = ref (fun _at _url -> failwith "get_env")
 let eval_imp env env' d : env =
   let ImpD (xo, xs, url) = d.it in
   let menv = !get_env d.at url in
-  let x = (match xo with None -> "" | Some x -> x.it ^ "_") in
+  let x = (match xo with None -> "" | Some x -> x.it) in
   List.fold_left (fun env' xI ->
     let x' = (x ^ xI.it) @@ xI.at in
     let env' =

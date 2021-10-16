@@ -1912,7 +1912,7 @@ and compile_block ctxt ds =
 let compile_imp ctxt d =
   let ImpD (xo, xs, url) = d.it in
   let _, env = current_scope ctxt in
-  let x = (match xo with None -> "" | Some x -> x.it ^ "_") in
+  let x = (match xo with None -> "" | Some x -> x.it) in
   List.iter2 (fun xI (st_opt, k_opt) ->
     let x' = Source.((x ^ xI.it) @@ xI.at) in
     let class_opt =

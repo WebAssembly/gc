@@ -653,7 +653,7 @@ let get_env = ref (fun _at _url -> failwith "get_env")
 let check_imp env env' d : env =
   let ImpD (xo, xs, url) = d.it in
   let menv = !get_env d.at url in
-  let x = (match xo with None -> "" | Some x -> x.it ^ "_") in
+  let x = (match xo with None -> "" | Some x -> x.it) in
   let env', stats =
     List.fold_left (fun (env', stats) xI ->
       if not (E.mem_val xI menv || E.mem_typ xI menv) then
