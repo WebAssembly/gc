@@ -115,7 +115,7 @@ typ ::=
 
 Notes:
 
-* Generics can only be instantiated with _boxed_ types, which excludes the primitive data types `Bool`, `Byte`, `Int`, and `Float`. These can be converted to boxed types via `Bool$`, `Int$`, etc. There is no autoboxing.
+* Generics can only be instantiated with _boxed_ types, which excludes the primitive data types `Bool`, `Byte`, `Int`, `Float`, and `Text`. These can be converted to boxed types via `Bool$`, `Int$`, etc. There is no autoboxing. (`Text` is considered unboxed because equality on text values is structural, whereas all boxed values, which have reference equality.)
 
 
 ### Expressions
@@ -460,8 +460,9 @@ Moreover, arrays and tuples likewise represent all fields of boxed type with `eq
 ```
 func fst<X, Y>(p : (X, Y)) : X { p.0 };
 
-let p = ("foo", "bar");
-fst<Text, Text>(p);
+class C() { let n = 1 };
+let p = (new C(), new C());
+fst<C, C>(p).n;
 ```
 If `p` was not represented as `ref (struct eqref eqref)`, then the call to `fst` would produce invalid Wasm.
 
@@ -481,16 +482,17 @@ The type representation is a fairly simple tree structure, where non-generic typ
 | Int      | i31(3)       |
 | Float    | i31(4)       |
 | Text     | i31(5)       |
-| Object   | i31(6)       |
 | Bool$    | i31(-1)      |
 | Byte$    | i31(-2)      |
 | Int$     | i31(-3)      |
 | Float$   | i31(-4)      |
-| Text$    | [i31(7); i31(5)] |
-| (Float$,Text) | [i31(8); i31(-4); i31(5)] |
+| Text$    | i31(-5)      |
+| Object   | i31(6)       |
+| Object$  | [i31(7); i31(6)] |
+| (Float$,Object) | [i31(8); i31(-4); i31(6)] |
 | Object[] | [i31(9); i31(6)] |
 | C        | $disp_C      |
-| C<Int$,Text> | array [$disp_C; i31(-3); i31(5)] |
+| C<Int$,Object> | array [$disp_C; i31(-3); i31(6)] |
 
 Checking type equivalence is a simple parallel tree recursion, short-cut by reference equality. The runtime does not currently perform type canonicalisation.
 

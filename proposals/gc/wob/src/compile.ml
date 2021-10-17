@@ -689,6 +689,7 @@ and compile_typ ctxt t =
       | T.Byte -> emit ctxt W.[i32_const (-2l @@ t.at); i31_new]; []
       | T.Int -> emit ctxt W.[i32_const (-3l @@ t.at); i31_new]; []
       | T.Float -> emit ctxt W.[i32_const (-4l @@ t.at); i31_new]; []
+      | T.Text -> emit ctxt W.[i32_const (-5l @@ t.at); i31_new]; []
       | _ -> emit ctxt W.[i32_const (7l @@ t.at); i31_new]; [t1]
       )
     | TupT ts -> emit ctxt W.[i32_const (8l @@ t.at); i31_new]; ts
@@ -883,7 +884,7 @@ and compile_exp ctxt e =
         | _ -> W.struct_get
       in
       emit ctxt [struct_get_sxopt (typeidx @@ e.at) (0l @@ e.at)];
-      compile_coerce_block_type ctxt e.at (type_of e)
+      compile_coerce_abs_block_type ctxt e.at (type_of e)
     )
 
   | TupE [] ->
