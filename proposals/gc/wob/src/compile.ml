@@ -689,7 +689,6 @@ and compile_typ ctxt t =
       | T.Byte -> emit ctxt W.[i32_const (-2l @@ t.at); i31_new]; []
       | T.Int -> emit ctxt W.[i32_const (-3l @@ t.at); i31_new]; []
       | T.Float -> emit ctxt W.[i32_const (-4l @@ t.at); i31_new]; []
-      | T.Text -> emit ctxt W.[i32_const (-5l @@ t.at); i31_new]; []
       | _ -> emit ctxt W.[i32_const (7l @@ t.at); i31_new]; [t1]
       )
     | TupT ts -> emit ctxt W.[i32_const (8l @@ t.at); i31_new]; ts

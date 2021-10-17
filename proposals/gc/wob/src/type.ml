@@ -184,7 +184,7 @@ let rec sub t1 t2 =
   t1 == t2 ||
   match t1, t2 with
   | Bot, _ -> true
-  | (Bool | Byte | Int | Float | Text), Boxed -> false
+  | (Bool | Byte | Int | Float), Boxed -> false
   | _, Boxed -> true
   | Null, t2 -> sub t2 Boxed
   | Inst _, Obj -> true

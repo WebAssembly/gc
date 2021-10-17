@@ -16,7 +16,7 @@ class E<X>() <: D() {};
 
 let a : Object = new A<Int$, Float$>();
 let b : Object = new B<Int$, Float$>();
-let c : Object = new C<Text$>();
+let c : Object = new C<Text>();
 let d : Object = new D();
 let e : Object = new E<A<Int$, C<D>>>();
 
@@ -34,9 +34,9 @@ assert b :> B<Int$, Bool$> == null;
 assert b :> D == null;
 assert b :> E<A<Int$, C<D>>> == null;
 
-assert c :> A<Bool$, (Text$, Text$)> == c;
+assert c :> A<Bool$, (Text, Text)> == c;
 assert c :> A<Bool$, (Int$, Int$)> == null;
-assert c :> C<Text$> == c;
+assert c :> C<Text> == c;
 assert c :> C<Bool$> == null;
 
 assert d :> A<Int$, Float$> == d;
@@ -72,7 +72,7 @@ func castE<X>(o : Object) : E<X> { o :> E<X> };
 
 let aa = makeA<Int$, Float$>();
 let bb = makeB<Int$, Float$>();
-let cc = makeC<Text$>();
+let cc = makeC<Text>();
 let dd = makeD();
 let ee = makeE<A<Int$, C<D>>>();
 
@@ -90,9 +90,9 @@ assert castB<Int$, Bool$>(bb) == null;
 assert castD(bb) == null;
 assert castE<A<Int$, C<D>>>(bb) == null;
 
-assert castA<Bool$, (Text$, Text$)>(cc) == cc;
+assert castA<Bool$, (Text, Text)>(cc) == cc;
 assert castA<Bool$, (Int$, Int$)>(cc) == null;
-assert castC<Text$>(cc) == cc;
+assert castC<Text>(cc) == cc;
 assert castC<Bool$>(cc) == null;
 
 assert castA<Int$, Float$>(dd) == dd;

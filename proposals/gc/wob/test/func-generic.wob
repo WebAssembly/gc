@@ -2,11 +2,11 @@
 
 type Pair<X, Y> = (Y, X);
 
-let p01 : Pair<Text$, ()> = ((), "5"$);
+let p01 : Pair<Text, ()> = ((), "5");
 let p02 : Pair<Int$, Bool$> = (true$, 6$);
 let p03 : Pair<Float$, Byte$> = ("1"[0]$, 3.14$);
 
-assert p01.1.$[0] == "5"[0];
+assert p01.1[0] == "5"[0];
 assert p02.0.$;
 assert p02.1.$ == 6;
 assert p03.0.$ == "1"[0];
@@ -20,11 +20,11 @@ func pair<X, Y>(x : X, y : Y) : Pair<X, Y> { (y, x) };
 func fst<X, Y>(p : Pair<X, Y>) : X { p.1 };
 func snd<X, Y>(p : Pair<X, Y>) : Y { p.0 };
 
-let p1 = pair<Text$, ()>("6"$, ());
-let x1 = fst<Text$, ()>(p1);
-let y1 = snd<Text$, ()>(p1);
-assert p1.1.$[0] == "6"[0];
-assert x1.$[0] == "6"[0];
+let p1 = pair<Text, ()>("6", ());
+let x1 = fst<Text, ()>(p1);
+let y1 = snd<Text, ()>(p1);
+assert p1.1[0] == "6"[0];
+assert x1[0] == "6"[0];
 
 let p2 = pair<Int$, Bool$>(6$, true$);
 assert fst<Int$, Bool$>(p2).$ == 6;
@@ -70,11 +70,11 @@ func reversed<X>(a : X[], init : X) : X[] {
   return b;
 };
 
-let a2 = ["1"$, "2"$, "3"$];
-let b2 = reversed<Text$>(a2, ""$);
-assert b2[0].$ == "3";
-assert b2[1].$ == "2";
-assert b2[2].$ == "1";
+let a2 = ["1", "2", "3"];
+let b2 = reversed<Text>(a2, "");
+assert b2[0] == "3";
+assert b2[1] == "2";
+assert b2[2] == "1";
 
 assert reversed<Int[]>([[7]], [0])[0][0] == 7;
 
