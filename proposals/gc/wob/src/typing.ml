@@ -43,6 +43,11 @@ type pass = Full | Pre | Post
 
 (* Types *)
 
+let check_mut env m : T.mut =
+  match m.it with
+  | MutT -> T.Mut
+  | ConstT -> T.Const
+
 let check_typ_var env y : T.kind * T.con =
   match E.find_opt_typ y env with
   | Some kc -> kc.it
@@ -76,7 +81,7 @@ and check_typ' env t : T.typ =
   | ObjT -> T.Obj
   | BoxT t1 -> T.Box (check_typ env t1)
   | TupT ts -> T.Tup (List.map (check_typ env) ts)
-  | ArrayT t1 -> T.Array (check_typ env t1)
+  | ArrayT (t1, m) -> T.Array (check_typ env t1, check_mut env m)
   | FuncT (ys, ts1, t2) ->
     let ys' = List.map Source.it ys in
     let env' = E.extend_typs_abs env ys in
@@ -208,7 +213,7 @@ and check_exp' env e : T.typ =
       try List.fold_left T.lub T.Bot ts with Failure _ ->
         error e.at "array has inconsistent element types"
     in
-    T.Array t
+    T.Array (t, T.Mut)
 
   | LenE e1 ->
     let t1 = check_exp env e1 in
@@ -222,8 +227,8 @@ and check_exp' env e : T.typ =
     let t2 = check_exp env e2 in
     (match t1, t2 with
     | T.Text, T.Int -> T.Byte
-    | T.Array t, T.Int -> t
-    | T.Array t, _ ->
+    | T.Array (t, _), T.Int -> t
+    | T.Array (t, _), _ ->
       error e2.at "integer type expected but got %s" (T.to_string t2)
     | _ -> error e1.at "array or text type expected but got %s" (T.to_string t1)
     )
@@ -280,7 +285,7 @@ and check_exp' env e : T.typ =
     if not (T.sub t2 t') then
       error e2.at "array initialization expects argument type %s but got %s"
         (T.to_string t') (T.to_string t2);
-    T.Array t'
+    T.Array (t', T.Mut)
 
   | DotE (e1, x) ->
     let t1 = check_exp env e1 in
@@ -384,7 +389,7 @@ and check_exp_ref env e : T.typ =
 
   | IdxE (e1, _) ->
     (match e1.et with
-    | Some (T.Array _) -> ()
+    | Some (T.Array (_, T.Mut)) -> ()
     | _ -> error e.at "mutable array expected"
     )
 

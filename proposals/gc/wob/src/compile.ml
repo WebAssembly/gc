@@ -311,7 +311,7 @@ and lower_var_type ctxt at t : int32 =
   | T.Tup ts ->
     let fts = List.map (lower_field_type ctxt at W.Immutable) ts in
     emit_type ctxt at W.(StructDefType (StructType fts))
-  | T.Array t1 ->
+  | T.Array (t1, _m) ->
     let ft = lower_field_type ctxt at W.Mutable t1 in
     emit_type ctxt at W.(ArrayDefType (ArrayType ft))
   | T.Func _ -> nyi at "function types"
@@ -692,7 +692,11 @@ and compile_typ ctxt t =
       | _ -> emit ctxt W.[i32_const (7l @@ t.at); i31_new]; [t1]
       )
     | TupT ts -> emit ctxt W.[i32_const (8l @@ t.at); i31_new]; ts
-    | ArrayT t1 -> emit ctxt W.[i32_const (9l @@ t.at); i31_new]; [t1]
+    | ArrayT (t1, m) ->
+      (match m.it with
+      | MutT -> emit ctxt W.[i32_const (9l @@ t.at); i31_new]; [t1]
+      | ConstT -> emit ctxt W.[i32_const (10l @@ t.at); i31_new]; [t1]
+      )
     | FuncT (ys, ts1, t2) -> nyi t.at "function types"
     | BoolT | ByteT | IntT | FloatT | TextT | ObjT -> assert false
   in
@@ -1106,12 +1110,13 @@ and compile_exp ctxt e =
       )
 
     | IdxE (e11, e12) ->
+      let t111, _ = T.as_array (type_of e11) in
       let typeidx = lower_var_type ctxt e11.at (type_of e11) in
       compile_exp ctxt e11;
       compile_exp ctxt e12;
       compile_exp ctxt e2;
       compile_coerce_value_type ctxt e2.at (type_of e2);
-      compile_coerce_null_type ctxt e2.at (type_of e2) (T.as_array (type_of e11));
+      compile_coerce_null_type ctxt e2.at (type_of e2) t111;
       emit ctxt W.[array_set (typeidx @@ e.at)]
 
     | DotE (e11, x) ->

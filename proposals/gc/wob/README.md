@@ -108,6 +108,7 @@ typ ::=
   id ('<' typ,* '>')?                      named use
   '(' typ,* ')'                            tuple
   typ '[' ']'                              array
+  typ [' ']' '!'                           readonly array
   typ '$'                                  boxed
   ('<' id,* '>')? '(' typ,* ')' '->' typ   function
   typ '->' typ                             function (shorthand)
@@ -116,6 +117,8 @@ typ ::=
 Notes:
 
 * Generics can only be instantiated with _boxed_ types, which excludes the primitive data types `Bool`, `Byte`, `Int`, and `Float`. These can be converted to boxed types via `Bool$`, `Int$`, etc. There is no autoboxing.
+
+* Readonly arrays are a supertype of regular arrays, and only they allow covariant subtyping on the element type.
 
 
 ### Expressions
@@ -489,6 +492,7 @@ The type representation is a fairly simple tree structure, where non-generic typ
 | Text$    | [i31(7); i31(5)] |
 | (Float$,Text) | [i31(8); i31(-4); i31(5)] |
 | Object[] | [i31(9); i31(6)] |
+| Object[]! | [i31(10); i31(6)] |
 | C        | $disp_C      |
 | C<Int$,Text> | array [$disp_C; i31(-3); i31(5)] |
 
