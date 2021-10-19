@@ -1,0 +1,34 @@
+// Inheritance with generic refinement
+
+class C<T>(x : T) {
+  let v = x;
+  func f<U>(x : T, y : U, z : (T, U), a : T[]) : (T, U, T[]) {
+    let x2 : T = a[0];
+    let y2 : U = z.1;
+    let z2 : (T, U) = (x, y);
+    let a2 : T[] = [x, z.0, a[1], v];
+    (x2, y2, a2)
+  };
+};
+
+class B(i : Int) { let n = i };
+class D(b : B) <: C<B>(b) {
+  func f<U>(x : B, y : U, z : (B, U), a : B[]) : (B, U, B[]) {
+    let x2 : B = a[0];
+    let y2 : U = z.1;
+    let z2 : (B, U) = (x, y);
+    let a2 : B[] = [v, x, z.0, a[1]];
+    (x2, y2, a2)
+  };
+};
+
+let b = new B(-1);
+let a = [new B(0), new B(1), new B(2)];
+let d = new D(new B(-1));
+let t = d.f<Int$>(new B(-2), 9$, (new B(-3), 8$), a);
+assert t.0.n == 0;
+assert t.1.$ == 8;
+assert t.2[0].n == -1;
+assert t.2[1].n == -2;
+assert t.2[2].n == -3;
+assert t.2[3].n == 1;
