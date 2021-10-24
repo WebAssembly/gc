@@ -1,3 +1,5 @@
+// @FAIL-V8
+
 // Generic types
 
 type Pair<X, Y> = (Y, X);

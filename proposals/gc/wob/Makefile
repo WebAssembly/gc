@@ -186,7 +186,7 @@ linktest/%:	$(WASMDIR)/wasm $(WASMLINK)
 		fi; \
 		# $(NODE) js/$(NAME).js $(TESTDIR)/$(@F)
 
-$(RUNTIME).wasm:
+$(RUNTIME).wasm:	$(OPT)
 		@./$(NAME) -g $@
 
 

@@ -138,6 +138,8 @@ and ctxt_ext =
   { envs : (scope * env ref) list;
     clss : cls_env ref;
     funcs : func_env ref;
+    texts : int32 Env.Map.t ref;
+    data : int32 ref;
     self : string;
     tcls : T.cls option;
     ret : T.typ;
@@ -147,6 +149,8 @@ let make_ext_ctxt () : ctxt_ext =
   { envs = [(PreScope, make_env ())];
     clss = ref ClsEnv.empty;
     funcs = ref FuncEnv.empty;
+    texts = ref Env.Map.empty;
+    data = ref (-1l);
     self = "";
     tcls = None;
     ret = T.Tup [];
@@ -265,7 +269,7 @@ let rec _print_cls ctxt cls =
 let intrinsic compile import =
   (if !Flags.headless then compile else import)
 
-let intrinsic_text_new c = Intrinsic.compile_text_new c (* needs local memory *)
+let intrinsic_text_new c = intrinsic Intrinsic.compile_text_new Runtime.import_text_new c
 let intrinsic_text_cat c = intrinsic Intrinsic.compile_text_cat Runtime.import_text_cat c
 let intrinsic_text_eq c = intrinsic Intrinsic.compile_text_eq Runtime.import_text_eq c
 let intrinsic_rtt_eq c = intrinsic Intrinsic.compile_rtt_eq Runtime.import_rtt_eq c
@@ -496,6 +500,70 @@ and lower_class ctxt at tcls =
     }
   );
   cls
+
+
+(* Allocate data *)
+
+let data_list data_e ctxt es data =
+  List.fold_left (fun data eI -> data_e ctxt eI data) data es
+
+let data_lit ctxt l at data =
+  match l with
+  | NullL | BoolL _ | IntL _ | FloatL _ -> data
+  | TextL s ->
+    if Env.Map.find_opt s !(ctxt.ext.texts) <> None then data else
+    let addr = i32 (String.length data) in
+    ctxt.ext.texts := Env.Map.add s addr !(ctxt.ext.texts);
+    data ^ s
+
+let rec data_exp ctxt e data =
+  match e.it with
+  | VarE _ -> data
+  | LitE l ->
+    data_lit ctxt l e.at data
+  | UnE (_, e1) | BoxE e1 | UnboxE e1 | ProjE (e1, _) | LenE e1 | DotE (e1, _)
+  | AnnotE (e1, _) | CastE (e1, _, _) | AssertE e1 | RetE e1 ->
+    data_exp ctxt e1 data
+  | BinE (e1, _, e2) | RelE (e1, _, e2) | LogE (e1, _, e2)
+  | IdxE (e1, e2) | NewArrayE (_, e1, e2) | AssignE (e1, e2) | WhileE (e1, e2) ->
+    data_list data_exp ctxt [e1; e2] data
+  | TupE es | ArrayE es | NewE (_, _, es) ->
+    data_list data_exp ctxt es data
+  | CallE (e1, _, es) ->
+    data_list data_exp ctxt (e1::es) data
+  | IfE (e1, e2, e3) ->
+    data_list data_exp ctxt [e1; e2; e3] data
+  | BlockE ds ->
+    data_list data_dec ctxt ds data
+
+and data_dec ctxt d data =
+  match d.it with
+  | TypD _ -> data
+  | ExpD e | LetD (_, e) | VarD (_, _, e) | FuncD (_, _, _, _, e) ->
+    data_exp ctxt e data
+  | ClassD (_, _, _, _, ds) ->
+    data_list data_dec ctxt ds data
+
+let data_prog ctxt p =
+  let Prog (_, ds) = p.it in
+  let emit ctxt = List.iter (emit_instr ctxt p.at) in
+  let data = data_list data_dec ctxt ds "" in
+  if data <> "" then begin
+    let seg = emit_passive_data ctxt p.at data in
+    let len = i32 (String.length data) in
+    let const = W.[i32_const (0l @@ p.at) @@ p.at] @@ p.at in
+    let dataidx = emit_global ctxt p.at W.Mutable W.i32t const in
+    ctxt.ext.data := dataidx;
+    emit ctxt W.[
+      i32_const (len @@ p.at);
+      call (Runtime.import_mem_alloc ctxt @@ p.at);
+      global_set (dataidx @@ p.at);
+      global_get (dataidx @@ p.at);
+      i32_const (0l @@ p.at);
+      i32_const (len @@ p.at);
+      memory_init (seg @@ p.at);
+    ]
+  end
 
 
 (* Coercions *)
@@ -742,9 +810,24 @@ and compile_lit ctxt l at =
   | IntL i -> emit ctxt W.[i32_const (i @@ at)]
   | FloatL z -> emit ctxt W.[f64_const (W.F64.of_float z @@ at)]
   | TextL s ->
-    let addr = emit_data ctxt at s in
+    if !Flags.headless then begin
+      let addr = emit_active_data ctxt at s in
+      emit ctxt W.[
+        i32_const (addr @@ at);
+      ]
+    end else begin
+      let offset = Env.Map.find s !(ctxt.ext.texts) in
+      emit ctxt W.[
+        global_get (!(ctxt.ext.data) @@ at);
+      ];
+      if offset <> 0l then begin
+        emit ctxt W.[
+          i32_const (offset @@ at);
+          i32_add;
+        ]
+      end
+    end;
     emit ctxt W.[
-      i32_const (addr @@ at);
       i32_const (i32 (String.length s) @@ at);
       call (intrinsic_text_new ctxt @@ at);
     ]
@@ -1959,7 +2042,7 @@ let compile_imp ctxt d =
 
 let compile_prog p : W.module_ =
   let Prog (is, ds) = p.it in
-  let emit ctxt = emit_instr ctxt p.at in
+  let emit ctxt = List.iter (emit_instr ctxt p.at) in
   let ctxt = enter_scope (make_ctxt ()) GlobalScope in
   if not !Flags.headless then Runtime.compile_runtime_import ctxt;
   List.iter (compile_imp ctxt) is;
@@ -1969,9 +2052,13 @@ let compile_prog p : W.module_ =
   let result_idx = emit_global ctxt p.at W.Mutable t' const in
   let start_idx =
     emit_func ctxt p.at [] [] (fun ctxt _ ->
+      if not !Flags.headless then
+        data_prog ctxt p;
       compile_block ctxt ds;
       compile_coerce_value_type ctxt p.at (type_of p);
-      emit ctxt W.(global_set (result_idx @@ p.at));
+      emit ctxt W.[
+        global_set (result_idx @@ p.at)
+      ];
     )
   in
   emit_start ctxt p.at start_idx;

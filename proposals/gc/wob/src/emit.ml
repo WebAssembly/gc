@@ -58,6 +58,7 @@ type internal =
   { types : W.type_ entities;
     globals : W.global entities;
     funcs : W.func entities;
+    memories : W.memory entities;
     datas : W.data_segment entities;
     imports : W.import entities;
     exports : W.export entities;
@@ -76,6 +77,7 @@ let make_internal () =
   { types = make_entities ();
     globals = make_entities ();
     funcs = make_entities ();
+    memories = make_entities ();
     datas = make_entities ();
     imports = make_entities ();
     exports = make_entities ();
@@ -163,6 +165,10 @@ let emit_global_import ctxt at mname name mut t =
   emit_import ctxt at mname name W.(GlobalImport (GlobalType (t, mut)));
   implicit_entity ctxt.int.globals
 
+let emit_memory_import ctxt at mname name min max =
+  emit_import ctxt at mname name W.(MemoryImport (MemoryType {min; max}));
+  implicit_entity ctxt.int.memories
+
 let emit_export descf ctxt at name idx =
   let name = W.Utf8.decode name in
   let edesc = descf (idx @@ at) @@ at in
@@ -170,6 +176,7 @@ let emit_export descf ctxt at name idx =
 
 let emit_func_export ctxt = emit_export (fun x -> W.FuncExport x) ctxt
 let emit_global_export ctxt = emit_export (fun x -> W.GlobalExport x) ctxt
+let emit_memory_export ctxt = emit_export (fun x -> W.MemoryExport x) ctxt
 
 let emit_param ctxt at : int32 =
   implicit_entity ctxt.int.locals
@@ -181,7 +188,19 @@ let emit_global ctxt at mut t' ginit : int32 =
   let gtype = W.GlobalType (t', mut) in
   emit_entity ctxt.int.globals (W.{gtype; ginit} @@ at)
 
-let emit_data ctxt at s : int32 =
+let emit_memory ctxt at min max : int32 =
+  let mtype = W.(MemoryType {min; max}) in
+  let idx = emit_entity ctxt.int.memories (W.{mtype} @@ at) in
+  assert (idx = 0l);
+  idx
+
+let emit_passive_data ctxt at s : int32 =
+  let dmode = W.Passive @@ at in
+  let seg = W.{dinit = s; dmode} @@ at in
+  emit_entity ctxt.int.datas seg
+
+let emit_active_data ctxt at s : int32 =
+  assert (get_entities ctxt.int.memories = []);
   let addr = !(ctxt.int.data_offset) in
   let offset = W.[Const (I32 addr @@ at) @@ at] @@ at in
   let dmode = W.Active {index = 0l @@ at; offset} @@ at in
@@ -254,7 +273,9 @@ let gen_module ctxt at : W.module_ =
         } @@ at
       ];
     W.memories =
-      if get_entities ctxt.int.datas = [] then [] else
+      let memories = get_entities ctxt.int.memories in
+      if get_entities ctxt.int.datas = []
+      || ctxt.int.memories.cnt > 0l then memories else
       let sz = (!(ctxt.int.data_offset) +% 0xffffl) /% 0x10000l in
       [{W.mtype = W.(MemoryType {min = sz; max = Some sz})} @@ at]
   } @@ at

@@ -17,21 +17,22 @@ let argspec = Arg.align
 [
   "-", Arg.Set Flags.prompt,
     " start interactive prompt (default if no files given)";
-  "-r", Arg.Set Flags.interpret,
-    " interpret input (default when interactive)";  (* TODO: for now *)
+  "-r", Arg.Set Flags.run,
+    " run input (default when interactive or not compiling)";
+  "-i", Arg.Set Flags.interpret,
+    " run with interpreter (default when interactive for now)";
   "-c", Arg.Set Flags.compile,
     " compile input to Wasm (default when files given)";
   "-n", Arg.Set Flags.headless,
     " no runtime system, compile headless";
   "-g", Arg.String (add_list gens),
     " generate runtime system";
-  "-d", Arg.Set Flags.dry,
-    " dry, do not run program" ^
-    " (default when compiling non-interactively)";
   "-u", Arg.Set Flags.unchecked,
     " unchecked, do not perform type-checking (only without -c)";
   "-v", Arg.Set Flags.validate,
     " validate generated Wasm";
+  "-x", Arg.Set Flags.textual,
+    " produce textual Wasm";
   "-a", Arg.Set Flags.print_ast,
     " output abstract syntac";
   "-s", Arg.Set Flags.print_sig,
@@ -40,8 +41,6 @@ let argspec = Arg.align
     " universal generics, box everything";
   "-p", Arg.Set Flags.parametric,
     " parametric generics, disallows casts";
-  "-x", Arg.Set Flags.textual,
-    " output textual Wasm";
   "-w", Arg.Int (fun n -> Flags.width := n),
     " configure output width (default is 80)";
   "-t", Arg.Set Flags.trace,
@@ -65,11 +64,12 @@ let () =
   try
     Arg.parse argspec (add_list args) usage;
     if !args = [] && !gens = [] then Flags.prompt := true;
+    if !Flags.prompt || not !Flags.compile then Flags.run := true;
     if !Flags.prompt then Flags.interpret := true;  (* TODO: for now *)
     if !Flags.compile then Flags.unchecked := false;
     Run.init ();
     List.iter (io Run.compile_runtime) !gens;
-    if !Flags.interpret then
+    if !Flags.run then
     (
       List.iter (io Run.run_file) !args;
       if !Flags.prompt then

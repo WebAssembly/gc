@@ -39,16 +39,21 @@ val emit_func_import :
   'a ctxt -> W.region -> string -> string -> W.func_type -> int32
 val emit_global_import :
   'a ctxt -> W.region -> string -> string -> W.mutability -> W.value_type -> int32
+val emit_memory_import :
+  'a ctxt -> W.region -> string -> string -> int32 -> int32 option -> int32
 
 val emit_func_export : 'a ctxt -> W.region -> string -> int32 -> unit
 val emit_global_export : 'a ctxt -> W.region -> string -> int32 -> unit
+val emit_memory_export : 'a ctxt -> W.region -> string -> int32 -> unit
 
 val emit_param : 'a ctxt -> W.region -> int32
 val emit_local : 'a ctxt -> W.region -> W.value_type -> int32
 val emit_global :
   'a ctxt -> W.region -> W.mutability -> W.value_type -> W.const -> int32
 
-val emit_data : 'a ctxt -> W.region -> string -> int32
+val emit_memory : 'a ctxt -> W.region -> int32 -> int32 option -> int32
+val emit_passive_data : 'a ctxt -> W.region -> string -> int32
+val emit_active_data : 'a ctxt -> W.region -> string -> int32 (* address *)
 
 val emit_instr : 'a ctxt -> W.region -> W.instr' -> unit
 val emit_block : 'a ctxt -> W.region ->

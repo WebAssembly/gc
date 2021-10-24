@@ -3,7 +3,60 @@ open Emit
 let (@@) = W.Source.(@@)
 
 
-(* Intrinsics *)
+(* Memory *)
+
+let compile_mem ctxt : int32 =
+  Emit.lookup_intrinsic ctxt "mem" (fun () ->
+    let at = Prelude.region in
+    emit_memory ctxt at 1l None
+  )
+
+let compile_mem_ptr ctxt : int32 =
+  Emit.lookup_intrinsic ctxt "mem_ptr" (fun () ->
+    let at = Prelude.region in
+    emit_global ctxt at W.Mutable W.i32t W.([i32_const (0l @@ at) @@ at] @@ at)
+  )
+
+let compile_mem_alloc ctxt : int32 =
+  Emit.lookup_intrinsic ctxt "mem_alloc" (fun () ->
+    let at = Prelude.region in
+    emit_func ctxt at W.[i32t] W.[i32t] (fun ctxt _ ->
+      let argidx = emit_param ctxt at in
+      let addridx = emit_local ctxt at W.i32t in
+      let deltaidx = emit_local ctxt at W.i32t in
+      let freeidx = compile_mem_ptr ctxt in
+      let _ = compile_mem ctxt in
+      List.iter (emit_instr ctxt at) W.[
+        global_get (freeidx @@ at);
+        local_tee (addridx @@ at);
+        local_get (argidx @@ at);
+        i32_add;
+        global_set (freeidx @@ at);
+        block voidbt (List.map (fun e -> e @@ at) [
+          global_get (freeidx @@ at);
+          i32_const (0xffffl @@ at);
+          i32_add;
+          i32_const (16l @@ at);
+          i32_shr_u;
+          memory_size;
+          i32_sub;
+          local_tee (deltaidx @@ at);
+          i32_eqz;
+          br_if (0l @@ at);
+          local_get (deltaidx @@ at);
+          memory_grow;
+          i32_const (-1l @@ at);
+          i32_ne;
+          br_if (0l @@ at);
+          unreachable;
+        ]);
+        local_get (addridx @@ at);
+      ]
+    )
+  )
+
+
+(* Text *)
 
 let compile_text_type ctxt : int32 =
   let ft = W.(FieldType (PackedStorageType Pack8, Mutable)) in
@@ -173,6 +226,8 @@ let compile_text_eq ctxt : int32 =
     )
   )
 
+
+(* Runtime types *)
 
 let compile_rtt_type ctxt : int32 =
   let rtt_vt = W.(RefType (Nullable, EqHeapType)) in
