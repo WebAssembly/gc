@@ -28,6 +28,7 @@ let funcs =
     name_rtt_eq, (compile_rtt_eq, ty [rtt; rtt] [i32]);
   ])
 
+
 let compile_runtime () : Wasm.Ast.module_ =
   let ctxt = Emit.make_ctxt () in
   Emit.emit_memory_export ctxt Prelude.region name_mem
@@ -38,23 +39,21 @@ let compile_runtime () : Wasm.Ast.module_ =
   Emit.gen_module ctxt Prelude.region
 
 
-let compile_runtime_import ctxt =
-  let ctxt' = {ctxt with Emit.ext = ()} in  (* ensure polymorphism *)
-  ignore (Emit.emit_memory_import ctxt' Prelude.region module_name name_mem 0l None);
-  List.iteri (fun i (name, (compile, _)) ->
-    let _, emit_type = List.assoc name funcs in
-    let idx =
-      Emit.emit_func_import ctxt' Prelude.region module_name name (emit_type ctxt')
-    in assert (Int32.to_int idx = i)
-  ) funcs
-
-let import name ctxt =
+let import_func name ctxt =
   assert (not !Flags.headless);
-  Option.get (Wasm.Lib.List32.index_where (fun (name', _) -> name = name') funcs)
+  Emit.lookup_intrinsic ctxt name (fun () ->
+    let ctxt' = {ctxt with Emit.ext = ()} in  (* ensure polymorphism *)
+    let _, emit_type = List.assoc name funcs in
+    Emit.emit_func_import ctxt' Prelude.region module_name name (emit_type ctxt')
+  )
 
-let import_mem_alloc ctxt = import name_mem_alloc ctxt
-let import_text_new ctxt = import name_text_new ctxt
-(*let import_text_cpy ctxt = import name_text_cpy ctxt*)
-let import_text_cat ctxt = import name_text_cat ctxt
-let import_text_eq ctxt = import name_text_eq ctxt
-let import_rtt_eq ctxt = import name_rtt_eq ctxt
+let import_mem_alloc ctxt =
+  Emit.lookup_intrinsic ctxt name_mem (fun () ->
+    Emit.emit_memory_import ctxt Prelude.region module_name name_mem 0l None
+  ) |> ignore;
+  import_func name_mem_alloc ctxt
+let import_text_new ctxt = import_func name_text_new ctxt
+(*let import_text_cpy ctxt = import_func name_text_cpy ctxt*)
+let import_text_cat ctxt = import_func name_text_cat ctxt
+let import_text_eq ctxt = import_func name_text_eq ctxt
+let import_rtt_eq ctxt = import_func name_rtt_eq ctxt

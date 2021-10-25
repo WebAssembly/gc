@@ -2,8 +2,6 @@ val module_name : string
 
 val compile_runtime : unit -> Wasm.Ast.module_
 
-val compile_runtime_import : 'a Emit.ctxt -> unit
-
 val import_mem_alloc : 'a Emit.ctxt -> int32
 val import_text_new : 'a Emit.ctxt -> int32
 (*val import_text_cpy : 'a Emit.ctxt -> int32*)
