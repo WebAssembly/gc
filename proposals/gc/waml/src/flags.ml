@@ -12,5 +12,6 @@ let textual = ref false
 
 let box_locals = ref false
 let box_globals = ref false
+let box_modules = ref false
 let box_temps = ref false
 let box_scrut = ref false

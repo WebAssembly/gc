@@ -92,6 +92,9 @@ let make_ctxt ext = {ext; int = make_internal ()}
 
 (* Lookup *)
 
+let lookup_types ctxt : W.def_type list =
+  List.map (fun t -> (Option.get !t).W.Source.it) (List.rev ctxt.int.types.list)
+
 let lookup_def_type ctxt idx : W.def_type =
   (Option.get !(W.Lib.List32.nth (List.rev ctxt.int.types.list) idx)).W.Source.it
 

@@ -279,14 +279,21 @@ let compile_val_proj ctxt str x t dst =
   let _, typeidx = lower_str_type ctxt x.at str in
   let k = E.cardinal_mods str in
   let i = ref 0 in
+  let t_src = ref T.Bool in
   let found = ref false in
-  E.iter_vals (fun x' _ ->
-    if not !found then if x' = x.it then found := true else incr i
+  E.iter_vals (fun x' t' ->
+    if not !found then if x' <> x.it then incr i else
+      (found := true; t_src := T.as_mono t'.it)
   ) str;
   emit_instr ctxt x.at W.(
     struct_get (typeidx @@ x.at) (int32 (k + !i) @@ x.at)
   );
-  compile_coerce ctxt struct_rep dst t x.at
+  if T.eq !t_src t then
+    compile_coerce ctxt (struct_rep ()) dst t x.at
+  else begin (* one of them will be boxed *)
+    compile_coerce ctxt (struct_rep ()) (BoxedRep Nonull) !t_src x.at;
+    compile_coerce ctxt (BoxedRep Nonull) dst t x.at
+  end
 
 let compile_val_path ctxt q t dst =
   match q.it with
@@ -1060,7 +1067,7 @@ and compile_mod_func_opt ctxt m : func_loc option =
       compile_mod_var ctxt Source.(x @@ m.at)
     ) vars.mods;
     Vars.iter (fun x t ->
-      compile_val_var ctxt Source.(x @@ m.at) t struct_rep
+      compile_val_var ctxt Source.(x @@ m.at) t (struct_rep ())
     ) vars.vals;
     let rttidx = lower_rtt_global ctxt m.at str [] in
     emit ctxt W.[
@@ -1093,7 +1100,7 @@ and compile_mod_func_opt ctxt m : func_loc option =
   | AppM (m1, m2) ->
     let anyclos = lower_anyclos_type ctxt m1.at in
     let _, clos1 = lower_sig_type ctxt m1.at (Source.et m1) in
-    let _, s11, _ = T.as_fct (Source.et m1) in
+    let _, s11, s12 = T.as_fct (Source.et m1) in
     let func_loc_opt = compile_mod_func_opt ctxt m1 in
     let rttidx = lower_rtt_global ctxt m1.at clos1 [anyclos] in
     emit ctxt W.[
@@ -1121,6 +1128,7 @@ and compile_mod_func_opt ctxt m : func_loc option =
         call_ref;
       ]
     );
+    compile_coerce_mod ctxt s12 (Source.et m) m.at;
     None
 
   | AnnotM (m1, _s) ->
@@ -1135,7 +1143,7 @@ and compile_mod_func_opt ctxt m : func_loc option =
 
 
 and compile_coerce_mod ctxt s1 s2 at =
-  if need_coerce_mod s1 s2 then begin
+  if need_coerce_mod ctxt s1 s2 then begin
     let emit ctxt = List.iter (emit_instr ctxt at) in
     match s1, s2 with
     | T.Str (_, str1), T.Str (_, str2) ->
@@ -1154,7 +1162,7 @@ and compile_coerce_mod ctxt s1 s2 at =
       E.iter_vals (fun x t ->
         emit_instr ctxt at W.(local_get (tmp @@ at));
         compile_val_proj ctxt str1 (Source.(@@) x at)
-          (T.as_mono t.it) struct_rep;
+          (T.as_mono t.it) (struct_rep ());
       ) str2;
       let rttidx = lower_rtt_global ctxt at typeidx2 [] in
       emit ctxt W.[
@@ -1166,7 +1174,7 @@ and compile_coerce_mod ctxt s1 s2 at =
       let ft, fidx = lower_sig_type ctxt at s1 in
       let anyclos = lower_anyclos_type ctxt at in
       let envflds = W.[field ft] in
-      let _code, clos1, closenv = lower_fct_clos_type ctxt at s12 s22 envflds in
+      let _code, clos1, closenv = lower_fct_clos_type ctxt at s21 s22 envflds in
       let vt21, _ = lower_sig_type ctxt at s21 in
       let vt22, _ = lower_sig_type ctxt at s22 in
       let fn = emit_func ctxt at W.(ref_ clos1 :: [vt21]) [vt22]
@@ -1210,17 +1218,24 @@ and compile_coerce_mod ctxt s1 s2 at =
       assert false
   end
 
-and need_coerce_mod s1 s2 =
+and need_coerce_mod ctxt s1 s2 =
   match s1, s2 with
   | T.Str (_, str1), T.Str (_, str2) ->
     E.cardinal_vals str1 > E.cardinal_vals str2 ||
     E.cardinal_mods str1 > E.cardinal_mods str2 ||
-    List.exists2 (fun (x1, s1) (x2, s2) -> need_coerce_mod s1.it s2.it)
+    List.exists2 (fun (x1, t1) (x2, t2) -> need_coerce_val ctxt t1.it t2.it)
+      (E.vals str1) (E.vals str2) ||
+    List.exists2 (fun (x1, s1) (x2, s2) -> need_coerce_mod ctxt s1.it s2.it)
       (E.mods str1) (E.mods str2)
   | T.Fct (_, s11, s12), T.Fct (_, s21, s22) ->
-    need_coerce_mod s21 s11 || need_coerce_mod s12 s22
+    need_coerce_mod ctxt s21 s11 || need_coerce_mod ctxt s12 s22
   | _ ->
     assert false
+
+and need_coerce_val ctxt t1 t2 =
+  let t1' = lower_value_type ctxt no_region (struct_rep ()) (T.as_mono t1) in
+  let t2' = lower_value_type ctxt no_region (struct_rep ()) (T.as_mono t2) in
+  not (W.Match.match_value_type (Emit.lookup_types ctxt) [] t1' t2')
 
 
 (* Declarations *)
@@ -1360,8 +1375,8 @@ and compile_dec ctxt d dst =
       let x = Source.(x' @@ pt.at) in
       let T.Forall (_, t) = pt.it in
       emit_instr ctxt m.at W.(local_get (tmp @@ m.at));
-      compile_val_proj ctxt str x t struct_rep;
-      compile_val_var_bind ctxt x t struct_rep None
+      compile_val_proj ctxt str x t (struct_rep ());
+      compile_val_var_bind ctxt x t (struct_rep ()) None
     ) str;
     compile_coerce ctxt unit_rep dst (T.Tup []) d.at
 
@@ -1401,7 +1416,7 @@ let compile_imp ctxt idx d =
   ) str;
   E.iter_vals (fun _ pt ->
     emit_instr ctxt pt.at W.(global_get (int32 !idx @@ pt.at)); incr idx;
-    compile_coerce ctxt (global_rep ()) struct_rep (T.as_mono pt.it) pt.at
+    compile_coerce ctxt (global_rep ()) (struct_rep ()) (T.as_mono pt.it) pt.at
   ) str;
   let vt, typeidx = lower_str_type ctxt x.at str in
   let rttidx = lower_rtt_global ctxt d.at typeidx [] in

@@ -41,6 +41,8 @@ let argspec = Arg.align
     " box locals";
   "-bglobals", Arg.Set Flags.box_globals,
     " box globals";
+  "-bmodules", Arg.Set Flags.box_modules,
+    " box modules";
   "-btemps", Arg.Set Flags.box_temps,
     " box temporaries";
   "-bscrut", Arg.Set Flags.box_scrut,
@@ -51,6 +53,8 @@ let argspec = Arg.align
     " unbox locals (default)";
   "-ubglobals", Arg.Clear Flags.box_globals,
     " unbox globals (default)";
+  "-ubmodules", Arg.Clear Flags.box_modules,
+    " unbox modules (default)";
   "-ubtemps", Arg.Clear Flags.box_temps,
     " unbox temporaries (default)";
   "-ubscrut", Arg.Clear Flags.box_scrut,

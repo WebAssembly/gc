@@ -26,7 +26,7 @@ let as_global_loc = function GlobalLoc idx -> idx | _ -> assert false
 type rep =
   | DropRep                (* value never used *)
   | BlockRep of null       (* like Boxed, but empty tuples are suppressed *)
-  | BoxedRep of null       (* boxed representation that may not be null *)
+  | BoxedRep of null       (* boxed representation *)
   | UnboxedRep of null     (* representation with unboxed type or concrete ref types *)
   | UnboxedLaxRep of null  (* like Unboxed, but Int may have junk high bit *)
 
@@ -39,6 +39,7 @@ let boxed_if flag null = if !flag then BoxedRep null else UnboxedRep null
 let local_rep () = boxed_if Flags.box_locals Null    (* values stored in locals *)
 let clos_rep () = boxed_if Flags.box_locals Nonull   (* values stored in closures *)
 let global_rep () = boxed_if Flags.box_globals Null  (* values stored in globals *)
+let struct_rep () = boxed_if Flags.box_modules Nonull (* values stored in structs *)
 let tmp_rep () = boxed_if Flags.box_temps Null       (* values stored in temps *)
 let pat_rep () = boxed_if Flags.box_scrut Nonull     (* values fed into patterns *)
 
@@ -47,7 +48,6 @@ let ref_rep = BoxedRep Null         (* expecting a reference *)
 let rigid_rep = UnboxedRep Nonull   (* values produced or to be consumed *)
 let lax_rep = UnboxedLaxRep Nonull  (* lax ints produced or consumed *)
 let field_rep = BoxedRep Nonull     (* values stored in fields *)
-let struct_rep = BoxedRep Nonull    (* values stored in structs *)
 let arg_rep = BoxedRep Nonull       (* argument and result values *)
 let unit_rep = BlockRep Nonull      (* nothing on stack *)
 
@@ -90,7 +90,7 @@ let scope_rep = function
 
 module ClosKey =
 struct
-  type t = int * W.field_type list
+  type t = W.value_type list * W.value_type list * W.field_type list
   let compare = compare
 end
 
@@ -180,29 +180,31 @@ and lower_anyclos_type ctxt at : int32 =
   emit_type ctxt at W.(type_struct [field i32])
 
 and lower_func_type ctxt at arity : int32 * int32 =
-  match ClosMap.find_opt (arity, []) !(ctxt.ext.clostypes) with
+  let argts, _ = lower_param_types ctxt at arity in
+  let key = (argts, [boxedref], []) in
+  match ClosMap.find_opt key !(ctxt.ext.clostypes) with
   | Some {codeidx; closidx; _} -> codeidx, closidx
   | None ->
     let code, def_code = emit_type_deferred ctxt at in
     let closdt = W.(type_struct [field i32; field (ref_ code)]) in
     let clos = emit_type ctxt at closdt in
-    let argts, _ = lower_param_types ctxt at arity in
     let codedt = W.(type_func (ref_ clos :: argts) [boxedref]) in
     def_code codedt;
     let clos_idxs = {codeidx = code; closidx = clos; envidx = clos} in
-    ctxt.ext.clostypes := ClosMap.add (arity, []) clos_idxs !(ctxt.ext.clostypes);
+    ctxt.ext.clostypes := ClosMap.add key clos_idxs !(ctxt.ext.clostypes);
     code, clos
 
 and lower_clos_type ctxt at arity flds : int32 * int32 * int32 =
-  match ClosMap.find_opt (arity, flds) !(ctxt.ext.clostypes) with
+  let argts, _ = lower_param_types ctxt at arity in
+  let key = (argts, [boxedref], flds) in
+  match ClosMap.find_opt key !(ctxt.ext.clostypes) with
   | Some {codeidx; closidx; envidx} -> codeidx, closidx, envidx
   | None ->
     let code, clos = lower_func_type ctxt at arity in
     let closdt = W.(type_struct (field i32 :: field (ref_ code) :: flds)) in
     let clos_env = emit_type ctxt at closdt in
     let clos_idxs = {codeidx = code; closidx = clos; envidx = clos_env} in
-    ctxt.ext.clostypes :=
-      ClosMap.add (arity, flds) clos_idxs !(ctxt.ext.clostypes);
+    ctxt.ext.clostypes := ClosMap.add key clos_idxs !(ctxt.ext.clostypes);
     code, clos, clos_env
 
 and lower_param_types ctxt at arity : W.value_type list * int32 option =
@@ -232,25 +234,39 @@ and lower_str_type ctxt at str : W.value_type * int32 =
   let mod_ts = List.map (fun (_, s) ->
     fst (lower_sig_type ctxt at s.Source.it)) (E.mods str) in
   let val_ts = List.map (fun (_, pt) ->
-    lower_value_type ctxt at struct_rep (T.as_mono pt.Source.it)) (E.vals str) in
+    lower_value_type ctxt at (struct_rep ()) (T.as_mono pt.Source.it)) (E.vals str) in
   let x = emit_type ctxt at W.(type_struct (List.map field (mod_ts @ val_ts))) in
   W.ref_ x, x
 
 and lower_fct_type ctxt at s1 s2 : int32 * int32 =
   let t1, _ = lower_sig_type ctxt at s1 in
   let t2, _ = lower_sig_type ctxt at s2 in
-  let code, def_code = emit_type_deferred ctxt at in
-  let closdt = W.(type_struct [field i32; field (ref_ code)]) in
-  let clos = emit_type ctxt at closdt in
-  let codedt = W.(type_func [ref_ clos; t1] [t2]) in
-  def_code codedt;
-  code, clos
+  let key = ([t1], [t2], []) in
+  match ClosMap.find_opt key !(ctxt.ext.clostypes) with
+  | Some {codeidx; closidx; _} -> codeidx, closidx
+  | None ->
+    let code, def_code = emit_type_deferred ctxt at in
+    let closdt = W.(type_struct [field i32; field (ref_ code)]) in
+    let clos = emit_type ctxt at closdt in
+    let codedt = W.(type_func [ref_ clos; t1] [t2]) in
+    def_code codedt;
+    let clos_idxs = {codeidx = code; closidx = clos; envidx = clos} in
+    ctxt.ext.clostypes := ClosMap.add key clos_idxs !(ctxt.ext.clostypes);
+    code, clos
 
 let lower_fct_clos_type ctxt at s1 s2 flds : int32 * int32 * int32 =
-  let code, clos = lower_fct_type ctxt at s1 s2 in
-  let closdt = W.(type_struct (field i32 :: field (ref_ code) :: flds)) in
-  let clos_env = emit_type ctxt at closdt in
-  code, clos, clos_env
+  let t1, _ = lower_sig_type ctxt at s1 in
+  let t2, _ = lower_sig_type ctxt at s2 in
+  let key = ([t1], [t2], flds) in
+  match ClosMap.find_opt key !(ctxt.ext.clostypes) with
+  | Some {codeidx; closidx; envidx} -> codeidx, closidx, envidx
+  | None ->
+    let code, clos = lower_fct_type ctxt at s1 s2 in
+    let closdt = W.(type_struct (field i32 :: field (ref_ code) :: flds)) in
+    let clos_env = emit_type ctxt at closdt in
+    let clos_idxs = {codeidx = code; closidx = clos; envidx = clos_env} in
+    ctxt.ext.clostypes := ClosMap.add key clos_idxs !(ctxt.ext.clostypes);
+    code, clos, clos_env
 
 
 (* Closure environments *)
