@@ -170,8 +170,9 @@ let compile_text_eq ctxt : int32 =
               local_get (arg2 @@ at);
               local_get (len @@ at);
               array_get_u (text @@ at);
-              i32_eq;
-              br_if (0l @@ at);
+              i32_ne;
+              br_if (2l @@ at);
+              br (0l @@ at);
             ])
           ]);
           i32_const (1l @@ at);
@@ -249,7 +250,7 @@ let rec compile_apply ctxt arity =
     let emit ctxt = List.iter (emit_instr ctxt at) in
     let anyclos = lower_anyclos_type ctxt at in
     let argts, argv_opt = lower_param_types ctxt at arity in
-    emit_func ctxt at W.(ref_ anyclos :: argts) [boxedref] (fun ctxt fn ->
+    emit_func ctxt at W.(ref_ anyclos :: argts) [absref] (fun ctxt fn ->
       def_fwd fn;
       let clos = emit_param ctxt at in
       let args = List.map (fun _ -> emit_param ctxt at) argts in
@@ -357,7 +358,7 @@ and compile_curry ctxt arity =
     let flds = List.map W.field W.(ref_ anyclos :: argts) in
     let _, clos1, curriedN = lower_clos_type ctxt at 1 flds in
     (* curryN = fun xN => apply_N+1 x0 ... xN-1 xN *)
-    emit_func ctxt at W.[ref_ clos1; boxedref] [boxedref] (fun ctxt fn ->
+    emit_func ctxt at W.[ref_ clos1; absref] [absref] (fun ctxt fn ->
       def_fwd fn;
       let clos = emit_param ctxt at in
       let arg0 = emit_param ctxt at in
@@ -371,7 +372,7 @@ and compile_curry ctxt arity =
         ref_cast;
       ];
       (* Bind result to local *)
-      emit_let ctxt at W.(result boxedref) W.[ref_ curriedN] (fun ctxt ->
+      emit_let ctxt at W.(result absref) W.[ref_ curriedN] (fun ctxt ->
         (* Load arguments *)
         if arity <= max_func_arity then begin
           (* Load target function *)

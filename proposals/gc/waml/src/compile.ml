@@ -35,6 +35,7 @@ let string_of_rep = function
   | DropRep -> "drop"
   | BlockRep n -> "block" ^ string_of_null n
   | BoxedRep n -> "boxed" ^ string_of_null n
+  | BoxedAbsRep n -> "abs" ^ string_of_null n
   | UnboxedRep n -> "unboxed" ^ string_of_null n
   | UnboxedLaxRep n -> "lax" ^ string_of_null n
 
@@ -71,7 +72,7 @@ let mark ctxt i =
 
 (* Coercions *)
 
-let compile_coerce ctxt src dst t at =
+let rec compile_coerce ctxt src dst t at =
   if src <> dst then
   let emit ctxt = List.iter (emit_instr ctxt at) in
   let non_null n1 n2 =
@@ -92,19 +93,14 @@ let compile_coerce ctxt src dst t at =
       i32_const (0l @@ at);
       i31_new;
     ]
+  | (BlockRep n1 | BoxedRep n1 | BoxedAbsRep n1), BoxedAbsRep n2
   | (BlockRep n1 | BoxedRep n1), (BlockRep n2 | BoxedRep n2) ->
     non_null n1 n2
-  | (BlockRep n1 | BoxedRep n1), (UnboxedRep n2 | UnboxedLaxRep n2) ->
+  | BoxedAbsRep n1, (BlockRep n2 | BoxedRep n2) ->
     (match T.norm t with
-    | T.Bool | T.Byte ->
+    | T.Bool | T.Byte | T.Int ->
       emit ctxt W.[
         ref_as_i31;
-        i31_get_u;
-      ]
-    | T.Int ->
-      emit ctxt W.[
-        ref_as_i31;
-        i31_get_s;
       ]
     | T.Float ->
       let boxedfloat = lower_var_type ctxt at T.Float in
@@ -113,7 +109,6 @@ let compile_coerce ctxt src dst t at =
         ref_as_data;
         global_get (rttidx @@ at);
         ref_cast;
-        struct_get (boxedfloat @@ at) (0l @@ at);
       ]
     | T.Tup [] | T.Var _ | T.Data _ ->
       non_null n1 n2
@@ -128,7 +123,7 @@ let compile_coerce ctxt src dst t at =
         ref_cast;
       ]
     | t ->
-      (* No types handled here must use super RTTs *)
+      (* No types handled here can use super RTTs *)
       let x = lower_var_type ctxt at t in
       let rttidx = lower_rtt_global ctxt at x [] in
       non_null n1 n2;
@@ -138,7 +133,25 @@ let compile_coerce ctxt src dst t at =
         ref_cast;
       ]
     )
-  | (UnboxedRep n1 | UnboxedLaxRep n1), (BlockRep n2 | BoxedRep n2) ->
+  | (BlockRep n1 | BoxedRep n1 | BoxedAbsRep n1), (UnboxedRep n2 | UnboxedLaxRep n2) ->
+    compile_coerce ctxt src (BoxedRep n2) t at;
+    (match T.norm t with
+    | T.Bool | T.Byte ->
+      emit ctxt W.[
+        i31_get_u;
+      ]
+    | T.Int ->
+      emit ctxt W.[
+        i31_get_s;
+      ]
+    | T.Float ->
+      let boxedfloat = lower_var_type ctxt at T.Float in
+      emit ctxt W.[
+        struct_get (boxedfloat @@ at) (0l @@ at);
+      ]
+    | _ -> ()
+    )
+  | (UnboxedRep n1 | UnboxedLaxRep n1), (BlockRep n2 | BoxedRep n2 | BoxedAbsRep n2) ->
     (match T.norm t with
     | T.Bool | T.Byte | T.Int ->
       emit ctxt W.[
@@ -290,9 +303,9 @@ let compile_val_proj ctxt str x t dst =
   );
   if T.eq !t_src t then
     compile_coerce ctxt (struct_rep ()) dst t x.at
-  else begin (* one of them will be boxed *)
-    compile_coerce ctxt (struct_rep ()) (BoxedRep Nonull) !t_src x.at;
-    compile_coerce ctxt (BoxedRep Nonull) dst t x.at
+  else begin (* one of them will be abstract *)
+    compile_coerce ctxt (struct_rep ()) (BoxedAbsRep Nonull) !t_src x.at;
+    compile_coerce ctxt (BoxedAbsRep Nonull) dst t x.at
   end
 
 let compile_val_path ctxt q t dst =
@@ -542,7 +555,7 @@ let rec compile_pat ctxt fail funcloc_opt p =
       let data = find_typ_var ctxt Source.(y @@ q.at) ctxt.ext.envs in
       let con = List.assoc (name_of_path q).it data in
       assert (List.length ps = con.arity);
-      let bt1 = emit_type ctxt p.at W.(type_func [boxedref] [dataref]) in
+      let bt1 = emit_type ctxt p.at W.(type_func [absref] [dataref]) in
       compile_coerce ctxt (pat_rep ()) rigid_rep t p.at;
       emit_block ctxt p.at W.block W.(typeuse bt1) (fun ctxt ->
         emit ctxt W.[
@@ -629,7 +642,7 @@ and compile_exp_func_opt ctxt e dst : func_loc option =
           let con = List.assoc (name_of_path q).it data in
           let _code, clos = lower_func_type ctxt e.at con.arity in
           let argts, argv_opt = lower_param_types ctxt e.at con.arity in
-          let fn = emit_func ctxt e.at W.(ref_ clos :: argts) [boxedref]
+          let fn = emit_func ctxt e.at W.(ref_ clos :: argts) [absref]
             (fun ctxt _ ->
               let ctxt = enter_scope ctxt LocalScope in
               let _clos = emit_param ctxt e.at in
@@ -975,7 +988,7 @@ and compile_func_staged ctxt rec_xs f : func_loc * _ * _ =
       let _code, closN, closNenv = lower_clos_type ctxt f.at arity envflds in
       let def ctxt =
         let argts, argv_opt = lower_param_types ctxt f.at arity in
-        def_func f.at W.(ref_ closN :: argts) [boxedref] (fun ctxt _ ->
+        def_func f.at W.(ref_ closN :: argts) [absref] (fun ctxt _ ->
           let ctxt = enter_scope ctxt LocalScope in
           let clos = emit_param ctxt f.at in
           let args = List.map (fun _ -> emit_param ctxt f.at) argts in
@@ -1098,15 +1111,9 @@ and compile_mod_func_opt ctxt m : func_loc option =
     Some {funcidx = fn; typeidx = closN; arity = 1}
 
   | AppM (m1, m2) ->
-    let anyclos = lower_anyclos_type ctxt m1.at in
     let _, clos1 = lower_sig_type ctxt m1.at (Source.et m1) in
     let _, s11, s12 = T.as_fct (Source.et m1) in
     let func_loc_opt = compile_mod_func_opt ctxt m1 in
-    let rttidx = lower_rtt_global ctxt m1.at clos1 [anyclos] in
-    emit ctxt W.[
-      global_get (rttidx @@ m1.at);
-      ref_cast;
-    ];
     (match func_loc_opt with
     | Some {funcidx; _} ->
       compile_mod ctxt m2;
@@ -1228,7 +1235,9 @@ and need_coerce_mod ctxt s1 s2 =
     List.exists2 (fun (x1, s1) (x2, s2) -> need_coerce_mod ctxt s1.it s2.it)
       (E.mods str1) (E.mods str2)
   | T.Fct (_, s11, s12), T.Fct (_, s21, s22) ->
-    need_coerce_mod ctxt s21 s11 || need_coerce_mod ctxt s12 s22
+    need_coerce_mod ctxt s21 s11 || need_coerce_mod ctxt s12 s22 ||
+    (* The following would be unnecessary if we had Wasm function subtyping *)
+    need_coerce_mod ctxt s11 s21 || need_coerce_mod ctxt s22 s12
   | _ ->
     assert false
 

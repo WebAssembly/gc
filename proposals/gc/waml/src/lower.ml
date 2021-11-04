@@ -26,12 +26,13 @@ let as_global_loc = function GlobalLoc idx -> idx | _ -> assert false
 type rep =
   | DropRep                (* value never used *)
   | BlockRep of null       (* like Boxed, but empty tuples are suppressed *)
-  | BoxedRep of null       (* boxed representation *)
+  | BoxedRep of null       (* concrete boxed representation *)
+  | BoxedAbsRep of null    (* abstract boxed representation *)
   | UnboxedRep of null     (* representation with unboxed type or concrete ref types *)
   | UnboxedLaxRep of null  (* like Unboxed, but Int may have junk high bit *)
 
 let null_rep = function
-  | BlockRep n | BoxedRep n | UnboxedRep n | UnboxedLaxRep n -> n
+  | BlockRep n | BoxedRep n | BoxedAbsRep n | UnboxedRep n | UnboxedLaxRep n -> n
   | DropRep -> assert false
 
 (* Configurable *)
@@ -44,11 +45,11 @@ let tmp_rep () = boxed_if Flags.box_temps Null       (* values stored in temps *
 let pat_rep () = boxed_if Flags.box_scrut Nonull     (* values fed into patterns *)
 
 (* Non-configurable *)
-let ref_rep = BoxedRep Null         (* expecting a reference *)
+let ref_rep = BoxedAbsRep Null      (* expecting a reference *)
 let rigid_rep = UnboxedRep Nonull   (* values produced or to be consumed *)
 let lax_rep = UnboxedLaxRep Nonull  (* lax ints produced or consumed *)
-let field_rep = BoxedRep Nonull     (* values stored in fields *)
-let arg_rep = BoxedRep Nonull       (* argument and result values *)
+let field_rep = BoxedAbsRep Nonull  (* values stored in fields *)
+let arg_rep = BoxedAbsRep Nonull    (* argument and result values *)
 let unit_rep = BlockRep Nonull      (* nothing on stack *)
 
 let loc_rep = function
@@ -126,14 +127,14 @@ let lower_ref null ht =
   | Null -> W.(ref_null_heap ht)
   | Nonull -> W.(ref_heap ht)
 
-let boxed = W.eq
-let boxedref = lower_ref Nonull boxed
+let abs = W.eq
+let absref = lower_ref Nonull abs
 
 let rec lower_value_type ctxt at rep t : W.value_type =
   match T.norm t, rep with
-  | T.Data _ as t, (BlockRep n | BoxedRep n) ->
-    lower_ref n (lower_heap_type ctxt at t)
-  | _, (BlockRep n | BoxedRep n) -> lower_ref n boxed
+  | t, (BlockRep n | BoxedRep n)
+  | (T.Data _ as t), BoxedAbsRep n -> lower_ref n (lower_heap_type ctxt at t)
+  | _, BoxedAbsRep n -> lower_ref n abs
   | (T.Bool | T.Byte | T.Int), _ -> W.i32
   | T.Float, _ -> W.f64
   | t, (UnboxedRep n | UnboxedLaxRep n) -> lower_ref n (lower_heap_type ctxt at t)
@@ -181,14 +182,14 @@ and lower_anyclos_type ctxt at : int32 =
 
 and lower_func_type ctxt at arity : int32 * int32 =
   let argts, _ = lower_param_types ctxt at arity in
-  let key = (argts, [boxedref], []) in
+  let key = (argts, [absref], []) in
   match ClosMap.find_opt key !(ctxt.ext.clostypes) with
   | Some {codeidx; closidx; _} -> codeidx, closidx
   | None ->
     let code, def_code = emit_type_deferred ctxt at in
     let closdt = W.(type_struct [field i32; field (ref_ code)]) in
     let clos = emit_type ctxt at closdt in
-    let codedt = W.(type_func (ref_ clos :: argts) [boxedref]) in
+    let codedt = W.(type_func (ref_ clos :: argts) [absref]) in
     def_code codedt;
     let clos_idxs = {codeidx = code; closidx = clos; envidx = clos} in
     ctxt.ext.clostypes := ClosMap.add key clos_idxs !(ctxt.ext.clostypes);
@@ -196,7 +197,7 @@ and lower_func_type ctxt at arity : int32 * int32 =
 
 and lower_clos_type ctxt at arity flds : int32 * int32 * int32 =
   let argts, _ = lower_param_types ctxt at arity in
-  let key = (argts, [boxedref], flds) in
+  let key = (argts, [absref], flds) in
   match ClosMap.find_opt key !(ctxt.ext.clostypes) with
   | Some {codeidx; closidx; envidx} -> codeidx, closidx, envidx
   | None ->
@@ -209,9 +210,9 @@ and lower_clos_type ctxt at arity flds : int32 * int32 * int32 =
 
 and lower_param_types ctxt at arity : W.value_type list * int32 option =
   if arity <= max_func_arity then
-    List.init arity (fun _ -> boxedref), None
+    List.init arity (fun _ -> absref), None
   else
-    let argv = emit_type ctxt at W.(type_array (field_mut boxedref)) in
+    let argv = emit_type ctxt at W.(type_array (field_mut absref)) in
     W.[ref_ argv], Some argv
 
 and lower_block_type ctxt at rep t : W.block_type =

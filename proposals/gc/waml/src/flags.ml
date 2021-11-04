@@ -11,7 +11,7 @@ let width = ref 80
 let textual = ref false
 
 let box_locals = ref false
-let box_globals = ref false
-let box_modules = ref false
+let box_globals = ref true
+let box_modules = ref true
 let box_temps = ref false
 let box_scrut = ref false
