@@ -11,8 +11,9 @@ type value =
   | Con of var * value list
   | Ref of value ref
   | Fun of ((var * value) list -> value -> value)
+  | Pack of module_
 
-type module_ =
+and module_ =
   | Str of str
   | Fct of (module_ -> module_)
 

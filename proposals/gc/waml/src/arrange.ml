@@ -36,17 +36,18 @@ let rec typ t = match t.it with
   | RefT t1 -> "RefT" $$ [typ t1]
   | TupT ts -> "TupT" $$ list typ ts
   | FunT (t1, t2) -> "FunT" $$ [typ t1; typ t2]
+  | PackT s -> "PackT" $$ [sig_ s]
 
 
 (* Patterns *)
 
-let lit = function
+and lit = function
   | BoolL b -> "BoolL" $$ [Atom (if b then "True" else "False")]
   | IntL i -> "IntL" $$ [Atom (Int32.to_string i)]
   | FloatL z -> "FloatL" $$ [Atom (string_of_float z)]
   | TextL t -> "TextL" $$ [Atom (string t)]
 
-let rec pat p = match p.it with
+and pat p = match p.it with
   | WildP -> Atom "WildP"
   | VarP x -> "VarP" $$ [var x]
   | LitP l -> "LitP" $$ [lit l]
@@ -58,13 +59,13 @@ let rec pat p = match p.it with
 
 (* Expressions *)
 
-let unop = function
+and unop = function
   | PosOp -> "PosOp"
   | NegOp -> "NegOp"
   | InvOp -> "InvOp"
   | NotOp -> "NotOp"
 
-let binop = function
+and binop = function
   | AddOp -> "AddOp"
   | SubOp -> "SubOp"
   | MulOp -> "MulOp"
@@ -77,7 +78,7 @@ let binop = function
   | ShrOp -> "ShrOp"
   | CatOp -> "CatOp"
 
-let relop = function
+and relop = function
   | EqOp -> "EqOp"
   | NeOp -> "NeOp"
   | LtOp -> "LtOp"
@@ -85,12 +86,12 @@ let relop = function
   | LeOp -> "LeOp"
   | GeOp -> "GeOp"
 
-let logop = function
+and logop = function
   | AndThenOp -> "AndThenOp"
   | OrElseOp  -> "OrElseOp"
 
 
-let rec exp e = match e.it with
+and exp e = match e.it with
   | VarE q -> "VarE" $$ [path q]
   | LitE l -> "LitE" $$ [lit l]
   | ConE q -> "ConE" $$ [path q]
@@ -108,6 +109,7 @@ let rec exp e = match e.it with
   | IfE (e1, e2, e3) -> "IfE" $$ [exp e1; exp e2; exp e3]
   | CaseE (e1, pes) ->
     "CaseE" $$ [exp e1] @ ["case" $$ flatlist (fun (p, e) -> [pat p; exp e]) pes]
+  | PackE (m, s) -> "PackE" $$ [mod_ m; sig_ s]
   | LetE (ds, e1) -> "LetE" $$ list dec ds @ [exp e1]
 
 
@@ -156,6 +158,7 @@ and mod_ m = match m.it with
   | FunM (x, s1, m2) -> "FunM" $$ [var x; sig_ s1; mod_ m2]
   | AppM (m1, m2) -> "AppM" $$ [mod_ m1; mod_ m2]
   | AnnotM (m1, s) -> "AnnotM"  $$ [mod_ m1; sig_ s]
+  | UnpackM (e, s) -> "UnpackM" $$ [exp e; sig_ s]
   | LetM (ds, m1) -> "LetM" $$ list dec ds @ [mod_ m1]
 
 

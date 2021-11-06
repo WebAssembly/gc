@@ -15,17 +15,17 @@ type typ =
   | Tup of typ list
   | Fun of typ * typ * arity ref
   | Data of typ
+  | Pack of sig_
   | Infer of infer ref
 
 and infer =
   | Unres of string * pred
   | Res of typ
 
+and poly = Forall of var list * typ
+and con = Lambda of var list * typ
 
-type poly = Forall of var list * typ
-type con = Lambda of var list * typ
-
-type sig_ =
+and sig_ =
   | Str of var list * str
   | Fct of var list * sig_ * sig_
 

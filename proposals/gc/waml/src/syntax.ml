@@ -32,17 +32,18 @@ and typ' =
   | RefT of typ
   | TupT of typ list
   | FunT of typ * typ
+  | PackT of sig_
 
 
 (* Patterns *)
 
-type lit =
+and lit =
   | BoolL of bool
   | IntL of int32
   | FloatL of float
   | TextL of string
 
-type pat = (pat', T.typ) Source.phrase
+and pat = (pat', T.typ) Source.phrase
 and pat' =
   | WildP
   | VarP of var
@@ -55,14 +56,14 @@ and pat' =
 
 (* Expressions *)
 
-type unop = PosOp | NegOp | InvOp | NotOp
-type binop =
+and unop = PosOp | NegOp | InvOp | NotOp
+and binop =
   | AddOp | SubOp | MulOp | DivOp | ModOp
   | AndOp | OrOp | XorOp | ShlOp | ShrOp | CatOp
-type relop = EqOp | NeOp | LtOp | GtOp | LeOp | GeOp
-type logop = AndThenOp | OrElseOp
+and relop = EqOp | NeOp | LtOp | GtOp | LeOp | GeOp
+and logop = AndThenOp | OrElseOp
 
-type exp = (exp', T.typ) Source.phrase
+and exp = (exp', T.typ) Source.phrase
 and exp' =
   | VarE of val_path
   | LitE of lit
@@ -80,6 +81,7 @@ and exp' =
   | AnnotE of exp * typ
   | IfE of exp * exp * exp
   | CaseE of exp * (pat * exp) list
+  | PackE of mod_ * sig_
   | LetE of dec list * exp
 
 
@@ -98,6 +100,7 @@ and dec' =
   | InclD of mod_
 
 and con = (var * typ list, T.typ) Source.phrase
+
 
 (* Signatures *)
 
@@ -128,6 +131,7 @@ and mod' =
   | FunM of var * sig_ * mod_
   | AppM of mod_ * mod_
   | AnnotM of mod_ * sig_
+  | UnpackM of exp * sig_
   | LetM of dec list * mod_
 
 
@@ -217,6 +221,7 @@ let rec free_exp e =
   | FunE (p1, e2) -> free_case (p1, e2)
   | IfE (e1, e2, e3) -> free_exp e1 ++ free_exp e2 ++ free_exp e3
   | CaseE (e1, pes) -> free_exp e1 ++ list free_case pes
+  | PackE (m, _) -> free_mod m
   | LetE (ds, e1) -> free_exp e1 -- list bound_dec ds ++ free_decs ds
 
 and free_case (p, e) =
@@ -242,4 +247,5 @@ and free_mod m =
   | FunM (x, s, m) -> free_mod m -- mod_var x (Source.et s)
   | AppM (m1, m2) -> free_mod m1 ++ free_mod m2
   | AnnotM (m1, _) -> free_mod m1
+  | UnpackM (e, _) -> free_exp e
   | LetM (ds, m1) -> free_mod m1 -- list bound_dec ds ++ free_decs ds

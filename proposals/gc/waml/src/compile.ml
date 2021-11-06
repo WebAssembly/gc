@@ -963,6 +963,11 @@ and compile_exp_func_opt ctxt e dst : func_loc option =
     );
     None
 
+  | PackE (m, s) ->
+    compile_mod ctxt m;
+    compile_coerce_mod ctxt (Source.et m) (Source.et s) e.at;
+    None
+
   | LetE (ds, e1) ->
     let ctxt = enter_scope ctxt LocalScope in
     compile_decs ctxt ds unit_rep;
@@ -1141,6 +1146,10 @@ and compile_mod_func_opt ctxt m : func_loc option =
   | AnnotM (m1, _s) ->
     compile_mod ctxt m1;
     compile_coerce_mod ctxt (Source.et m1) (Source.et m) m.at;
+    None
+
+  | UnpackM (e, _s) ->
+    compile_exp ctxt e (UnboxedRep Nonull);
     None
 
   | LetM (ds, m1) ->

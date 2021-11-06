@@ -21,7 +21,7 @@ assert A.M.y == 4
 signature A' =
 {
   val x : Int
-  module M : { val y : Int }
+  module M : {val y : Int}
   module F : {val a : Int; val b : Int} -> {val d : Int}
 }
 

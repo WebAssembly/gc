@@ -43,7 +43,7 @@ let float s at =
 %token EOF
 
 %token LPAR RPAR LBRACK RBRACK LCURLY RCURLY BAR COMMA SEMICOLON SEMICOLON_EOL
-%token COLON EQ ARROW DARROW REF DEREF ASSIGN DOT WILD
+%token COLON EQ ARROW DARROW REF DEREF ASSIGN DOT WILD PACK UNPACK
 %token EQOP NEOP LEOP LTOP GTOP GEOP
 %token ADDOP SUBOP MULOP DIVOP MODOP ANDOP OROP XOROP SHLOP SHROP CATOP CONS
 %token ANDTHENOP ORELSEOP NOTOP
@@ -121,9 +121,13 @@ typ_post :
   | typ_simple { $1 }
   | tpath typ_simple_seq1 { ConT ($1, $2) @@ at () }
 
-typ :
+typ_bin :
   | typ_post { $1 }
-  | typ ARROW typ { FunT ($1, $3) @@ at () }
+  | typ_bin ARROW typ_bin { FunT ($1, $3) @@ at () }
+
+typ :
+  | typ_bin { $1 }
+  | PACK sig_ { PackT $2 @@ at () }
 
 typ_simple_seq1 :
   | typ_simple { [$1] }
@@ -260,6 +264,7 @@ exp :
       IfE ($2, $4, TupE [] @@ at ()) @@ at ()
     }
   | CASE exp OF case_list %prec BAR { CaseE ($2, $4) @@ at () }
+  | PACK mod_post COLON sig_ { PackE ($2, $4) @@ at () }
   | LET dec_list IN exp { LetE ($2, $4) @@ at () }
 
 exp_list :
@@ -422,6 +427,7 @@ spec_list :
 sig_simple :
   | spath { ConS $1 @@ at () }
   | LCURLY spec_list RCURLY { StrS $2 @@ at () }
+  | LPAR sig_ RPAR { $2 }
 
 sig_ :
   | sig_simple { $1 }
@@ -442,11 +448,12 @@ mod_post :
 
 mod_bin :
   | mod_post { $1 }
-  | mod_bin COLON sig_ { AnnotM ($1, $3) @@ at () }
+  | mod_post COLON sig_ { AnnotM ($1, $3) @@ at () }
 
 mod_ :
   | mod_bin { $1 }
   | FUN LPAR mvar COLON sig_ RPAR DARROW mod_ { FunM ($3, $5, $8) @@ at () }
+  | UNPACK exp_post COLON sig_ { UnpackM ($2, $4) @@ at () }
   | LET dec_list IN mod_ { LetM ($2, $4) @@ at () }
 
 

@@ -180,11 +180,13 @@ rule token = parse
   | "let" { LET }
   | "module" { MODULE }
   | "of" { OF }
+  | "pack" { PACK }
   | "rec" { REC }
   | "ref" { REF }
   | "signature" { SIGNATURE }
   | "then" { THEN }
   | "type" { TYPE }
+  | "unpack" { UNPACK }
   | "val" { VAL }
   | "with" { WITH }
 

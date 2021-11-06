@@ -16,8 +16,9 @@ type value =
   | Con of var * value list
   | Ref of value ref
   | Fun of ((var * value) list -> value -> value)
+  | Pack of module_
 
-type module_ =
+and module_ =
   | Str of str
   | Fct of (module_ -> module_)
 
@@ -85,9 +86,10 @@ and string_of_value_simple = function
   | Tup vs -> "(" ^ list ", " string_of_value vs ^ ")"
   | Con (x, []) -> x
   | Fun _ -> "(fun)"
+  | Pack m -> "(pack " ^ string_of_module m ^ ")"
   | v -> "(" ^ string_of_value v ^ ")"
 
-let rec string_of_module = function
+and string_of_module = function
   | Str s ->
     let vs = List.map string_of_val (S.vals s) in
     let ms = List.map string_of_mod (S.mods s) in

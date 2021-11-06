@@ -20,17 +20,17 @@ type typ =
   | Tup of typ list
   | Fun of typ * typ * arity ref
   | Data of typ
+  | Pack of sig_
   | Infer of infer ref
 
 and infer =
   | Unres of string * pred
   | Res of typ
 
+and poly = Forall of var list * typ
+and con = Lambda of var list * typ
 
-type poly = Forall of var list * typ
-type con = Lambda of var list * typ
-
-type sig_ =
+and sig_ =
   | Str of var list * str
   | Fct of var list * sig_ * sig_
 
@@ -81,10 +81,15 @@ let string_of_arity a =
   | KnownArity i -> string_of_int i
   | VariableArity -> ""
 
+let quant sym = function
+  | [] -> ""
+  | bs -> sym ^ list " " Fun.id bs ^ ". "
+
 let rec string_of_typ = function
   | Fun (t1, t2, a) ->
     string_of_typ_app t1 ^ " ->" ^ string_of_arity a ^ " " ^ string_of_typ t2
   | Data t -> "data " ^ string_of_typ t
+  | Pack s -> "pack " ^ string_of_sig s
   | Infer {contents = Res t'} -> string_of_typ t'
   | t -> string_of_typ_app t
 
@@ -107,15 +112,10 @@ and string_of_typ_simple = function
   | Infer {contents = Unres (y, p)} -> "(_" ^ y ^ " " ^ string_of_pred p ^ ")"
   | t -> "(" ^ string_of_typ t ^ ")"
 
+and string_of_poly (Forall (bs, t)) = quant "" bs ^ string_of_typ t
+and string_of_con (Lambda (bs, t)) = quant "\\" bs ^ string_of_typ t
 
-let quant sym = function
-  | [] -> ""
-  | bs -> sym ^ list " " Fun.id bs ^ ". "
-
-let string_of_poly (Forall (bs, t)) = quant "" bs ^ string_of_typ t
-let string_of_con (Lambda (bs, t)) = quant "\\" bs ^ string_of_typ t
-
-let rec string_of_sig = function
+and string_of_sig = function
   | Str (bs, str) ->
     quant "?" bs ^ "{" ^ string_of_str' "; " str ^ "}"
   | Fct (bs, s1, s2) ->
@@ -154,13 +154,14 @@ let rec free = function
   | Ref t | Data t-> free t
   | Tup ts -> list free ts
   | Fun (t1, t2, _) -> free t1 ++ free t2
+  | Pack s -> free_sig s
   | Infer {contents = Res t'} -> free t'
   | Infer _ -> Set.empty
 
-let free_poly (Forall (bs, t)) = Set.diff (free t) (Set.of_list bs)
-let free_con (Lambda (bs, t)) = Set.diff (free t) (Set.of_list bs)
+and free_poly (Forall (bs, t)) = Set.diff (free t) (Set.of_list bs)
+and free_con (Lambda (bs, t)) = Set.diff (free t) (Set.of_list bs)
 
-let rec free_sig = function
+and free_sig = function
   | Str (bs, str) -> Set.diff (free_str str) (Set.of_list bs)
   | Fct (bs, s1, s2) ->
     Set.diff (Set.union (free_sig s1) (free_sig s2)) (Set.of_list bs)
@@ -182,13 +183,14 @@ let rec free_infer = function
   | Ref t | Data t -> free_infer t
   | Tup ts -> list free_infer ts
   | Fun (t1, t2, _) -> free_infer t1 @ free_infer t2
+  | Pack s -> free_infer_sig s
   | Infer {contents = Res t'} -> free_infer t'
   | Infer inf -> [inf]
 
-let free_infer_poly (Forall (_, t)) = free_infer t
-let free_infer_con (Lambda (_, t)) = free_infer t
+and free_infer_poly (Forall (_, t)) = free_infer t
+and free_infer_con (Lambda (_, t)) = free_infer t
 
-let rec free_infer_sig = function
+and free_infer_sig = function
   | Str (_, str) -> free_infer_str str
   | Fct (_, s1, s2) -> free_infer_sig s1 @ free_infer_sig s2
 
@@ -253,16 +255,17 @@ let rec subst ((m, s) as su) t =
   | Tup ts -> Tup (List.map (subst su) ts)
   | Fun (t1, t2, a) -> Fun (subst su t1, subst su t2, ref !a)
   | Data t1 -> Data (subst su t1)
+  | Pack s -> Pack (subst_sig su s)
   | Infer {contents = Res t'} -> subst su t'
   | Infer _ -> t
 
-let subst_poly su (Forall (bs, t)) =
+and subst_poly su (Forall (bs, t)) =
   let su', bs' = subst_fresh su bs in Forall (bs', subst su' t)
 
-let subst_con su (Lambda (bs, t)) =
+and subst_con su (Lambda (bs, t)) =
   let su', bs' = subst_fresh su bs in Lambda (bs', subst su' t)
 
-let rec subst_sig su s =
+and subst_sig su s =
   if is_empty_subst su then s else
   match s with
   | Str (bs, str) ->
@@ -282,6 +285,8 @@ and subst_str su str =
 
 (* Equivalence *)
 
+let eq_sig = ref (fun _ -> assert false)
+
 let rec eq t1 t2 =
   t1 == t2 ||
   match t1, t2 with
@@ -293,6 +298,7 @@ let rec eq t1 t2 =
     assert (!a1 = !a2);
     eq t11 t21 && eq t12 t22
   | Data t1', Data t2' -> eq t1' t2'
+  | Pack s1, Pack s2 -> !eq_sig s1 s2
   | Infer {contents = Res t1'}, t2 -> eq t1' t2
   | t1, Infer {contents = Res t2'} -> eq t1 t2'
   | t1, t2 -> t1 = t2
@@ -315,31 +321,45 @@ let inst (Forall (bs, t)) =
   | Fun (t1, t2, a) -> Fun (t1, t2, ref !a)
   | t' -> t'
 
-let list f capt i s ts =
-  List.fold_left Set.union Set.empty (List.map (f capt i s) ts)
+let list f capt free i ts =
+  List.fold_left Set.union Set.empty (List.map (f capt free i) ts)
 
-let rec generalize' capt i s = function
-  | Var (b, ts) -> list generalize' capt i s ts
+let rec generalize' capt free i = function
+  | Var (b, ts) -> list generalize' capt free i ts
   | Bool | Byte | Int | Float | Text -> Set.empty
-  | Ref t | Data t -> generalize' capt i s t
-  | Tup ts -> list generalize' capt i s ts
+  | Ref t | Data t -> generalize' capt free i t
+  | Tup ts -> list generalize' capt free i ts
   | Fun (t1, t2, arity) ->
     if !arity = UnknownArity then arity := VariableArity;
-    let set1 = generalize' capt i s t1 in
-    let set2 = generalize' capt i s t2 in
+    let set1 = generalize' capt free i t1 in
+    let set2 = generalize' capt free i t2 in
     set1 ++ set2
-  | Infer {contents = Res t'} -> generalize' capt i s t'
+  | Pack s -> generalize_sig capt free i s
+  | Infer {contents = Res t'} -> generalize' capt free i t'
   | Infer ({contents = Unres (b, p)} as inf) ->
     if p <> Any || List.memq inf (Lazy.force capt) then Set.empty else
     let c = String.make 1 (Char.chr (Char.code 'a' + !i mod 26)) in
     let b = if !i < 26 then c else c ^ string_of_int (!i / 26) in
     incr i;
-    inf := Res (var (fresh_for s b));
+    inf := Res (var (fresh_for free b));
     Set.singleton b
+
+and generalize_poly capt free i (Forall (bs, t)) =
+  generalize' capt (List.fold_right Set.add bs free) i t
+
+and generalize_sig capt free i = function
+  | Str (bs, str) -> generalize_str capt (List.fold_right Set.add bs free) i str
+  | Fct (bs, s1, s2) ->
+    let free' = List.fold_right Set.add bs free in
+    generalize_sig capt free' i s1 ++ generalize_sig capt free' i s2
+
+and generalize_str capt free i str = Set.empty
+  |> S.fold_vals (fun _ t set -> set ++ generalize_poly capt free i t.it) str
+  |> S.fold_mods (fun _ s set -> set ++ generalize_sig capt free i s.it) str
 
 let generalize env = function
   | Forall ([], t) ->
-    let bs = generalize' (lazy (free_infer_str env)) (ref 0) (free t) t in
+    let bs = generalize' (lazy (free_infer_str env)) (free t) (ref 0) t in
     Forall (Set.elements bs, t)
   | t -> t
 
@@ -352,12 +372,13 @@ let rec default = function
   | Ref t | Data t -> default t
   | Tup ts -> List.iter default ts
   | Fun (t1, t2, _) -> default t1; default t2
+  | Pack s -> default_sig s
   | Infer {contents = Res t} -> default t
   | Infer inf -> inf := Res Int
 
-let default_poly (Forall (_, t)) = default t
+and default_poly (Forall (_, t)) = default t
 
-let rec default_sig = function
+and default_sig = function
   | Str (_, str) -> default_str str
   | Fct (_, s1, s2) -> default_sig s1; default_sig s2
 
@@ -390,7 +411,7 @@ let rec occurs inf = function
   | Infer ({contents = Unres _} as inf') -> inf == inf'
 *)
 
-let rec enforce inf p = function
+let rec enforce inf (p : pred) = function
   | Var (_, ts) when p = Any -> List.iter (enforce inf p) ts
   | Int | Float -> ()
   | Bool | Byte | Text when p <= Eq -> ()
@@ -398,6 +419,7 @@ let rec enforce inf p = function
   | Tup ts -> List.iter (enforce inf p) ts
   | Fun (t1, t2, _) when p = Any -> enforce inf p t1; enforce inf p t2
   | Data t when p = Any -> enforce inf p t
+  | Pack s when p = Any -> ()
   | Infer {contents = Res t'} -> enforce inf p t'
   | Infer ({contents = Unres (y, p')} as inf') when inf' != inf ->
     inf' := Unres (y, max p p')
@@ -420,6 +442,8 @@ let rec unify t1 t2 =
     in a1 := a'; a2 := a';
     unify t11 t21; unify t12 t22
   | Data t1', Data t2' -> unify t1' t2'
+  | Pack s1, Pack s2 ->
+    if not (!eq_sig s1 s2) then raise (Unify (t1, t2))
   | Infer {contents = Res t1'}, t2 -> unify t1' t2
   | t1, Infer {contents = Res t2'} -> unify t1 t2'
   | Infer ({contents = Unres _} as inf1), Infer ({contents = Unres _} as inf2)
@@ -551,3 +575,6 @@ and sub_str p str1 str2 =
         raise (Mismatch ("incompatible signature member " ^ path p' ^
           ", due to " ^ s))
   ) str2
+
+let () = eq_sig := fun s1 s2 ->
+  try ignore (sub s1 s2); ignore (sub s2 s1); true with Mismatch _ -> false

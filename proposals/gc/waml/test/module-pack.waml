@@ -1,0 +1,22 @@
+signature P = {type T; val x : T; val y : T; val z : T}
+
+module M =
+{
+  type T = Int
+  val y = 1
+  val x = 2
+  val z = 3
+}
+
+val p : pack P with type T = Int = pack M : P with type T = Int
+
+module M' = unpack p : {val z : Int; val x : Int; val y : Int; type T = Int}
+
+assert M'.y == 1
+assert M'.x == 2
+assert M'.z == 3
+
+
+signature A = {type T}
+type T = Int
+signature B = (A with type T = Int -> Int) -> {}

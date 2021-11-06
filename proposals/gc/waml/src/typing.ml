@@ -144,11 +144,12 @@ and check_typ' (env : env) t : T.typ =
   | RefT t1 -> T.Ref (check_typ env t1)
   | TupT ts -> T.Tup (List.map (check_typ env) ts)
   | FunT (t1, t2) -> T.Fun (check_typ env t1, check_typ env t2, ref T.VariableArity)
+  | PackT s -> T.Pack (check_sig env s)
 
 
 (* Patterns *)
 
-let unify t1 t2 at =
+and unify t1 t2 at =
   try T.unify t1 t2 with T.Unify (t1', t2') ->
     if t1 = t1' && t2 = t2' then
       error at "type mismatch: cannot unify types %s and %s"
@@ -159,14 +160,14 @@ let unify t1 t2 at =
         (T.string_of_typ t1') (T.string_of_typ t2')
 
 
-let check_lit _env lit : T.typ =
+and check_lit _env lit : T.typ =
   match lit with
   | BoolL _ -> T.Data T.Bool
   | IntL _ -> T.Int
   | FloatL _ -> T.Float
   | TextL _ -> T.Text
 
-let rec check_pat env p : T.typ * env =
+and check_pat env p : T.typ * env =
   let t, env' = check_pat' env p in
   p.et <- Some t;
   t, env'
@@ -217,11 +218,11 @@ and check_pats env = function
 
 (* Expressions *)
 
-let rec arity_exp = function
+and arity_exp = function
   | {it = FunE (_, e); _} -> 1 + arity_exp e
   | _ -> 0
 
-let rec check_exp env e : T.typ =
+and check_exp env e : T.typ =
   assert (e.et = None);
   let t = check_exp' env e in
   e.et <- Some t;
@@ -339,6 +340,14 @@ and check_exp' env e : T.typ =
     ) pes;
     t
 
+  | PackE (m, s) ->
+    let s1 = check_mod env m in
+    let s2 = check_sig env s in
+    (try ignore (T.sub s1 s2) with T.Mismatch s ->
+      error e.at "module does not match annotation, %s" s
+    );
+    T.Pack s2  (* TODO: fresh names *)
+
   | LetE (ds, e1) ->
     let bs, env' = check_scope env ds in
     let t = check_exp (E.adjoin env env') e1 in
@@ -362,13 +371,30 @@ and is_pure e =
   | AnnotE (e1, _) -> is_pure e1
   | IfE (e1, e2, e3) -> is_pure e1 && is_pure e2 && is_pure e3
   | CaseE (e1, pes) -> is_pure e1 && List.for_all (fun (_, eI) -> is_pure eI) pes
-  | LetE _ -> false
+  | PackE (m, _) -> is_pure_mod m
+  | LetE (ds, e2) -> List.for_all is_pure_dec ds && is_pure e2
 
 and is_pure_con e =
   match e.it with
   | ConE _ -> true
   | AppE (e1, e2) -> is_pure_con e1 && is_pure e2
   | _ -> false
+
+and is_pure_mod m =
+  match m.it with
+  | VarM _ | FunM _ -> true
+  | StrM ds -> List.for_all is_pure_dec ds
+  | AppM _  -> false
+  | AnnotM (m1, _) -> is_pure_mod m1
+  | UnpackM (e, _) -> is_pure e
+  | LetM (ds, m2) -> List.for_all is_pure_dec ds && is_pure_mod m2
+
+and is_pure_dec d =
+  match d.it with
+  | ExpD e | AssertD e | ValD (_, e) -> is_pure e
+  | TypD _ | DatD _ | SigD _ -> true
+  | ModD (_, m) | InclD m -> is_pure_mod m
+  | RecD ds -> List.for_all is_pure_dec ds 
 
 
 and check_dec pass env d : T.typ * T.var list * env =
@@ -625,6 +651,12 @@ and check_mod' env m : T.sig_ =
     (try ignore (T.sub s1 s2) with T.Mismatch s ->
       error m.at "module does not match annotation, %s" s
     );
+    s2  (* TODO: fresh names *)
+
+  | UnpackM (e, s) ->
+    let t1 = check_exp env e in
+    let s2 = check_sig env s in
+    unify t1 (T.Pack s2) e.at;
     s2  (* TODO: fresh names *)
 
   | LetM (ds, m) ->

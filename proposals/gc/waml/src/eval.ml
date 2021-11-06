@@ -265,6 +265,10 @@ let rec eval_exp env e : V.value =
         | None -> cases pes'
     in cases pes
 
+  | PackE (m, _) ->
+    let m' = eval_mod env m in
+    V.Pack m'
+
   | LetE (ds, e1) ->
     let _, env' = eval_decs env ds (V.Tup []) in
     eval_exp (E.adjoin env env') e1
@@ -295,6 +299,13 @@ and eval_mod env m : V.module_ =
 
   | AnnotM (m1, _) ->
     eval_mod env m1
+
+  | UnpackM (e, _) ->
+    let v = eval_exp env e in
+    (match v with
+    | V.Pack m -> m
+    | _ -> crash m.at "runtime type error at unpack"
+    )
 
   | LetM (ds, m1) ->
     let _, env' = eval_decs env ds (V.Tup []) in

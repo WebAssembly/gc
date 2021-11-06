@@ -154,6 +154,7 @@ typ ::=
   upath typ*                               named use
   '(' typ,* ')'                            tuple
   typ '->' typ                             function
+  'pack' sig                               first-class module
 ```
 Note:
 
@@ -192,6 +193,7 @@ exp ::=
   exp ':' typ                              type annotation
   'if' exp 'then' exp ('else' exp)?        conditional
   'case' exp 'of' case|*                   case
+  'pack' mod ':' sig                       first-class module
   'let' dec;* 'in' exp                     local declaration
   '(' dec;* ')'                            sequencing (shorthand)
 
@@ -273,6 +275,7 @@ mod ::=
   'fun' '(' uid ':' sig ')' '=>' mod         functor
   mod mod                                    functor call
   mod ':' sig                                signature annotation
+  'unpack' exp ':' sig                       unpacking first-class module
   'let' dec;* 'in' mod                       local declaration
 ```
 Note:

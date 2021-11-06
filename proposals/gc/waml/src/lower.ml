@@ -175,6 +175,7 @@ and lower_var_type ctxt at t : int32 =
     | T.KnownArity arity -> snd (lower_func_type ctxt at arity)
     | T.UnknownArity | T.VariableArity -> lower_anyclos_type ctxt at
     )
+  | T.Pack s -> snd (lower_sig_type ctxt at s)
   | _ -> Printf.printf "%s\n%!" (T.string_of_typ t); assert false
 
 and lower_anyclos_type ctxt at : int32 =
@@ -224,7 +225,7 @@ and lower_block_type ctxt at rep t : W.block_type =
 
 (* Lowering signatures *)
 
-let rec lower_sig_type ctxt at s : W.value_type * int32 =
+and lower_sig_type ctxt at s : W.value_type * int32 =
   match s with
   | T.Str (_, str) -> lower_str_type ctxt at str
   | T.Fct (_, s1, s2) ->
