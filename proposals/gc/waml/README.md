@@ -113,9 +113,11 @@ See `waml -h` for further options.
 
 Points of note:
 
-* The Wasm code produced is self-contained with no imports (unless the source declares explicit imports of other Waml modules). Consequently, it can run in any Wasm environment supporting the GC proposal.
+* The Wasm code produced is self-contained with no imports except the small Waml runtime system (unless the source declares explicit imports of other Waml modules). Consequently, it can run in any Wasm environment supporting the GC proposal.
 
-* That measn that there is no I/O. However, a program can communicate results via module exports or run assertions.
+* The compiler even supports a *headless* mode in which the relevant parts of the runtime system is included into each module.
+
+* That means that there is no I/O. However, a program can communicate results via module exports or run assertions.
 
 * When batch-executing, all Wasm code is itself executed via the Wasm reference interpreter, so don't expect performance miracles.
 
@@ -645,7 +647,7 @@ Import declarations in a unit compile to a list of Wasm imports for all exports 
 
 #### Linking
 
-A Waml program can be executed by _linking_ its main unit. Linking does not require any magic, it simply locates all imported Wasm modules (by appending `.wasm` to the URL, which is interpreted as file path), recursively links them (using a simple registry to share instantiations), and maps exports to imports by name.
+A Waml program can be executed by _linking_ its main module. Linking does not require any magic, it simply locates the [runime](#runtime-system) (if used) and all imported modules (by appending `.wasm` to the URL, which is interpreted as file path), recursively links them (using a simple registry to share instantiations), and maps exports to imports by name.
 
 
 #### Batch compilation
@@ -664,7 +666,7 @@ Furthermore, before compilation, each input is preprocessed by injecting imports
 
 Waml's linking model is as straightforward as it can get, and requires no language-specific support. It merely assumes that modules are loaded and instantiated in a bottom-up manner.
 
-Here is a template for minimal glue code to run Waml programs in an environment like node.js. Invoking `run("name")` should suffice to run a compiled `name.wasm` and return its result, provided the dependencies are also avaliable in the right place.
+Here is a template for minimal glue code to run Wob programs in an environment like node.js. Invoking `run("name")` should suffice to run a compiled `name.wasm` and return its result, provided the dependencies are also avaliable in the right place (imported modules and the Waml [runtime system](#runtime-system), if not running headless).
 ```
 'use strict';
 

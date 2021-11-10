@@ -82,7 +82,7 @@ Points of note:
 
 * The compiler even supports a *headless* mode in which the relevant parts of the runtime system is included into each module.
 
-* That measn that there is no I/O. However, a program can communicate results via module exports or run assertions.
+* That means that there is no I/O. However, a program can communicate results via module exports or run assertions.
 
 * When batch-executing, all Wasm code is itself executed via the Wasm reference interpreter, so don't expect performance miracles.
 

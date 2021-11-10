@@ -119,7 +119,7 @@ debugtest/%:	$(UNOPT)
 		@ ./$(NAME) -r $(shell grep "@FLAGS" $(TESTDIR)/$(@F).$(EXT) | sed 's/.*@FLAGS//g') $(TESTDIR)/$(@F).$(EXT)
 
 runtimetest:	$(OPT) titletest/Test-runtime
-		@./$(NAME) -v -g $(TESTDIR)/wob-runtime.wasm -g $(TESTDIR)/wob-runtime.wat
+		@./$(NAME) -v -g $(TESTDIR)/$(RUNTIME).wasm -g $(TESTDIR)/$(RUNTIME).wat
 		@make cleantest
 
 wasmtest/%:		$(OPT)
@@ -155,7 +155,7 @@ nodetest/%:		$(OPT)
 		  else echo '**' Skipping $(@F).$(EXT); \
 		fi
 
-$(RUNTIME).wasm:
+$(RUNTIME).wasm:	$(OPT)
 		@./$(NAME) -g $@
 
 
