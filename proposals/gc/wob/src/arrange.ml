@@ -20,6 +20,10 @@ let var x = Atom x.it
 
 (* Types *)
 
+let mut m = match m.it with
+  | MutT -> Atom "Mut"
+  | ConstT -> Atom "Const"
+
 let rec typ t = match t.it with
   | VarT (y, ts) -> "VarT" $$ [var y] @ list typ ts
   | BoolT -> Atom "BoolT"
@@ -30,7 +34,7 @@ let rec typ t = match t.it with
   | ObjT -> Atom "ObjT"
   | BoxT t -> "BoxT" $$ [typ t]
   | TupT ts -> "TupT" $$ list typ ts
-  | ArrayT t -> "ArrayT" $$ [typ t]
+  | ArrayT (t, m) -> "ArrayT" $$ [typ t; mut m]
   | FuncT (ys, ts1, t2) ->
     "FuncT" $$ list var ys @ ["param" $$ list typ ts1; typ t2]
 

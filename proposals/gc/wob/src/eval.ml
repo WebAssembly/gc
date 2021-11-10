@@ -42,6 +42,11 @@ type pass = Full | Pre | Post
 
 (* Types *)
 
+let eval_mut env m : T.mut =
+  match m.it with
+  | MutT -> T.Mut
+  | ConstT -> T.Const
+
 let eval_typ_var env y : T.con =
   match E.find_opt_typ y env with
   | Some c -> c.it
@@ -60,7 +65,7 @@ let rec eval_typ env t : T.typ =
   | ObjT -> T.Obj
   | BoxT t1 -> T.Box (eval_typ env t1)
   | TupT ts -> T.Tup (List.map (eval_typ env) ts)
-  | ArrayT t1 -> T.Array (eval_typ env t1)
+  | ArrayT (t1, m) -> T.Array (eval_typ env t1, eval_mut env m)
   | FuncT (ys, ts1, t2) ->
     let ys' = List.map Source.it ys in
     let env' = E.extend_typs_abs env ys in

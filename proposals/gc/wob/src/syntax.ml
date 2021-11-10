@@ -10,6 +10,9 @@ type var = (string, unit) Source.phrase
 
 (* Types *)
 
+type mut = (mut', unit) Source.phrase
+and mut' = MutT | ConstT
+
 type typ = (typ', T.typ) Source.phrase
 and typ' =
   | VarT of var * typ list
@@ -21,7 +24,7 @@ and typ' =
   | ObjT
   | BoxT of typ
   | TupT of typ list
-  | ArrayT of typ
+  | ArrayT of typ * mut
   | FuncT of var list * typ list * typ
 
 

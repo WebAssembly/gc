@@ -83,3 +83,29 @@ while i < #enum {
   i := i + 1;
 };
 assert sum == #enum*(#enum - 1)/2;
+
+
+// Subtyping
+
+class C(i : Int) { let n = i };
+class D(i : Int) <: C(i) { let m = 2*i };
+
+let da_mut = [new D(1), new D(2), new D(3)];
+let da_const = da_mut : D[]!;
+let ca_const = da_mut : C[]!;
+let ca_const2 = da_const : C[]!;
+
+assert da_mut[2].m == 6;
+assert da_const[2].m == 6;
+assert da_mut[2].n == 3;
+assert da_const[2].n == 3;
+assert ca_const2[2].n == 3;
+assert ca_const2[2].n == 3;
+
+da_mut[2] := new D(4);
+assert da_mut[2].m == 8;
+assert da_const[2].m == 8;
+assert da_mut[2].n == 4;
+assert da_const[2].n == 4;
+assert ca_const2[2].n == 4;
+assert ca_const2[2].n == 4;

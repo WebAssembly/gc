@@ -9,22 +9,12 @@
 
 let fs = require('fs');
 
-function arraybuffer(bytes) {
-  let buffer = new ArrayBuffer(bytes.length);
-  let view = new Uint8Array(buffer);
-  for (let i = 0; i < bytes.length; ++i) {
-    view[i] = bytes.charCodeAt(i);
-  }
-  return buffer;
-}
-
 let registry = {__proto__: null};
 
 async function link(name) {
   if (! (name in registry)) {
-    let bytes = fs.readFileSync(name + ".wasm", "binary");
-    let binary = arraybuffer(bytes);
-    let module = await WebAssembly.compile(binary);
+    let binary = fs.readFileSync(name + ".wasm");
+    let module = await WebAssembly.compile(new Uint8Array(binary));
     for (let im of WebAssembly.Module.imports(module)) {
       await link(im.module);
     }

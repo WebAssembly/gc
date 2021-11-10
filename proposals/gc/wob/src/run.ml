@@ -283,7 +283,7 @@ let run name lexbuf start =
       else begin
         let wasm = backend (inject_env senv prog) in
         if !Flags.textual then write_stdout wasm;
-        if not !Flags.dry then
+        if !Flags.run then
           exec wasm (fun inst -> register env_name senv' Env.empty (Some inst));
         Env.empty
       end
@@ -291,7 +291,7 @@ let run name lexbuf start =
     env := (Env.adjoin senv senv', Env.adjoin denv denv');
     let open Printf in
     if not !Flags.unchecked then begin
-      printf "%s%s\n" (if !Flags.dry then "" else " : ") (Type.to_string t);
+      printf "%s%s\n" (if not !Flags.run then "" else " : ") (Type.to_string t);
       if !Flags.print_sig then begin
         Env.iter_typs (fun x kc ->
           let (k, c) = kc.Source.it in
@@ -306,7 +306,7 @@ let run name lexbuf start =
         ) senv'
       end
     end
-    else if not !Flags.dry then
+    else if !Flags.run then
       printf "\n"
   )
 
@@ -347,29 +347,32 @@ let load_file url at : entry =
     trace ("Loading import \"" ^ url ^ "\"...");
     let src_file = url ^ ".wob" in
     let wasm_file = url ^ ".wasm" in
-    let entry =
+    let stat, dyn, wasm_opt =
       if !Flags.compile && Sys.file_exists wasm_file then begin
         let wasm, stat = read_binary_file wasm_file in
-        let inst = if !Flags.dry then None else Some (Link.link wasm) in
-        {stat; dyn = Env.empty; inst}
+        stat, Env.empty, Some wasm
       end
       else begin
         input_file src_file (fun lexbuf ->
           let prog, (_, stat) = frontend src_file lexbuf Parse.Prog Env.empty in
-          let dyn, inst =
-            if not !Flags.compile then
-              snd (Eval.eval_prog Env.empty prog), None
-            else
-              Env.empty,
-              if !Flags.dry then None else
-              let wasm = backend prog in
-              if not !Flags.prompt then
-                write_file wasm_file wasm stat;
-              Some (Link.link wasm)
-          in {stat; dyn; inst}
+          if not !Flags.compile then
+            stat, snd (Eval.eval_prog Env.empty prog), None
+          else begin
+            let wasm = backend prog in
+            if not !Flags.prompt then
+              write_file wasm_file wasm stat;
+            stat, Env.empty, Some wasm
+          end
         )
       end
     in
+    let inst =
+      if not !Flags.run || wasm_opt = None then None else begin
+        trace "Linking...";
+        Option.map Link.link wasm_opt
+      end
+    in
+    let entry = {stat; dyn; inst} in
     trace ("Finished import \"" ^ url ^ "\".");
     trace (String.make 60 '-');
     entry

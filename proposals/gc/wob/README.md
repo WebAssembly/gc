@@ -108,6 +108,7 @@ typ ::=
   id ('<' typ,* '>')?                      named use
   '(' typ,* ')'                            tuple
   typ '[' ']'                              array
+  typ [' ']' '!'                           readonly array
   typ '$'                                  boxed
   ('<' id,* '>')? '(' typ,* ')' '->' typ   function
   typ '->' typ                             function (shorthand)
@@ -116,6 +117,8 @@ typ ::=
 Notes:
 
 * Generics can only be instantiated with _boxed_ types, which excludes the primitive data types `Bool`, `Byte`, `Int`, and `Float`. These can be converted to boxed types via `Bool$`, `Int$`, etc. There is no autoboxing.
+
+* Readonly arrays are a supertype of regular arrays, and only they allow covariant subtyping on the element type.
 
 
 ### Expressions
@@ -490,8 +493,9 @@ The type representation is a fairly simple tree structure, where non-generic typ
 | Text$    | [i31(7); i31(5)] |
 | (Float$,Text) | [i31(8); i31(-4); i31(5)] |
 | Object[] | [i31(9); i31(6)] |
-| C        | $disp_C |
-| C<Int$,Text> | array [$disp_C; i31(-3); i31(5)]
+| Object[]! | [i31(10); i31(6)] |
+| C        | $disp_C      |
+| C<Int$,Text> | array [$disp_C; i31(-3); i31(5)] |
 
 Checking type equivalence is a simple parallel tree recursion, short-cut by reference equality. The runtime does not currently perform type canonicalisation.
 
@@ -544,30 +548,25 @@ Furthermore, before compilation, each input is preprocessed by injecting imports
 
 Wob's linking model is as straightforward as it can get, and requires no language-specific support. It merely assumes that modules are loaded and instantiated in a bottom-up manner.
 
-Here is a template for minimal glue code to run Wob programs in an environment like node.js. Invoking `run("name")` should suffice to run a compiled `name.wasm` and return its result, provided the dependencies are also avaliable in the right place (imported modules and the Wob [runtime system](#runtime-system), if not running headless).
+The simple template for runner glue code for node.js is provided in `js/wob.js` and shown below. With that, invoking
+```
+node js/wob.js name
+```
+suffices to run a compiled module `name.wasm`, provided the dependencies are avaliable in the right place. The Wob [runtime system](#runtime-system) is assumed to be found (as `wob-runtime.wasm`) in the current working directory (if not running headless), and imported modules (in compiled form) at their respective import paths, again relative to the current directory.
+
 ```
 'use strict';
 
-let fs = require('fs').promises;
-
-function arraybuffer(bytes) {
-  let buffer = new ArrayBuffer(bytes.length);
-  let view = new Uint8Array(buffer);
-  for (let i = 0; i < bytes.length; ++i) {
-    view[i] = bytes.charCodeAt(i);
-  }
-  return buffer;
-}
+let fs = require('fs');
 
 let registry = {__proto__: null};
 
 async function link(name) {
   if (! (name in registry)) {
-    let bytes = await fs.readFile(name + ".wasm", "binary");
-    let binary = arraybuffer(bytes);
-    let module = await WebAssembly.compile(binary);
+    let binary = fs.readFileSync(name + ".wasm");
+    let module = await WebAssembly.compile(new Uint8Array(binary));
     for (let im of WebAssembly.Module.imports(module)) {
-      link(im.module);
+      await link(im.module);
     }
     let instance = await WebAssembly.instantiate(module, registry);
     registry[name] = instance.exports;
@@ -578,5 +577,10 @@ async function link(name) {
 async function run(name) {
   let exports = await link(name);
   return exports.return;
+}
+
+process.argv.splice(0, 2);
+for (let file of process.argv) {
+  run(file);
 }
 ```

@@ -106,7 +106,8 @@ typ_post :
   | typ_simple { $1 }
   | typ_tup { $1 }
   | typ_post DOLLAR { BoxT $1 @@ at () }
-  | typ_post LBRACK RBRACK { ArrayT $1 @@ at () }
+  | typ_post LBRACK RBRACK { ArrayT ($1, MutT @@ at ()) @@ at () }
+  | typ_post LBRACK RBRACK NOTOP { ArrayT ($1, ConstT @@ at ()) @@ at () }
 
 typ :
   | typ_post { $1 }

@@ -2,6 +2,7 @@
 
 type var = string
 type kind = int
+type mut = Mut | Const
 type sort = LetS | VarS | FuncS | ClassS | ProhibitedS
 
 type typ =
@@ -17,7 +18,7 @@ type typ =
   | Boxed
   | Box of typ
   | Tup of typ list
-  | Array of typ
+  | Array of typ * mut
   | Func of var list * typ list * typ
   | Inst of cls * typ list
   | Class of cls
@@ -40,7 +41,7 @@ val is_var : typ -> bool
 val is_inst : typ -> bool
 
 val as_tup : typ -> typ list
-val as_array : typ -> typ
+val as_array : typ -> typ * mut
 val as_func : typ -> var list * typ list * typ
 val as_inst : typ -> cls * typ list
 val as_class : typ -> cls
