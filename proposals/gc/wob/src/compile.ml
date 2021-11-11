@@ -815,6 +815,10 @@ and compile_lit ctxt l at =
       emit ctxt W.[
         i32_const (addr @@ at);
       ]
+    end else if s = "" then begin
+      emit ctxt W.[
+        i32_const (0l @@ at);
+      ]
     end else begin
       let offset = Env.Map.find s !(ctxt.ext.texts) in
       emit ctxt W.[

@@ -1,1 +1,3 @@
+;; @FAIL-V8: does not recognise (ref null (rtt _))
+
 data T a = C a | D

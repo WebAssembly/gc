@@ -70,6 +70,97 @@ let mark ctxt i =
 *)
 
 
+(* Intrinsics *)
+
+let intrinsic compile import =
+  (if !Flags.headless then compile else import)
+
+let intrinsic_text_new c = intrinsic Intrinsic.compile_text_new Runtime.import_text_new c
+let intrinsic_text_cat c = intrinsic Intrinsic.compile_text_cat Runtime.import_text_cat c
+let intrinsic_text_eq c = intrinsic Intrinsic.compile_text_eq Runtime.import_text_eq c
+let intrinsic_func_apply n c = intrinsic Intrinsic.compile_func_apply Runtime.import_func_apply n c
+
+
+(* Allocate data *)
+
+let data_list data_e ctxt es data =
+  List.fold_left (fun data eI -> data_e ctxt eI data) data es
+
+let data_lit ctxt l at data =
+  match l with
+  | BoolL _ | IntL _ | FloatL _ -> data
+  | TextL s ->
+    ignore (Runtime.import_mem_alloc ctxt);
+    ignore (Runtime.import_text_new ctxt);
+    if Env.Map.find_opt s !(ctxt.ext.texts) <> None then data else
+    let addr = int32 (String.length data) in
+    ctxt.ext.texts := Env.Map.add s addr !(ctxt.ext.texts);
+    data ^ s
+
+let rec data_pat ctxt p data =
+  match p.it with
+  | WildP | VarP _ -> data
+  | LitP l ->
+    (match T.norm (Source.et p) with
+    | T.Text -> ignore (Runtime.import_text_eq ctxt)
+    | _ -> ()
+    );
+    data_lit ctxt l p.at data
+  | ConP (_, ps) | TupP ps -> data_list data_pat ctxt ps data
+  | RefP p | AnnotP (p, _) -> data_pat ctxt p data
+
+let rec data_exp ctxt e data =
+  match e.it with
+  | VarE _ | ConE _ -> data
+  | LitE l -> data_lit ctxt l e.at data
+  | BinE (e1, CatOp, e2) ->
+    ignore (Runtime.import_text_cat ctxt);
+    data_list data_exp ctxt [e1; e2] data
+  | RelE (e1, (EqOp | NeOp), e2) when T.eq (Source.et e1) T.Text ->
+    ignore (Runtime.import_text_eq ctxt);
+    data_list data_exp ctxt [e1; e2] data
+  | UnE (_, e1) | RefE e1 | DerefE e1 | AnnotE (e1, _) -> data_exp ctxt e1 data
+  | BinE (e1, _, e2) | LogE (e1, _, e2) | RelE (e1, _, e2) | AssignE (e1, e2) ->
+    data_list data_exp ctxt [e1; e2] data
+  | TupE es -> data_list data_exp ctxt es data
+  | FunE (p1, e2) -> data_match ctxt (p1, e2) data
+  | AppE (e1, e2) ->
+    let rec flat e1 es =
+      match e1.it with
+      | AppE (e1', e2') -> flat e1' (e2'::es)
+      | _ -> ignore (Runtime.import_func_apply (List.length es) ctxt)
+    in flat e1 [e2];
+    data_list data_exp ctxt [e1; e2] data
+  | IfE (e1, e2, e3) -> data_list data_exp ctxt [e1; e2; e3] data
+  | CaseE (e1, ms) -> data_list data_match ctxt ms (data_exp ctxt e1 data)
+  | PackE (m, _) -> data_mod ctxt m data
+  | LetE (ds, e2) -> data_exp ctxt e2 (data_list data_dec ctxt ds data)
+
+and data_match ctxt (p, e) data =
+  data_exp ctxt e (data_pat ctxt p data)
+
+and data_dec ctxt d data =
+  match d.it with
+  | ExpD e | AssertD e -> data_exp ctxt e data
+  | ValD (p, e) -> data_match ctxt (p, e) data
+  | ModD (_, m) | InclD m -> data_mod ctxt m data
+  | RecD ds -> data_list data_dec ctxt ds data
+  | TypD _ | DatD _ | SigD _ -> data
+
+and data_mod ctxt m data =
+  match m.it with
+  | VarM _ -> data
+  | StrM ds -> data_list data_dec ctxt ds data
+  | FunM (_, _, m1) | AnnotM (m1, _) -> data_mod ctxt m1 data
+  | AppM (m1, m2) -> data_list data_mod ctxt [m1; m2] data
+  | UnpackM (e, _) -> data_exp ctxt e data
+  | LetM (ds, m2) -> data_mod ctxt m2 (data_list data_dec ctxt ds data)
+
+let data_prog ctxt p =
+  let Prog (_, ds) = p.it in
+  data_list data_dec ctxt ds ""
+
+
 (* Coercions *)
 
 let rec compile_coerce ctxt src dst t at =
@@ -205,11 +296,30 @@ let compile_lit ctxt l at =
       f64_const (float64 z @@ at);
     ]
   | TextL s ->
-    let addr = emit_data ctxt at s in
+    if !Flags.headless then begin
+      let addr = emit_active_data ctxt at s in
+      emit ctxt W.[
+        i32_const (addr @@ at);
+      ]
+    end else if s = "" then begin
+      emit ctxt W.[
+        i32_const (0l @@ at);
+      ]
+    end else begin
+      let offset = Env.Map.find s !(ctxt.ext.texts) in
+      emit ctxt W.[
+        global_get (!(ctxt.ext.data) @@ at);
+      ];
+      if offset <> 0l then begin
+        emit ctxt W.[
+          i32_const (offset @@ at);
+          i32_add;
+        ]
+      end
+    end;
     emit ctxt W.[
-      i32_const (addr @@ at);
       i32_const (int32 (String.length s) @@ at);
-      call (Intrinsic.compile_text_new ctxt @@ at);
+      call (intrinsic_text_new ctxt @@ at);
     ]
 
 
@@ -501,7 +611,7 @@ let rec compile_pat ctxt fail funcloc_opt p =
     | T.Float -> emit ctxt W.[f64_ne]
     | T.Ref _ -> emit ctxt W.[ref_eq; i32_eqz]
     | T.Text ->
-      emit ctxt W.[call (Intrinsic.compile_text_eq ctxt @@ p.at); i32_eqz]
+      emit ctxt W.[call (intrinsic_text_eq ctxt @@ p.at); i32_eqz]
     | _ -> assert false
     );
     emit ctxt W.[
@@ -726,7 +836,7 @@ and compile_exp_func_opt ctxt e dst : func_loc option =
     | MulOp, T.Float -> emit ctxt W.[f64_mul]
     | DivOp, T.Float -> emit ctxt W.[f64_div]
     | CatOp, T.Text ->
-      emit ctxt W.[call (Intrinsic.compile_text_cat ctxt @@ e.at)]
+      emit ctxt W.[call (intrinsic_text_cat ctxt @@ e.at)]
     | _ -> assert false
     );
     compile_coerce ctxt lax_rep dst (Source.et e) e.at;
@@ -751,9 +861,9 @@ and compile_exp_func_opt ctxt e dst : func_loc option =
     | EqOp, T.Ref _ -> emit ctxt W.[ref_eq]
     | NeOp, T.Ref _ -> emit ctxt W.[ref_eq; i32_eqz]
     | EqOp, T.Text ->
-      emit ctxt W.[call (Intrinsic.compile_text_eq ctxt @@ e.at)]
+      emit ctxt W.[call (intrinsic_text_eq ctxt @@ e.at)]
     | NeOp, T.Text ->
-      emit ctxt W.[call (Intrinsic.compile_text_eq ctxt @@ e.at); i32_eqz]
+      emit ctxt W.[call (intrinsic_text_eq ctxt @@ e.at); i32_eqz]
     | _ -> assert false
     );
     compile_coerce ctxt rigid_rep dst (Source.et e) e.at;
@@ -866,7 +976,7 @@ and compile_exp_func_opt ctxt e dst : func_loc option =
             compile_exp ctxt (List.nth es i) arg_rep
           );
           emit ctxt W.[
-            call (Intrinsic.compile_apply ctxt (List.length es) @@ e.at);
+            call (intrinsic_func_apply (List.length es) ctxt @@ e.at);
           ];
           compile_coerce ctxt arg_rep dst (Source.et e) e.at;
 
@@ -888,7 +998,7 @@ and compile_exp_func_opt ctxt e dst : func_loc option =
             compile_exp ctxt (List.nth es i) arg_rep
           );
           emit ctxt W.[
-            call (Intrinsic.compile_apply ctxt (List.length es) @@ e.at);
+            call (intrinsic_func_apply (List.length es) ctxt @@ e.at);
           ]
         );
         compile_coerce ctxt arg_rep dst (Source.et e) e.at
@@ -1445,11 +1555,27 @@ let compile_imp ctxt idx d =
 let compile_prog p : W.module_ =
   let Prog (is, ds) = p.it in
   let ctxt = enter_scope (make_ctxt ()) GlobalScope in
+  let data = if !Flags.headless then "" else data_prog ctxt p in
   let t, _ = Source.et p in
   let vt = lower_value_type ctxt p.at (global_rep ()) t in
   let start_idx =
     emit_func ctxt p.at [] [] (fun ctxt _ ->
       List.iter (compile_imp_pre ctxt) is;
+      if data <> "" then begin
+        let seg = emit_passive_data ctxt p.at data in
+        let len = int32 (String.length data) in
+        let dataidx = emit_global ctxt p.at W.Mutable W.i32 None in
+        ctxt.ext.data := dataidx;
+        List.iter (emit_instr ctxt p.at) W.[
+          i32_const (len @@ p.at);
+          call (Runtime.import_mem_alloc ctxt @@ p.at);
+          global_set (dataidx @@ p.at);
+          global_get (dataidx @@ p.at);
+          i32_const (0l @@ p.at);
+          i32_const (len @@ p.at);
+          memory_init (seg @@ p.at);
+        ]
+      end;
       List.iter (compile_imp ctxt (ref 0)) is;
       compile_decs ctxt ds (global_rep ());
       let result_idx = emit_global ctxt p.at W.Mutable vt None in

@@ -1,3 +1,5 @@
+;; @FAIL-V8: does not recognise (ref null (rtt _))
+
 ;; Transitive imports
 
 import I from "test/import"

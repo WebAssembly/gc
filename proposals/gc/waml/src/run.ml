@@ -35,9 +35,9 @@ let rec handle f =
 
 (* Input *)
 
-(* Let's hope this is build-dependen enough *)
-let marshal_tag = Hashtbl.hash (Marshal.to_string handle [Marshal.Closures])
-let marshal_conf () = Flags.(!box_locals, !box_locals, !box_temps, !box_scrut)
+(* Let's hope this is build-dependent enough *)
+let marshal_tag () = Hashtbl.hash (Marshal.to_string handle [Marshal.Closures])
+let marshal_conf () = Flags.(!box_modules, !headless)
 
 let with_in_file open_in_mode file f =
   let ic = open_in_mode file in
@@ -101,12 +101,13 @@ let read_binary_file file : Wasm.Ast.module_ * (Type.var list * Typing.env) =
   | [s] ->
     try
       let bs = Bytes.of_string s in
-      if Marshal.from_string s 0 <> marshal_tag then
-        raise (WasmFormat (at, "wasm binary is from incompatible build"));
+      if Marshal.from_string s 0 <> marshal_tag () then
+        raise (WasmFormat (at, "wasm binary is from incompatible build or compilation options"));
       let off1 = Marshal.total_size bs 0 in
       if Marshal.from_string s off1 <> marshal_conf () then
         raise (WasmFormat (at, "wasm binary has incompatible language mode"));
       let off2 = off1 + Marshal.total_size bs off1 in
+      trace "Decoding signature...";
       m, Marshal.from_string s off2
     with Failure _ ->
       raise (WasmFormat (at, "wasm binary has malformed signature information"))
@@ -120,17 +121,22 @@ let with_out_file open_out_mode file f =
     f oc; close_out oc
   with exn -> close_out oc; raise exn
 
-let write_binary_file file
-    (m : Wasm.Ast.module_) (stat : Type.var list * Typing.env) =
+let write_binary_file file m (stat_opt : (Type.var list * Typing.env) option) =
   let file' = file ^ ".wasm" in
   trace "Encoding...";
   let s1 = Wasm.Encode.encode m in
-  let custom =
-    Marshal.to_string marshal_tag [] ^
-    Marshal.to_string (marshal_conf ()) [] ^
-    Marshal.to_string stat []
+  let s2 =
+    match stat_opt with
+    | None -> ""
+    | Some stat ->
+      trace "Encoding signature...";
+      let custom =
+        Marshal.to_string (marshal_tag ()) [] ^
+        Marshal.to_string (marshal_conf ()) [] ^
+        Marshal.to_string stat [Marshal.Closures]
+      in
+      Wasm.Encode.encode_custom (Wasm.Utf8.decode "waml-sig") custom
   in
-  let s2 = Wasm.Encode.encode_custom (Wasm.Utf8.decode "waml-sig") custom in
   trace ("Writing (" ^ file' ^ ")...");
   with_out_file open_out_bin file' (fun oc ->
     output_string oc s1;
@@ -147,25 +153,57 @@ let write_file file m stat =
   if !Flags.textual then
     write_textual_file file' m
   else
-    write_binary_file file' m stat
+    write_binary_file file' m (Some stat)
 
 let write_stdout m =
   trace "Printing Wasm...";
   Wasm.Print.module_ stdout !Flags.width m
 
 
+(* Runtime System *)
+
+let runtime_module : Wasm.Ast.module_ option ref = ref None
+let runtime_instance : Wasm.Instance.module_inst option ref = ref None
+
+let generate_runtime () =
+  trace ("Compiling runtime system...");
+  let runtime = Runtime.compile_runtime () in
+  if !Flags.validate then begin
+    trace "Validating runtime system...";
+    Wasm.Valid.check_module runtime
+  end;
+  runtime_module := Some runtime;
+  if not !Flags.headless then
+  (
+    trace ("Instantiating runtime system...");
+    runtime_instance := Some (Wasm.Eval.init runtime [])
+  )
+
+let init () =
+  if not !Flags.headless then generate_runtime ()
+
+let compile_runtime file =
+  if !runtime_module = None then generate_runtime ();
+  let m = Option.get !runtime_module in
+  match Filename.extension file with
+  | ".wasm" -> write_binary_file (Filename.chop_extension file) m None; true
+  | ".wat" -> write_textual_file (Filename.chop_extension file) m; true
+  | ext -> prerr_endline (file ^ ": Unknown output file type"); false
+
+
 (* Compilation pipeline *)
 
-let frontend name lexbuf start env : Syntax.prog * (Type.typ * Type.var list * Typing.env) =
+let frontend name lexbuf start env : Syntax.prog * (Type.typ * (Type.var list * Typing.env)) =
   trace "Parsing...";
   let prog = Parse.parse name lexbuf start in
   if !Flags.print_ast then begin
     trace "Abstract syntax:";
     Wasm.Sexpr.print !Flags.width (Arrange.prog prog);
   end;
-  if !Flags.unchecked then prog, (Type.Tup [], [], Env.empty) else begin
+  if !Flags.unchecked then prog, (Type.Tup [], ([], Env.empty)) else begin
     trace "Checking...";
-    prog, Typing.check_prog env prog
+    let t, bs, senv = Typing.check_prog env prog in
+    prog, (t, (bs, senv))
   end
 
 let backend prog : Wasm.Ast.module_ =
@@ -242,27 +280,26 @@ let inject_env senv prog =
 let run name lexbuf start =
   handle (fun () ->
     let (senv, denv) = !env in
-    let prog, (t, bs, senv') = frontend name lexbuf start senv in
+    let prog, (t, ((bs, senv') as stat)) = frontend name lexbuf start senv in
     let denv' =
       if not !Flags.compile then
         eval denv prog
       else begin
         let wasm = backend (inject_env senv prog) in
         if !Flags.textual then write_stdout wasm;
-        if not !Flags.dry then
-          exec wasm (fun inst ->
-            register env_name (bs, senv') Env.empty (Some inst));
+        if !Flags.run then
+          exec wasm (fun inst -> register env_name stat Env.empty (Some inst));
         Env.empty
       end
     in
     env := (Env.adjoin senv senv', Env.adjoin denv denv');
     let open Printf in
     if not !Flags.unchecked then begin
-      printf "%s%s\n" (if !Flags.dry then "" else " : ") (Type.string_of_typ t);
+      printf "%s%s\n" (if not !Flags.run then "" else " : ") (Type.string_of_typ t);
       if !Flags.print_sig && senv' <> Env.empty then
         printf "%s\n" (Type.string_of_str senv')
     end
-    else if not !Flags.dry then
+    else if !Flags.run then
       printf "\n"
   )
 
@@ -280,9 +317,9 @@ let run_stdin () =
 
 let compile name file lexbuf start =
   handle (fun () ->
-    let prog, (_, bs, str) = frontend name lexbuf start Env.empty in
+    let prog, (_, stat) = frontend name lexbuf start Env.empty in
     if !Flags.compile then
-      write_file file (backend prog) (bs, str)
+      write_file file (backend prog) stat
   )
 
 let compile_file file : bool =
@@ -297,46 +334,56 @@ let compile_string string file : bool =
 
 let load_file url at : entry =
   try
+    if !Flags.prompt then
+      print_endline ("// loading \"" ^ url ^ "\"");
     trace (String.make 60 '-');
     trace ("Loading import \"" ^ url ^ "\"...");
     let src_file = url ^ ".waml" in
     let wasm_file = url ^ ".wasm" in
-    let entry =
+    let stat, dyn, wasm_opt =
       if !Flags.compile && Sys.file_exists wasm_file then begin
         let wasm, stat = read_binary_file wasm_file in
-        let inst = if !Flags.dry then None else Some (Link.link wasm) in
-        {stat; dyn = Env.empty; inst}
+        stat, Env.empty, Some wasm
       end
       else begin
         input_file src_file (fun lexbuf ->
-          let prog, (_, bs, senv) =
+          let prog, (_, stat) =
             frontend src_file lexbuf Parse.Prog Env.empty in
-          let dyn, inst =
-            if not !Flags.compile then
-              snd (Eval.eval_prog Env.empty prog), None
-            else
-              Env.empty,
-              if !Flags.dry then None else
-              let wasm = backend prog in
-              if not !Flags.prompt then
-                write_file wasm_file wasm (bs, senv);
-              Some (Link.link wasm)
-          in {stat = (bs, senv); dyn; inst}
+          if not !Flags.compile then begin
+            trace "Running...";
+            stat, snd (Eval.eval_prog Env.empty prog), None
+          end
+          else begin
+            let wasm = backend prog in
+            if not !Flags.prompt then
+              write_file wasm_file wasm stat;
+            stat, Env.empty, Some wasm
+          end
         )
       end
     in
+    let inst =
+      if not !Flags.run || wasm_opt = None then None else begin
+        trace "Linking...";
+        Option.map Link.link wasm_opt
+      end
+    in
+    let entry = {stat; dyn; inst} in
     trace ("Finished import \"" ^ url ^ "\".");
     trace (String.make 60 '-');
     entry
   with exn -> raise (Recursive (at, exn, Printexc.get_raw_backtrace ()))
 
 let find_entry url at =
-  match Reg.find_opt url !reg with
-  | Some entry -> entry
-  | None ->
-    let entry = load_file url at in
-    reg := Reg.add url entry !reg;
-    entry
+  if url = Runtime.module_name then
+    {stat = ([], Env.empty); dyn = Env.empty; inst = !runtime_instance}
+  else
+    match Reg.find_opt url !reg with
+    | Some entry -> entry
+    | None ->
+      let entry = load_file url at in
+      reg := Reg.add url entry !reg;
+      entry
 
 let _ = Typing.get_env := fun at url -> (find_entry url at).stat
 let _ = Eval.get_env := fun at url -> (find_entry url at).dyn

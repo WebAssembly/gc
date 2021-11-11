@@ -1,3 +1,5 @@
+;; @FAIL-V8: does not recognise (ref null (rtt _))
+
 val id f = f
 
 val caller1 f = f 1

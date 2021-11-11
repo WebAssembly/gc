@@ -1,3 +1,5 @@
+;; @FAIL-V8: does not recognise (ref null (rtt _))
+
 ;; Nullary constructors
 
 data T = A | B

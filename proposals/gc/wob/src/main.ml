@@ -20,7 +20,7 @@ let argspec = Arg.align
   "-r", Arg.Set Flags.run,
     " run input (default when interactive or not compiling)";
   "-i", Arg.Set Flags.interpret,
-    " run with interpreter (default when interactive for now)";
+    " run with interpreter (default when interactive, for now)";
   "-c", Arg.Set Flags.compile,
     " compile input to Wasm (default when files given)";
   "-n", Arg.Set Flags.headless,

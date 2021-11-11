@@ -59,7 +59,7 @@ let loc_rep = function
   | ClosureLoc _ -> clos_rep ()
 
 
-let max_func_arity = 5
+let max_func_arity = if !Flags.headless then 4 else 12
 
 let clos_arity_idx = 0l
 let clos_code_idx = 1l
@@ -103,6 +103,8 @@ type ctxt_ext =
   { envs : (scope * env ref) list;
     clostypes : clos_idxs ClosMap.t ref;
     rttglobals : int32 IdxMap.t ref;
+    texts : int32 Env.Map.t ref;
+    data : int32 ref;
   }
 type ctxt = ctxt_ext Emit.ctxt
 
@@ -110,6 +112,8 @@ let make_ext_ctxt () : ctxt_ext =
   { envs = [(PreScope, make_env ())];
     clostypes = ref ClosMap.empty;
     rttglobals = ref IdxMap.empty;
+    texts = ref Env.Map.empty;
+    data = ref (-1l);
   }
 let make_ctxt () : ctxt = Emit.make_ctxt (make_ext_ctxt ())
 

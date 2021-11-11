@@ -8,7 +8,60 @@ let (+%) = Int32.add
 let int32 = W.I32.of_int_s
 
 
-(* Text intrinsics *)
+(* Memory *)
+
+let compile_mem ctxt : int32 =
+  Emit.lookup_intrinsic ctxt "mem" (fun _ ->
+    let at = Prelude.region in
+    emit_memory ctxt at 1l None
+  )
+
+let compile_mem_ptr ctxt : int32 =
+  Emit.lookup_intrinsic ctxt "mem_ptr" (fun _ ->
+    let at = Prelude.region in
+    emit_global ctxt at W.Mutable W.i32 None
+  )
+
+let compile_mem_alloc ctxt : int32 =
+  Emit.lookup_intrinsic ctxt "mem_alloc" (fun _ ->
+    let at = Prelude.region in
+    emit_func ctxt at W.[i32] W.[i32] (fun ctxt _ ->
+      let argidx = emit_param ctxt at in
+      let addridx = emit_local ctxt at W.i32 in
+      let deltaidx = emit_local ctxt at W.i32 in
+      let freeidx = compile_mem_ptr ctxt in
+      let _ = compile_mem ctxt in
+      List.iter (emit_instr ctxt at) W.[
+        global_get (freeidx @@ at);
+        local_tee (addridx @@ at);
+        local_get (argidx @@ at);
+        i32_add;
+        global_set (freeidx @@ at);
+        block void (List.map (fun e -> e @@ at) [
+          global_get (freeidx @@ at);
+          i32_const (0xffffl @@ at);
+          i32_add;
+          i32_const (16l @@ at);
+          i32_shr_u;
+          memory_size;
+          i32_sub;
+          local_tee (deltaidx @@ at);
+          i32_eqz;
+          br_if (0l @@ at);
+          local_get (deltaidx @@ at);
+          memory_grow;
+          i32_const (-1l @@ at);
+          i32_ne;
+          br_if (0l @@ at);
+          unreachable;
+        ]);
+        local_get (addridx @@ at);
+      ]
+    )
+  )
+
+
+(* Text *)
 
 let lower_text_type ctxt : int32 =
   emit_type ctxt Prelude.region W.(type_array (field_mut_pack i8))
@@ -244,8 +297,9 @@ let compile_load_args ctxt at i j shift arg0 src_argv_opt =
       compile_load_arg ctxt at (i + k) (arg0 +% shift) src_argv_opt
     )
 
-let rec compile_apply ctxt arity =
-  Emit.lookup_intrinsic ctxt ("apply" ^ string_of_int arity) (fun def_fwd ->
+let rec compile_func_apply arity ctxt =
+  assert (arity > 0);
+  Emit.lookup_intrinsic ctxt ("func_apply" ^ string_of_int arity) (fun def_fwd ->
     let at = Prelude.region in
     let emit ctxt = List.iter (emit_instr ctxt at) in
     let anyclos = lower_anyclos_type ctxt at in
@@ -298,7 +352,7 @@ let rec compile_apply ctxt arity =
                 (* Apply result to remaining arguments *)
                 compile_load_args ctxt at n arity 1l arg0 argv_opt;
                 emit ctxt W.[
-                  call (compile_apply ctxt (arity - n) @@ at);
+                  call (compile_func_apply (arity - n) ctxt @@ at);
                   return;  (* TODO: should be tail call *)
                 ];
               )
@@ -334,7 +388,7 @@ let rec compile_apply ctxt arity =
       let _, clos1, curriedN = lower_clos_type ctxt at 1 flds in
       emit ctxt W.[
         i32_const (1l @@ at);
-        ref_func (compile_curry ctxt arity @@ at);
+        ref_func (compile_func_curry arity ctxt @@ at);
         local_get (clos @@ at);
       ];
       compile_load_args ctxt at 0 arity 0l arg0 argv_opt;
@@ -347,10 +401,10 @@ let rec compile_apply ctxt arity =
     )
   )
 
-and compile_curry ctxt arity =
+and compile_func_curry arity ctxt =
   let arity_string =
     if arity <= max_func_arity then string_of_int arity else "vec" in
-  Emit.lookup_intrinsic ctxt ("curry" ^ arity_string) (fun def_fwd ->
+  Emit.lookup_intrinsic ctxt ("func_curry" ^ arity_string) (fun def_fwd ->
     let at = Prelude.region in
     let emit ctxt = List.iter (emit_instr ctxt at) in
     let anyclos = lower_anyclos_type ctxt at in
@@ -396,7 +450,7 @@ and compile_curry ctxt arity =
           );
           (* Call target *)
           emit ctxt W.[
-            call (compile_apply ctxt (arity + 1) @@ at);
+            call (compile_func_apply (arity + 1) ctxt @@ at);
             return;  (* TODO: should be tail call *)
           ]
         end else begin
@@ -491,7 +545,7 @@ and compile_curry ctxt arity =
           (* Still missing arguments, create new closure *)
           emit ctxt W.[
             i32_const (1l @@ at);
-            ref_func (compile_curry ctxt arity @@ at);
+            ref_func (compile_func_curry arity ctxt @@ at);
             local_get (0l @@ at);
             struct_get (curriedN @@ at) (curry_fun_idx @@ at);
             local_get (dst +% 1l @@ at);

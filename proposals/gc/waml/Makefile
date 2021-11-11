@@ -19,6 +19,9 @@ WASMFILES = Makefile $(shell cd $(WASMBASE); ls $(foreach DIR,$(WASMDIRS),$(DIR)
 WASMDIR =		_wasm
 WASMDEPS =	$(WASMFILES:%=$(WASMDIR)/%)
 
+WASMLINK =	wln
+WASMLINKDIR =	../$(WASMLINK)
+
 DIRS =		src
 LIBS =		bigarray wasm
 INCLS =		$(PWD)/_wasm/_build
@@ -64,6 +67,17 @@ $(WASMDIR)/_build/wasm.cmo $(WASMDIR)/_build/wasm.cma: $(WASMDEPS)
 		touch $@
 		$(OCB) -clean
 
+$(WASMDIR)/wasm:	$(WASMDEPS)
+		make -C $(WASMDIR)
+
+
+# Building linker
+
+.PHONY:	$(WASMLINK)
+
+$(WASMLINK):
+		make -C $(WASMLINKDIR)
+
 
 # Building executable
 
@@ -90,11 +104,12 @@ main.native: _tags $(WASMDIR)/_build/wasm.cmxa
 
 TESTDIR =	test
 TESTFILES =	$(shell cd $(TESTDIR); ls *.$(EXT))
+LINKFILES =	$(shell cd $(TESTDIR); ls *.$(WASMLINK))
 TESTS =		$(TESTFILES:%.$(EXT)=%)
 
-.PHONY:		test evaltest debugtest wasmtest wasmntest wasmptest runtimetest
+.PHONY:		test runtimetest evaltest debugtest wasmtest wasmntest nodetest linktest
 
-test:	runtimetest evaltest wasmtest wasmptest wasmntest nodetest
+test:	runtimetest evaltest wasmtest wasmntest nodetest linktest
 
 evaltest:		titletest/Test-eval $(TESTFILES:%.$(EXT)=evaltest/%)
 debugtest:	titletest/Test-debug $(TESTFILES:%.$(EXT)=debugtest/%)
@@ -103,6 +118,8 @@ wasmtest:		cleantest titletest/Test-wasm $(TESTFILES:%.$(EXT)=wasmtest/%)
 wasmntest:		cleantest titletest/Test-wasm-headless $(TESTFILES:%.$(EXT)=wasmntest/%)
 		@make cleantest
 nodetest:		cleantest titletest/Test-node $(RUNTIME).wasm $(TESTFILES:%.$(EXT)=nodetest/%)
+		@make cleantest
+linktest:		titletest/Test-link $(LINKFILES:%.$(WASMLINK)=linktest/%)
 		@make cleantest
 
 titletest/%:	$(OPT)
@@ -144,6 +161,20 @@ nodetest/%:		$(OPT)
 		    $(NODE) js/$(NAME).js $(TESTDIR)/$(@F); \
 		  else echo '**' Skipping $(@F).$(EXT); \
 		fi
+
+linktest/%:		$(WASMDIR)/wasm $(WASMLINK)
+		@ if ! grep -q "@FAIL-LINK" $(TESTDIR)/$(@F).$(WASMLINK); \
+		  then \
+		    echo $(@F).$(WASMLINK); \
+		    for file in $$(cat $(TESTDIR)/$(@F).$(WASMLINK)); \
+		    do \
+		      ./$(NAME) -c -v $$file.$(EXT); \
+		    done; \
+		    $(WASMLINKDIR)/$(WASMLINK) -v $(RUNTIME).wasm $$(cat $(TESTDIR)/$(@F).$(WASMLINK) | sed s/$$/.wasm/g) -o $(TESTDIR)/$(@F).wasm; \
+		    $(WASMDIR)/wasm $(TESTDIR)/$(@F).wasm; \
+		  else echo '**' Skipping $(@F).$(WASMLINK); \
+		fi; \
+		# $(NODE) js/$(NAME).js $(TESTDIR)/$(@F)
 
 $(RUNTIME).wasm:	$(OPT)
 		@./$(NAME) -g $@

@@ -555,8 +555,6 @@ node js/wob.js name
 suffices to run a compiled module `name.wasm`, provided the dependencies are avaliable in the right place. The Wob [runtime system](#runtime-system) is assumed to be found (as `wob-runtime.wasm`) in the current working directory (if not running headless), and imported modules (in compiled form) at their respective import paths, again relative to the current directory.
 
 ```
-'use strict';
-
 let fs = require('fs');
 
 let registry = {__proto__: null};

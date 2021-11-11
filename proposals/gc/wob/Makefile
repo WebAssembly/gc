@@ -107,7 +107,7 @@ TESTFILES =	$(shell cd $(TESTDIR); ls *.$(EXT))
 LINKFILES =	$(shell cd $(TESTDIR); ls *.$(WASMLINK))
 TESTS =		$(TESTFILES:%.$(EXT)=%)
 
-.PHONY:		test evaltest debugtest wasmtest wasmntest wasmptest runtimetest
+.PHONY:		test runtimetest evaltest debugtest wasmtest wasmntest wasmptest nodetest linktest
 
 test: runtimetest evaltest wasmtest wasmptest wasmntest nodetest linktest
 
@@ -178,7 +178,7 @@ linktest/%:	$(WASMDIR)/wasm $(WASMLINK)
 		    echo $(@F).$(WASMLINK); \
 		    for file in $$(cat $(TESTDIR)/$(@F).$(WASMLINK)); \
 		    do \
-	        ./$(NAME) -c -v $$file.$(EXT); \
+		      ./$(NAME) -c -v $$file.$(EXT); \
 		    done; \
 		    $(WASMLINKDIR)/$(WASMLINK) -v $(RUNTIME).wasm $$(cat $(TESTDIR)/$(@F).$(WASMLINK) | sed s/$$/.wasm/g) -o $(TESTDIR)/$(@F).wasm; \
 		    $(WASMDIR)/wasm $(TESTDIR)/$(@F).wasm; \

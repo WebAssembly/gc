@@ -666,30 +666,22 @@ Furthermore, before compilation, each input is preprocessed by injecting imports
 
 Waml's linking model is as straightforward as it can get, and requires no language-specific support. It merely assumes that modules are loaded and instantiated in a bottom-up manner.
 
-Here is a template for minimal glue code to run Wob programs in an environment like node.js. Invoking `run("name")` should suffice to run a compiled `name.wasm` and return its result, provided the dependencies are also avaliable in the right place (imported modules and the Waml [runtime system](#runtime-system), if not running headless).
+The simple template for runner glue code for node.js is provided in `js/wob.js` and shown below. With that, invoking
 ```
-'use strict';
-
-let fs = require('fs').promises;
-
-function arraybuffer(bytes) {
-  let buffer = new ArrayBuffer(bytes.length);
-  let view = new Uint8Array(buffer);
-  for (let i = 0; i < bytes.length; ++i) {
-    view[i] = bytes.charCodeAt(i);
-  }
-  return buffer;
-}
+node js/waml.js name
+```
+suffices to run a compiled module `name.wasm`, provided the dependencies are avaliable in the right place. The Waml [runtime system](#runtime-system) is assumed to be found (as `waml-runtime.wasm`) in the current working directory (if not running headless), and imported modules (in compiled form) at their respective import paths, again relative to the current directory.
+```
+let fs = require('fs');
 
 let registry = {__proto__: null};
 
 async function link(name) {
   if (! (name in registry)) {
-    let bytes = await fs.readFile(name + ".wasm", "binary");
-    let binary = arraybuffer(bytes);
-    let module = await WebAssembly.compile(binary);
+    let binary = fs.readFileSync(name + ".wasm");
+    let module = await WebAssembly.compile(new Uint8Array(binary));
     for (let im of WebAssembly.Module.imports(module)) {
-      link(im.module);
+      await link(im.module);
     }
     let instance = await WebAssembly.instantiate(module, registry);
     registry[name] = instance.exports;

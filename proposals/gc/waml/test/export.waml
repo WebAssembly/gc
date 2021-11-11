@@ -1,3 +1,5 @@
+;; @FAIL-V8: does not recognise (ref null (rtt _))
+
 ;; Exports
 
 type Pair a b = (a, b)

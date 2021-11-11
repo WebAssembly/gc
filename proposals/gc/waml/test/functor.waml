@@ -1,3 +1,5 @@
+;; @FAIL-V8: does not recognise (ref null (rtt _))
+
 ;; Functors
 
 signature S = {type T; val x : T}
