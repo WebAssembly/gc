@@ -50,12 +50,12 @@ let implicit_entity ents : int32 =
 
 (* Compilation context *)
 
-module DefTypes = Map.Make(struct type t = W.def_type let compare = compare end)
+module DefTypes = Map.Make(struct type t = W.sub_type let compare = compare end)
 module Refs = Set.Make(Int32)
 module Intrinsics = Map.Make(String)
 
 type internal =
-  { types : W.type_ entities;
+  { types : W.sub_type W.Source.phrase entities;
     globals : W.global entities;
     funcs : W.func entities;
     memories : W.memory entities;
@@ -95,11 +95,13 @@ let make_ctxt ext = {ext; int = make_internal ()}
 
 (* Lookup *)
 
-let lookup_def_type ctxt idx : W.def_type =
-  (Option.get !(W.Lib.List32.nth (List.rev ctxt.int.types.list) idx)).W.Source.it
+let lookup_sub_type ctxt idx : W.str_type =
+  let W.SubType (_, st) =
+    (Option.get !(W.Lib.List32.nth (List.rev ctxt.int.types.list) idx)).W.Source.it in
+  st
 
 let lookup_func_type ctxt idx : W.func_type =
-  match lookup_def_type ctxt idx with
+  match lookup_sub_type ctxt idx with
   | W.(FuncDefType ft) -> ft
   | _ -> assert false
 
@@ -108,7 +110,7 @@ let lookup_param_type ctxt idx i : W.value_type =
   W.Lib.List32.nth ts i
 
 let lookup_field_type ctxt idx i : W.value_type =
-  match lookup_def_type ctxt idx with
+  match lookup_sub_type ctxt idx with
   | W.(StructDefType (StructType fts)) ->
     let W.FieldType (t, _) = W.Lib.List32.nth fts i in
     (match t with
@@ -148,7 +150,7 @@ let emit_type ctxt at dt : int32 =
     ctxt.int.deftypes := DefTypes.add dt idx !(ctxt.int.deftypes);
     idx
 
-let emit_type_deferred ctxt at : int32 * (W.def_type -> unit) =
+let emit_type_deferred ctxt at : int32 * (W.sub_type -> unit) =
   let idx, r = alloc_entity ctxt.int.types in
   idx, fun dt ->
     ctxt.int.deftypes := DefTypes.add dt idx !(ctxt.int.deftypes);
@@ -161,7 +163,7 @@ let emit_import ctxt at mname name desc =
   ignore (emit_entity ctxt.int.imports W.({module_name; item_name; idesc} @@ at))
 
 let emit_func_import ctxt at mname name ft =
-  let typeidx = emit_type ctxt at W.(FuncDefType ft) in
+  let typeidx = emit_type ctxt at W.(sub [] (FuncDefType ft)) in
   emit_import ctxt at mname name W.(FuncImport (typeidx @@ at));
   implicit_entity ctxt.int.funcs
 
@@ -243,7 +245,7 @@ let emit_func_deferred ctxt : int32 * _ =
   let idx, func = alloc_entity ctxt.int.funcs in
   idx, fun at ts1' ts2' f ->
     let ft = W.(FuncType (ts1', ts2')) in
-    let typeidx = emit_type ctxt at W.(FuncDefType ft) in
+    let typeidx = emit_type ctxt at W.(sub [] (FuncDefType ft)) in
     let ctxt' = {ctxt with int =
       {ctxt.int with locals = make_entities (); instrs = make_entities ()}} in
     f ctxt' idx;
@@ -267,12 +269,18 @@ let emit_start ctxt at idx =
   ctxt.int.start := Some (idx @@ at)
 
 
+(* Resolve type recursion *)
+
+let recify x sss =
+  
+
+
 (* Generation *)
 
 let gen_module ctxt at : W.module_ =
   { W.empty_module with
     W.start = !(ctxt.int.start);
-    W.types = get_entities ctxt.int.types;
+    W.types = recify 0l (get_entities ctxt.int.types);
     W.globals = get_entities ctxt.int.globals;
     W.funcs = get_entities ctxt.int.funcs;
     W.imports = get_entities ctxt.int.imports;

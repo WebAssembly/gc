@@ -1432,34 +1432,21 @@ and compile_dec ctxt d dst =
     compile_coerce ctxt unit_rep dst (T.Tup []) d.at
 
   | DatD (y, ys, cs) ->
-    let tagged = emit_type ctxt y.at W.(type_struct [field i32]) in
-    let rtttmp =
-      if List.for_all (fun c -> snd c.it = []) cs then -1l else
-      let tmp = emit_local ctxt y.at W.(ref_null_heap (rtt_n tagged 0l)) in
-      emit ctxt W.[
-        rtt_canon (tagged @@ y.at);
-        local_set (tmp @@ y.at);
-      ];
-      tmp
-    in
     let t = T.Var (y.it, List.map T.var (List.map Source.it ys)) in
     let data =
       List.mapi (fun i c ->
         let (x, ts) = c.it in
         let ts' = List.map Source.et ts in
         let typeidx = lower_con_type ctxt x.at ts' in
-        if ts = [] then begin
+        if ts = [] then
           emit ctxt W.[
             i32_const (int32 i @@ x.at);
             i31_new;
           ]
-        end else begin
+        else
           emit ctxt W.[
-            local_get (rtttmp @@ x.at);
-            ref_as_non_null;
-            rtt_sub (typeidx @@ x.at);
-          ]
-        end;
+            rtt_canon (typeidx @@ x.at);
+          ];
         let t_data = T.Data (T.fun_flat ts' t) in
         compile_val_var_bind ctxt x t_data rigid_rep None;
         (x.it, {tag = int32 i; typeidx; arity = List.length ts})

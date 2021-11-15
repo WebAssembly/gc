@@ -156,11 +156,15 @@ and lower_heap_type ctxt at t : W.heap_type =
     )
   | t -> W.(type_ (lower_var_type ctxt at t))
 
+and lower_anycon_type ctxt at : int32 =
+  emit_type ctxt at W.(type_def (struct_ [field i32]))
+
 and lower_con_type ctxt at ts : int32 =
   if ts = [] then -1l else
+  let anycon = lower_anycon_type ctxt at in
   let vts = List.map (lower_value_type ctxt at field_rep) ts in
   let fts = List.map W.field vts in
-  emit_type ctxt at W.(type_def (struct_ (field i32 :: fts)))
+  emit_type ctxt at W.(type_sub [anycon] (struct_ (field i32 :: fts)))
 
 and lower_var_type ctxt at t : int32 =
   match T.norm t with
@@ -191,8 +195,9 @@ and lower_func_type ctxt at arity : int32 * int32 =
   match ClosMap.find_opt key !(ctxt.ext.clostypes) with
   | Some {codeidx; closidx; _} -> codeidx, closidx
   | None ->
+    let anyclos = lower_anyclos_type ctxt at in
     let code, def_code = emit_type_deferred ctxt at in
-    let closdt = W.(type_def (struct_ [field i32; field (ref_ code)])) in
+    let closdt = W.(type_sub [anyclos] (struct_ [field i32; field (ref_ code)])) in
     let clos = emit_type ctxt at closdt in
     let codedt = W.(type_def (func (ref_ clos :: argts) [absref])) in
     def_code codedt;
@@ -207,8 +212,9 @@ and lower_clos_type ctxt at arity flds : int32 * int32 * int32 =
   | Some {codeidx; closidx; envidx} -> codeidx, closidx, envidx
   | None ->
     let code, clos = lower_func_type ctxt at arity in
-    let closdt = W.(type_def (struct_ (field i32 :: field (ref_ code) :: flds))) in
-    let clos_env = emit_type ctxt at closdt in
+    let envdt =
+      W.(type_sub [clos] (struct_ (field i32 :: field (ref_ code) :: flds))) in
+    let clos_env = emit_type ctxt at envdt in
     let clos_idxs = {codeidx = code; closidx = clos; envidx = clos_env} in
     ctxt.ext.clostypes := ClosMap.add key clos_idxs !(ctxt.ext.clostypes);
     code, clos, clos_env

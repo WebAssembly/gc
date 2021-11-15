@@ -42,7 +42,7 @@ let struct_ fts = StructDefType (StructType fts)
 let array ft = ArrayDefType (ArrayType ft)
 let func ts1 ts2 = FuncDefType (FuncType (ts1, ts2))
 
-let sub xs st = SubType (xs, st)
+let sub xs st = SubType (List.map (fun x -> SynVar x) xs, st)
 let type_def st = DefType (sub [] st)
 let type_sub xs st = DefType (sub xs st)
 let type_rec sts = RecDefType (List.map (sub []) sts)
