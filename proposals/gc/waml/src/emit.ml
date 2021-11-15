@@ -239,9 +239,9 @@ let emit_let ctxt at bt ts f =
   let locals = List.map (fun t -> t @@ at) ts in
   emit_instr ctxt at (W.let_ bt locals (get_entities ctxt'.int.instrs))
 
-let emit_func_deferred ctxt : int32 * _ =
+let emit_func_deferred ctxt at : int32 * _ =
   let idx, func = alloc_entity ctxt.int.funcs in
-  idx, fun at ts1' ts2' f ->
+  idx, fun ctxt ts1' ts2' f ->
     let ft = W.(FuncType (ts1', ts2')) in
     let typeidx = emit_type ctxt at W.(FuncDefType ft) in
     let ctxt' = {ctxt with int =
@@ -255,8 +255,8 @@ let emit_func_deferred ctxt : int32 * _ =
     )
 
 let emit_func ctxt at ts1' ts2' f : int32 =
-  let idx, def_func = emit_func_deferred ctxt in
-  def_func at ts1' ts2' f;
+  let idx, def_func = emit_func_deferred ctxt at in
+  def_func ctxt ts1' ts2' f;
   idx
 
 let emit_func_ref ctxt _at idx =

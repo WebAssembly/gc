@@ -221,14 +221,14 @@ let print_env env =
   Printf.printf "\n"
 
 let string_of_type ctxt idx =
-  match Emit.lookup_def_type_opt ctxt idx with
-  | Some dt -> W.string_of_def_type dt
-  | None -> "?"
+  try W.string_of_def_type (Emit.lookup_def_type ctxt idx)
+  with Invalid_argument _ -> "?"
 
 let string_of_field_type ctxt idx i =
-  if Emit.lookup_def_type_opt ctxt idx = None then "?" else
-  let idx' = Emit.lookup_ref_field_type ctxt idx i in
-  Int32.to_string idx' ^ " = " ^ string_of_type ctxt idx'
+  try
+    let idx' = Emit.lookup_ref_field_type ctxt idx i in
+    Int32.to_string idx' ^ " = " ^ string_of_type ctxt idx'
+  with Invalid_argument _ -> "?"
 
 let rec _print_cls ctxt cls =
   let open Printf in
@@ -577,9 +577,6 @@ let default_exp ctxt at t : W.instr' list =
     | T.Inst _ | T.Array _ | T.Func _ | T.Class _ | T.Bot ->
       W.ref_null (lower_heap_type ctxt at t)
   in [instr']
-
-let default_const ctxt at t : W.const =
-  List.map (fun instr' -> instr' @@ at) (default_exp ctxt at t) @@ at
 
 let compile_coerce_block_type ctxt at t =
   match t with
@@ -1382,9 +1379,7 @@ and alloc_funcdec ctxt d =
     let idx =
       match scope with
       | BlockScope | FuncScope -> emit_local ctxt x.at cls_vt
-      | GlobalScope ->
-        let const = W.[ref_null cls_ht @@ d.at] @@ d.at in
-        emit_global ctxt x.at W.Mutable cls_vt const
+      | GlobalScope -> emit_global ctxt x.at W.Mutable cls_vt None
       | ClassScope _ -> nyi d.at "nested class definitions"
       | PreScope -> assert false
     in
@@ -1437,8 +1432,7 @@ and compile_dec pass ctxt d =
 
       | GlobalScope ->
         assert (pass = FullPass);
-        let const = default_const ctxt x.at t in
-        let idx = emit_global ctxt x.at W.Mutable t' const in
+        let idx = emit_global ctxt x.at W.Mutable t' None in
         emit ctxt W.[global_set (idx @@ x.at)];
         DirectLoc idx
 
@@ -1473,8 +1467,7 @@ and compile_dec pass ctxt d =
 
       | GlobalScope ->
         assert (pass = FullPass);
-        let const = default_const ctxt x.at t in
-        let idx = emit_global ctxt x.at W.Mutable t' const in
+        let idx = emit_global ctxt x.at W.Mutable t' None in
         compile_exp ctxt e;
         compile_coerce_value_type ctxt e.at t;
         compile_coerce_null_type ctxt e.at (type_of e) t;
@@ -2052,15 +2045,13 @@ let compile_prog p : W.module_ =
   List.iter (compile_imp ctxt) is;
   ctxt_flush ctxt;
   let t' = lower_value_type ctxt p.at (type_of p) in
-  let const = default_const ctxt p.at (type_of p) in
-  let result_idx = emit_global ctxt p.at W.Mutable t' const in
+  let result_idx = emit_global ctxt p.at W.Mutable t' None in
   let start_idx =
     emit_func ctxt p.at [] [] (fun ctxt _ ->
       if data <> "" then begin
         let seg = emit_passive_data ctxt p.at data in
         let len = int32 (String.length data) in
-        let const = W.[i32_const (0l @@ p.at) @@ p.at] @@ p.at in
-        let dataidx = emit_global ctxt p.at W.Mutable W.i32 const in
+        let dataidx = emit_global ctxt p.at W.Mutable W.i32 None in
         ctxt.ext.data := dataidx;
         emit ctxt W.[
           i32_const (len @@ p.at);

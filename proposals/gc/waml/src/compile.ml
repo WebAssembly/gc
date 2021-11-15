@@ -1096,14 +1096,14 @@ and compile_func_staged ctxt rec_xs f : func_loc * _ * _ =
     match e.it with
     | FunE (p, e') -> flat (p::ps) e'
     | _ ->
-      let fn, def_func = emit_func_deferred ctxt in
+      let fn, def_func = emit_func_deferred ctxt f.at in
       let envflds, fixups = lower_clos_env ctxt f.at vars rec_xs in
       let ps = List.rev ps in
       let arity = List.length ps in
       let _code, closN, closNenv = lower_clos_type ctxt f.at arity envflds in
       let def ctxt =
         let argts, argv_opt = lower_param_types ctxt f.at arity in
-        def_func f.at W.(ref_ closN :: argts) [absref] (fun ctxt _ ->
+        def_func ctxt W.(ref_ closN :: argts) [absref] (fun ctxt _ ->
           let ctxt = enter_scope ctxt LocalScope in
           let clos = emit_param ctxt f.at in
           let args = List.map (fun _ -> emit_param ctxt f.at) argts in

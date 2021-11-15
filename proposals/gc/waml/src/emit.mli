@@ -65,9 +65,9 @@ val emit_let : 'a ctxt -> W.region -> W.block_type -> W.value_type list ->
 val emit_func :
   'a ctxt -> W.region -> W.value_type list -> W.value_type list ->
   ('a ctxt -> int32 -> unit) -> int32
-val emit_func_deferred : 'a ctxt ->
+val emit_func_deferred : 'a ctxt -> W.region ->
   int32 *
-  (W.region -> W.value_type list -> W.value_type list -> ('a ctxt -> int32 -> unit) -> unit)
+  ('a ctxt -> W.value_type list -> W.value_type list -> ('a ctxt -> int32 -> unit) -> unit)
 
 val emit_func_ref : 'a ctxt -> W.region -> int32 -> unit
 val emit_start : 'a ctxt -> W.region -> int32 -> unit

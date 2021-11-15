@@ -6,19 +6,19 @@ let (@@) = W.Source.(@@)
 (* Memory *)
 
 let compile_mem ctxt : int32 =
-  Emit.lookup_intrinsic ctxt "mem" (fun () ->
+  Emit.lookup_intrinsic ctxt "mem" (fun _ ->
     let at = Prelude.region in
     emit_memory ctxt at 1l None
   )
 
 let compile_mem_ptr ctxt : int32 =
-  Emit.lookup_intrinsic ctxt "mem_ptr" (fun () ->
+  Emit.lookup_intrinsic ctxt "mem_ptr" (fun _ ->
     let at = Prelude.region in
-    emit_global ctxt at W.Mutable W.i32 W.([i32_const (0l @@ at) @@ at] @@ at)
+    emit_global ctxt at W.Mutable W.i32 None
   )
 
 let compile_mem_alloc ctxt : int32 =
-  Emit.lookup_intrinsic ctxt "mem_alloc" (fun () ->
+  Emit.lookup_intrinsic ctxt "mem_alloc" (fun _ ->
     let at = Prelude.region in
     emit_func ctxt at W.[i32] W.[i32] (fun ctxt _ ->
       let argidx = emit_param ctxt at in
@@ -64,7 +64,7 @@ let compile_text_type ctxt : int32 =
 
 
 let compile_text_new ctxt : int32 =
-  Emit.lookup_intrinsic ctxt "text_new" (fun () ->
+  Emit.lookup_intrinsic ctxt "text_new" (fun _ ->
     let at = Prelude.region in
     let typeidx = compile_text_type ctxt in
     let t' = W.(RefType (Nullable, DefHeapType (SynVar typeidx))) in
@@ -101,7 +101,7 @@ let compile_text_new ctxt : int32 =
   )
 
 let compile_text_cpy ctxt : int32 =
-  Emit.lookup_intrinsic ctxt "text_cpy" (fun () ->
+  Emit.lookup_intrinsic ctxt "text_cpy" (fun _ ->
     let at = Prelude.region in
     let typeidx = compile_text_type ctxt in
     let t' = W.(RefType (Nullable, DefHeapType (SynVar typeidx))) in
@@ -138,7 +138,7 @@ let compile_text_cpy ctxt : int32 =
   )
 
 let compile_text_cat ctxt : int32 =
-  Emit.lookup_intrinsic ctxt "text_cat" (fun () ->
+  Emit.lookup_intrinsic ctxt "text_cat" (fun _ ->
     let text_cpy = compile_text_cpy ctxt in
     let at = Prelude.region in
     let typeidx = compile_text_type ctxt in
@@ -176,7 +176,7 @@ let compile_text_cat ctxt : int32 =
   )
 
 let compile_text_eq ctxt : int32 =
-  Emit.lookup_intrinsic ctxt "text_eq" (fun () ->
+  Emit.lookup_intrinsic ctxt "text_eq" (fun _ ->
     let at = Prelude.region in
     let typeidx = compile_text_type ctxt in
     let t' = W.(RefType (Nullable, DefHeapType (SynVar typeidx))) in
@@ -235,7 +235,7 @@ let compile_rtt_type ctxt : int32 =
   emit_type ctxt Prelude.region W.(ArrayDefType (ArrayType rtt_ft))
 
 let compile_rtt_eq ctxt : int32 =
-  Emit.lookup_intrinsic ctxt "rtt_eq" (fun () ->
+  Emit.lookup_intrinsic ctxt "rtt_eq" (fun _ ->
     let at = Prelude.region in
     let typeidx = compile_rtt_type ctxt in
     let rtt_t' = W.(RefType (Nullable, DefHeapType (SynVar typeidx))) in
