@@ -64,7 +64,7 @@ let compile_mem_alloc ctxt : int32 =
 (* Text *)
 
 let lower_text_type ctxt : int32 =
-  emit_type ctxt Prelude.region W.(type_array (field_mut_pack i8))
+  emit_type ctxt Prelude.region W.(sub [] (array (field_mut_pack i8)))
 
 
 let compile_text_new ctxt : int32 =
@@ -329,8 +329,7 @@ let rec compile_func_apply arity ctxt =
               (* Downcast closure type *)
               emit ctxt W.[
                 local_get (clos @@ at);
-                rtt_canon (anyclos @@ at);
-                rtt_sub (closN @@ at);
+                rtt_canon (closN @@ at);
                 ref_cast;
               ];
               (* Bind result to local *)
@@ -363,8 +362,7 @@ let rec compile_func_apply arity ctxt =
         (* Downcast closure type *)
         emit ctxt W.[
           local_get (clos @@ at);
-          rtt_canon (anyclos @@ at);
-          rtt_sub (closN @@ at);
+          rtt_canon (closN @@ at);
           ref_cast;
         ];
         (* Bind result to local *)
@@ -393,9 +391,7 @@ let rec compile_func_apply arity ctxt =
       ];
       compile_load_args ctxt at 0 arity 0l arg0 argv_opt;
       emit ctxt W.[
-        rtt_canon (anyclos @@ at);
-        rtt_sub (clos1 @@ at);
-        rtt_sub (curriedN @@ at);
+        rtt_canon (curriedN @@ at);
         struct_new (curriedN @@ at);
       ]
     )
@@ -420,9 +416,7 @@ and compile_func_curry arity ctxt =
       (* Downcast generic to specific closure type *)
       emit ctxt W.[
         local_get (clos @@ at);
-        rtt_canon (anyclos @@ at);
-        rtt_sub (clos1 @@ at);
-        rtt_sub (curriedN @@ at);
+        rtt_canon (curriedN @@ at);
         ref_cast;
       ];
       (* Bind result to local *)
@@ -525,8 +519,7 @@ and compile_func_curry arity ctxt =
               (* All arguments collected, perform call *)
               local_get (0l @@ at);
               struct_get (curriedN @@ at) (curry_fun_idx @@ at);
-              rtt_canon (anyclos @@ at);
-              rtt_sub (closNP @@ at);
+              rtt_canon (closNP @@ at);
               ref_cast;
             ];
             (* Bind closure at specific type *)
@@ -550,9 +543,7 @@ and compile_func_curry arity ctxt =
             struct_get (curriedN @@ at) (curry_fun_idx @@ at);
             local_get (dst +% 1l @@ at);
             ref_as_non_null;
-            rtt_canon (anyclos @@ at);
-            rtt_sub (clos1 @@ at);
-            rtt_sub (curriedN @@ at);
+            rtt_canon (curriedN @@ at);
             struct_new (curriedN @@ at);
           ]
         end

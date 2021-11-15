@@ -87,7 +87,7 @@ let list subst s xs = List.map (subst s) xs
 
 let var_type s = function
   | SynVar x -> SynVar (lookup s.stype x)
-  | SemVar _ -> assert false
+  | _ -> assert false
 
 let num_type s = function
   | (I32Type | I64Type | F32Type | F64Type) as t -> t
@@ -96,7 +96,7 @@ let heap_type s = function
   | ( AnyHeapType | EqHeapType | I31HeapType | DataHeapType
     | FuncHeapType | ExternHeapType | BotHeapType ) as t -> t
   | DefHeapType x -> DefHeapType (var_type s x)
-  | RttHeapType (x, no) -> RttHeapType (var_type s x, no)
+  | RttHeapType x -> RttHeapType (var_type s x)
 
 let ref_type s = function
   | (nul, t) -> (nul, heap_type s t)
@@ -119,10 +119,17 @@ let array_type s (ArrayType ft) = ArrayType (field_type s ft)
 let func_type s (FuncType (ts1, ts2)) =
   FuncType (list value_type s ts1, list value_type s ts2)
 
-let def_type s = function
+let str_type s = function
   | StructDefType st -> StructDefType (struct_type s st)
   | ArrayDefType at -> ArrayDefType (array_type s at)
   | FuncDefType ft -> FuncDefType (func_type s ft)
+
+let sub_type s = function
+  | SubType (xs, st) -> SubType (List.map (var_type s) xs, str_type s st)
+
+let def_type s = function
+  | DefType st -> DefType (sub_type s st)
+  | RecDefType sts -> RecDefType (List.map (sub_type s) sts)
 
 let global_type s (GlobalType (t, mut)) = GlobalType (value_type s t, mut)
 let table_type s (TableType (lim, t)) = TableType (lim, ref_type s t)
@@ -155,7 +162,6 @@ and instr' s = function
   | ArraySet x -> ArraySet (type_idx s x)
   | ArrayLen x -> ArrayLen (type_idx s x)
   | RttCanon x -> RttCanon (type_idx s x)
-  | RttSub x -> RttSub (type_idx s x)
   | Const c -> Const c
   | Test op -> Test op
   | Compare op -> Compare op

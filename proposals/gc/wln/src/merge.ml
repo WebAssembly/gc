@@ -128,7 +128,7 @@ let rec merge_imports (env : env) file m ts ims cnt ims_out : env * counts * imp
           let it =
             sem_extern_type ts (extern_type_of_import_type (import_type_of m im)) in
           let dts = List.map Wasm.Lib.Promise.value ts in
-          if not (Wasm.Match.match_extern_type dts [] et it) then
+          if not (Wasm.Match.match_extern_type dts et it) then
             error file (
               "imported module \"" ^ mname ^ "\" " ^
               "exports item \"" ^ iname ^ "\" with incompatible type\n" ^
@@ -155,13 +155,28 @@ let rec merge_imports (env : env) file m ts ims cnt ims_out : env * counts * imp
 
 let rec add_range s x y = function
   | [] -> s
-  | _::defs' -> add_range (Subst.Map.add x y s) (x +% 1l) (y +% 1l) defs'
+  | _::defs -> add_range (Subst.Map.add x y s) (x +% 1l) (y +% 1l) defs
+
+let rec add_types_range s x y = function
+  | [] -> s
+  | {it = DefType _; _}::dts ->
+    add_types_range (Subst.Map.add x y s) (x +% 1l) (y +% 1l) dts
+  | {it = RecDefType []; at}::dts ->
+    add_types_range s x y dts
+  | {it = RecDefType (st::sts); at}::dts ->
+    add_types_range (Subst.Map.add x y s) (x +% 1l) (y +% 1l)
+      ({it = RecDefType sts; at}::dts)
+
+let rec num_types = function
+  | [] -> 0l
+  | {it = DefType _; _}::dts -> 1l +% num_types dts
+  | {it = RecDefType sts; _}::dts -> Wasm.Lib.List32.length sts +% num_types dts
 
 let merge_defs (env : env) cnt m : env =
   let open Subst in
   let {subst; binds; _} = env in
   let subst' =
-    { stype = add_range subst.stype 0l binds.ntypes m.it.types;
+    { stype = add_types_range subst.stype 0l binds.ntypes m.it.types;
       sfunc = add_range subst.sfunc cnt.nfuncs binds.nfuncs m.it.funcs;
       sglobal = add_range subst.sglobal cnt.nglobals binds.nglobals m.it.globals;
       stable = add_range subst.stable cnt.ntables binds.ntables m.it.tables;
@@ -173,7 +188,7 @@ let merge_defs (env : env) cnt m : env =
     }
   in
   let binds' =
-    { ntypes = binds.ntypes +% Wasm.Lib.List32.length m.it.types;
+    { ntypes = binds.ntypes +% num_types m.it.types;
       nfuncs = binds.nfuncs +% Wasm.Lib.List32.length m.it.funcs;
       nglobals = binds.nglobals +% Wasm.Lib.List32.length m.it.globals;
       ntables = binds.ntables +% Wasm.Lib.List32.length m.it.tables;

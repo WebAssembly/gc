@@ -20,6 +20,10 @@ val instr : Ast.instr -> t
 val block : Ast.instr list -> t
 val const : Ast.const -> t
 
+val str_type : Types.str_type -> t
+val sub_type : Types.sub_type -> t
+val def_type : Types.def_type -> t
+
 val type_ : Ast.type_ -> t
 val global : Ast.global -> t
 val func : Ast.func -> t

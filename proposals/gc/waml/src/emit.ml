@@ -271,8 +271,23 @@ let emit_start ctxt at idx =
 
 (* Resolve type recursion *)
 
-let recify x sss =
-  
+let compact s =
+  Scc.IntSet.(min_elt s + cardinal s = max_elt s + 1)
+
+let recify sts =
+  let open W.Source in
+  let sta = Array.of_list sts in
+  let sccs = Scc.sccs_of_subtypes (Array.map W.Source.it sta) in
+  assert (List.for_all compact sccs);
+  List.map (fun scc ->
+    match Scc.IntSet.elements scc with
+    | [x] when not Wasm.Free.(Set.mem (i32 x) (sub_type sta.(x).it).types) ->
+      W.DefType sta.(x).it @@ sta.(x).at
+    | xs ->
+      let left = sta.(List.hd xs).at.left in
+      let right = sta.(Wasm.Lib.List.last xs).at.left in
+      W.RecDefType (List.map (fun x -> sta.(x).it) xs) @@ {left; right}
+  ) sccs
 
 
 (* Generation *)
@@ -280,7 +295,7 @@ let recify x sss =
 let gen_module ctxt at : W.module_ =
   { W.empty_module with
     W.start = !(ctxt.int.start);
-    W.types = recify 0l (get_entities ctxt.int.types);
+    W.types = recify (get_entities ctxt.int.types);
     W.globals = get_entities ctxt.int.globals;
     W.funcs = get_entities ctxt.int.funcs;
     W.imports = get_entities ctxt.int.imports;

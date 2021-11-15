@@ -30,8 +30,8 @@ val lookup_intrinsic : 'a ctxt -> string -> ((int32 -> unit) -> int32) -> int32
 
 (* Emitter *)
 
-val emit_type : 'a ctxt -> W.region -> W.def_type -> int32
-val emit_type_deferred : 'a ctxt -> W.region -> int32 * (W.def_type -> unit)
+val emit_type : 'a ctxt -> W.region -> W.sub_type -> int32
+val emit_type_deferred : 'a ctxt -> W.region -> int32 * (W.sub_type -> unit)
 
 val emit_func_import :
   'a ctxt -> W.region -> string -> string -> W.func_type -> int32
