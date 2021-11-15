@@ -1356,9 +1356,10 @@ and need_coerce_mod ctxt s1 s2 =
     assert false
 
 and need_coerce_val ctxt t1 t2 =
-  let t1' = lower_value_type ctxt no_region (struct_rep ()) (T.as_mono t1) in
-  let t2' = lower_value_type ctxt no_region (struct_rep ()) (T.as_mono t2) in
-  not (W.Match.match_value_type (Emit.lookup_types ctxt) [] t1' t2')
+  match T.norm (T.as_mono t1), T.norm (T.as_mono t2) with
+  | T.Var _, T.Var _ -> false
+  | T.Var _, _ | _, T.Var _ -> true
+  | _, _ -> false
 
 
 (* Declarations *)
