@@ -58,7 +58,7 @@ let print_envs envs =
   List.iter (fun (_, env) -> print_env !env) envs
 
 let string_of_type ctxt idx =
-  W.string_of_def_type (Emit.lookup_def_type ctxt idx)
+  W.string_of_ctx_type (Emit.lookup_ctx_type ctxt idx)
 
 let string_of_field_type ctxt idx i =
   let idx' = Emit.lookup_ref_field_type ctxt idx i in
@@ -540,7 +540,7 @@ let compile_load_env ctxt clos closN closNenv vars envflds at =
 let compile_alloc_clos ctxt fn arity vars rec_xs closN closNenv at =
   let emit ctxt = List.iter (emit_instr ctxt at) in
   let anyclos = lower_anyclos_type ctxt at in
-  let rttidx = lower_rtt_global ctxt at closN [anyclos] in
+  let rttidx = lower_rtt_global ctxt at closNenv in
   emit_func_ref ctxt at fn;
   emit ctxt W.[
     i32_const (int32 arity @@ at);
@@ -556,11 +556,6 @@ let compile_alloc_clos ctxt fn arity vars rec_xs closN closNenv at =
   emit ctxt W.[
     global_get (rttidx @@ at);
   ];
-  if vars <> empty then begin
-    emit ctxt W.[
-      rtt_sub (closNenv @@ at);
-    ]
-  end;
   emit ctxt W.[
     struct_new (closNenv @@ at);
   ]

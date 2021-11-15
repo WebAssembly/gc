@@ -109,7 +109,7 @@ TESTS =		$(TESTFILES:%.$(EXT)=%)
 
 .PHONY:		test runtimetest evaltest debugtest wasmtest wasmntest nodetest linktest
 
-test:	runtimetest evaltest wasmtest wasmntest nodetest linktest
+test:	runtimetest evaltest wasmtest wasmntest linktest # nodetest
 
 evaltest:		titletest/Test-eval $(TESTFILES:%.$(EXT)=evaltest/%)
 debugtest:	titletest/Test-debug $(TESTFILES:%.$(EXT)=debugtest/%)

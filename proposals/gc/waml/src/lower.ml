@@ -152,7 +152,7 @@ and lower_heap_type ctxt at t : W.heap_type =
   | T.Data t1 ->
     (match T.as_fun_flat t1 with
     | [], _ -> W.i31
-    | ts, _ -> W.rtt_n (lower_con_type ctxt at ts) 1l
+    | ts, _ -> W.rtt (lower_con_type ctxt at ts)
     )
   | t -> W.(type_ (lower_var_type ctxt at t))
 
@@ -160,20 +160,20 @@ and lower_con_type ctxt at ts : int32 =
   if ts = [] then -1l else
   let vts = List.map (lower_value_type ctxt at field_rep) ts in
   let fts = List.map W.field vts in
-  emit_type ctxt at W.(type_struct (field i32 :: fts))
+  emit_type ctxt at W.(type_def (struct_ (field i32 :: fts)))
 
 and lower_var_type ctxt at t : int32 =
   match T.norm t with
   | T.Float ->
-    emit_type ctxt at W.(type_struct [field f64])
+    emit_type ctxt at W.(type_def (struct_ [field f64]))
   | T.Text ->
-    emit_type ctxt at W.(type_array (field_mut_pack i8))
+    emit_type ctxt at W.(type_def (array (field_mut_pack i8)))
   | T.Tup ts ->
     let ts = List.map (lower_value_type ctxt at field_rep) ts in
-    emit_type ctxt at W.(type_struct (List.map W.field ts))
+    emit_type ctxt at W.(type_def (struct_ (List.map W.field ts)))
   | T.Ref t1 ->
     let t1' = lower_value_type ctxt at field_rep t1 in
-    emit_type ctxt at W.(type_struct [field_mut t1'])
+    emit_type ctxt at W.(type_def (struct_ [field_mut t1']))
   | T.Fun (_, _, arity_opt) ->
     (match !arity_opt with
     | T.KnownArity arity -> snd (lower_func_type ctxt at arity)
@@ -183,7 +183,7 @@ and lower_var_type ctxt at t : int32 =
   | _ -> Printf.printf "%s\n%!" (T.string_of_typ t); assert false
 
 and lower_anyclos_type ctxt at : int32 =
-  emit_type ctxt at W.(type_struct [field i32])
+  emit_type ctxt at W.(type_def (struct_ [field i32]))
 
 and lower_func_type ctxt at arity : int32 * int32 =
   let argts, _ = lower_param_types ctxt at arity in
@@ -192,9 +192,9 @@ and lower_func_type ctxt at arity : int32 * int32 =
   | Some {codeidx; closidx; _} -> codeidx, closidx
   | None ->
     let code, def_code = emit_type_deferred ctxt at in
-    let closdt = W.(type_struct [field i32; field (ref_ code)]) in
+    let closdt = W.(type_def (struct_ [field i32; field (ref_ code)])) in
     let clos = emit_type ctxt at closdt in
-    let codedt = W.(type_func (ref_ clos :: argts) [absref]) in
+    let codedt = W.(type_def (func (ref_ clos :: argts) [absref])) in
     def_code codedt;
     let clos_idxs = {codeidx = code; closidx = clos; envidx = clos} in
     ctxt.ext.clostypes := ClosMap.add key clos_idxs !(ctxt.ext.clostypes);
@@ -207,7 +207,7 @@ and lower_clos_type ctxt at arity flds : int32 * int32 * int32 =
   | Some {codeidx; closidx; envidx} -> codeidx, closidx, envidx
   | None ->
     let code, clos = lower_func_type ctxt at arity in
-    let closdt = W.(type_struct (field i32 :: field (ref_ code) :: flds)) in
+    let closdt = W.(type_def (struct_ (field i32 :: field (ref_ code) :: flds))) in
     let clos_env = emit_type ctxt at closdt in
     let clos_idxs = {codeidx = code; closidx = clos; envidx = clos_env} in
     ctxt.ext.clostypes := ClosMap.add key clos_idxs !(ctxt.ext.clostypes);
@@ -217,7 +217,7 @@ and lower_param_types ctxt at arity : W.value_type list * int32 option =
   if arity <= max_func_arity then
     List.init arity (fun _ -> absref), None
   else
-    let argv = emit_type ctxt at W.(type_array (field_mut absref)) in
+    let argv = emit_type ctxt at W.(type_def (array (field_mut absref))) in
     W.[ref_ argv], Some argv
 
 and lower_block_type ctxt at rep t : W.block_type =
@@ -241,7 +241,7 @@ and lower_str_type ctxt at str : W.value_type * int32 =
     fst (lower_sig_type ctxt at s.Source.it)) (E.mods str) in
   let val_ts = List.map (fun (_, pt) ->
     lower_value_type ctxt at (struct_rep ()) (T.as_mono pt.Source.it)) (E.vals str) in
-  let x = emit_type ctxt at W.(type_struct (List.map field (mod_ts @ val_ts))) in
+  let x = emit_type ctxt at W.(type_def (struct_ (List.map field (mod_ts @ val_ts)))) in
   W.ref_ x, x
 
 and lower_fct_type ctxt at s1 s2 : int32 * int32 =
@@ -252,9 +252,9 @@ and lower_fct_type ctxt at s1 s2 : int32 * int32 =
   | Some {codeidx; closidx; _} -> codeidx, closidx
   | None ->
     let code, def_code = emit_type_deferred ctxt at in
-    let closdt = W.(type_struct [field i32; field (ref_ code)]) in
+    let closdt = W.(type_def (struct_ [field i32; field (ref_ code)])) in
     let clos = emit_type ctxt at closdt in
-    let codedt = W.(type_func [ref_ clos; t1] [t2]) in
+    let codedt = W.(type_def (func [ref_ clos; t1] [t2])) in
     def_code codedt;
     let clos_idxs = {codeidx = code; closidx = clos; envidx = clos} in
     ctxt.ext.clostypes := ClosMap.add key clos_idxs !(ctxt.ext.clostypes);
@@ -268,7 +268,7 @@ let lower_fct_clos_type ctxt at s1 s2 flds : int32 * int32 * int32 =
   | Some {codeidx; closidx; envidx} -> codeidx, closidx, envidx
   | None ->
     let code, clos = lower_fct_type ctxt at s1 s2 in
-    let closdt = W.(type_struct (field i32 :: field (ref_ code) :: flds)) in
+    let closdt = W.(type_def (struct_ (field i32 :: field (ref_ code) :: flds))) in
     let clos_env = emit_type ctxt at closdt in
     let clos_idxs = {codeidx = code; closidx = clos; envidx = clos_env} in
     ctxt.ext.clostypes := ClosMap.add key clos_idxs !(ctxt.ext.clostypes);
@@ -299,19 +299,13 @@ let lower_clos_env ctxt at vars rec_xs
 
 (* RTTs *)
 
-let rec lower_rtt_global ctxt xat typeidx supidxs : int32 =
+let lower_rtt_global ctxt xat typeidx : int32 =
   match IdxMap.find_opt typeidx !(ctxt.ext.rttglobals) with
   | Some idx -> idx
   | None ->
     let open W.Source in
-    let instrs =
-      match supidxs with
-      | [] -> W.[rtt_canon (typeidx @@ xat) @@ xat]
-      | typeidx'::supidxs' ->
-        let idx' = lower_rtt_global ctxt xat typeidx' supidxs' in
-        W.[global_get (idx' @@ xat) @@ xat; rtt_sub (typeidx @@ xat) @@ xat]
-    in
-    let t = W.(rttref_n typeidx (Int32.of_int (List.length supidxs))) in
-    let idx = emit_global ctxt xat W.Immutable t (Some (instrs @@ xat)) in
+    let const = W.[rtt_canon (typeidx @@ xat) @@ xat] @@ xat in
+    let t = W.(rttref typeidx) in
+    let idx = emit_global ctxt xat W.Immutable t (Some const) in
     ctxt.ext.rttglobals := IdxMap.add typeidx idx !(ctxt.ext.rttglobals);
     idx

@@ -20,9 +20,9 @@ val make_ctxt : 'a -> 'a ctxt
 
 (* Lookup *)
 
-val lookup_types : 'a ctxt -> W.def_type list
+val lookup_types : 'a ctxt -> W.ctx_type list
 
-val lookup_def_type : 'a ctxt -> int32 -> W.def_type
+val lookup_sub_type : 'a ctxt -> int32 -> W.sub_type
 val lookup_func_type : 'a ctxt -> int32 -> W.func_type
 val lookup_param_type : 'a ctxt -> int32 -> int32 -> W.value_type
 val lookup_field_type : 'a ctxt -> int32 -> int32 -> W.value_type

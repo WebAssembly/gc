@@ -38,9 +38,15 @@ let field_mut t = FieldType (ValueStorageType t, Mutable)
 let field_pack t = FieldType (PackedStorageType t, Immutable)
 let field_mut_pack t = FieldType (PackedStorageType t, Mutable)
 
-let type_struct fts = StructDefType (StructType fts)
-let type_array ft = ArrayDefType (ArrayType ft)
-let type_func ts1 ts2 = FuncDefType (FuncType (ts1, ts2))
+let struct_ fts = StructDefType (StructType fts)
+let array ft = ArrayDefType (ArrayType ft)
+let func ts1 ts2 = FuncDefType (FuncType (ts1, ts2))
+
+let sub xs st = SubType (xs, st)
+let type_def st = DefType (sub [] st)
+let type_sub xs st = DefType (sub xs st)
+let type_rec sts = RecDefType (List.map (sub []) sts)
+let type_rec_sub xssts = RecDefType (List.map (fun (xs, st) -> sub xs st) xssts)
 
 let void = ValBlockType None
 let result t = ValBlockType (Some t)
