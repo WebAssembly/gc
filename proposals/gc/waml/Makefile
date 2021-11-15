@@ -162,7 +162,7 @@ nodetest/%:		$(OPT)
 		  else echo '**' Skipping $(@F).$(EXT); \
 		fi
 
-linktest/%:		$(WASMDIR)/wasm $(WASMLINK)
+linktest/%:		$(WASMDIR)/wasm $(WASMLINK) $(RUNTIME).wasm
 		@ if ! grep -q "@FAIL-LINK" $(TESTDIR)/$(@F).$(WASMLINK); \
 		  then \
 		    echo $(@F).$(WASMLINK); \
