@@ -1269,7 +1269,7 @@ and compile_mod_func_opt ctxt m : func_loc option =
 
 
 and compile_coerce_mod ctxt s1 s2 at =
-  if need_coerce_mod ctxt s1 s2 then begin
+  if need_coerce_mod s1 s2 then begin
     let emit ctxt = List.iter (emit_instr ctxt at) in
     match s1, s2 with
     | T.Str (_, str1), T.Str (_, str2) ->
@@ -1344,25 +1344,25 @@ and compile_coerce_mod ctxt s1 s2 at =
       assert false
   end
 
-and need_coerce_mod ctxt s1 s2 =
+and need_coerce_mod s1 s2 =
   match s1, s2 with
   | T.Str (_, str1), T.Str (_, str2) ->
     E.cardinal_vals str1 > E.cardinal_vals str2 ||
     E.cardinal_mods str1 > E.cardinal_mods str2 ||
-    List.exists2 (fun (x1, t1) (x2, t2) -> need_coerce_val ctxt t1.it t2.it)
+    List.exists2 (fun (x1, t1) (x2, t2) -> need_coerce_val t1.it t2.it)
       (E.vals str1) (E.vals str2) ||
-    List.exists2 (fun (x1, s1) (x2, s2) -> need_coerce_mod ctxt s1.it s2.it)
+    List.exists2 (fun (x1, s1) (x2, s2) -> need_coerce_mod s1.it s2.it)
       (E.mods str1) (E.mods str2)
   | T.Fct (_, s11, s12), T.Fct (_, s21, s22) ->
-    need_coerce_mod ctxt s21 s11 || need_coerce_mod ctxt s12 s22 ||
+    need_coerce_mod s21 s11 || need_coerce_mod s12 s22 ||
     (* The following would be unnecessary if we had Wasm function subtyping *)
-    need_coerce_mod ctxt s11 s21 || need_coerce_mod ctxt s22 s12
+    need_coerce_mod s11 s21 || need_coerce_mod s22 s12
   | _ ->
     assert false
 
-and need_coerce_val ctxt t1 t2 =
+and need_coerce_val t1 t2 =
   match T.norm (T.as_mono t1), T.norm (T.as_mono t2) with
-  | T.Var _, T.Var _ -> false
+  | (T.Var _ | T.Tup []), (T.Var _ | T.Tup []) -> false
   | T.Var _, _ | _, T.Var _ -> true
   | _, _ -> false
 
