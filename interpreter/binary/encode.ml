@@ -97,7 +97,7 @@ struct
 
   let var_type var = function
     | SynVar x -> var x
-    | SemVar _ -> assert false
+    | _ -> assert false
 
   let num_type = function
     | I32Type -> s7 (-0x01)
@@ -113,16 +113,14 @@ struct
     | FuncHeapType -> s7 (-0x10)
     | ExternHeapType -> s7 (-0x11)
     | DefHeapType x -> var_type s33 x
-    | RttHeapType (x, None) -> s7 (-0x18); var_type u32 x
-    | RttHeapType (x, Some n) -> s7 (-0x17); s32 n; var_type u32 x
+    | RttHeapType x -> s7 (-0x18); var_type u32 x
     | BotHeapType -> assert false
 
   let ref_type = function
     | (Nullable, FuncHeapType) -> s7 (-0x10)
     | (Nullable, ExternHeapType) -> s7 (-0x11)
     | (Nullable, t) -> s7 (-0x14); heap_type t
-    | (NonNullable, RttHeapType (x, None)) -> s7 (-0x18); var_type u32 x
-    | (NonNullable, RttHeapType (x, Some n)) -> s7 (-0x17); s32 n; var_type u32 x
+    | (NonNullable, RttHeapType x) -> s7 (-0x18); var_type u32 x
     | (NonNullable, t) -> s7 (-0x15); heap_type t
 
   let value_type = function
@@ -151,10 +149,18 @@ struct
   let func_type = function
     | FuncType (ts1, ts2) -> vec value_type ts1; vec value_type ts2
 
-  let def_type = function
+  let str_type = function
     | StructDefType st -> s7 (-0x21); struct_type st
     | ArrayDefType at -> s7 (-0x22); array_type at
     | FuncDefType ft -> s7 (-0x20); func_type ft
+
+  let sub_type = function
+    | SubType ([], st) -> str_type st
+    | SubType (xs, st) -> s7 (-0x30); vec (var_type u32) xs; str_type st
+
+  let def_type = function
+    | DefType st -> sub_type st
+    | RecDefType sts -> s7 (-0x31); vec sub_type sts
 
   let limits uN {min; max} =
     bool (max <> None); uN min; opt uN max
@@ -186,7 +192,7 @@ struct
     | ValBlockType None -> s33 (-0x40l)
     | ValBlockType (Some t) -> value_type t
     | VarBlockType (SynVar x) -> s33 x
-    | VarBlockType (SemVar _) -> assert false
+    | VarBlockType _ -> assert false
 
   let local (t, n) = len n; value_type t.it
   let locals locs =
@@ -333,7 +339,6 @@ struct
     | ArrayLen x -> op 0xfb; op 0x17; var x
 
     | RttCanon x -> op 0xfb; op 0x30; var x
-    | RttSub x -> op 0xfb; op 0x31; var x
 
     | Const {it = I32 c; _} -> op 0x41; s32 c
     | Const {it = I64 c; _} -> op 0x42; s64 c

@@ -22,7 +22,8 @@ let table =
   Table.alloc (TableType ({min = 10l; max = Some 20l}, (Nullable, FuncHeapType)))
     (NullRef FuncHeapType)
 let memory = Memory.alloc (MemoryType {min = 1l; max = Some 2l})
-let func f ft = Func.alloc_host (Types.alloc (FuncDefType ft)) (f ft)
+let func_type ft = Types.alloc (CtxType (SubType ([], FuncDefType ft)))
+let func f ft = Func.alloc_host (func_type ft) (f ft)
 
 let print_value v =
   Printf.printf "%s : %s\n"

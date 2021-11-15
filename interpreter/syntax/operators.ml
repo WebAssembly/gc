@@ -18,8 +18,7 @@ let data = DataHeapType
 let func = FuncHeapType
 let extern = ExternHeapType
 let type_ x = DefHeapType (SynVar x)
-let rtt x = RttHeapType (SynVar x, None)
-let rtt_n x n = RttHeapType (SynVar x, Some n)
+let rtt x = RttHeapType (SynVar x)
 
 let ref_heap ht = RefType (NonNullable, ht)
 let ref_null_heap ht = RefType (Nullable, ht)
@@ -31,7 +30,6 @@ let i31ref = ref_null_heap i31
 let dataref = ref_null_heap data
 let funcref = ref_null_heap func
 let rttref x = ref_heap (rtt x)
-let rttref_n x n = ref_heap (rtt_n x n)
 
 let i8 = Pack8
 let i16 = Pack16
@@ -188,7 +186,6 @@ let array_set x = ArraySet x
 let array_len x = ArrayLen x
 
 let rtt_canon x = RttCanon x
-let rtt_sub x = RttSub x
 
 let i32_clz = Unary (I32 I32Op.Clz)
 let i32_ctz = Unary (I32 I32Op.Ctz)
