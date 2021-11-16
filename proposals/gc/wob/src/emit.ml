@@ -95,9 +95,6 @@ let make_ctxt ext = {ext; int = make_internal ()}
 
 (* Lookup *)
 
-let lookup_def_type_opt ctxt idx : W.def_type option =
-  Option.map W.Source.it !(W.Lib.List32.nth (List.rev ctxt.int.types.list) idx)
-
 let lookup_def_type ctxt idx : W.def_type =
   (Option.get !(W.Lib.List32.nth (List.rev ctxt.int.types.list) idx)).W.Source.it
 
@@ -129,8 +126,15 @@ let lookup_intrinsic ctxt name f : int32 =
   match Intrinsics.find_opt name !(ctxt.int.intrinsics) with
   | Some idx -> idx
   | None ->
-    let idx = f () in
-    ctxt.int.intrinsics := Intrinsics.add name idx !(ctxt.int.intrinsics);
+    let fwd = ref (-1l) in
+    let idx = f (fun idx ->
+        ctxt.int.intrinsics := Intrinsics.add name idx !(ctxt.int.intrinsics);
+        fwd := idx
+      )
+    in
+    assert (!fwd = -1l || !fwd = idx);
+    if !fwd = -1l then
+      ctxt.int.intrinsics := Intrinsics.add name idx !(ctxt.int.intrinsics);
     idx
 
 
@@ -184,9 +188,21 @@ let emit_param ctxt at : int32 =
 let emit_local ctxt at t' : int32 =
   emit_entity ctxt.int.locals (t' @@ at)
 
-let emit_global ctxt at mut t' ginit : int32 =
+let emit_global ctxt at mut t' ginit_opt : int32 =
   let gtype = W.GlobalType (t', mut) in
-  emit_entity ctxt.int.globals (W.{gtype; ginit} @@ at)
+  let ginit =
+    match ginit_opt with
+    | Some ginit -> ginit
+    | None ->
+      match t' with
+      | W.(NumType I32Type) -> W.[i32_const (0l @@ at) @@ at] @@ at
+      | W.(NumType I64Type) -> W.[i64_const (0L @@ at) @@ at] @@ at
+      | W.(NumType F32Type) -> W.[f32_const (F32.of_float 0.0 @@ at) @@ at] @@ at
+      | W.(NumType F64Type) -> W.[f64_const (F64.of_float 0.0 @@ at) @@ at] @@ at
+      | W.(RefType (Nullable, ht)) -> W.[ref_null ht @@ at] @@ at
+      | W.(RefType (NonNullable, _)) -> assert false
+      | W.BotType -> assert false
+  in emit_entity ctxt.int.globals (W.{gtype; ginit} @@ at)
 
 let emit_memory ctxt at min max : int32 =
   let mtype = W.(MemoryType {min; max}) in
@@ -223,9 +239,7 @@ let emit_let ctxt at bt ts f =
   let locals = List.map (fun t -> t @@ at) ts in
   emit_instr ctxt at (W.let_ bt locals (get_entities ctxt'.int.instrs))
 
-let emit_func_deferred ctxt at
-  : int32 * ('a ctxt -> W.value_type list -> W.value_type list ->
-('a ctxt -> int32 -> unit) -> unit) =
+let emit_func_deferred ctxt at : int32 * _ =
   let idx, func = alloc_entity ctxt.int.funcs in
   idx, fun ctxt ts1' ts2' f ->
     let ft = W.(FuncType (ts1', ts2')) in
@@ -241,8 +255,8 @@ let emit_func_deferred ctxt at
     )
 
 let emit_func ctxt at ts1' ts2' f : int32 =
-  let idx, define = emit_func_deferred ctxt at in
-  define ctxt ts1' ts2' f;
+  let idx, def_func = emit_func_deferred ctxt at in
+  def_func ctxt ts1' ts2' f;
   idx
 
 let emit_func_ref ctxt _at idx =

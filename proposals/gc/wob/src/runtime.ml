@@ -41,14 +41,14 @@ let compile_runtime () : Wasm.Ast.module_ =
 
 let import_func name ctxt =
   assert (not !Flags.headless);
-  Emit.lookup_intrinsic ctxt name (fun () ->
+  Emit.lookup_intrinsic ctxt name (fun _ ->
     let ctxt' = {ctxt with Emit.ext = ()} in  (* ensure polymorphism *)
     let _, emit_type = List.assoc name funcs in
     Emit.emit_func_import ctxt' Prelude.region module_name name (emit_type ctxt')
   )
 
 let import_mem_alloc ctxt =
-  Emit.lookup_intrinsic ctxt name_mem (fun () ->
+  Emit.lookup_intrinsic ctxt name_mem (fun _ ->
     Emit.emit_memory_import ctxt Prelude.region module_name name_mem 0l None
   ) |> ignore;
   import_func name_mem_alloc ctxt
