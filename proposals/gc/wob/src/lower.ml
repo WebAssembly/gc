@@ -160,7 +160,7 @@ let current_scope ctxt : scope * env ref =
 
 
 let emit_cls ctxt at id sup :
-    cls * (W.def_type -> W.def_type -> W.def_type -> unit) =
+    cls * (W.sub_type -> W.sub_type -> W.sub_type -> unit) =
   let inst_idx, f1 = emit_type_deferred ctxt at in
   let disp_idx, f2 = emit_type_deferred ctxt at in
   let cls_idx, f3 = emit_type_deferred ctxt at in
@@ -201,7 +201,7 @@ let lower_value_rtt ctxt at : W.value_type =
 let lower_var_rtt ctxt at : int32 =
   let rtt_vt = W.(RefType (Nullable, EqHeapType)) in
   let rtt_ft = W.(FieldType (ValueStorageType rtt_vt, Mutable)) in
-  emit_type ctxt at W.(ArrayDefType (ArrayType rtt_ft))
+  emit_type ctxt at W.(sub [] (array rtt_ft))
 
 let rec lower_value_type ctxt at t : W.value_type =
   match t with
@@ -215,27 +215,29 @@ and lower_heap_type ctxt at t : W.heap_type =
   | T.Box (T.Bool | T.Byte) -> W.I31HeapType
   | t -> W.(DefHeapType (SynVar (lower_var_type ctxt at t)))
 
+and lower_obj_type ctxt at : int32 * int32 =
+  let disp_idx = emit_type ctxt at W.(sub [] (struct_ [])) in
+  let disp_vt = W.(RefType (NonNullable, DefHeapType (SynVar disp_idx))) in
+  let disp_ft = W.(FieldType (ValueStorageType disp_vt, Immutable)) in
+  emit_type ctxt at W.(sub [] (struct_ [disp_ft])), disp_idx
+
 and lower_var_type ctxt at t : int32 =
   match t with
-  | T.Obj ->
-    let disp_idx = emit_type ctxt at W.(StructDefType (StructType [])) in
-    let disp_vt = W.(RefType (NonNullable, DefHeapType (SynVar disp_idx))) in
-    let disp_ft = W.(FieldType (ValueStorageType disp_vt, Immutable)) in
-    emit_type ctxt at W.(StructDefType (StructType [disp_ft]))
+  | T.Obj -> fst (lower_obj_type ctxt at)
   | T.Inst (tcls, _ts) ->
     (lower_class ctxt at tcls).inst_idx
   | T.Text ->
     let ft = W.(FieldType (PackedStorageType Pack8, Mutable)) in
-    emit_type ctxt at W.(ArrayDefType (ArrayType ft))
+    emit_type ctxt at W.(sub [] (array ft))
   | T.Box t1 ->
     let ft = lower_field_type ctxt at W.Immutable t1 in
-    emit_type ctxt at W.(StructDefType (StructType [ft]))
+    emit_type ctxt at W.(sub [] (struct_ [ft]))
   | T.Tup ts ->
     let fts = List.map (lower_field_type ctxt at W.Immutable) ts in
-    emit_type ctxt at W.(StructDefType (StructType fts))
+    emit_type ctxt at W.(sub [] (struct_ fts))
   | T.Array (t1, _m) ->
     let ft = lower_field_type ctxt at W.Mutable t1 in
-    emit_type ctxt at W.(ArrayDefType (ArrayType ft))
+    emit_type ctxt at W.(sub [] (array ft))
   | T.Func _ -> nyi at "function types"
   | T.Class tcls -> (lower_class ctxt at tcls).cls_idx
   | _ -> assert false
@@ -261,7 +263,7 @@ and lower_block_type_func ctxt at ts1 ts2 : W.block_type =
   let ts1' = List.map (lower_value_type ctxt at) ts1 in
   let ts2' = List.map (lower_value_type ctxt at) ts2 in
   W.(VarBlockType (SynVar
-    (emit_type ctxt at (FuncDefType (FuncType (ts1', ts2'))))))
+    (emit_type ctxt at (sub [] (func ts1' ts2')))))
 
 and lower_stack_type ctxt at t : W.value_type list =
   Option.to_list (lower_block_value_type ctxt at t)
@@ -289,7 +291,8 @@ and lower_class ctxt at tcls =
   let (cls, define_cls), sup, tsup_def =
     match tcls.T.sup with
     | T.Obj ->
-      let sup_dummy = make_cls None (-1l) (-1l) (-1l) in
+      let sup_inst, sup_disp = lower_obj_type ctxt at in
+      let sup_dummy = make_cls None sup_inst sup_disp (-1l) in
       sup_dummy.def <- lazy (make_cls_def ());
       emit_cls ctxt at tcls.T.id None, sup_dummy, []
     | T.Inst (tsup, _) ->
@@ -348,8 +351,8 @@ and lower_class ctxt at tcls =
           let ys, ts1, t2 = T.as_func t in
           let W.FuncType (ts1', ts2') =
             lower_func_type ctxt at (T.Func (ys, ts1, t2)) in
-          let fnt = W.FuncType (lower_value_type ctxt at inst_t :: ts1', ts2') in
-          let idx = emit_type ctxt at W.(FuncDefType (fnt)) in
+          let ts1'' = lower_value_type ctxt at inst_t :: ts1' in
+          let idx = emit_type ctxt at W.(sub [] (func ts1'' ts2')) in
           let dt = W.(DefHeapType (SynVar idx)) in
           let st = W.(ValueStorageType (RefType (NonNullable, dt))) in
           let ft = W.(FieldType (st, Immutable)) in
@@ -373,29 +376,28 @@ and lower_class ctxt at tcls =
     let disp_fts = sup_def.disp_flds @ List.rev disp_fts_r @ ty_fts in
     let disp_vt = W.(RefType (NonNullable, DefHeapType (SynVar cls.disp_idx))) in
     let disp_ft = W.(FieldType (ValueStorageType disp_vt, Immutable)) in
-    let rtt_ht = W.(RttHeapType (SynVar cls.inst_idx,
-      Some (int32 (T.cls_depth tcls)))) in
+    let rtt_ht = W.(RttHeapType (SynVar cls.inst_idx)) in
     let rtt_vt = W.(RefType (NonNullable, rtt_ht)) in
     let rtt_ft = W.(FieldType (ValueStorageType rtt_vt, Immutable)) in
     let new_fnt = lower_func_type ctxt at (T.Class tcls) in
-    let new_idx = emit_type ctxt at W.(FuncDefType (new_fnt)) in
+    let new_idx = emit_type ctxt at W.(sub [] (FuncDefType new_fnt)) in
     let new_vt = W.(RefType (NonNullable, DefHeapType (SynVar new_idx))) in
     let new_ft = W.(FieldType (ValueStorageType new_vt, Immutable)) in
     let pre_fnt = W.(FuncType (param_vts, List.map snd pre_binds)) in
-    let pre_idx = emit_type ctxt at W.(FuncDefType pre_fnt) in
+    let pre_idx = emit_type ctxt at W.(sub [] (FuncDefType pre_fnt)) in
     let pre_vt = W.(RefType (NonNullable, DefHeapType (SynVar pre_idx))) in
     let pre_ft = W.(FieldType (ValueStorageType pre_vt, Immutable)) in
     let post_fnt = W.(FuncType ([inst_vt], [])) in
-    let post_idx = emit_type ctxt at W.(FuncDefType post_fnt) in
+    let post_idx = emit_type ctxt at W.(sub [] (FuncDefType post_fnt)) in
     let post_vt = W.(RefType (NonNullable, DefHeapType (SynVar post_idx))) in
     let post_ft = W.(FieldType (ValueStorageType post_vt, Immutable)) in
     let sup_vt = if cls.sup = None then W.i32 else
       W.(RefType (NonNullable, DefHeapType (SynVar sup.cls_idx))) in
     let sup_ft = W.(FieldType (ValueStorageType sup_vt, Immutable)) in
     let cls_fts = [disp_ft; rtt_ft; new_ft; pre_ft; post_ft; sup_ft] in
-    let inst_dt = W.(StructDefType (StructType (disp_ft :: inst_fts))) in
-    let disp_dt = W.(StructDefType (StructType disp_fts)) in
-    let cls_dt = W.(StructDefType (StructType cls_fts)) in
+    let inst_st = W.(sub [sup.inst_idx] (struct_ (disp_ft :: inst_fts))) in
+    let disp_st = W.(sub [sup.disp_idx] (struct_ disp_fts)) in
+    let cls_st = W.(sub [] (struct_ cls_fts)) in
     let clsenv' =
       if !Flags.parametric then clsenv else
       List.fold_left (fun clsenv (x, _) ->
@@ -407,7 +409,7 @@ and lower_class ctxt at tcls =
         E.extend_val clsenv (Source.(@@) x at) (T.LetS, DirectLoc (as_hidden x))
       ) clsenv' param_vbinds
     in
-    define_cls inst_dt disp_dt cls_dt;
+    define_cls inst_st disp_st cls_st;
     { (make_cls_def ()) with
       env = clsenv'';
       inst_flds = inst_fts;

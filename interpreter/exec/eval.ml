@@ -966,17 +966,28 @@ let add_import (m : module_) (ext : extern) (im : import) (inst : module_inst)
   let et = Types.sem_extern_type inst.types it in
   let et' = extern_type_of inst.types ext in
   if not (Match.match_extern_type [] et' et) then
+  (
+    let xs = Types.FreeSem.(transitive (extern_type (extern_type [] et) et')) in
     Link.error im.at ("incompatible import type for " ^
       "\"" ^ Utf8.encode im.it.module_name ^ "\" " ^
       "\"" ^ Utf8.encode im.it.item_name ^ "\": " ^
       "expected " ^ Types.string_of_extern_type et ^
-      ", got " ^ Types.string_of_extern_type et');
+      ", got " ^ Types.string_of_extern_type et' ^
+      (if xs = [] then "" else ", where:\n" ^
+        String.concat "\n" (
+          List.map (fun x ->
+            "type " ^ string_of_sem_var x ^ " = " ^
+            Types.string_of_sub_type (Types.unroll_ctx_type (Lib.Promise.value x))
+          ) xs
+        )
+      )
+    )
+  );
   match ext with
   | ExternFunc func -> {inst with funcs = func :: inst.funcs}
   | ExternTable tab -> {inst with tables = tab :: inst.tables}
   | ExternMemory mem -> {inst with memories = mem :: inst.memories}
   | ExternGlobal glob -> {inst with globals = glob :: inst.globals}
-
 
 let init_type (inst : module_inst) (x, ts : int32 * type_inst list) (type_ : type_) =
   let cts = ctx_types_of_def_type x type_.it in

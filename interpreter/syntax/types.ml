@@ -299,6 +299,86 @@ let sem_module_type (ModuleType (dts, its, ets)) =
   ModuleType ([], its, ets)
 
 
+(* Free semantic types *)
+
+let hash_sem_var x = Hashtbl.hash_param 20 256 x
+
+module FreeSem =
+struct
+  let list free xs ts = List.fold_left (fun xs t -> free xs t) xs ts
+
+  let var_type xs = function
+    | SemVar x -> if List.memq x xs then xs else x::xs
+    | _ -> xs
+
+  let num_type xs = function
+    | I32Type | I64Type | F32Type | F64Type -> xs
+
+  let heap_type xs = function
+    | AnyHeapType | EqHeapType | I31HeapType | DataHeapType
+    | FuncHeapType | ExternHeapType | BotHeapType -> xs
+    | DefHeapType x | RttHeapType x -> var_type xs x
+
+  let ref_type xs = function
+    | (_, t) -> heap_type xs t
+
+  let value_type xs = function
+    | NumType t -> num_type xs t
+    | RefType t -> ref_type xs t
+    | BotType -> xs
+
+  let packed_type xs t = xs
+
+  let storage_type xs = function
+    | ValueStorageType t -> value_type xs t
+    | PackedStorageType t -> packed_type xs t
+
+  let field_type xs = function
+    | FieldType (st, _) -> storage_type xs st
+
+  let struct_type xs (StructType fts) = list field_type xs fts
+  let array_type xs (ArrayType ft) = field_type xs ft
+  let func_type xs (FuncType (ts1, ts2)) = list (list value_type) xs [ts1; ts2]
+
+  let str_type xs = function
+    | StructDefType st -> struct_type xs st
+    | ArrayDefType at -> array_type xs at
+    | FuncDefType ft -> func_type xs ft
+
+  let sub_type xs = function
+    | SubType (xs', st) -> list var_type (str_type xs st) xs'
+  let def_type xs = function
+    | DefType st -> sub_type xs st
+    | RecDefType sts -> list sub_type xs sts
+  let ctx_type xs = function
+    | CtxType st -> sub_type xs st
+    | RecCtxType (xsts, _) ->
+      let xs', sts = List.split xsts in
+      list sub_type (list var_type xs xs') sts
+
+  let global_type xs (GlobalType (t, _mut)) = value_type xs t
+  let table_type xs (TableType (_lim, t)) = ref_type xs t
+  let memory_type xs (MemoryType (_lim)) = xs
+
+  let extern_type xs = function
+    | ExternFuncType ft -> func_type xs ft
+    | ExternTableType tt -> table_type xs tt
+    | ExternMemoryType mt -> memory_type xs mt
+    | ExternGlobalType gt -> global_type xs gt
+
+
+  let rec transitive' xs = function
+    | [] -> xs
+    | x::rest ->
+      let xs' = ctx_type xs (Lib.Promise.value x) in
+      transitive' xs' (Lib.List.take (List.length xs' - List.length xs) xs' @ rest)
+
+  let transitive xs =
+    List.sort (fun t1 t2 -> compare (hash_sem_var t1) (hash_sem_var t2))
+      (transitive' xs xs)
+end
+
+
 (* String conversion *)
 
 let string_of_name n =
@@ -315,14 +395,17 @@ let string_of_name n =
   List.iter escape n;
   Buffer.contents b
 
+let string_of_sem_var x =
+  Printf.sprintf "%08x" (hash_sem_var x)
+
 let rec string_of_var =
   let inner = ref [] in
   function
   | SynVar x -> I32.to_string_u x
   | SemVar x ->
-    let h = Hashtbl.hash x in
-    string_of_int h ^
-    if List.mem h !inner then "" else
+    let h = hash_sem_var x in
+    string_of_sem_var x ^
+    if List.mem h !inner || true then "" else
     ( inner := h :: !inner;
       try
         let s = string_of_ctx_type (def_of x) in
@@ -404,12 +487,25 @@ and string_of_def_type = function
     "rec " ^
     String.concat " " (List.map (fun st -> "(" ^ string_of_sub_type st ^ ")") sts)
 
+and equal_var x y =
+  match x, y with
+  | SynVar x', SynVar y' -> x' = y'
+  | SemVar x', SemVar y' -> x' == y'
+  | RecVar x', RecVar y' -> x' = y'
+  | _, _ -> false
+and tie_var_type xs x =
+  match Lib.List32.index_where (equal_var x) xs with
+  | Some i -> RecVar i
+  | None -> x
+and tie_rec_types rts =
+  let xs, sts = List.split rts in
+  List.map (subst_sub_type (tie_var_type xs)) sts
+
 and string_of_ctx_type = function
   | CtxType st -> string_of_sub_type st
   | RecCtxType (rts, i) ->
-    "(" ^ string_of_def_type (RecDefType (List.map snd rts)) ^ ")." ^
-      I32.to_string_u i
-
+    "(" ^ string_of_def_type (RecDefType (tie_rec_types rts)) ^ ")." ^
+    I32.to_string_u i
 
 let string_of_limits {min; max} =
   I32.to_string_u min ^

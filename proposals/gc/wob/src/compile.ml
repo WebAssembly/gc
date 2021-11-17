@@ -40,7 +40,7 @@ let print_env env =
   Printf.printf "\n"
 
 let string_of_type ctxt idx =
-  try W.string_of_def_type (Emit.lookup_def_type ctxt idx)
+  try W.string_of_sub_type (Emit.lookup_sub_type ctxt idx)
   with Invalid_argument _ -> "?"
 
 let string_of_field_type ctxt idx i =
@@ -201,19 +201,8 @@ let compile_coerce_abs_value_type ctxt at t =
       ] (
         [ local_get (tmpidx @@ at) @@ at;
           ref_as_data @@ at;
-        ] @
-        (match t with
-        | T.Inst (tcls, _) ->
-          let rec sub tcls =
-            let cls = lower_class ctxt at tcls in
-            (match T.sup_cls tcls with
-            | None -> [rtt_canon (lower_var_type ctxt at T.Obj @@ at) @@ at]
-            | Some tsup -> sub tsup
-            ) @ [rtt_sub (cls.inst_idx @@ at) @@ at]
-          in sub tcls
-        | _ -> [rtt_canon (typeidx @@ at) @@ at]
-        ) @
-        [ ref_cast @@ at;
+          rtt_canon (typeidx @@ at) @@ at;
+          ref_cast @@ at;
         ]
       )
     ]
@@ -1353,18 +1342,8 @@ and compile_dec pass ctxt d =
     end;
 
     (* Allocate RTT (and leave on stack) *)
-    if sup_opt = None then
-      emit ctxt W.[
-        rtt_canon (lower_var_type ctxt d.at T.Obj @@ d.at)
-      ]
-    else begin
-      emit ctxt W.[
-        local_get (suptmp @@ sup_at);
-        struct_get (sup_cls.cls_idx @@ sup_at) (cls_rtt @@ sup_at);
-      ]
-    end;
     emit ctxt W.[
-      rtt_sub (cls.inst_idx @@ d.at);
+      rtt_canon (cls.inst_idx @@ d.at);
     ];
 
     (* Emit pre-alloc function *)
@@ -1423,8 +1402,8 @@ and compile_dec pass ctxt d =
           let rest_len = List.length sup_pre_vals - sup_let_depth in
           let locals = W.Lib.List.drop rest_len sup_pre_vals in
           let results = W.Lib.List.drop rest_len cls_def.pre_vals in
-          let ft = W.FuncType ([], List.map snd results) in
-          let bt = W.(typeuse (emit_type ctxt sup_at (FuncDefType ft))) in
+          let bt = W.(typeuse (emit_type ctxt sup_at
+            (sub [] (func [] (List.map snd results))))) in
           emit_let ctxt sup_at bt (List.map snd locals) (fun ctxt ->
             List.iteri (fun i (xI, _) ->
               let loc = DirectLoc (int32 i) in

@@ -95,13 +95,15 @@ let make_ctxt ext = {ext; int = make_internal ()}
 
 (* Lookup *)
 
-let lookup_sub_type ctxt idx : W.str_type =
-  let W.SubType (_, st) =
-    (Option.get !(W.Lib.List32.nth (List.rev ctxt.int.types.list) idx)).W.Source.it in
+let lookup_sub_type ctxt idx : W.sub_type =
+  (Option.get !(W.Lib.List32.nth (List.rev ctxt.int.types.list) idx)).W.Source.it
+
+let lookup_str_type ctxt idx : W.str_type =
+  let W.SubType (_, st) = lookup_sub_type ctxt idx in
   st
 
 let lookup_func_type ctxt idx : W.func_type =
-  match lookup_sub_type ctxt idx with
+  match lookup_str_type ctxt idx with
   | W.(FuncDefType ft) -> ft
   | _ -> assert false
 
@@ -110,7 +112,7 @@ let lookup_param_type ctxt idx i : W.value_type =
   W.Lib.List32.nth ts i
 
 let lookup_field_type ctxt idx i : W.value_type =
-  match lookup_sub_type ctxt idx with
+  match lookup_str_type ctxt idx with
   | W.(StructDefType (StructType fts)) ->
     let W.FieldType (t, _) = W.Lib.List32.nth fts i in
     (match t with
@@ -287,7 +289,7 @@ let recify sts =
       let left = sta.(List.hd xs).at.left in
       let right = sta.(Wasm.Lib.List.last xs).at.left in
       W.RecDefType (List.map (fun x -> sta.(x).it) xs) @@ {left; right}
-  ) sccs
+  ) (List.sort Scc.IntSet.compare sccs)
 
 
 (* Generation *)

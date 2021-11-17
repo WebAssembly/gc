@@ -50,12 +50,12 @@ let implicit_entity ents : int32 =
 
 (* Compilation context *)
 
-module DefTypes = Map.Make(struct type t = W.def_type let compare = compare end)
+module DefTypes = Map.Make(struct type t = W.sub_type let compare = compare end)
 module Refs = Set.Make(Int32)
 module Intrinsics = Map.Make(String)
 
 type internal =
-  { types : W.type_ entities;
+  { types : W.sub_type W.Source.phrase entities;
     globals : W.global entities;
     funcs : W.func entities;
     memories : W.memory entities;
@@ -95,11 +95,15 @@ let make_ctxt ext = {ext; int = make_internal ()}
 
 (* Lookup *)
 
-let lookup_def_type ctxt idx : W.def_type =
+let lookup_sub_type ctxt idx : W.sub_type =
   (Option.get !(W.Lib.List32.nth (List.rev ctxt.int.types.list) idx)).W.Source.it
 
+let lookup_str_type ctxt idx : W.str_type =
+  let W.SubType (_, st) = lookup_sub_type ctxt idx in
+  st
+
 let lookup_func_type ctxt idx : W.func_type =
-  match lookup_def_type ctxt idx with
+  match lookup_str_type ctxt idx with
   | W.(FuncDefType ft) -> ft
   | _ -> assert false
 
@@ -108,7 +112,7 @@ let lookup_param_type ctxt idx i : W.value_type =
   W.Lib.List32.nth ts i
 
 let lookup_field_type ctxt idx i : W.value_type =
-  match lookup_def_type ctxt idx with
+  match lookup_str_type ctxt idx with
   | W.(StructDefType (StructType fts)) ->
     let W.FieldType (t, _) = W.Lib.List32.nth fts i in
     (match t with
@@ -148,7 +152,7 @@ let emit_type ctxt at dt : int32 =
     ctxt.int.deftypes := DefTypes.add dt idx !(ctxt.int.deftypes);
     idx
 
-let emit_type_deferred ctxt at : int32 * (W.def_type -> unit) =
+let emit_type_deferred ctxt at : int32 * (W.sub_type -> unit) =
   let idx, r = alloc_entity ctxt.int.types in
   idx, fun dt ->
     ctxt.int.deftypes := DefTypes.add dt idx !(ctxt.int.deftypes);
@@ -161,7 +165,7 @@ let emit_import ctxt at mname name desc =
   ignore (emit_entity ctxt.int.imports W.({module_name; item_name; idesc} @@ at))
 
 let emit_func_import ctxt at mname name ft =
-  let typeidx = emit_type ctxt at W.(FuncDefType ft) in
+  let typeidx = emit_type ctxt at W.(sub [] (FuncDefType ft)) in
   emit_import ctxt at mname name W.(FuncImport (typeidx @@ at));
   implicit_entity ctxt.int.funcs
 
@@ -243,7 +247,7 @@ let emit_func_deferred ctxt at : int32 * _ =
   let idx, func = alloc_entity ctxt.int.funcs in
   idx, fun ctxt ts1' ts2' f ->
     let ft = W.(FuncType (ts1', ts2')) in
-    let typeidx = emit_type ctxt at W.(FuncDefType ft) in
+    let typeidx = emit_type ctxt at W.(sub [] (FuncDefType ft)) in
     let ctxt' = {ctxt with int =
       {ctxt.int with locals = make_entities (); instrs = make_entities ()}} in
     f ctxt' idx;
@@ -270,26 +274,29 @@ let emit_start ctxt at idx =
 (* Generation *)
 
 let gen_module ctxt at : W.module_ =
-  { W.empty_module with
-    W.start = !(ctxt.int.start);
-    W.types = get_entities ctxt.int.types;
-    W.globals = get_entities ctxt.int.globals;
-    W.funcs = get_entities ctxt.int.funcs;
-    W.imports = get_entities ctxt.int.imports;
-    W.exports = get_entities ctxt.int.exports;
-    W.datas = get_entities ctxt.int.datas;
-    W.elems =
-      if !(ctxt.int.refs) = Refs.empty then [] else W.[
-        { etype = (NonNullable, FuncHeapType);
-          emode = Declarative @@ at;
-          einit = Refs.fold (fun idx consts ->
-            ([ref_func (idx @@ at) @@ at] @@ at) :: consts) !(ctxt.int.refs) []
-        } @@ at
-      ];
-    W.memories =
-      let memories = get_entities ctxt.int.memories in
-      if get_entities ctxt.int.datas = []
-      || ctxt.int.memories.cnt > 0l then memories else
-      let sz = (!(ctxt.int.data_offset) +% 0xffffl) /% 0x10000l in
-      [{W.mtype = W.(MemoryType {min = sz; max = Some sz})} @@ at]
-  } @@ at
+  let types, su = Recify.recify (get_entities ctxt.int.types) in
+  let m =
+    { W.empty_module with
+      W.start = !(ctxt.int.start);
+      W.types = types;
+      W.globals = get_entities ctxt.int.globals;
+      W.funcs = get_entities ctxt.int.funcs;
+      W.imports = get_entities ctxt.int.imports;
+      W.exports = get_entities ctxt.int.exports;
+      W.datas = get_entities ctxt.int.datas;
+      W.elems =
+        if !(ctxt.int.refs) = Refs.empty then [] else W.[
+          { etype = (NonNullable, FuncHeapType);
+            emode = Declarative @@ at;
+            einit = Refs.fold (fun idx consts ->
+              ([ref_func (idx @@ at) @@ at] @@ at) :: consts) !(ctxt.int.refs) []
+          } @@ at
+        ];
+      W.memories =
+        let memories = get_entities ctxt.int.memories in
+        if get_entities ctxt.int.datas = []
+        || ctxt.int.memories.cnt > 0l then memories else
+        let sz = (!(ctxt.int.data_offset) +% 0xffffl) /% 0x10000l in
+        [{W.mtype = W.(MemoryType {min = sz; max = Some sz})} @@ at]
+    } @@ at
+  in Subst.module_ su m

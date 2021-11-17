@@ -60,7 +60,7 @@ let compile_mem_alloc ctxt : int32 =
 
 let compile_text_type ctxt : int32 =
   let ft = W.(FieldType (PackedStorageType Pack8, Mutable)) in
-  emit_type ctxt Prelude.region W.(ArrayDefType (ArrayType ft))
+  emit_type ctxt Prelude.region W.(sub [] (array ft))
 
 
 let compile_text_new ctxt : int32 =
@@ -232,7 +232,7 @@ let compile_text_eq ctxt : int32 =
 let compile_rtt_type ctxt : int32 =
   let rtt_vt = W.(RefType (Nullable, EqHeapType)) in
   let rtt_ft = W.(FieldType (ValueStorageType rtt_vt, Mutable)) in
-  emit_type ctxt Prelude.region W.(ArrayDefType (ArrayType rtt_ft))
+  emit_type ctxt Prelude.region W.(sub [] (array rtt_ft))
 
 let compile_rtt_eq ctxt : int32 =
   Emit.lookup_intrinsic ctxt "rtt_eq" (fun _ ->
