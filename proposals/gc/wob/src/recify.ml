@@ -250,7 +250,7 @@ let recify (sts : W.sub_type phrase list) : W.def_type phrase list * Subst.t =
     done;
     assert (!sep > !i);
 
-    (* Sort types with now empty bwd set *)
+    (* Sort partition with empty bwd set *)
     let sub = Array.sub groups !i (!sep - !i) in
     Array.stable_sort (compare_group tys su) sub;
     Array.blit sub 0 groups !i (!sep - !i);
