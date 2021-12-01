@@ -1,7 +1,6 @@
 module W = Wasm.Types
 
-module IntSet = Set.Make(Int)
-module IntPairSet = Set.Make(struct type t = int * int let compare = compare end)
+module IntSet = Scc.IntSet
 
 
 (* Canonical Ordering *)
@@ -27,70 +26,77 @@ let compare_sub (tys : W.sub_type array) (su : int array) recs x1 x2 =
   let nullability n1 n2 = compare n1 n2 in
   let mutability m1 m2 = compare m1 m2 in
 
-  let rec syn_var v y1 y2 =
-    if y1 = y2 || IntPairSet.mem (y1, y2) v then 0 else
+  let rec syn_var v1 v2 y1 y2 =
     match IntSet.mem y1 recs, IntSet.mem y2 recs with
     | false, false -> compare su.(y1) su.(y2)
     | false, true -> -1
     | true, false -> +1
-    | true, true -> sub_type (IntPairSet.add (y1, y2) v) tys.(y1) tys.(y2)
+    | true, true ->
+      match Wasm.Lib.List.(index_of y1 v1, index_of y2 v2) with
+      | None, None -> sub_type (y1::v1) (y2::v2) tys.(y1) tys.(y2)
+      | Some n1, Some n2 -> compare n1 n2
+      | Some _, None -> -1
+      | None, Some _ -> +1
 
-  and var_type v x1 x2 = match x1, x2 with
-    | SynVar x1', SynVar x2' -> syn_var v (Int32.to_int x1') (Int32.to_int x2')
+  and var_type v1 v2 x1 x2 = match x1, x2 with
+    | SynVar x1', SynVar x2' ->
+      syn_var v1 v2 (Int32.to_int x1') (Int32.to_int x2')
     | _, _ -> assert false
 
-  and num_type v t1 t2 = compare t1 t2
+  and num_type v1 v2 t1 t2 = compare t1 t2
 
-  and heap_type v t1 t2 = match t1, t2 with
+  and heap_type v1 v2 t1 t2 = match t1, t2 with
     | DefHeapType x1, DefHeapType x2
-    | RttHeapType x1, RttHeapType x2 -> var_type v x1 x2
+    | RttHeapType x1, RttHeapType x2 -> var_type v1 v2 x1 x2
     | _, DefHeapType _ -> -1
     | DefHeapType _, _ -> +1
     | _, RttHeapType _ -> -1
     | RttHeapType _, _ -> +1
     | _, _ -> compare t1 t2
 
-  and ref_type v t1 t2 = compare_pair nullability (heap_type v) t1 t2
+  and ref_type v1 v2 t1 t2 = compare_pair nullability (heap_type v1 v2) t1 t2
 
-  and value_type v t1 t2 = match t1, t2 with
-    | NumType nt1, NumType nt2 -> num_type v nt1 nt2
-    | RefType rt1, RefType rt2 -> ref_type v rt1 rt2
+  and value_type v1 v2 t1 t2 = match t1, t2 with
+    | NumType nt1, NumType nt2 -> num_type v1 v2 nt1 nt2
+    | RefType rt1, RefType rt2 -> ref_type v1 v2 rt1 rt2
     | _, _ -> compare t1 t2
 
-  and result_type v ts1 ts2 = compare_list (value_type v) ts1 ts2
+  and result_type v1 v2 ts1 ts2 = compare_list (value_type v1 v2) ts1 ts2
 
-  and storage_type v t1 t2 = match t1, t2 with
-    | ValueStorageType vt1, ValueStorageType vt2 -> value_type v vt1 vt2
+  and storage_type v1 v2 t1 t2 = match t1, t2 with
+    | ValueStorageType vt1, ValueStorageType vt2 -> value_type v1 v2 vt1 vt2
     | _, _ -> compare t1 t2
 
-  and field_type v t1 t2 = match t1, t2 with
+  and field_type v1 v2 t1 t2 = match t1, t2 with
     | FieldType (st1, mut1), FieldType (st2, mut2) ->
-      compare_pair mutability (storage_type v) (mut1, st1) (mut2, st2)
+      compare_pair mutability (storage_type v1 v2) (mut1, st1) (mut2, st2)
 
-  and struct_type v t1 t2 = match t1, t2 with
-    | StructType fts1, StructType fts2 -> compare_list (field_type v) fts1 fts2
+  and struct_type v1 v2 t1 t2 = match t1, t2 with
+    | StructType fts1, StructType fts2 ->
+      compare_list (field_type v1 v2) fts1 fts2
 
-  and array_type v t1 t2 = match t1, t2 with
-    | ArrayType ft1, ArrayType ft2 -> field_type v ft1 ft2
+  and array_type v1 v2 t1 t2 = match t1, t2 with
+    | ArrayType ft1, ArrayType ft2 -> field_type v1 v2 ft1 ft2
 
-  and func_type v t1 t2 = match t1, t2 with
+  and func_type v1 v2 t1 t2 = match t1, t2 with
     | FuncType (ts11, ts12), FuncType (ts21, ts22) ->
-      compare_pair (result_type v) (result_type v) (ts11, ts12) (ts21, ts22)
+      compare_pair (result_type v1 v2) (result_type v1 v2)
+        (ts11, ts12) (ts21, ts22)
 
-  and str_type v t1 t2 = match t1, t2 with
-    | StructDefType st1, StructDefType st2 -> struct_type v st1 st2
-    | ArrayDefType at1, ArrayDefType at2 -> array_type v at1 at2
-    | FuncDefType ft1, FuncDefType ft2 -> func_type v ft1 ft2
+  and str_type v1 v2 t1 t2 = match t1, t2 with
+    | StructDefType st1, StructDefType st2 -> struct_type v1 v2 st1 st2
+    | ArrayDefType at1, ArrayDefType at2 -> array_type v1 v2 at1 at2
+    | FuncDefType ft1, FuncDefType ft2 -> func_type v1 v2 ft1 ft2
     | _, _ -> compare t1 t2
 
-  and sub_type v t1 t2 = match t1, t2 with
+  and sub_type v1 v2 t1 t2 = match t1, t2 with
     | SubType (xs1, st1), SubType (xs2, st2) ->
-      let xs1' = List.sort (inv (var_type v)) xs1 in
-      let xs2' = List.sort (inv (var_type v)) xs2 in
-      compare_pair (compare_list (var_type v)) (str_type v)
+      let xs1' = List.sort (inv (var_type v1 v2)) xs1 in
+      let xs2' = List.sort (inv (var_type v1 v2)) xs2 in
+      compare_pair (compare_list (var_type v1 v2)) (str_type v1 v2)
         (xs1', st1) (xs2', st2)
   in
-  if x1 = x2 then 0 else sub_type IntPairSet.empty tys.(x1) tys.(x2)
+  if x1 = x2 then 0 else sub_type [x1] [x2] tys.(x1) tys.(x2)
 
 
 type group =
