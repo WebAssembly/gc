@@ -538,7 +538,7 @@ The opcode for heap types is encoded as an `s33`.
 | 0xfb14 | `array.get_s $t` | `$t : typeidx` |
 | 0xfb15 | `array.get_u $t` | `$t : typeidx` |
 | 0xfb16 | `array.set $t` | `$t : typeidx` |
-| 0xfb17 | `array.len` | `u32` (TODO: remove, was typeidx) |
+| 0xfb17 | `array.len` | `_ : u32` (TODO: remove, was typeidx) |
 | 0xfb20 | `i31.new` |  |
 | 0xfb21 | `i31.get_s` |  |
 | 0xfb22 | `i31.get_u` |  |
