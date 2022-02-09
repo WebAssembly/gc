@@ -185,7 +185,7 @@ sign:  s | u
 offset: offset=<nat>
 align: align=(1|2|4|8|...)
 cvtop: trunc | extend | wrap | ...
-castop: data | array | func | i31
+castop: data | struct | array | func | i31
 
 num_type: i32 | i64 | f32 | f64
 heap_type: any | eq | i31 | data | func | extern | <var> | (rtt <nat>? <var>)
