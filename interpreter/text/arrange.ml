@@ -240,6 +240,7 @@ let castop = function
   | NullOp -> "null"
   | I31Op -> "i31"
   | DataOp -> "data"
+  | StructOp -> "struct"
   | ArrayOp -> "array"
   | FuncOp -> "func"
   | RttOp -> assert false

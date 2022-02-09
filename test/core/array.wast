@@ -97,6 +97,7 @@
 
 (assert_return (invoke "new" (i32.const 0)) (ref.array))
 (assert_return (invoke "new" (i32.const 0)) (ref.data))
+(assert_return (invoke "new" (i32.const 0)) (ref.any))
 (assert_return (invoke "get" (i32.const 0)) (f32.const 0))
 (assert_return (invoke "set_get" (i32.const 1) (f32.const 7)) (f32.const 7))
 (assert_return (invoke "len") (i32.const 3))

@@ -110,6 +110,7 @@ struct
     | EqHeapType -> vs7 (-0x13)
     | I31HeapType -> vs7 (-0x16)
     | DataHeapType -> vs7 (-0x19)
+    | StructHeapType -> vs7 (-0x1b)
     | ArrayHeapType -> vs7 (-0x1a)
     | FuncHeapType -> vs7 (-0x10)
     | DefHeapType x -> var_type vs33 x
@@ -122,6 +123,7 @@ struct
     | (Nullable, EqHeapType) -> vs7 (-0x13)
     | (NonNullable, I31HeapType) -> vs7 (-0x16)
     | (NonNullable, DataHeapType) -> vs7 (-0x19)
+    | (NonNullable, StructHeapType) -> vs7 (-0x1b)
     | (NonNullable, ArrayHeapType) -> vs7 (-0x1a)
     | (Nullable, FuncHeapType) -> vs7 (-0x10)
     | (Nullable, t) -> vs7 (-0x14); heap_type t
@@ -217,12 +219,14 @@ struct
     | BrCast (x, NullOp) -> op 0xd4; var x
     | BrCast (x, I31Op) -> op 0xfb; op 0x62; var x
     | BrCast (x, DataOp) -> op 0xfb; op 0x61; var x
+    | BrCast (x, StructOp) -> op 0xfb; op 0x68; var x
     | BrCast (x, ArrayOp) -> op 0xfb; op 0x66; var x
     | BrCast (x, FuncOp) -> op 0xfb; op 0x60; var x
     | BrCast (x, RttOp) -> op 0xfb; op 0x42; var x
     | BrCastFail (x, NullOp) -> op 0xd6; var x
     | BrCastFail (x, I31Op) -> op 0xfb; op 0x65; var x
     | BrCastFail (x, DataOp) -> op 0xfb; op 0x64; var x
+    | BrCastFail (x, StructOp) -> op 0xfb; op 0x69; var x
     | BrCastFail (x, ArrayOp) -> op 0xfb; op 0x67; var x
     | BrCastFail (x, FuncOp) -> op 0xfb; op 0x63; var x
     | BrCastFail (x, RttOp) -> op 0xfb; op 0x43; var x
@@ -306,6 +310,7 @@ struct
     | RefTest NullOp -> op 0xd1
     | RefTest I31Op -> op 0xfb; op 0x52
     | RefTest DataOp -> op 0xfb; op 0x51
+    | RefTest StructOp -> op 0xfb; op 0x54
     | RefTest ArrayOp -> op 0xfb; op 0x53
     | RefTest FuncOp -> op 0xfb; op 0x50
     | RefTest RttOp -> op 0xfb; op 0x40
@@ -313,6 +318,7 @@ struct
     | RefCast NullOp -> op 0xd3
     | RefCast I31Op -> op 0xfb; op 0x5a
     | RefCast DataOp -> op 0xfb; op 0x59
+    | RefCast StructOp -> op 0xfb; op 0x5c
     | RefCast ArrayOp -> op 0xfb; op 0x5b
     | RefCast FuncOp -> op 0xfb; op 0x58
     | RefCast RttOp -> op 0xfb; op 0x41

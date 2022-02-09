@@ -19,6 +19,7 @@ and heap_type =
   | EqHeapType
   | I31HeapType
   | DataHeapType
+  | StructHeapType
   | ArrayHeapType
   | FuncHeapType
   | DefHeapType of var
@@ -164,6 +165,7 @@ let sem_heap_type c = function
   | EqHeapType -> EqHeapType
   | I31HeapType -> I31HeapType
   | DataHeapType -> DataHeapType
+  | StructHeapType -> StructHeapType
   | ArrayHeapType -> ArrayHeapType
   | FuncHeapType -> FuncHeapType
   | DefHeapType x -> DefHeapType (sem_var_type c x)
@@ -284,6 +286,7 @@ and string_of_heap_type = function
   | EqHeapType -> "eq"
   | I31HeapType -> "i31"
   | DataHeapType -> "data"
+  | StructHeapType -> "struct"
   | ArrayHeapType -> "array"
   | FuncHeapType -> "func"
   | DefHeapType x -> string_of_var x

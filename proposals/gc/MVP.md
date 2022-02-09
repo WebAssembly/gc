@@ -39,6 +39,10 @@ All three proposals are prerequisites.
   - `heaptype ::= ... | data`
   - the common supertype of all compound data types, like struct and array types and possibly host-defined types, for which casts are allowed
 
+* `struct` is a new heap type
+  - `heaptype ::= ... | struct`
+  - the common supertype of all struct types
+
 * `array` is a new heap type
   - `heaptype ::= ... | array`
   - the common supertype of all array types
@@ -72,6 +76,9 @@ New abbreviations are introduced for reference types in binary and text format, 
 
 * `dataref` is a new reference type
   - `dataref == (ref data)`
+
+* `structref` is a new reference type
+  - `structref == (ref struct)`
 
 * `arrayref` is a new reference type
   - `arrayref == (ref array)`
@@ -127,6 +134,9 @@ In addition to the [existing rules](https://github.com/WebAssembly/function-refe
   - `data <: eq`
   - TODO: provide a way to make data types non-eq, especially immutable ones?
 
+* `structref` is a subtype of `dataref`
+  - `struct <: data`
+
 * `arrayref` is a subtype of `dataref`
   - `array <: data`
 
@@ -140,6 +150,11 @@ In addition to the [existing rules](https://github.com/WebAssembly/function-refe
   - `(type $t) <: func`
      - if `$t = <functype>`
      - or `$t = type ht` and `rt <: func` (imports)
+
+* Any concrete struct type is a subtype of `struct`
+  - `(type $t) <: struct`
+     - if `$t = <structtype>`
+     - or `$t = type ht` and `rt <: struct` (imports)
 
 * Any concrete array type is a subtype of `array`
   - `(type $t) <: array`
@@ -161,8 +176,8 @@ Note: This creates a hierarchy of *abstract* Wasm heap types that looks as follo
    eq    func
   /  \
 i31  data
-       \
-       array
+      / \
+struct   array
 ```
 All *concrete* heap types (of the form `(type $t)`) are situated below either `data` or `func`.
 RTTs are below `eq`.
@@ -332,6 +347,9 @@ Tentatively, support a type of guaranteed unboxed scalars.
 * `ref.is_data` checks whether a reference is compound data
   - `ref.is_data : [anyref] -> [i32]`
 
+* `ref.is_struct` checks whether a reference is a structure
+  - `ref.is_struct : [anyref] -> [i32]`
+
 * `ref.is_array` checks whether a reference is an array
   - `ref.is_array : [anyref] -> [i32]`
 
@@ -361,6 +379,20 @@ Tentatively, support a type of guaranteed unboxed scalars.
 
 * `br_on_non_data <labelidx>` branches if a reference is not compound data
   - `br_on_non_data $l : [t0* t] -> [t0* (ref data)]`
+    - iff `$l : [t0* t']`
+    - and `t <: anyref`
+    - and `t <: t'`
+  - passes operand along with branch, plus possible extra args
+
+* `br_on_struct <labelidx>` branches if a reference is a structure
+  - `br_on_stru t $l : [t0* t] -> [t0* t]`
+    - iff `$l : [t0* t']`
+    - and `t <: anyref`
+    - and `(ref struct) <: t'`
+  - passes operand along with branch as data, plus possible extra args
+
+* `br_on_non_struct <labelidx>` branches if a reference is not a structure
+  - `br_on_non_struct $l : [t0* t] -> [t0* (ref struct)]`
     - iff `$l : [t0* t']`
     - and `t <: anyref`
     - and `t <: t'`
@@ -403,6 +435,11 @@ Tentatively, support a type of guaranteed unboxed scalars.
   - `ref.as_data : [anyref] -> [(ref data)]`
   - traps if reference is not compound data
   - equivalent to `(block $l (param anyref) (result (ref data)) (br_on_data $l) (unreachable))`
+
+* `ref.as_struct` converts to a structure reference
+  - `ref.as_struct : [anyref] -> [(ref struct)]`
+  - traps if reference is not an array
+  - equivalent to `(block $l (param anyref) (result (ref struct)) (br_on_struct $l) (unreachable))`
 
 * `ref.as_array` converts to an array reference
   - `ref.as_array : [anyref] -> [(ref array)]`
@@ -506,6 +543,7 @@ This extends the [encodings](https://github.com/WebAssembly/function-references/
 | -0x18  | `(rtt $t)`      | `i : typeidx` | shorthand |
 | -0x19  | `dataref`       |            | shorthand |
 | -0x1a  | `arrayref`      |            | shorthand |
+| -0x1b  | `structref`     |            | shorthand |
 
 #### Heap Types
 
@@ -522,6 +560,7 @@ The opcode for heap types is encoded as an `s33`.
 | -0x18  | `(rtt i)`       | `i : typeidx` | |
 | -0x19  | `data`          |            | |
 | -0x1a  | `array`         |            | |
+| -0x1b  | `struct`        |            | |
 
 #### Defined Types
 
@@ -569,10 +608,12 @@ The opcode for heap types is encoded as an `s33`.
 | 0xfb51 | `ref.is_data` | |
 | 0xfb52 | `ref.is_i31` | |
 | 0xfb53 | `ref.is_array` | |
+| 0xfb54 | `ref.is_struct` | |
 | 0xfb58 | `ref.as_func` | |
 | 0xfb59 | `ref.as_data` | |
 | 0xfb5a | `ref.as_i31` | |
 | 0xfb5b | `ref.as_array` | |
+| 0xfb5c | `ref.as_struct` | |
 | 0xfb60 | `br_on_func` | |
 | 0xfb61 | `br_on_data` | |
 | 0xfb62 | `br_on_i31` | |
@@ -581,6 +622,8 @@ The opcode for heap types is encoded as an `s33`.
 | 0xfb65 | `br_on_non_i31` | |
 | 0xfb66 | `br_on_array` | |
 | 0xfb67 | `br_on_non_array` | |
+| 0xfb68 | `br_on_struct` | |
+| 0xfb69 | `br_on_non_struct` | |
 
 
 ## JS API

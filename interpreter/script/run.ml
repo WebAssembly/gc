@@ -356,6 +356,7 @@ let assert_result at got expect =
         | Types.EqHeapType, Ref (I31.I31Ref _ | Data.DataRef _)
         | Types.I31HeapType, Ref (I31.I31Ref _)
         | Types.DataHeapType, Ref (Data.DataRef _)
+        | Types.StructHeapType, Ref (Data.DataRef (Data.Struct _))
         | Types.ArrayHeapType, Ref (Data.DataRef (Data.Array _))
         | Types.FuncHeapType, Ref (Instance.FuncRef _) -> false
         | _ -> true

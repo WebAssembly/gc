@@ -63,7 +63,7 @@ type loadop = (pack_size * extension) memop
 type storeop = pack_size memop
 
 type initop = Explicit | Implicit
-type castop = NullOp | I31Op | DataOp | ArrayOp | FuncOp | RttOp
+type castop = NullOp | I31Op | DataOp | StructOp | ArrayOp | FuncOp | RttOp
 
 
 (* Expressions *)

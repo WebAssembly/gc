@@ -404,7 +404,8 @@ assertion:
 
 result_pat:
   ( <num_type>.const <num_pat> )
-  ( ref )
+  ( ref.any )
+  ( ref.eq )
   ( ref.null )
   ( ref.<castop> )
   ( ref.extern )

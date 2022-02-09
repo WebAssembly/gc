@@ -69,8 +69,8 @@ let num_type = function
   | I32Type | I64Type | F32Type | F64Type -> empty
 
 let heap_type = function
-  | AnyHeapType | EqHeapType | I31HeapType | DataHeapType | ArrayHeapType
-  | FuncHeapType | BotHeapType -> empty
+  | AnyHeapType | EqHeapType | I31HeapType | DataHeapType
+  | StructHeapType | ArrayHeapType | FuncHeapType | BotHeapType -> empty
   | DefHeapType x | RttHeapType (x, _) -> var_type x
 
 let ref_type = function

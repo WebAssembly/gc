@@ -90,8 +90,8 @@ let check_num_type (c : context) (t : num_type) at =
 
 let check_heap_type (c : context) (t : heap_type) at =
   match t with
-  | AnyHeapType | EqHeapType | I31HeapType | DataHeapType | ArrayHeapType
-  | FuncHeapType -> ()
+  | AnyHeapType | EqHeapType | I31HeapType | DataHeapType
+  | ArrayHeapType | StructHeapType | FuncHeapType -> ()
   | DefHeapType (SynVar x) -> ignore (type_ c (x @@ at))
   | RttHeapType (SynVar x, _) -> ignore (type_ c (x @@ at))
   | DefHeapType (SemVar _) | RttHeapType (SemVar _, _) | BotHeapType ->
@@ -277,6 +277,7 @@ let type_castop op ht =
   | NullOp -> ht
   | I31Op -> I31HeapType
   | DataOp -> DataHeapType
+  | StructOp -> StructHeapType
   | ArrayOp -> ArrayHeapType
   | FuncOp -> FuncHeapType
   | RttOp -> assert false

@@ -235,6 +235,14 @@ let rec step (c : config) : config =
           Ref r :: vs', []
         )
 
+      | BrCast (x, StructOp), Ref r :: vs' ->
+        (match r with
+        | Data.DataRef (Data.Struct _) ->
+          Ref r :: vs', [Plain (Br x) @@ e.at]
+        | _ ->
+          Ref r :: vs', []
+        )
+
       | BrCast (x, ArrayOp), Ref r :: vs' ->
         (match r with
         | Data.DataRef (Data.Array _) ->
@@ -287,6 +295,14 @@ let rec step (c : config) : config =
       | BrCastFail (x, DataOp), Ref r :: vs' ->
         (match r with
         | Data.DataRef _ ->
+          Ref r :: vs', []
+        | _ ->
+          Ref r :: vs', [Plain (Br x) @@ e.at]
+        )
+
+      | BrCastFail (x, StructOp), Ref r :: vs' ->
+        (match r with
+        | Data.DataRef (Data.Struct _) ->
           Ref r :: vs', []
         | _ ->
           Ref r :: vs', [Plain (Br x) @@ e.at]
@@ -605,6 +621,9 @@ let rec step (c : config) : config =
       | RefTest DataOp, Ref r :: vs' ->
         value_of_bool (match r with Data.DataRef _ -> true | _ -> false) :: vs', []
 
+      | RefTest StructOp, Ref r :: vs' ->
+        value_of_bool (match r with Data.DataRef (Data.Struct _) -> true | _ -> false) :: vs', []
+
       | RefTest ArrayOp, Ref r :: vs' ->
         value_of_bool (match r with Data.DataRef (Data.Array _) -> true | _ -> false) :: vs', []
 
@@ -649,6 +668,15 @@ let rec step (c : config) : config =
           Ref r :: vs', []
         | _ ->
           vs', [Trapping ("cast failure, expected data but got " ^
+            string_of_value (Ref r)) @@ e.at]
+        )
+
+      | RefCast StructOp, Ref r :: vs' ->
+        (match r with
+        | Data.DataRef (Data.Struct _) ->
+          Ref r :: vs', []
+        | _ ->
+          vs', [Trapping ("cast failure, expected struct but got " ^
             string_of_value (Ref r)) @@ e.at]
         )
 

@@ -342,6 +342,7 @@ let assert_return ress ts at =
         | EqHeapType -> Call (is_eqref_idx @@ at)
         | I31HeapType -> RefTest I31Op
         | DataHeapType -> RefTest DataOp
+        | StructHeapType -> RefTest StructOp
         | ArrayHeapType -> RefTest ArrayOp
         | FuncHeapType -> RefTest FuncOp
         | DefHeapType _ -> Const (I32 1l @@ at) (* TODO *)

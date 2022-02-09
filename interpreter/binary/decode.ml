@@ -168,6 +168,7 @@ let heap_type s =
     | -0x18 -> RttHeapType (var_type s, None)
     | -0x19 -> DataHeapType
     | -0x1a -> ArrayHeapType
+    | -0x1b -> StructHeapType
     | _ -> error s pos "malformed heap type"
     )
   | _ ->
@@ -188,6 +189,7 @@ let ref_type s =
   | -0x18 -> (NonNullable, RttHeapType (var_type s, None))
   | -0x19 -> (NonNullable, DataHeapType)
   | -0x1a -> (NonNullable, ArrayHeapType)
+  | -0x1b -> (NonNullable, StructHeapType)
   | _ -> error s pos "malformed reference type"
 
 let value_type s =
@@ -580,10 +582,12 @@ let rec instr s =
     | 0x51l -> ref_is_data
     | 0x52l -> ref_is_i31
     | 0x53l -> ref_is_array
+    | 0x54l -> ref_is_struct
     | 0x58l -> ref_as_func
     | 0x59l -> ref_as_data
     | 0x5al -> ref_as_i31
     | 0x5bl -> ref_as_array
+    | 0x5cl -> ref_as_struct
 
     | 0x60l -> br_on_func (at var s)
     | 0x61l -> br_on_data (at var s)
@@ -593,6 +597,8 @@ let rec instr s =
     | 0x65l -> br_on_non_i31 (at var s)
     | 0x66l -> br_on_array (at var s)
     | 0x67l -> br_on_non_array (at var s)
+    | 0x68l -> br_on_struct (at var s)
+    | 0x69l -> br_on_non_struct (at var s)
 
     | n -> illegal2 s pos b n
     )
