@@ -20,9 +20,7 @@ Based on the following proposals:
 
 * [typed function references](https://github.com/WebAssembly/function-references), which introduces typed references `(ref null? $t)` etc.
 
-* [type imports](https://github.com/WebAssembly/proposal-type-imports), which allows type definitions to be imported and exported
-
-All three proposals are prerequisites.
+Both proposals are prerequisites.
 
 
 ### Types
@@ -81,14 +79,15 @@ New abbreviations are introduced for reference types in binary and text format, 
 #### Type Definitions
 
 * `deftype` is the syntax for an entry in the type section, generalising the existing syntax
-  - `deftype ::= <subtype> | rec <subtype>*`
+  - `deftype ::= rec <subtype>*`
   - `module ::= {..., types vec(<deftype>)}`
   - a `rec` definition defines a group of mutually recursive types that can refer to each other; it thereby defines several type indices at a time
+  - a single type definition, as in Wasm before this proposal, is reinterpreted as a short-hand for a recursive group containing just one type
 
 * `subtype` is a new category of type defining a single type, as a subtype of possible other types
   - `subtype ::= sub <typeidx>* <strtype>`
   - the preexisting syntax with no `sub` clause is redefined to be a shorthand for a `sub` clause with empty `typeidx` list: `<strtype> == sub () <strtype>`
-  - Note: This allows multiple supertypes. For the MVP, it could be restricted to at most one supertype.
+  - Note: This allows multiple supertypes. For the MVP, it is restricted to at most one supertype.
 
 * `strtype` is a new category of types covering the different forms of concrete structural reference types
   - `strtype ::= <functype> | <structtype> | <arraytype>`
@@ -112,7 +111,7 @@ TODO: Need to be able to use `i31` as a type definition.
 
 Validity of a module is checked under a context storing the definitions for each type. In the case of recursive types, this definition is given by a respective projection from the full type:
 ```
-ctxtype ::= <subtype> | (rec <subtype>*).<i>
+ctxtype ::= <deftype>.<i>
 ```
 
 #### Auxiliary Definitions
@@ -122,12 +121,11 @@ ctxtype ::= <subtype> | (rec <subtype>*).<i>
   - `unpacked(pt) = i32`
 
 * Unrolling a possibly recursive context type projects the respective item
-  - `unroll($t)                 = unroll(<ctxtype>)`  iff `C($t) = <ctxtype>`
-  - `unroll(<subtype>)          = <subtype>`
+  - `unroll($t)                 = unroll(<ctxtype>)`  iff `$t = <ctxtype>`
   - `unroll((rec <subtype>*).i) = (<subtype>*)[i]`
 
 * Expanding a type definition unrolls it and returns its plain definition
-  - `expand($t)                 = expand(<ctxtype>)`  iff `C($t) = <ctxtype>`
+  - `expand($t)                 = expand(<ctxtype>)`  iff `$t = <ctxtype>`
   - `expand(<ctxtype>) = <strtype>`
     - where `unroll(<ctxttype>) = sub x* <strtype>`
 
@@ -141,11 +139,7 @@ Some of the rules define a type as `ok` for a certain index, written `ok(x)`. Th
     - iff `<deftype0> ok` and extends the context accordingly
     - and `<deftype>* ok` under the extended context
 
-* a plain type definition is valid if its `subtype` is at its type index
-  - `<subtype> ok` and extends the context with `<subtype>`
-    - iff `<subtype> ok($t)` where `$t` is the next unused (i.e., current) type index
-
-* a recursive type definition is valid if its types are valid under the context containing all of them
+* a group of recursive type definitions is valid if its types are valid under the context containing all of them
   - `rec <subtype>* ok` and extends the context with `<ctxtype>*`
     - iff `<subtype>* ok($t)` under the extended context(!)
     - where `$t` is the next unused (i.e., current) type index
@@ -202,10 +196,9 @@ This form is only used during equivalence checking, to identify and represent "b
 
 * Rolling a context type produces an _iso-recursive_ representation of its underlying recursion group
   - `tie($t)                    = tie_$t(<ctxtype>)`  iff `$t = <ctxtype>`
-  - `tie_$t(<subtype>)          = <subtype>`
   - `tie_$t((rec <subtype>*).i) = (rec <subtype>*).i[$t':=rec.0, ..., $t'+N:=rec.N]` iff `$t' = $t-i` and `N = |<subtype>*|-1`
-  - Note: If a type is not recursive, `tie` is just the identity.
   - Note: This definition assumes that all projections of the recursive type are bound to consecutive type indices, so that `$t-i` is the first of them.
+  - Note: If a type is not recursive, `tie` is just the identity.
 
 With that:
 
@@ -267,7 +260,8 @@ where `<...>` denotes a type tuple. However, in our case, a single syntactic typ
 
 Note 2: This semantics implies that type equivalence checks can be implemented in constant-time by representing all types as trees in tied form and canonicalising them bottom-up in linear time upfront.
 
-Note 3: It's worth noting that the only observable difference to a nominal type system is the equivalence rule on (non-recursive) type indices: instead of looking at their definitions, a nominal system would require `$t = $t'` syntactically (at least as long as we ignore things like checking imports, where type indices become meaningless).
+Note 3: It's worth noting that the only observable difference to the rules for a nominal type system is the equivalence rule on (non-recursive) type indices: instead of comparing the definitions of their recursive groups, a nominal system would require `$t = $t'` syntactically (at least as long as we ignore things like checking imports, where type indices become meaningless).
+Consequently, using a single big recursion group in this system makes it behave like a nominal system.
 
 
 #### Subtyping
@@ -300,10 +294,8 @@ In addition to the [existing rules](https://github.com/WebAssembly/function-refe
 * Any concrete type is a subtype of either `data` or `func`
   - `$t <: data`
      - if `$t = <structtype>` or `$t = <arraytype>`
-     - or `$t = type ht` and `ht <: data` (imports)
   - `$t <: func`
      - if `$t = <functype>`
-     - or `$t = type ht` and `ht <: func` (imports)
 
 * `rtt $t` is a subtype of `eq`
   - `rtt $t <: eq`
@@ -649,14 +641,29 @@ The opcode for heap types is encoded as an `s33`.
 | -0x18  | `(rtt i)`       | `i : typeidx` | |
 | -0x19  | `data`          |            | |
 
-#### Defined Types
+#### Structured Types
 
 | Opcode | Type            | Parameters |
 | ------ | --------------- | ---------- |
 | -0x21  | `struct ft*`    | `ft* : vec(fieldtype)` |
 | -0x22  | `array ft`      | `ft : fieldtype`       |
-| -0x30  | `sub $t* st`    | `$t* : vec(typeidx)`, `st : strtype` |
-| -0x31  | `rec dt*`       | `dt* : vec(subtype)` |
+
+#### Subtypes
+
+| Opcode | Type            | Parameters | Note |
+| ------ | --------------- | ---------- | ---- |
+| -0x21  | `struct ft*`    | `ft* : vec(fieldtype)` | shorthand |
+| -0x22  | `array ft`      | `ft : fieldtype`       | shorthand |
+| -0x30  | `sub $t* st`    | `$t* : vec(typeidx)`, `st : strtype` | |
+
+#### Defined Types
+
+| Opcode | Type            | Parameters | Note |
+| ------ | --------------- | ---------- | ---- |
+| -0x21  | `struct ft*`    | `ft* : vec(fieldtype)` | shorthand |
+| -0x22  | `array ft`      | `ft : fieldtype`       | shorthand |
+| -0x30  | `sub $t* st`    | `$t* : vec(typeidx)`, `st : strtype` | shorthand |
+| -0x31  | `rec dt*`       | `dt* : vec(subtype)` | |
 
 #### Field Types
 
@@ -789,10 +796,6 @@ C |- st st'* ok(x)
 #### Defined Types (`C |- <deftype>* -| C'`)
 
 ```
-C |- st ok(|C|)
----------------
-C |- st -| C,st
-
 x = |C|    N = |st*|-1
 C' = C,(rec st*).0,...,(rec st*).N
 C' |- st* ok(x)
