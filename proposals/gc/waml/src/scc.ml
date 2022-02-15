@@ -58,7 +58,7 @@ let sccs_of_subtypes (dta : W.sub_type array) : IntSet.t list =
 
   and value_type v = function
     | W.RefType (_, ht) -> heap_type v ht
-    | W.NumType _ | W.BotType -> ()
+    | W.NumType _ | W.VecType _ | W.BotType -> ()
 
   and heap_type v = function
     | W.DefHeapType x' | W.RttHeapType x' -> var_type v x'

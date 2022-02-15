@@ -203,6 +203,7 @@ let emit_global ctxt at mut t' ginit_opt : int32 =
       | W.(NumType I64Type) -> W.[i64_const (0L @@ at) @@ at] @@ at
       | W.(NumType F32Type) -> W.[f32_const (F32.of_float 0.0 @@ at) @@ at] @@ at
       | W.(NumType F64Type) -> W.[f64_const (F64.of_float 0.0 @@ at) @@ at] @@ at
+      | W.(VecType V128Type) -> W.[v128_const (V128.zero @@ at) @@ at] @@ at
       | W.(RefType (Nullable, ht)) -> W.[ref_null ht @@ at] @@ at
       | W.(RefType (NonNullable, _)) -> assert false
       | W.BotType -> assert false

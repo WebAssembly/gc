@@ -92,6 +92,9 @@ let var_type s = function
 let num_type s = function
   | (I32Type | I64Type | F32Type | F64Type) as t -> t
 
+let vec_type s = function
+  | V128Type as t -> t
+
 let heap_type s = function
   | ( AnyHeapType | EqHeapType | I31HeapType | DataHeapType | ArrayHeapType
     | FuncHeapType | BotHeapType ) as t -> t
@@ -103,6 +106,7 @@ let ref_type s = function
 
 let value_type s = function
   | NumType t -> NumType (num_type s t)
+  | VecType t -> VecType (vec_type s t)
   | RefType t -> RefType (ref_type s t)
   | BotType -> BotType
 
@@ -167,6 +171,21 @@ and instr' s = function
   | Unary op -> Unary op
   | Binary op -> Binary op
   | Convert op -> Convert op
+  | VecConst v -> VecConst v
+  | VecTest op -> VecTest op
+  | VecCompare op -> VecCompare op
+  | VecUnary op -> VecUnary op
+  | VecBinary op -> VecBinary op
+  | VecConvert op -> VecConvert op
+  | VecShift op -> VecShift op
+  | VecBitmask op -> VecBitmask op
+  | VecTestBits op -> VecTestBits op
+  | VecUnaryBits op -> VecUnaryBits op
+  | VecBinaryBits op -> VecBinaryBits op
+  | VecTernaryBits op -> VecTernaryBits op
+  | VecSplat op -> VecSplat op
+  | VecExtract op -> VecExtract op
+  | VecReplace op -> VecReplace op
   | Block (bt, es) -> Block (block_type s bt, block s es)
   | Loop (bt, es) -> Loop (block_type s bt, block s es)
   | If (bt, es1, es2) -> If (block_type s bt, block s es1, block s es2)
@@ -199,6 +218,10 @@ and instr' s = function
   | ElemDrop x -> ElemDrop (elem_idx s x)
   | Load op -> Load op
   | Store op -> Store op
+  | VecLoad op -> VecLoad op
+  | VecStore op -> VecStore op
+  | VecLoadLane op -> VecLoadLane op
+  | VecStoreLane op -> VecStoreLane op
   | MemorySize -> assert (lookup s.smemory 0l = 0l); MemorySize
   | MemoryGrow -> assert (lookup s.smemory 0l = 0l); MemoryGrow
   | MemoryCopy -> assert (lookup s.smemory 0l = 0l); MemoryCopy

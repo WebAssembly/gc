@@ -36,6 +36,9 @@ let var_type s = function
 let num_type s = function
   | (I32Type | I64Type | F32Type | F64Type) as t -> t
 
+let vec_type s = function
+  | V128Type as t -> t
+
 let heap_type s = function
   | ( AnyHeapType | EqHeapType | I31HeapType | DataHeapType | ArrayHeapType
     | FuncHeapType | BotHeapType ) as t -> t
@@ -47,6 +50,7 @@ let ref_type s = function
 
 let value_type s = function
   | NumType t -> NumType (num_type s t)
+  | VecType t -> VecType (vec_type s t)
   | RefType t -> RefType (ref_type s t)
   | BotType -> BotType
 
