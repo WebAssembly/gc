@@ -6,15 +6,15 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
-    <title>Validation Algorithm &#8212; WebAssembly 1.1 + function-references + gc (Draft 2021-10-13)</title>
-    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
-    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
-    <script id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <title>Validation Algorithm &#8212; WebAssembly 1.1 + function-references + gc (Draft 2022-02-15)</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
     <script src="../_static/jquery.js"></script>
     <script src="../_static/underscore.js"></script>
     <script src="../_static/doctools.js"></script>
-    <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <script type="text/x-mathjax-config">MathJax.Hub.Config({"TeX": {"MAXBUFFER": 30720}})</script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>window.MathJax = {"tex": {"maxBuffer": 30720}}</script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Custom Sections" href="custom.html" />
@@ -97,15 +97,19 @@ Consequently, it can be integrated directly into a decoder.</p>
 <span id="index-1"></span><h2>Data Structures<a class="headerlink" href="#data-structures" title="Permalink to this headline">¶</a></h2>
 <p>Types are representable as a set of enumerations.</p>
 <div class="highlight-pseudo notranslate"><div class="highlight"><pre><span></span><span class="k">type</span> <span class="nf">num_type</span> = I32 | I64 | F32 | F64
+<span class="k">type</span> <span class="nf">vec_type</span> = V128
 <span class="k">type</span> <span class="nf">heap_type</span> = Def(<span class="nf">idx</span> : nat) | Func | Extern | Bot
 <span class="k">type</span> <span class="nf">ref_type</span> = Ref(<span class="nf">heap</span> : heap_type, <span class="nf">null</span> : bool)
-<span class="k">type</span> <span class="nf">val_type</span> = num_type | ref_type | Bot
+<span class="k">type</span> <span class="nf">val_type</span> = num_type | vec_type | ref_type | Bot
 
 <span class="k">func</span> <span class="nf">is_num</span>(<span class="nf">t</span> : val_type) : bool =
   <span class="k">return</span> t = I32 || t = I64 || t = F32 || t = F64 || t = Bot
 
-<span class="k">func</span> <span class="nf">is_ref</span>(<span class="nf">t</span> : val_type) : bool =
-  <span class="k">return</span> t = not (is_num t) || t = Bot
+<span class="k">func</span> <span class="nf">is_vec</span>(<span class="nf">t</span> : val_type | Unknown) : bool =
+  <span class="k">return</span> t = V128 || t = Unknown
+
+<span class="k">func</span> <span class="nf">is_ref</span>(<span class="nf">t</span> : val_type | Unknown) : bool =
+  <span class="k">return</span> t = not (is_num t || is_vec t) || t = Bot
 </pre></div>
 </div>
 <p>Equivalence and subtyping checks can be defined on these types.</p>
@@ -167,6 +171,11 @@ For each entered block, the control stack records a <em>control frame</em> with 
   error_if(vals.size() = ctrls[0].height)
   <span class="k">return</span> vals.pop()
 
+<span class="k">func</span> <span class="nf">pop_val</span>(<span class="nf">expect</span> : val_type) : val_type =
+  <span class="k">let</span> <span class="nf">actual</span> = pop_val()
+  error_if(not matches(actual, expect))
+  <span class="k">return</span> actual
+
 <span class="k">func</span> <span class="nf">pop_num</span>() : num_type | Bot =
   <span class="k">let</span> <span class="nf">actual</span> = pop_val()
   error_if(not is_num(actual))
@@ -178,15 +187,10 @@ For each entered block, the control stack records a <em>control frame</em> with 
   <span class="k">if</span> actual = Bot then <span class="k">return</span> Ref(Bot, false)
   <span class="k">return</span> actual
 
-<span class="k">func</span> <span class="nf">pop_val</span>(<span class="nf">expect</span> : val_type) : val_type =
-  <span class="k">let</span> <span class="nf">actual</span> = pop_val()
-  error_if(not matches(actual, expect))
-  <span class="k">return</span> actual
-
 <span class="k">func</span> <span class="nf">push_vals</span>(<span class="nf">types</span> : list(val_type)) = <span class="k">foreach</span> (t <span class="k">in</span> types) push_val(t)
 <span class="k">func</span> <span class="nf">pop_vals</span>(<span class="nf">types</span> : list(val_type)) : list(val_type) =
   <span class="k">var</span> <span class="nf">popped</span> := []
-  <span class="k">foreach</span> (t <span class="k">in</span> reverse(types)) popped.append(pop_val(t))
+  <span class="k">foreach</span> (t <span class="k">in</span> reverse(types)) popped.prepend(pop_val(t))
   <span class="k">return</span> popped
 </pre></div>
 </div>
@@ -206,13 +210,13 @@ so that, e.g., <code class="code docutils literal notranslate"><span class="pre"
 </div>
 <p>The control stack is likewise manipulated through auxiliary functions:</p>
 <div class="highlight-pseudo notranslate"><div class="highlight"><pre><span></span><span class="k">func</span> <span class="nf">push_ctrl</span>(<span class="nf">opcode</span> : opcode, <span class="k">in</span> : list(val_type), <span class="nf">out</span> : list(val_type)) =
-  <span class="k">let</span> <span class="nf">frame</span> = ctrl_frame(opcode, <span class="k">in</span>, out, vals.size(), false)
+  <span class="k">let</span> <span class="nf">frame</span> = ctrl_frame(opcode, <span class="k">in</span>, out, vals.size(), false)
   ctrls.push(frame)
   push_vals(<span class="k">in</span>)
 
 <span class="k">func</span> <span class="nf">pop_ctrl</span>() : ctrl_frame =
-  error_if(ctrls.is_empty())
-  <span class="k">let</span> <span class="nf">frame</span> = ctrls[0]
+  error_if(ctrls.is_empty())
+  <span class="k">let</span> <span class="nf">frame</span> = ctrls[0]
   pop_vals(frame.end_types)
   error_if(vals.size() =/= frame.height)
   ctrls.pop()
@@ -262,10 +266,11 @@ That is an easy addition and therefore omitted from this presentation.</p>
 
     <span class="k">case</span> (select)
       pop_val(I32)
-      <span class="k">let</span> <span class="nf">t1</span> = pop_num()
-      <span class="k">let</span> <span class="nf">t2</span> = pop_num()
+      <span class="k">let</span> <span class="nf">t1</span> = pop_val()
+      <span class="k">let</span> <span class="nf">t2</span> = pop_val()
+      error_if(not (is_num(t1) &amp;&amp; is_num(t2) || is_vec(t1) &amp;&amp; is_vec(t2)))
       error_if(t1 =/= t2 &amp;&amp; t1 =/= Bot &amp;&amp; t2 =/= Bot)
-      push_val(if (t1 = Bot) t2 else t1)
+      push_val(if (t1 == Bot) t2 else t1)
 
     <span class="k">case</span> (select t)
       pop_val(I32)
@@ -281,8 +286,8 @@ That is an easy addition and therefore omitted from this presentation.</p>
       <span class="k">let</span> <span class="nf">rt</span> = pop_ref()
       push_val(Ref(rt.heap, false))
 
-    <span class="k">case</span> (unreachable)
-      unreachable()
+    <span class="k">case</span> (unreachable)
+      unreachable()
 
     <span class="k">case</span> (block t1*-&gt;t2*)
       pop_vals([t1*])
@@ -307,32 +312,32 @@ That is an easy addition and therefore omitted from this presentation.</p>
       push_ctrl(else, frame.start_types, frame.end_types)
 
     <span class="k">case</span> (br n)
-      error_if(ctrls.size() &lt; n)
-      pop_vals(label_types(ctrls[n]))
-      unreachable()
+      error_if(ctrls.size() &lt; n)
+      pop_vals(label_types(ctrls[n]))
+      unreachable()
 
     <span class="k">case</span> (br_if n)
-      error_if(ctrls.size() &lt; n)
+      error_if(ctrls.size() &lt; n)
       pop_val(I32)
-      pop_vals(label_types(ctrls[n]))
-      push_vals(label_types(ctrls[n]))
+      pop_vals(label_types(ctrls[n]))
+      push_vals(label_types(ctrls[n]))
 
-    <span class="k">case</span> (br_table n* m)
+    <span class="k">case</span> (br_table n* m)
       pop_val(I32)
-      error_if(ctrls.size() &lt; m)
+      error_if(ctrls.size() &lt; m)
       <span class="k">let</span> <span class="nf">arity</span> = label_types(ctrls[m]).size()
-      <span class="k">foreach</span> (n <span class="k">in</span> n*)
-        error_if(ctrls.size() &lt; n)
-        error_if(label_types(ctrls[n]).size() =/= arity)
+      <span class="k">foreach</span> (n <span class="k">in</span> n*)
+        error_if(ctrls.size() &lt; n)
+        error_if(label_types(ctrls[n]).size() =/= arity)
         push_vals(pop_vals(label_types(ctrls[n])))
-      pop_vals(label_types(ctrls[m]))
-      unreachable()
+      pop_vals(label_types(ctrls[m]))
+      unreachable()
 
     <span class="k">case</span> (br_on_null n)
-      error_if(ctrls.size() &lt; n)
+      error_if(ctrls.size() &lt; n)
       <span class="k">let</span> <span class="nf">rt</span> = pop_ref()
-      pop_vals(label_types(ctrls[n]))
-      push_vals(label_types(ctrls[n]))
+      pop_vals(label_types(ctrls[n]))
+      push_vals(label_types(ctrls[n]))
       push_val(Ref(rt.heap, false))
 
     <span class="k">case</span> (call_ref)
