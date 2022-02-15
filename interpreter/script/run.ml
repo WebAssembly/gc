@@ -231,7 +231,7 @@ let type_of_result r =
   | LitResult v -> Value.type_of_value v.it
   | NanResult n -> Types.NumType (Value.type_of_num n.it)
   | RefResult t -> Types.(RefType (NonNullable, t))
-  | NullResult -> Types.(RefType (Nullable, ExternHeapType))
+  | NullResult -> Types.(RefType (Nullable, AnyHeapType))
 
 let string_of_result r =
   match r with
@@ -353,11 +353,11 @@ let assert_result at got expect =
       | RefResult t ->
         (match t, v with
         | Types.AnyHeapType, Ref _
-        | Types.EqHeapType, Ref (I31.I31Ref _)
-        | Types.I31HeapType, Ref (I31.I31Ref _ | Data.DataRef _)
+        | Types.EqHeapType, Ref (I31.I31Ref _ | Data.DataRef _)
+        | Types.I31HeapType, Ref (I31.I31Ref _)
         | Types.DataHeapType, Ref (Data.DataRef _)
-        | Types.FuncHeapType, Ref (Instance.FuncRef _)
-        | Types.ExternHeapType, Ref (ExternRef _) -> false
+        | Types.ArrayHeapType, Ref (Data.DataRef (Data.Array _))
+        | Types.FuncHeapType, Ref (Instance.FuncRef _) -> false
         | _ -> true
         )
       | NullResult ->

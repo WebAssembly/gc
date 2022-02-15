@@ -19,8 +19,8 @@ and heap_type =
   | EqHeapType
   | I31HeapType
   | DataHeapType
+  | ArrayHeapType
   | FuncHeapType
-  | ExternHeapType
   | DefHeapType of var
   | RttHeapType of var * int32 option
   | BotHeapType
@@ -164,8 +164,8 @@ let sem_heap_type c = function
   | EqHeapType -> EqHeapType
   | I31HeapType -> I31HeapType
   | DataHeapType -> DataHeapType
+  | ArrayHeapType -> ArrayHeapType
   | FuncHeapType -> FuncHeapType
-  | ExternHeapType -> ExternHeapType
   | DefHeapType x -> DefHeapType (sem_var_type c x)
   | RttHeapType (x, no) -> RttHeapType (sem_var_type c x, no)
   | BotHeapType -> BotHeapType
@@ -250,17 +250,20 @@ let string_of_name n =
   Buffer.contents b
 
 let rec string_of_var =
-  let inner = ref 0 in
+  let inner = ref [] in
   function
   | SynVar x -> I32.to_string_u x
   | SemVar x ->
-    if !inner > 3 then "..." else
-    ( incr inner;
+    let h = Hashtbl.hash x in
+    string_of_int h ^
+    if List.mem h !inner then "" else
+    ( inner := h :: !inner;
       try
         let s = string_of_def_type (def_of x) in
-        decr inner; "(" ^ s ^ ")"
-      with exn -> inner := 0; raise exn
+        inner := List.tl !inner; "=(" ^ s ^ ")"
+      with exn -> inner := []; raise exn
     )
+
 
 and string_of_nullability = function
   | NonNullable -> ""
@@ -281,8 +284,8 @@ and string_of_heap_type = function
   | EqHeapType -> "eq"
   | I31HeapType -> "i31"
   | DataHeapType -> "data"
+  | ArrayHeapType -> "array"
   | FuncHeapType -> "func"
-  | ExternHeapType -> "extern"
   | DefHeapType x -> string_of_var x
   | RttHeapType (x, None) -> "(rtt " ^ string_of_var x ^ ")"
   | RttHeapType (x, Some n) ->
