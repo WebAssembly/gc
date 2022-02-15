@@ -19,8 +19,8 @@ and heap_type =
   | EqHeapType
   | I31HeapType
   | DataHeapType
+  | ArrayHeapType
   | FuncHeapType
-  | ExternHeapType
   | DefHeapType of var
   | RttHeapType of var
   | BotHeapType
@@ -166,8 +166,8 @@ let subst_heap_type s = function
   | EqHeapType -> EqHeapType
   | I31HeapType -> I31HeapType
   | DataHeapType -> DataHeapType
+  | ArrayHeapType -> ArrayHeapType
   | FuncHeapType -> FuncHeapType
-  | ExternHeapType -> ExternHeapType
   | DefHeapType x -> DefHeapType (s x)
   | RttHeapType x -> RttHeapType (s x)
   | BotHeapType -> BotHeapType
@@ -327,6 +327,7 @@ let rec string_of_var =
     )
   | RecVar x -> "rec." ^ I32.to_string_u x
 
+
 and string_of_nullability = function
   | NonNullable -> ""
   | Nullable -> "null "
@@ -346,8 +347,8 @@ and string_of_heap_type = function
   | EqHeapType -> "eq"
   | I31HeapType -> "i31"
   | DataHeapType -> "data"
+  | ArrayHeapType -> "array"
   | FuncHeapType -> "func"
-  | ExternHeapType -> "extern"
   | DefHeapType x -> string_of_var x
   | RttHeapType x -> "(rtt " ^ string_of_var x ^ ")"
   | BotHeapType -> "something"

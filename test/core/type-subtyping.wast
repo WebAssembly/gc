@@ -28,7 +28,7 @@
   (type $f1 (func (param (ref $s')) (result anyref)))
   (type $f2 (sub $f1 (func (param (ref $s)) (result (ref any)))))
   (type $f3 (sub $f2 (func (param (ref null $s)) (result (ref $s)))))
-  (type $f4 (sub $f3 (func (param dataref) (result (ref $s')))))
+  (type $f4 (sub $f3 (func (param (ref null data)) (result (ref $s')))))
 )
 
 

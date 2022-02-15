@@ -29,10 +29,6 @@ Both proposals are prerequisites.
 
 [Heap types](https://github.com/WebAssembly/function-references/blob/master/proposals/function-references/Overview.md#types) classify reference types and are extended:
 
-* `any` is a new heap type
-  - `heaptype ::= ... | any`
-  - the common supertype of all referenceable types
-
 * `eq` is a new heap type
   - `heaptype ::= ... | eq`
   - the common supertype of all referenceable types on which comparison (`ref.eq`) is allowed
@@ -41,6 +37,10 @@ Both proposals are prerequisites.
   - `heaptype ::= ... | data`
   - the common supertype of all compound data types, like struct and array types and possibly host-defined types, for which casts are allowed
 
+* `array` is a new heap type
+  - `heaptype ::= ... | array`
+  - the common supertype of all array types
+
 * `i31` is a new heap type
   - `heaptype ::= ... | i31`
   - the type of unboxed scalars
@@ -48,6 +48,10 @@ Both proposals are prerequisites.
 * `rtt <typeidx>` is a new heap type that is a runtime representation of the static type `<typeidx>`
   - `heaptype ::= ... | rtt <typeidx>`
   - `rtt t ok` iff `t ok`
+
+* `extern` is renamed back to `any`
+  - the common supertype of all referenceable types
+  - the name `extern` is kept as an alias in the text format for backwards compatibility
 
 * Note: heap types `func` and `extern` already exist via [reference types proposal](https://github.com/WebAssembly/reference-types), and `(ref null? $t)` via [typed references](https://github.com/WebAssembly/function-references)
 
@@ -60,20 +64,24 @@ Moreover, they form a small [subtype hierarchy](#subtyping).
 
 New abbreviations are introduced for reference types in binary and text format, corresponding to `funcref` and `externref`:
 
-* `anyref` is a new reference type
-  - `anyref == (ref null any)`
-
 * `eqref` is a new reference type
   - `eqref == (ref null eq)`
 
 * `dataref` is a new reference type
   - `dataref == (ref data)`
 
+* `arrayref` is a new reference type
+  - `arrayref == (ref array)`
+
 * `i31ref` is a new reference type
   - `i31ref == (ref i31)`
 
 * `rtt <typeidx>` is a new reference type
   - `(rtt $t) == (ref (rtt $t))`
+
+* `externref` is renamed to `anyref`
+  - `anyref == (ref null any)`
+  - the name `externref` is kept as an alias in the text format for backwards compatibility
 
 
 #### Type Definitions
@@ -288,6 +296,9 @@ In addition to the [existing rules](https://github.com/WebAssembly/function-refe
   - `data <: eq`
   - TODO: provide a way to make data types non-eq, especially immutable ones?
 
+* `arrayref` is a subtype of `dataref`
+  - `array <: data`
+
 * `i31ref` is a subtype of `eqref`
   - `i31 <: eq`
 
@@ -296,6 +307,11 @@ In addition to the [existing rules](https://github.com/WebAssembly/function-refe
      - if `$t = <structtype>` or `$t = <arraytype>`
   - `$t <: func`
      - if `$t = <functype>`
+
+* Any concrete array type is a subtype of `array`
+  - `(type $t) <: array`
+     - if `$t = <arraytype>`
+     - or `$t = type ht` and `rt <: array` (imports)
 
 * `rtt $t` is a subtype of `eq`
   - `rtt $t <: eq`
@@ -308,27 +324,17 @@ Note: This creates a hierarchy of *abstract* Wasm heap types that looks as follo
    eq    func
   /  \
 i31  data
+       \
+       array
 ```
 All *concrete* heap types (of the form `(type $t)`) are situated below either `data` or `func`.
 RTTs are below `eq`.
 
-In addition, the abstract heap type `extern` is also a subtype of `any`.
-Its interpretation is defined by the host environment.
-It may contain additional host-defined types that are neither of the above three leaf type categories.
-It may also overlap with some or all of these categories,
-as would be observable by applying a classification instruction like `ref.is_func` to a value of type `externref`.
-The possible outcomes of such an operation hence depend on the host environment.
-(For example, in a JavaScript embedding, `externref` could be inhabited by all JS values --
-which is a natural choice, because JavaScript is untyped;
-but some of its values are JS-side representations of Wasm values per the JS API,
-and those can also be observed as `data` or `func` references.
-Another possible interpretation could be that `data` is disjoint from `extern`,
-which would be determined by the coercions allowed by the JS API at the JS/Wasm boundary.
-While such an interpretation is probably not attractive for JavaScript,
-it would be natural in other embeddings such as the C/C++ API,
-where different references are represented with different host types.)
+In addition, a host environment may introduce additional inhabitants of type `any`
+that are are in neither of the above three leaf type categories.
+The interpretation of such values is defined by the host environment.
 
-Note: In the future, this hierarchy could be refined to distinguish compound data types that are not subtypes of `eq`.
+Note: In the future, this hierarchy could be refined, e.g., to distinguish compound data types that are not subtypes of `eq`.
 
 
 ##### Structural Types
@@ -475,9 +481,8 @@ This can compile to machine code that (1) reads the RTT from `$x`, (2) checks th
     - and `t = unpacked(t')`
   - traps on `null` or if the dynamic index is out of bounds
 
-* `array.len <typeidx>` inquires the length of an array
-  - `array.len $t : [(ref null $t)] -> [i32]`
-    - iff `expand($t) = array (mut t)`
+* `array.len` inquires the length of an array
+  - `array.len : [(ref null array)] -> [i32]`
   - traps on `null`
 
 
@@ -500,6 +505,9 @@ Tentatively, support a type of guaranteed unboxed scalars.
 
 * `ref.is_data` checks whether a reference is compound data
   - `ref.is_data : [anyref] -> [i32]`
+
+* `ref.is_array` checks whether a reference is an array
+  - `ref.is_array : [anyref] -> [i32]`
 
 * `ref.is_i31` checks whether a reference is an i31
   - `ref.is_i31 : [anyref] -> [i32]`
@@ -532,6 +540,20 @@ Tentatively, support a type of guaranteed unboxed scalars.
     - and `t <: t'`
   - passes operand along with branch, plus possible extra args
 
+* `br_on_array <labelidx>` branches if a reference is an array
+  - `br_on_array $l : [t0* t] -> [t0* t]`
+    - iff `$l : [t0* t']`
+    - and `t <: anyref`
+    - and `(ref array) <: t'`
+  - passes operand along with branch as data, plus possible extra args
+
+* `br_on_non_array <labelidx>` branches if a reference is not an array
+  - `br_on_non_array $l : [t0* t] -> [t0* (ref array)]`
+    - iff `$l : [t0* t']`
+    - and `t <: anyref`
+    - and `t <: t'`
+  - passes operand along with branch, plus possible extra args
+
 * `br_on_i31 <labelidx>` branches if a reference is an integer
   - `br_on_i31 $l : [t0* t] -> [t0* t]`
     - iff `$l : [t0* t']`
@@ -549,21 +571,24 @@ Tentatively, support a type of guaranteed unboxed scalars.
 * `ref.as_func` converts to a function reference
   - `ref.as_func : [anyref] -> [(ref func)]`
   - traps if reference is not a function
-  - equivalent to `(block $l (param anyref) (result funcref) (br_on_func $l) (unreachable))`
+  - equivalent to `(block $l (param anyref) (result (ref func)) (br_on_func $l) (unreachable))`
 
 * `ref.as_data` converts to a data reference
   - `ref.as_data : [anyref] -> [(ref data)]`
   - traps if reference is not compound data
-  - equivalent to `(block $l (param anyref) (result dataref) (br_on_data $l) (unreachable))`
+  - equivalent to `(block $l (param anyref) (result (ref data)) (br_on_data $l) (unreachable))`
+
+* `ref.as_array` converts to an array reference
+  - `ref.as_array : [anyref] -> [(ref array)]`
+  - traps if reference is not an array
+  - equivalent to `(block $l (param anyref) (result (ref array)) (br_on_array $l) (unreachable))`
 
 * `ref.as_i31` converts to an integer reference
   - `ref.as_i31 : [anyref] -> [(ref i31)]`
   - traps if reference is not an integer
-  - equivalent to `(block $l (param anyref) (result i31ref) (br_on_i31 $l) (unreachable))`
+  - equivalent to `(block $l (param anyref) (result (ref i31)) (br_on_i31 $l) (unreachable))`
 
 Note: The [reference types](https://github.com/WebAssembly/reference-types) and [typed function references](https://github.com/WebAssembly/function-references)already introduce similar `ref.is_null`, `br_on_null`, and `br_on_non_null` instructions.
-
-Note: There are no instructions to check for `externref`, since that can consist of a diverse set of different object representations that would be costly to check for exhaustively.
 
 Note: The `br_on_*` instructions allow an operand of unrelated reference type, even though this cannot possibly succeed. That's because subtyping allows to forget that information, so by the subtype substitutibility property, it would be accepted in any case. The given typing rules merely allow this type to also propagate to the result, which avoids the need to compute a least upper bound between the operand type and the target type in the typing algorithm.
 
@@ -639,14 +664,14 @@ This extends the [encodings](https://github.com/WebAssembly/function-references/
 | Opcode | Type            | Parameters | Note |
 | ------ | --------------- | ---------- | ---- |
 | -0x10  | `funcref`       |            | shorthand, from reftype proposal |
-| -0x11  | `externref`     |            | shorthand, from reftype proposal |
-| -0x12  | `anyref`        |            | shorthand |
+| -0x11  | `anyref`        |            | shorthand, from reftype proposal |
 | -0x13  | `eqref`         |            | shorthand |
 | -0x14  | `(ref null ht)` | `ht : heaptype (s33)` | from funcref proposal |
 | -0x15  | `(ref ht)`      | `ht : heaptype (s33)` | from funcref proposal |
 | -0x16  | `i31ref`        |            | shorthand |
 | -0x18  | `(rtt $t)`      | `i : typeidx` | shorthand |
 | -0x19  | `dataref`       |            | shorthand |
+| -0x1a  | `arrayref`      |            | shorthand |
 
 #### Heap Types
 
@@ -656,12 +681,12 @@ The opcode for heap types is encoded as an `s33`.
 | ------ | --------------- | ---------- | ---- |
 | i >= 0 | `(type i)`      |            | from funcref proposal |
 | -0x10  | `func`          |            | from funcref proposal |
-| -0x11  | `extern`        |            | from funcref proposal |
-| -0x12  | `any`           |            | |
+| -0x11  | `any`           |            | from funcref proposal |
 | -0x13  | `eq`            |            | |
 | -0x16  | `i31`           |            | |
 | -0x18  | `(rtt i)`       | `i : typeidx` | |
 | -0x19  | `data`          |            | |
+| -0x1a  | `array`         |            | |
 
 #### Structured Types
 
@@ -712,7 +737,7 @@ The opcode for heap types is encoded as an `s33`.
 | 0xfb14 | `array.get_s $t` | `$t : typeidx` |
 | 0xfb15 | `array.get_u $t` | `$t : typeidx` |
 | 0xfb16 | `array.set $t` | `$t : typeidx` |
-| 0xfb17 | `array.len $t` | `$t : typeidx` |
+| 0xfb17 | `array.len` | `_ : u32` (TODO: remove, was typeidx) |
 | 0xfb20 | `i31.new` |  |
 | 0xfb21 | `i31.get_s` |  |
 | 0xfb22 | `i31.get_u` |  |
@@ -724,16 +749,19 @@ The opcode for heap types is encoded as an `s33`.
 | 0xfb50 | `ref.is_func` | |
 | 0xfb51 | `ref.is_data` | |
 | 0xfb52 | `ref.is_i31` | |
+| 0xfb53 | `ref.is_array` | |
 | 0xfb58 | `ref.as_func` | |
 | 0xfb59 | `ref.as_data` | |
 | 0xfb5a | `ref.as_i31` | |
+| 0xfb5b | `ref.as_array` | |
 | 0xfb60 | `br_on_func` | |
 | 0xfb61 | `br_on_data` | |
 | 0xfb62 | `br_on_i31` | |
 | 0xfb63 | `br_on_non_func` | |
 | 0xfb64 | `br_on_non_data` | |
 | 0xfb65 | `br_on_non_i31` | |
-
+| 0xfb66 | `br_on_array` | |
+| 0xfb67 | `br_on_non_array` | |
 
 
 ## JS API

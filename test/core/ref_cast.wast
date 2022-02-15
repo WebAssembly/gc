@@ -17,7 +17,7 @@
   (global $t3 (rtt $t3) (rtt.canon $t3))
   (global $t4 (rtt $t4) (rtt.canon $t4))
 
-  (table 20 dataref)
+  (table 20 (ref null data))
 
   (func $init
     (table.set (i32.const 0) (struct.new_default $t0 (global.get $t0)))

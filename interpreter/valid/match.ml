@@ -149,6 +149,8 @@ and match_heap_type c t1 t2 =
   | _, AnyHeapType -> true
   | I31HeapType, EqHeapType -> true
   | DataHeapType, EqHeapType -> true
+  | ArrayHeapType, EqHeapType -> true
+  | ArrayHeapType, DataHeapType -> true
   | RttHeapType _, EqHeapType -> true
   | DefHeapType x1, EqHeapType ->
     (match expand_ctx_type (lookup c x1) with
@@ -158,6 +160,11 @@ and match_heap_type c t1 t2 =
   | DefHeapType x1, DataHeapType ->
     (match expand_ctx_type (lookup c x1) with
     | StructDefType _ | ArrayDefType _ -> true
+    | _ -> false
+    )
+  | DefHeapType x1, ArrayHeapType ->
+    (match expand_ctx_type (lookup c x1) with
+    | ArrayDefType _ -> true
     | _ -> false
     )
   | DefHeapType x1, FuncHeapType ->

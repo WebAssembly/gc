@@ -237,6 +237,14 @@ let rec step (c : config) : config =
           Ref r :: vs', []
         )
 
+      | BrCast (x, ArrayOp), Ref r :: vs' ->
+        (match r with
+        | Data.DataRef (Data.Array _) ->
+          Ref r :: vs', [Plain (Br x) @@ e.at]
+        | _ ->
+          Ref r :: vs', []
+        )
+
       | BrCast (x, FuncOp), Ref r :: vs' ->
         (match r with
         | FuncRef _ ->
@@ -281,6 +289,14 @@ let rec step (c : config) : config =
       | BrCastFail (x, DataOp), Ref r :: vs' ->
         (match r with
         | Data.DataRef _ ->
+          Ref r :: vs', []
+        | _ ->
+          Ref r :: vs', [Plain (Br x) @@ e.at]
+        )
+
+      | BrCastFail (x, ArrayOp), Ref r :: vs' ->
+        (match r with
+        | Data.DataRef (Data.Array _) ->
           Ref r :: vs', []
         | _ ->
           Ref r :: vs', [Plain (Br x) @@ e.at]
@@ -593,6 +609,9 @@ let rec step (c : config) : config =
       | RefTest DataOp, Ref r :: vs' ->
         value_of_bool (match r with Data.DataRef _ -> true | _ -> false) :: vs', []
 
+      | RefTest ArrayOp, Ref r :: vs' ->
+        value_of_bool (match r with Data.DataRef (Data.Array _) -> true | _ -> false) :: vs', []
+
       | RefTest FuncOp, Ref r :: vs' ->
         value_of_bool (match r with FuncRef _ -> true | _ -> false) :: vs', []
 
@@ -637,6 +656,15 @@ let rec step (c : config) : config =
             string_of_value (Ref r)) @@ e.at]
         )
 
+      | RefCast ArrayOp, Ref r :: vs' ->
+        (match r with
+        | Data.DataRef (Data.Array _) ->
+          Ref r :: vs', []
+        | _ ->
+          vs', [Trapping ("cast failure, expected array but got " ^
+            string_of_value (Ref r)) @@ e.at]
+        )
+
       | RefCast FuncOp, Ref r :: vs' ->
         (match r with
         | FuncRef _ ->
@@ -657,10 +685,14 @@ let rec step (c : config) : config =
           Ref r :: vs', []
         | FuncRef f when Rtt.match_rtt (Func.read_rtt f) rtt ->
           Ref r :: vs', []
-        | Data.DataRef _ | FuncRef _ ->
+        | Data.DataRef d ->
           vs', [Trapping ("cast failure, expected " ^
-            string_of_ctx_type (Rtt.ctx_type_of rtt) ^ " but got " ^
-            string_of_value (Ref r)) @@ e.at]
+            Rtt.string_of_rtt rtt ^ " but got " ^
+            Rtt.string_of_rtt (Data.read_rtt d)) @@ e.at]
+        | FuncRef f ->
+          vs', [Trapping ("cast failure, expected " ^
+            Rtt.string_of_rtt rtt ^ " but got " ^
+            Rtt.string_of_rtt (Func.read_rtt f)) @@ e.at]
         | _ ->
           Crash.error e.at "wrong reference type"
         )
@@ -749,10 +781,10 @@ let rec step (c : config) : config =
         (try Data.write_field (Lib.List32.nth fs i) v; vs', []
         with Failure _ -> Crash.error e.at "type mismatch writing array")
 
-      | ArrayLen x, Ref (NullRef _) :: vs' ->
+      | ArrayLen, Ref (NullRef _) :: vs' ->
         vs', [Trapping "null array reference" @@ e.at]
 
-      | ArrayLen x, Ref (Data.DataRef (Data.Array (_, _, svs))) :: vs' ->
+      | ArrayLen, Ref (Data.DataRef (Data.Array (_, _, svs))) :: vs' ->
         Num (I32 (Lib.List32.length svs)) :: vs', []
 
       | RttCanon x, vs ->
