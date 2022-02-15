@@ -19,8 +19,8 @@ and heap_type =
   | EqHeapType
   | I31HeapType
   | DataHeapType
+  | ArrayHeapType
   | FuncHeapType
-  | ExternHeapType
   | DefHeapType of var
   | RttHeapType of var
   | BotHeapType
@@ -42,8 +42,8 @@ and str_type =
   | FuncDefType of func_type
 
 and sub_type = SubType of var list * str_type
-and def_type = DefType of sub_type | RecDefType of sub_type list
-and ctx_type = CtxType of sub_type | RecCtxType of (var * sub_type) list * int32
+and def_type = RecDefType of sub_type list
+and ctx_type = RecCtxType of (var * sub_type) list * int32
 
 type 'a limits = {min : 'a; max : 'a option}
 type table_type = TableType of Int32.t limits * ref_type
@@ -166,8 +166,8 @@ let subst_heap_type s = function
   | EqHeapType -> EqHeapType
   | I31HeapType -> I31HeapType
   | DataHeapType -> DataHeapType
+  | ArrayHeapType -> ArrayHeapType
   | FuncHeapType -> FuncHeapType
-  | ExternHeapType -> ExternHeapType
   | DefHeapType x -> DefHeapType (s x)
   | RttHeapType x -> RttHeapType (s x)
   | BotHeapType -> BotHeapType
@@ -209,13 +209,11 @@ let subst_sub_type s = function
     SubType (List.map s xs, subst_str_type s st)
 
 let subst_def_type s = function
-  | DefType st -> DefType (subst_sub_type s st)
   | RecDefType sts -> RecDefType (List.map (subst_sub_type s) sts)
 
 let subst_rec_type s (x, st) = (s x, subst_sub_type s st)
 
 let subst_ctx_type s = function
-  | CtxType st -> CtxType (subst_sub_type s st)
   | RecCtxType (rts, i) -> RecCtxType (List.map (subst_rec_type s) rts, i)
 
 
@@ -246,7 +244,6 @@ let subst_import_type s (ImportType (et, module_name, name)) =
 
 let ctx_types_of_def_type x (dt : def_type) : ctx_type list =
   match dt with
-  | DefType st -> [CtxType st]
   | RecDefType sts ->
     let rts = Lib.List32.mapi (fun i st -> (SynVar (Int32.add x i), st)) sts in
     Lib.List32.mapi (fun i _ -> RecCtxType (rts, i)) sts
@@ -263,7 +260,6 @@ let ctx_types_of_def_types (dts : def_type list) : ctx_type list =
 
 let unroll_ctx_type (ct : ctx_type) : sub_type =
   match ct with
-  | CtxType st -> st
   | RecCtxType (rts, i) -> snd (Lib.List32.nth rts i)
 
 let expand_ctx_type (ct : ctx_type) : str_type =
@@ -315,8 +311,8 @@ struct
     | I32Type | I64Type | F32Type | F64Type -> xs
 
   let heap_type xs = function
-    | AnyHeapType | EqHeapType | I31HeapType | DataHeapType
-    | FuncHeapType | ExternHeapType | BotHeapType -> xs
+    | AnyHeapType | EqHeapType | I31HeapType | DataHeapType | ArrayHeapType
+    | FuncHeapType | BotHeapType -> xs
     | DefHeapType x | RttHeapType x -> var_type xs x
 
   let ref_type xs = function
@@ -348,10 +344,8 @@ struct
   let sub_type xs = function
     | SubType (xs', st) -> list var_type (str_type xs st) xs'
   let def_type xs = function
-    | DefType st -> sub_type xs st
     | RecDefType sts -> list sub_type xs sts
   let ctx_type xs = function
-    | CtxType st -> sub_type xs st
     | RecCtxType (xsts, _) ->
       let xs', sts = List.split xsts in
       list sub_type (list var_type xs xs') sts
@@ -434,8 +428,8 @@ and string_of_heap_type = function
   | EqHeapType -> "eq"
   | I31HeapType -> "i31"
   | DataHeapType -> "data"
+  | ArrayHeapType -> "array"
   | FuncHeapType -> "func"
-  | ExternHeapType -> "extern"
   | DefHeapType x -> string_of_var x
   | RttHeapType x -> "(rtt " ^ string_of_var x ^ ")"
   | BotHeapType -> "something"
@@ -482,30 +476,17 @@ and string_of_sub_type = function
     " (" ^ string_of_str_type st ^ ")"
 
 and string_of_def_type = function
-  | DefType st -> string_of_sub_type st
+  | RecDefType [st] -> string_of_sub_type st
   | RecDefType sts ->
     "rec " ^
     String.concat " " (List.map (fun st -> "(" ^ string_of_sub_type st ^ ")") sts)
 
-and equal_var x y =
-  match x, y with
-  | SynVar x', SynVar y' -> x' = y'
-  | SemVar x', SemVar y' -> x' == y'
-  | RecVar x', RecVar y' -> x' = y'
-  | _, _ -> false
-and tie_var_type xs x =
-  match Lib.List32.index_where (equal_var x) xs with
-  | Some i -> RecVar i
-  | None -> x
-and tie_rec_types rts =
-  let xs, sts = List.split rts in
-  List.map (subst_sub_type (tie_var_type xs)) sts
-
 and string_of_ctx_type = function
-  | CtxType st -> string_of_sub_type st
+  | RecCtxType ([(_, st)], 0l) -> string_of_sub_type st
   | RecCtxType (rts, i) ->
-    "(" ^ string_of_def_type (RecDefType (tie_rec_types rts)) ^ ")." ^
-    I32.to_string_u i
+    "(" ^ string_of_def_type (RecDefType (List.map snd rts)) ^ ")." ^
+      I32.to_string_u i
+
 
 let string_of_limits {min; max} =
   I32.to_string_u min ^

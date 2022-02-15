@@ -17,6 +17,7 @@ let match_rtt (Rtt x1) (Rtt x2) = Match.match_var_type [] (SemVar x1) (SemVar x2
 
 let string_of_rtt (Rtt x) = string_of_var (SemVar x)
 
+
 let () =
   let eq_ref' = !Value.eq_ref' in
   Value.eq_ref' := fun r1 r2 ->
@@ -33,5 +34,5 @@ let () =
 let () =
   let string_of_ref' = !Value.string_of_ref' in
   Value.string_of_ref' := function
-    | RttRef rtt -> "(rtt " ^ string_of_rtt rtt ^ ")"
+    | RttRef (Rtt x) -> "(rtt " ^ string_of_var (SemVar x) ^ ")"
     | r -> string_of_ref' r

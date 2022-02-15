@@ -106,21 +106,24 @@ struct
     | F64Type -> s7 (-0x04)
 
   let heap_type = function
-    | AnyHeapType -> s7 (-0x12)
+    | AnyHeapType -> s7 (-0x11)
     | EqHeapType -> s7 (-0x13)
     | I31HeapType -> s7 (-0x16)
     | DataHeapType -> s7 (-0x19)
+    | ArrayHeapType -> s7 (-0x1a)
     | FuncHeapType -> s7 (-0x10)
-    | ExternHeapType -> s7 (-0x11)
     | DefHeapType x -> var_type s33 x
     | RttHeapType x -> s7 (-0x18); var_type u32 x
     | BotHeapType -> assert false
 
   let ref_type = function
+    | (Nullable, AnyHeapType) -> s7 (-0x11)
+    | (Nullable, EqHeapType) -> s7 (-0x13)
+    | (NonNullable, I31HeapType) -> s7 (-0x16)
+    | (NonNullable, DataHeapType) -> s7 (-0x19)
+    | (NonNullable, ArrayHeapType) -> s7 (-0x1a)
     | (Nullable, FuncHeapType) -> s7 (-0x10)
-    | (Nullable, ExternHeapType) -> s7 (-0x11)
     | (Nullable, t) -> s7 (-0x14); heap_type t
-    | (NonNullable, RttHeapType x) -> s7 (-0x18); var_type u32 x
     | (NonNullable, t) -> s7 (-0x15); heap_type t
 
   let value_type = function
@@ -159,11 +162,11 @@ struct
     | SubType (xs, st) -> s7 (-0x30); vec (var_type u32) xs; str_type st
 
   let def_type = function
-    | DefType st -> sub_type st
+    | RecDefType [st] -> sub_type st
     | RecDefType sts -> s7 (-0x31); vec sub_type sts
 
-  let limits uN {min; max} =
-    bool (max <> None); uN min; opt uN max
+  let limits vu {min; max} =
+    bool (max <> None); vu min; opt vu max
 
   let table_type = function
     | TableType (lim, t) -> ref_type t; limits u32 lim
@@ -221,11 +224,13 @@ struct
     | BrCast (x, NullOp) -> op 0xd4; var x
     | BrCast (x, I31Op) -> op 0xfb; op 0x62; var x
     | BrCast (x, DataOp) -> op 0xfb; op 0x61; var x
+    | BrCast (x, ArrayOp) -> op 0xfb; op 0x66; var x
     | BrCast (x, FuncOp) -> op 0xfb; op 0x60; var x
     | BrCast (x, RttOp) -> op 0xfb; op 0x42; var x
     | BrCastFail (x, NullOp) -> op 0xd6; var x
     | BrCastFail (x, I31Op) -> op 0xfb; op 0x65; var x
     | BrCastFail (x, DataOp) -> op 0xfb; op 0x64; var x
+    | BrCastFail (x, ArrayOp) -> op 0xfb; op 0x67; var x
     | BrCastFail (x, FuncOp) -> op 0xfb; op 0x63; var x
     | BrCastFail (x, RttOp) -> op 0xfb; op 0x43; var x
     | Return -> op 0x0f
@@ -308,12 +313,14 @@ struct
     | RefTest NullOp -> op 0xd1
     | RefTest I31Op -> op 0xfb; op 0x52
     | RefTest DataOp -> op 0xfb; op 0x51
+    | RefTest ArrayOp -> op 0xfb; op 0x53
     | RefTest FuncOp -> op 0xfb; op 0x50
     | RefTest RttOp -> op 0xfb; op 0x40
 
     | RefCast NullOp -> op 0xd3
     | RefCast I31Op -> op 0xfb; op 0x5a
     | RefCast DataOp -> op 0xfb; op 0x59
+    | RefCast ArrayOp -> op 0xfb; op 0x5b
     | RefCast FuncOp -> op 0xfb; op 0x58
     | RefCast RttOp -> op 0xfb; op 0x41
 
@@ -336,7 +343,7 @@ struct
     | ArrayGet (x, Some SX) -> op 0xfb; op 0x14; var x
     | ArrayGet (x, Some ZX) -> op 0xfb; op 0x15; var x
     | ArraySet x -> op 0xfb; op 0x16; var x
-    | ArrayLen x -> op 0xfb; op 0x17; var x
+    | ArrayLen -> op 0xfb; op 0x17; op 0  (* TODO: remove 0 *)
 
     | RttCanon x -> op 0xfb; op 0x30; var x
 

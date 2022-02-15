@@ -159,8 +159,6 @@ let rec add_range s x y = function
 
 let rec add_types_range s x y = function
   | [] -> s
-  | {it = DefType _; _}::dts ->
-    add_types_range (Subst.Map.add x y s) (x +% 1l) (y +% 1l) dts
   | {it = RecDefType []; at}::dts ->
     add_types_range s x y dts
   | {it = RecDefType (st::sts); at}::dts ->
@@ -169,7 +167,6 @@ let rec add_types_range s x y = function
 
 let rec num_types = function
   | [] -> 0l
-  | {it = DefType _; _}::dts -> 1l +% num_types dts
   | {it = RecDefType sts; _}::dts -> Wasm.Lib.List32.length sts +% num_types dts
 
 let merge_defs (env : env) cnt m : env =

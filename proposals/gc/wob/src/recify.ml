@@ -209,18 +209,10 @@ let recify (sts : W.sub_type phrase list) : W.def_type phrase list * Subst.t =
   (* Construct def_types list *)
   let types = ref [] in
   Array.iter (fun g ->
-    if not g.is_rec then
-    (
-      let x = IntSet.min_elt g.fwd in
-      types := (W.DefType tys.(x) @@ sta.(x).at) :: !types
-    )
-    else
-    (
-      let sts = List.map (fun x -> tys.(x)) g.ord in
-      let left = sta.(IntSet.min_elt g.fwd).at.left in
-      let right = sta.(IntSet.max_elt g.fwd).at.right in
-      types := (W.RecDefType sts @@ {left; right}) :: !types
-    );
+    let sts = List.map (fun x -> tys.(x)) g.ord in
+    let left = sta.(IntSet.min_elt g.fwd).at.left in
+    let right = sta.(IntSet.max_elt g.fwd).at.right in
+    types := (W.RecDefType sts @@ {left; right}) :: !types
   ) groups;
 
   List.rev !types, !subst

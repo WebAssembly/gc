@@ -156,9 +156,9 @@ let compile_text_cat ctxt : int32 =
       let tmp = emit_local ctxt at textnullref in
       List.iter (emit_instr ctxt at) W.[
         local_get (arg1 @@ at);
-        array_len (text @@ at);
+        array_len;
         local_get (arg2 @@ at);
-        array_len (text @@ at);
+        array_len;
         i32_add;
         rtt_canon (text @@ at);
         array_new_default (text @@ at);
@@ -168,16 +168,16 @@ let compile_text_cat ctxt : int32 =
         local_get (arg1 @@ at);
         i32_const (0l @@ at);
         local_get (arg1 @@ at);
-        array_len (text @@ at);
+        array_len;
         call (text_cpy @@ at);
         local_get (tmp @@ at);
         ref_as_non_null;
         local_get (arg1 @@ at);
-        array_len (text @@ at);
+        array_len;
         local_get (arg2 @@ at);
         i32_const (0l @@ at);
         local_get (arg2 @@ at);
-        array_len (text @@ at);
+        array_len;
         call (text_cpy @@ at);
         local_get (tmp @@ at);
         ref_as_non_null;
@@ -203,9 +203,9 @@ let compile_text_eq ctxt : int32 =
             i32_const (1l @@ at); return
           ]) [];
           local_get (arg1 @@ at);
-          array_len (text @@ at);
+          array_len;
           local_get (arg2 @@ at);
-          array_len (text @@ at);
+          array_len;
           local_tee (len @@ at);
           i32_ne;
           br_if (0l @@ at);
@@ -464,7 +464,7 @@ and compile_func_curry arity ctxt =
             struct_get (curriedN @@ at) (curry_arg_idx @@ at);
             local_tee (src +% 1l @@ at);
             (* Load length *)
-            array_len (argv @@ at);
+            array_len;
             local_tee (i +% 1l @@ at);
             (* Allocate destination *)
             i32_const (1l @@ at);

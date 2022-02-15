@@ -16,7 +16,6 @@ let eq = EqHeapType
 let i31 = I31HeapType
 let data = DataHeapType
 let func = FuncHeapType
-let extern = ExternHeapType
 let type_ x = DefHeapType (SynVar x)
 let rtt x = RttHeapType (SynVar x)
 
@@ -43,8 +42,8 @@ let array ft = ArrayDefType (ArrayType ft)
 let func ts1 ts2 = FuncDefType (FuncType (ts1, ts2))
 
 let sub xs st = SubType (List.map (fun x -> SynVar x) xs, st)
-let type_def st = DefType (sub [] st)
-let type_sub xs st = DefType (sub xs st)
+let type_def st = RecDefType [sub [] st]
+let type_sub xs st = RecDefType [sub xs st]
 let type_rec sts = RecDefType (List.map (sub []) sts)
 let type_rec_sub xssts = RecDefType (List.map (fun (xs, st) -> sub xs st) xssts)
 
@@ -85,11 +84,13 @@ let br_table xs x = BrTable (xs, x)
 let br_on_null x = BrCast (x, NullOp)
 let br_on_i31 x = BrCast (x, I31Op)
 let br_on_data x = BrCast (x, DataOp)
+let br_on_array x = BrCast (x, ArrayOp)
 let br_on_func x = BrCast (x, FuncOp)
 let br_on_cast x = BrCast (x, RttOp)
 let br_on_non_null x = BrCastFail (x, NullOp)
 let br_on_non_i31 x = BrCastFail (x, I31Op)
 let br_on_non_data x = BrCastFail (x, DataOp)
+let br_on_non_array x = BrCastFail (x, ArrayOp)
 let br_on_non_func x = BrCastFail (x, FuncOp)
 let br_on_cast_fail x = BrCastFail (x, RttOp)
 
@@ -165,11 +166,13 @@ let data_drop x = DataDrop x
 let ref_is_null = RefTest NullOp
 let ref_is_i31 = RefTest I31Op
 let ref_is_data = RefTest DataOp
+let ref_is_array = RefTest ArrayOp
 let ref_is_func = RefTest FuncOp
 let ref_test = RefTest RttOp
 let ref_as_non_null = RefCast NullOp
 let ref_as_i31 = RefCast I31Op
 let ref_as_data = RefCast DataOp
+let ref_as_array = RefCast ArrayOp
 let ref_as_func = RefCast FuncOp
 let ref_cast = RefCast RttOp
 let ref_eq = RefEq
@@ -189,7 +192,7 @@ let array_get x = ArrayGet (x, None)
 let array_get_u x = ArrayGet (x, Some ZX)
 let array_get_s x = ArrayGet (x, Some SX)
 let array_set x = ArraySet x
-let array_len x = ArrayLen x
+let array_len = ArrayLen
 
 let rtt_canon x = RttCanon x
 

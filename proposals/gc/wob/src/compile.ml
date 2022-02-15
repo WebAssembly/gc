@@ -600,9 +600,8 @@ and compile_exp ctxt e =
     ) es
 
   | LenE e1 ->
-    let typeidx = lower_var_type ctxt e.at (type_of e1) in
     compile_exp ctxt e1;
-    emit ctxt W.[array_len (typeidx @@ e.at)]
+    emit ctxt W.[array_len]
 
   | IdxE (e1, e2) ->
     let typeidx = lower_var_type ctxt e.at (type_of e1) in

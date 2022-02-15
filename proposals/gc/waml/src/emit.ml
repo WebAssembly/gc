@@ -283,8 +283,8 @@ let recify sts =
   assert (List.for_all compact sccs);
   List.map (fun scc ->
     match Scc.IntSet.elements scc with
-    | [x] when not Wasm.Free.(Set.mem (i32 x) (sub_type sta.(x).it).types) ->
-      W.DefType sta.(x).it @@ sta.(x).at
+    | [x] ->
+      W.RecDefType [sta.(x).it] @@ sta.(x).at
     | xs ->
       let left = sta.(List.hd xs).at.left in
       let right = sta.(Wasm.Lib.List.last xs).at.left in

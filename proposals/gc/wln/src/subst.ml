@@ -93,8 +93,8 @@ let num_type s = function
   | (I32Type | I64Type | F32Type | F64Type) as t -> t
 
 let heap_type s = function
-  | ( AnyHeapType | EqHeapType | I31HeapType | DataHeapType
-    | FuncHeapType | ExternHeapType | BotHeapType ) as t -> t
+  | ( AnyHeapType | EqHeapType | I31HeapType | DataHeapType | ArrayHeapType
+    | FuncHeapType | BotHeapType ) as t -> t
   | DefHeapType x -> DefHeapType (var_type s x)
   | RttHeapType x -> RttHeapType (var_type s x)
 
@@ -128,7 +128,6 @@ let sub_type s = function
   | SubType (xs, st) -> SubType (List.map (var_type s) xs, str_type s st)
 
 let def_type s = function
-  | DefType st -> DefType (sub_type s st)
   | RecDefType sts -> RecDefType (List.map (sub_type s) sts)
 
 let global_type s (GlobalType (t, mut)) = GlobalType (value_type s t, mut)
@@ -160,7 +159,7 @@ and instr' s = function
   | ArrayNew (x, op) -> ArrayNew (type_idx s x, op)
   | ArrayGet (x, op) -> ArrayGet (type_idx s x, op)
   | ArraySet x -> ArraySet (type_idx s x)
-  | ArrayLen x -> ArrayLen (type_idx s x)
+  | ArrayLen -> ArrayLen
   | RttCanon x -> RttCanon (type_idx s x)
   | Const c -> Const c
   | Test op -> Test op

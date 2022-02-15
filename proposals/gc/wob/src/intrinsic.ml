@@ -149,9 +149,9 @@ let compile_text_cat ctxt : int32 =
       let tmpidx = emit_local ctxt at t' in
       List.iter (emit_instr ctxt at) W.[
         local_get (arg1idx @@ at);
-        array_len (typeidx @@ at);
+        array_len;
         local_get (arg2idx @@ at);
-        array_len (typeidx @@ at);
+        array_len;
         i32_add;
         rtt_canon (typeidx @@ at);
         array_new_default (typeidx @@ at);
@@ -160,15 +160,15 @@ let compile_text_cat ctxt : int32 =
         local_get (arg1idx @@ at);
         i32_const (0l @@ at);
         local_get (arg1idx @@ at);
-        array_len (typeidx @@ at);
+        array_len;
         call (text_cpy @@ at);
         local_get (tmpidx @@ at);
         local_get (arg1idx @@ at);
-        array_len (typeidx @@ at);
+        array_len;
         local_get (arg2idx @@ at);
         i32_const (0l @@ at);
         local_get (arg2idx @@ at);
-        array_len (typeidx @@ at);
+        array_len;
         call (text_cpy @@ at);
         local_get (tmpidx @@ at);
       ]
@@ -193,9 +193,9 @@ let compile_text_eq ctxt : int32 =
             i32_const (1l @@ at); return
           ]) [];
           local_get (arg1idx @@ at);
-          array_len (typeidx @@ at);
+          array_len;
           local_get (arg2idx @@ at);
-          array_len (typeidx @@ at);
+          array_len;
           local_tee (lenidx @@ at);
           i32_ne;
           br_if (0l @@ at);
@@ -274,7 +274,7 @@ let compile_rtt_eq ctxt : int32 =
             return;
           ]);
           local_get (rtt1idx @@ at);
-          array_len (typeidx @@ at);
+          array_len;
           local_set (lenidx @@ at);
           block void (List.map (fun e -> e @@ at) [
             loop void (List.map (fun e -> e @@ at) [

@@ -246,10 +246,9 @@ let lookup (mods : modules) x_opt name at =
 
 let subject_idx = 0l
 let externref_idx = 1l
-let is_externref_idx = 2l
-let is_eqref_idx = 3l
-let eq_ref_idx = 4l
-let subject_type_idx = 5l
+let is_eqref_idx = 2l
+let eq_ref_idx = 3l
+let subject_type_idx = 4l
 
 let eq_of = function
   | I32Type -> I32 I32Op.Eq
@@ -284,7 +283,7 @@ let value v =
   | Ref _ -> assert false
 
 let invoke ft vs at =
-  let dt = DefType (SubType ([], FuncDefType ft)) in
+  let dt = RecDefType [SubType ([], FuncDefType ft)] in
   [dt @@ at], FuncImport (subject_type_idx @@ at) @@ at,
   List.concat (List.map value vs) @ [Call (subject_idx @@ at) @@ at]
 
@@ -344,8 +343,8 @@ let assert_return ress ts at =
         | EqHeapType -> Call (is_eqref_idx @@ at)
         | I31HeapType -> RefTest I31Op
         | DataHeapType -> RefTest DataOp
+        | ArrayHeapType -> RefTest ArrayOp
         | FuncHeapType -> RefTest FuncOp
-        | ExternHeapType -> Call (is_externref_idx @@ at)
         | DefHeapType _ -> Const (I32 1l @@ at) (* TODO *)
         | RttHeapType _ -> Const (I32 1l @@ at) (* TODO *)
         | BotHeapType -> assert false
@@ -365,16 +364,15 @@ let assert_return ress ts at =
 let i32_type = NumType I32Type
 let anyref_type = RefType (Nullable, AnyHeapType)
 let eqref_type = RefType (Nullable, EqHeapType)
-let externref_type = RefType (Nullable, ExternHeapType)
 let func_def_type ins out at =
-  DefType (SubType ([], FuncDefType (FuncType (ins, out)))) @@ at
+  RecDefType [SubType ([], FuncDefType (FuncType (ins, out)))] @@ at
 
 let wrap item_name wrap_action wrap_assertion at =
   let itypes, idesc, action = wrap_action at in
   let locals, assertion = wrap_assertion at in
   let types =
     func_def_type [] [] at ::
-    func_def_type [i32_type] [externref_type] at ::
+    func_def_type [i32_type] [anyref_type] at ::
     func_def_type [anyref_type] [i32_type] at ::
     func_def_type [eqref_type; eqref_type] [i32_type] at ::
     itypes
@@ -383,8 +381,6 @@ let wrap item_name wrap_action wrap_assertion at =
     [ {module_name = Utf8.decode "module"; item_name; idesc} @@ at;
       {module_name = Utf8.decode "spectest"; item_name = Utf8.decode "externref";
        idesc = FuncImport (1l @@ at) @@ at} @@ at;
-      {module_name = Utf8.decode "spectest"; item_name = Utf8.decode "is_externref";
-       idesc = FuncImport (2l @@ at) @@ at} @@ at;
       {module_name = Utf8.decode "spectest"; item_name = Utf8.decode "is_eqref";
        idesc = FuncImport (2l @@ at) @@ at} @@ at;
       {module_name = Utf8.decode "spectest"; item_name = Utf8.decode "eq_ref";

@@ -237,6 +237,14 @@ let rec step (c : config) : config =
           Ref r :: vs', []
         )
 
+      | BrCast (x, ArrayOp), Ref r :: vs' ->
+        (match r with
+        | Data.DataRef (Data.Array _) ->
+          Ref r :: vs', [Plain (Br x) @@ e.at]
+        | _ ->
+          Ref r :: vs', []
+        )
+
       | BrCast (x, FuncOp), Ref r :: vs' ->
         (match r with
         | FuncRef _ ->
@@ -281,6 +289,14 @@ let rec step (c : config) : config =
       | BrCastFail (x, DataOp), Ref r :: vs' ->
         (match r with
         | Data.DataRef _ ->
+          Ref r :: vs', []
+        | _ ->
+          Ref r :: vs', [Plain (Br x) @@ e.at]
+        )
+
+      | BrCastFail (x, ArrayOp), Ref r :: vs' ->
+        (match r with
+        | Data.DataRef (Data.Array _) ->
           Ref r :: vs', []
         | _ ->
           Ref r :: vs', [Plain (Br x) @@ e.at]
@@ -593,6 +609,9 @@ let rec step (c : config) : config =
       | RefTest DataOp, Ref r :: vs' ->
         value_of_bool (match r with Data.DataRef _ -> true | _ -> false) :: vs', []
 
+      | RefTest ArrayOp, Ref r :: vs' ->
+        value_of_bool (match r with Data.DataRef (Data.Array _) -> true | _ -> false) :: vs', []
+
       | RefTest FuncOp, Ref r :: vs' ->
         value_of_bool (match r with FuncRef _ -> true | _ -> false) :: vs', []
 
@@ -634,6 +653,15 @@ let rec step (c : config) : config =
           Ref r :: vs', []
         | _ ->
           vs', [Trapping ("cast failure, expected data but got " ^
+            string_of_value (Ref r)) @@ e.at]
+        )
+
+      | RefCast ArrayOp, Ref r :: vs' ->
+        (match r with
+        | Data.DataRef (Data.Array _) ->
+          Ref r :: vs', []
+        | _ ->
+          vs', [Trapping ("cast failure, expected array but got " ^
             string_of_value (Ref r)) @@ e.at]
         )
 
@@ -753,10 +781,10 @@ let rec step (c : config) : config =
         (try Data.write_field (Lib.List32.nth fs i) v; vs', []
         with Failure _ -> Crash.error e.at "type mismatch writing array")
 
-      | ArrayLen x, Ref (NullRef _) :: vs' ->
+      | ArrayLen, Ref (NullRef _) :: vs' ->
         vs', [Trapping "null array reference" @@ e.at]
 
-      | ArrayLen x, Ref (Data.DataRef (Data.Array (_, _, svs))) :: vs' ->
+      | ArrayLen, Ref (Data.DataRef (Data.Array (_, _, svs))) :: vs' ->
         Num (I32 (Lib.List32.length svs)) :: vs', []
 
       | RttCanon x, vs ->
@@ -864,8 +892,10 @@ let rec step (c : config) : config =
         let ts = List.map (fun t -> Types.sem_value_type m.types t.it) locals in
         let vs0 = List.rev args @ List.map default_value ts in
         let locals' = List.map (fun t -> t @@ func.at) ts1 @ locals in
-        let ct = CtxType (SubType ([], FuncDefType (FuncType ([], ts2)))) in
-        let bt = VarBlockType (SemVar (alloc ct)) in
+        let st = SubType ([], FuncDefType (FuncType ([], ts2))) in
+        let x = Types.alloc_uninit () in
+        Types.init x (RecCtxType ([(SemVar x, st)], 0l));
+        let bt = VarBlockType (SemVar x) in
         let es0 = [Plain (Let (bt, locals', body)) @@ func.at] in
         vs', [Frame (List.length ts2, frame m, (List.rev vs0, es0)) @@ e.at]
 
@@ -920,7 +950,6 @@ let eval_const (inst : module_inst) (const : const) : value =
 
 let create_type (type_ : type_) : type_inst list =
   match type_.it with
-  | DefType _ -> [Types.alloc_uninit ()]
   | RecDefType sts -> List.map (fun _ -> Types.alloc_uninit ()) sts
 
 let create_func (inst : module_inst) (f : func) : func_inst =
@@ -988,6 +1017,7 @@ let add_import (m : module_) (ext : extern) (im : import) (inst : module_inst)
   | ExternTable tab -> {inst with tables = tab :: inst.tables}
   | ExternMemory mem -> {inst with memories = mem :: inst.memories}
   | ExternGlobal glob -> {inst with globals = glob :: inst.globals}
+
 
 let init_type (inst : module_inst) (x, ts : int32 * type_inst list) (type_ : type_) =
   let cts = ctx_types_of_def_type x type_.it in

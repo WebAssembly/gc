@@ -69,8 +69,8 @@ let num_type = function
   | I32Type | I64Type | F32Type | F64Type -> empty
 
 let heap_type = function
-  | AnyHeapType | EqHeapType | I31HeapType | DataHeapType
-  | FuncHeapType | ExternHeapType | BotHeapType -> empty
+  | AnyHeapType | EqHeapType | I31HeapType | DataHeapType | ArrayHeapType
+  | FuncHeapType | BotHeapType -> empty
   | DefHeapType x | RttHeapType x -> var_type x
 
 let ref_type = function
@@ -100,7 +100,6 @@ let str_type = function
 
 let sub_type (SubType (xs, st)) = list var_type xs ++ str_type st
 let def_type = function
-  | DefType st -> sub_type st
   | RecDefType sts -> list sub_type sts
 
 let global_type (GlobalType (t, _mut)) = value_type t
@@ -121,7 +120,8 @@ let rec instr (e : instr) =
   | I31New | I31Get _ -> empty
   | StructNew (x, _) | ArrayNew (x, _) -> types (idx x)
   | StructGet (x, _, _) | StructSet (x, _) -> types (idx x)
-  | ArrayGet (x, _) | ArraySet x | ArrayLen x -> types (idx x)
+  | ArrayGet (x, _) | ArraySet x -> types (idx x)
+  | ArrayLen -> empty
   | RttCanon x -> types (idx x)
   | Const _ | Test _ | Compare _ | Unary _ | Binary _ | Convert _ -> empty
   | Block (bt, es) | Loop (bt, es) -> block_type bt ++ block es
