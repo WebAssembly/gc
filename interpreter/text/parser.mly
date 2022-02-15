@@ -1154,12 +1154,6 @@ type_ :
     { let at = at () in
       fun c -> let tf = $1 c in fun () -> define_type c (tf () @@ at) }
 
-type_def_list :
-  | /* empty */ { fun c () -> [] }
-  | type_def type_def_list
-    { fun c -> let tf = $1 c in let tsf = $2 c in fun () ->
-      let st = tf () and sts = tsf () in st::sts }
-
 start :
   | LPAR START var RPAR
     { fun c -> $3 c func }
