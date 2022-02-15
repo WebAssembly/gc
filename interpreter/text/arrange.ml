@@ -435,7 +435,8 @@ let data i seg =
 
 let type_ (ns, i) ty =
   match ty.it with
-  | DefType st -> def_type i 0 st :: ns, i + 1
+  | RecDefType [st] when not Free.(Set.mem (Int32.of_int i) (type_ ty).types) ->
+    def_type i 0 st :: ns, i + 1
   | RecDefType sts ->
     Node ("rec", List.mapi (def_type i) sts) :: ns, i + List.length sts
 

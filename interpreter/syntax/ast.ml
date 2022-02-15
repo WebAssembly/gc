@@ -270,7 +270,6 @@ let func_type_of (m : module_) (x : idx) : func_type =
     match dts with
     | dt::dts' ->
       (match dt.it with
-      | DefType st -> find_in_sub_types [st] i dts'
       | RecDefType sts -> find_in_sub_types sts i dts'
       )
     | [] -> failwith "func_type_of"

@@ -42,8 +42,8 @@ and str_type =
   | FuncDefType of func_type
 
 and sub_type = SubType of var list * str_type
-and def_type = DefType of sub_type | RecDefType of sub_type list
-and ctx_type = CtxType of sub_type | RecCtxType of (var * sub_type) list * int32
+and def_type = RecDefType of sub_type list
+and ctx_type = RecCtxType of (var * sub_type) list * int32
 
 type 'a limits = {min : 'a; max : 'a option}
 type table_type = TableType of Int32.t limits * ref_type
@@ -209,13 +209,11 @@ let subst_sub_type s = function
     SubType (List.map s xs, subst_str_type s st)
 
 let subst_def_type s = function
-  | DefType st -> DefType (subst_sub_type s st)
   | RecDefType sts -> RecDefType (List.map (subst_sub_type s) sts)
 
 let subst_rec_type s (x, st) = (s x, subst_sub_type s st)
 
 let subst_ctx_type s = function
-  | CtxType st -> CtxType (subst_sub_type s st)
   | RecCtxType (rts, i) -> RecCtxType (List.map (subst_rec_type s) rts, i)
 
 
@@ -246,7 +244,6 @@ let subst_import_type s (ImportType (et, module_name, name)) =
 
 let ctx_types_of_def_type x (dt : def_type) : ctx_type list =
   match dt with
-  | DefType st -> [CtxType st]
   | RecDefType sts ->
     let rts = Lib.List32.mapi (fun i st -> (SynVar (Int32.add x i), st)) sts in
     Lib.List32.mapi (fun i _ -> RecCtxType (rts, i)) sts
@@ -263,7 +260,6 @@ let ctx_types_of_def_types (dts : def_type list) : ctx_type list =
 
 let unroll_ctx_type (ct : ctx_type) : sub_type =
   match ct with
-  | CtxType st -> st
   | RecCtxType (rts, i) -> snd (Lib.List32.nth rts i)
 
 let expand_ctx_type (ct : ctx_type) : str_type =
@@ -398,13 +394,13 @@ and string_of_sub_type = function
     " (" ^ string_of_str_type st ^ ")"
 
 and string_of_def_type = function
-  | DefType st -> string_of_sub_type st
+  | RecDefType [st] -> string_of_sub_type st
   | RecDefType sts ->
     "rec " ^
     String.concat " " (List.map (fun st -> "(" ^ string_of_sub_type st ^ ")") sts)
 
 and string_of_ctx_type = function
-  | CtxType st -> string_of_sub_type st
+  | RecCtxType ([(_, st)], 0l) -> string_of_sub_type st
   | RecCtxType (rts, i) ->
     "(" ^ string_of_def_type (RecDefType (List.map snd rts)) ^ ")." ^
       I32.to_string_u i

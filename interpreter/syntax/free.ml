@@ -100,7 +100,6 @@ let str_type = function
 
 let sub_type (SubType (xs, st)) = list var_type xs ++ str_type st
 let def_type = function
-  | DefType st -> sub_type st
   | RecDefType sts -> list sub_type sts
 
 let global_type (GlobalType (t, _mut)) = value_type t

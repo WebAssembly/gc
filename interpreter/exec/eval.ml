@@ -860,8 +860,10 @@ let rec step (c : config) : config =
         let ts = List.map (fun t -> Types.sem_value_type m.types t.it) locals in
         let vs0 = List.rev args @ List.map default_value ts in
         let locals' = List.map (fun t -> t @@ func.at) ts1 @ locals in
-        let ct = CtxType (SubType ([], FuncDefType (FuncType ([], ts2)))) in
-        let bt = VarBlockType (SemVar (alloc ct)) in
+        let st = SubType ([], FuncDefType (FuncType ([], ts2))) in
+        let x = Types.alloc_uninit () in
+        Types.init x (RecCtxType ([(SemVar x, st)], 0l));
+        let bt = VarBlockType (SemVar x) in
         let es0 = [Plain (Let (bt, locals', body)) @@ func.at] in
         vs', [Frame (List.length ts2, frame m, (List.rev vs0, es0)) @@ e.at]
 
@@ -916,7 +918,6 @@ let eval_const (inst : module_inst) (const : const) : value =
 
 let create_type (type_ : type_) : type_inst list =
   match type_.it with
-  | DefType _ -> [Types.alloc_uninit ()]
   | RecDefType sts -> List.map (fun _ -> Types.alloc_uninit ()) sts
 
 let create_func (inst : module_inst) (f : func) : func_inst =

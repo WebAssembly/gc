@@ -167,9 +167,6 @@ let check_sub_type (c : context) (st : sub_type) x at =
 let check_def_type (c : context) (dt : def_type) at : context =
   let x = Lib.List32.length c.types in
   match dt with
-  | DefType st ->
-    check_sub_type c st x at;
-    {c with types = c.types @ [CtxType st]}
   | RecDefType sts ->
     let c' = {c with types = c.types @ ctx_types_of_def_type x dt} in
     ignore (List.fold_left (fun x st -> check_sub_type c' st x at; I32.add x 1l) x sts);

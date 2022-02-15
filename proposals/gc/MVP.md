@@ -315,9 +315,18 @@ RTTs are below `eq`.
 In addition, the abstract heap type `extern` is also a subtype of `any`.
 Its interpretation is defined by the host environment.
 It may contain additional host-defined types that are neither of the above three leaf type categories.
-It may also overlap with some or all of these categories, as would be observable by applying a classification instruction like `ref.is_func` to a value of type `externref`.
+It may also overlap with some or all of these categories,
+as would be observable by applying a classification instruction like `ref.is_func` to a value of type `externref`.
 The possible outcomes of such an operation hence depend on the host environment.
-(For example, in a JavaScript embedding, `externref` could be inhabited by all JS values -- which is a natural choice, because JavaScript is untyped; but some of its values are JS-side representations of Wasm values per the JS API, and those can also be observed as `data` or `func` references. Another possible interpretation could be that `data` is disjoint from `extern`, which would be determined by the coercions allowed by the JS API at the JS/Wasm boundary. While such an interpretation is probably not attractive for JavaScript, it would be natural in other embeddings such as the C/C++ API, where different references are represented with different host types.)
+(For example, in a JavaScript embedding, `externref` could be inhabited by all JS values --
+which is a natural choice, because JavaScript is untyped;
+but some of its values are JS-side representations of Wasm values per the JS API,
+and those can also be observed as `data` or `func` references.
+Another possible interpretation could be that `data` is disjoint from `extern`,
+which would be determined by the coercions allowed by the JS API at the JS/Wasm boundary.
+While such an interpretation is probably not attractive for JavaScript,
+it would be natural in other embeddings such as the C/C++ API,
+where different references are represented with different host types.)
 
 Note: In the future, this hierarchy could be refined to distinguish compound data types that are not subtypes of `eq`.
 
@@ -358,9 +367,22 @@ Subtyping is not defined on type definitions.
 
 * An RTT value r1 is a *subtype* of another RTT value r2 iff they represent static types that are in a respective subtype relation.
 
-Note: RTT values correspond to type descriptors or "shape" objects as they exist in various engines. RTT equality can be implemented as a single pointer test by memoising RTT values. More interestingly, runtime casts along the hierachy encoded in these values can be implemented in an engine efficiently by using well-known techniques such as including a vector of its (direct and indirect) super-RTTs in each RTT value (with itself as the last entry). A subtype check between two RTT values can be implemented as follows using such a representation. Assume RTT value v1 has static type `(rtt $t1)` and v2 has type `(rtt $t2)`. Let `n1` and `n2` be the lenghts of the respective supertype vectors. To check whether v1 denotes a subtype RTT of v2, first verify that `n1 >= n2` -- if both `n1` and `n2` are known statically, this can be performed at compile time; if either is not statically known, it has to be read from the respective RTT value dynamically, and `n1 >= n2` becomes a dynamic check. Then compare v2 to the n2-th entry in v1's supertype vector. If they are equal, v1 is a subtype RTT.
+Note: RTT values correspond to type descriptors or "shape" objects as they exist in various engines.
+RTT equality can be implemented as a single pointer test by memoising RTT values.
+More interestingly, runtime casts along the hierarchy encoded in these values can be implemented in an engine efficiently
+by using well-known techniques such as including a vector of its (direct and indirect) super-RTTs in each RTT value (with itself as the last entry).
+A subtype check between two RTT values can be implemented as follows using such a representation.
+Assume RTT value v1 has static type `(rtt $t1)` and v2 has type `(rtt $t2)`.
+Let `n1` and `n2` be the lengths of the respective supertype vectors.
+To check whether v1 denotes a subtype RTT of v2, first verify that `n1 >= n2` --
+if both `n1` and `n2` are known statically, this can be performed at compile time;
+if either is not statically known (`$t1` and `n1` are typically unknown during a cast),
+it has to be read from the respective RTT value dynamically, and `n1 >= n2` becomes a dynamic check.
+Then compare v2 to the n2-th entry in v1's supertype vector.
+If they are equal, v1 is a subtype RTT.
 In the case of actual casts, the static type of RTT v1 (obtained from the value to cast) is not known at compile time, so `n1` is dynamic as well.
-(Note that `$t1` and `$t2` are not relevant for the dynamic semantics, but merely for validation.)
+(Note that `$t1` and `$t2` are not relevant for the dynamic semantics,
+but merely for validation.)
 
 Note: This assumes that there is at most one supertype. For hierarchies with multiple supertypes, more complex tests would be necessary.
 

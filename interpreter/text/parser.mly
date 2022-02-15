@@ -194,12 +194,17 @@ let anon_fields (c : context) n at = bind "field" c.fields n at
 
 let inline_func_type (c : context) ft at =
   let st = SubType ([], FuncDefType ft) in
-  match Lib.List.index_where (fun ty -> ty = CtxType st) c.types.ctx with
+  match Lib.List.index_where (function
+    | RecCtxType ([(_, st')], 0l) -> st = st'
+    | _ -> false
+    ) c.types.ctx with
   | Some i -> Int32.of_int i @@ at
   | None ->
     let i = anon_type c at in
-    define_type c (DefType st @@ at);
-    define_ctx_type c (CtxType st);
+    let x = Lib.Promise.make () in
+    Lib.Promise.fulfill x (RecCtxType ([(SemVar x, st)], 0l));
+    define_type c (RecDefType [st] @@ at);
+    define_ctx_type c (Lib.Promise.value x);
     i @@ at
 
 let inline_func_type_explicit (c : context) x ft at =
@@ -1117,14 +1122,17 @@ inline_export :
 
 type_def_rhs :
   | sub_type
-    { fun c -> let st = $1 c in define_ctx_type c (CtxType st); st }
+    { fun c i -> let st = $1 c in
+      let x = Lib.Promise.make () in
+      Lib.Promise.fulfill x (RecCtxType ([(SemVar x, st)], 0l));
+      define_ctx_type c (Lib.Promise.value x); st }
 
 type_def :
   | LPAR TYPE type_def_rhs RPAR
     { let at = at () in
-      fun c -> ignore (anon_type c at); fun () -> $3 c }
+      fun c -> let i = anon_type c at in fun () -> $3 c i }
   | LPAR TYPE bind_var type_def_rhs RPAR  /* Sugar */
-    { fun c -> ignore (bind_type c $3); fun () -> $4 c }
+    { fun c -> let i = bind_type c $3 in fun () -> $4 c i }
 
 type_def_list :
   | /* empty */ { fun c () -> [] }
@@ -1134,7 +1142,7 @@ type_def_list :
 
 def_type :
   | type_def
-    { fun c -> let tf = $1 c in fun () -> DefType (tf ()) }
+    { fun c -> let tf = $1 c in fun () -> RecDefType [tf ()] }
   | LPAR REC type_def_list RPAR
     { fun c -> let tf = $3 c in fun () -> RecDefType (tf ()) }
 

@@ -284,7 +284,7 @@ let value v =
   | Ref _ -> assert false
 
 let invoke ft vs at =
-  let dt = DefType (SubType ([], FuncDefType ft)) in
+  let dt = RecDefType [SubType ([], FuncDefType ft)] in
   [dt @@ at], FuncImport (subject_type_idx @@ at) @@ at,
   List.concat (List.map value vs) @ [Call (subject_idx @@ at) @@ at]
 
@@ -367,7 +367,7 @@ let anyref_type = RefType (Nullable, AnyHeapType)
 let eqref_type = RefType (Nullable, EqHeapType)
 let externref_type = RefType (Nullable, ExternHeapType)
 let func_def_type ins out at =
-  DefType (SubType ([], FuncDefType (FuncType (ins, out)))) @@ at
+  RecDefType [SubType ([], FuncDefType (FuncType (ins, out)))] @@ at
 
 let wrap item_name wrap_action wrap_assertion at =
   let itypes, idesc, action = wrap_action at in

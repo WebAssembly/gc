@@ -158,7 +158,7 @@ struct
     | SubType (xs, st) -> vs7 (-0x30); vec (var_type vu32) xs; str_type st
 
   let def_type = function
-    | DefType st -> sub_type st
+    | RecDefType [st] -> sub_type st
     | RecDefType sts -> vs7 (-0x31); vec sub_type sts
 
   let limits vu {min; max} =

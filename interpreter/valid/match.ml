@@ -97,16 +97,12 @@ and eq_sub_type c (SubType (xs1, st1)) (SubType (xs2, st2)) =
 
 and eq_def_type c rt1 rt2 =
   match rt1, rt2 with
-  | DefType st1, DefType st2 -> eq_sub_type c st1 st2
   | RecDefType sts1, RecDefType sts2 -> eq_list eq_sub_type c sts1 sts2
-  | _, _ -> false
 
 and eq_ctx_type c ct1 ct2 =
   match ct1, ct2 with
-  | CtxType st1, CtxType st2 -> eq_sub_type c st1 st2
   | RecCtxType (rts1, i1), RecCtxType (rts2, i2) ->
     eq_list eq_sub_type c (tie_rec_types rts1) (tie_rec_types rts2) && i1 = i2
-  | _, _ -> false
 
 and eq_var_type c x1 x2 =
   equal_var x1 x2 ||

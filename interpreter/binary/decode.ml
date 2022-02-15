@@ -238,7 +238,7 @@ let sub_type s =
 let def_type s =
   match peek s with
   | Some i when i = -0x31 land 0x7f -> skip 1 s; RecDefType (vec sub_type s)
-  | _ -> DefType (sub_type s)
+  | _ -> RecDefType [sub_type s]
 
 
 let limits vu s =
