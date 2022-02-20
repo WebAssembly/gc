@@ -496,28 +496,6 @@ This can compile to machine code that (1) reads the RTT from `$x`, (2) checks th
   - traps if `offset + size > len($e)`
   - note: for now, this is _not_ a constant instruction, in order to side-step issues of recursion between binary sections; this restriction will be lifted later
 
-* `array.new_fixed <typeidx> <N>` allocates an array of fixed size and initialises it from operands
-  - `array.new_fixed $t N : [t^N (rtt $t)] -> [(ref $t)]`
-    - iff `expand($t) = array (mut t')`
-
-* `array.new_data <typeidx> <dataidx>` allocates an array and initialises it from a data segment
-  - `array.new_data $t $d : [i32 i32 (rtt $t)] -> [(ref $t)]`
-    - iff `expand($t) = array (mut t')`
-    - and `t'` is numeric or packed numeric
-    - and `$d` is a defined data segment
-  - the 1st operand is the `offset` into the segment
-  - the 2nd operand is the `size` of the array
-  - traps if `offset + |t'|*size > len($d)`
-
-* `array.new_elem <typeidx> <elemidx>` allocates an array and initialises it from an element segment
-  - `array.new_elem $t $e : [i32 i32 (rtt $t)] -> [(ref $t)]`
-    - iff `expand($t) = array (mut t')`
-    - and `t'` is a reference type
-    - and `$e` is a defined element segment
-  - the 1st operand is the `offset` into the segment
-  - the 2nd operand is the `size` of the array
-  - traps if `offset + size > len($e)`
-
 * `array.get_<sx>? <typeidx>` reads an element from an array
   - `array.get_<sx>? $t : [(ref null $t) i32] -> [t]`
     - iff `expand($t) = array (mut t')`
