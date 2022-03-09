@@ -65,6 +65,9 @@
   (type $vec (array f32))
   (type $mvec (array (mut f32)))
 
+  (global (ref $vec) (array.new $vec (f32.const 1) (i32.const 3) (rtt.canon $vec)))
+  (global (ref $vec) (array.new_default $vec (i32.const 3) (rtt.canon $vec)))
+
   (func (export "new") (param $i i32) (result arrayref)
     (array.new_default $vec (i32.const 3) (rtt.canon $vec))
   )

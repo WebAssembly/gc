@@ -953,11 +953,9 @@ let check_func (c : context) (f : func) =
 
 let is_const (c : context) (e : instr) =
   match e.it with
-  | Const _
-  | VecConst _
-  | I31New
-  | RefNull _
-  | RefFunc _
+  | Const _ | VecConst _
+  | RefNull _ | RefFunc _
+  | I31New | StructNew _ | ArrayNew _
   | RttCanon _ -> true
   | GlobalGet x -> let GlobalType (_, mut) = global c x in mut = Immutable
   | _ -> false
