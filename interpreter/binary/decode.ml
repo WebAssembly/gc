@@ -591,7 +591,7 @@ let rec instr s =
     | 0x14l -> array_get_s (at var s)
     | 0x15l -> array_get_u (at var s)
     | 0x16l -> array_set (at var s)
-    | 0x17l -> let _ = var s in array_len  (* TODO: remove var *)
+    | 0x17l -> array_len
 
     | 0x19l -> let x = at var s in let n = u32 s in array_new_fixed x n
     | 0x1bl -> let x = at var s in let y = at var s in array_new_data x y

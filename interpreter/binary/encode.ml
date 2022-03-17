@@ -404,7 +404,7 @@ struct
     | ArrayGet (x, Some SX) -> op 0xfb; op 0x14; var x
     | ArrayGet (x, Some ZX) -> op 0xfb; op 0x15; var x
     | ArraySet x -> op 0xfb; op 0x16; var x
-    | ArrayLen -> op 0xfb; op 0x17; op 0  (* TODO: remove 0 *)
+    | ArrayLen -> op 0xfb; op 0x17
 
     | RttCanon x -> op 0xfb; op 0x30; var x
 
