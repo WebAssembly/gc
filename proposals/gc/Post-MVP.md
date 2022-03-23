@@ -14,6 +14,7 @@ See [overview](Overview.md) for addition background.
 * [Type parameters](#type-parameters) (polymorphism, generics)
 * [Variants](#variants) (a.k.a. disjoint unions or tagging)
 * [Static fields](#static-fields) (meta structures)
+* [Closures](#closures)
 * [Custom function RTTs](#custom-function-RTTs)
 * [Threads and shared references](#threads-and-shared-references)
 * [Weak references](#weak-references)
@@ -35,17 +36,50 @@ To that end, _bulk copying_ instructions could be added, similar to the [bulk in
   - `struct.copy $d : [(ref $d) (ref $s)] -> []` where both `$d` and `$s` are struct types, `$d` has only mutable fields, and `$s <: $d` modulo mutability
 
 * An instruction for bulk copying an array range:
-  - `array.copy $d : [(ref $d) i32 (ref $s) i32 i32] -> []`
-    - iff both `$d` and `$s` are array types
-    - and `$d` has mutable element type
-    - and `$s <: $d` modulo mutability
-  - the remaining operands are destination and source offset and length of the range
+  - `array.copy $d $s : [(ref null $d) i32 (ref null $s) i32 i32] -> []`
+    - iff `expand($d) = array (var t1)`
+    - and `expand($s) = array (mut t2)`
+    - and `t2 <: t1`
+  - the 1st i32 operand is the `destination` offset in the first array
+  - the 2nd i32 operand is the `source` offset in the second array
+  - the 3rd i32 operand is the `length` of the array subrange
+  - traps if either array is null
+  - traps if `destination + length > len(array1)`
+  - traps if `source + length > len(array2)`
 
 * An instruction for bulk setting an array range:
-  - `array.fill $d : [(ref $d) i32 t i32] -> []`
-    - iff `$d = (array (mut st))`
-    - and `t = unpacked(st)`
-  - the remaining operands are destination offset, initialisation value, and length of the range
+  - `array.fill $t : [(ref null $t) i32 t i32] -> []`
+    - iff `expand($t) = array (var t')`
+    - and `t = unpacked(t')`
+  - the 1st operand is the `offset` in the array
+  - the 2nd operand is the `length` of the array subrange
+  - traps if the array is null
+  - traps if `offset + length > len(array)`
+
+* An instruction to (re)initialise an array range from a data segment
+  - `array.init_data $t $d : [(ref null $t) i32 i32 i32] -> []`
+    - iff `expand($t) = array (var t')`
+    - and `t'` is numeric or packed numeric
+    - and `$d` is a defined data segment
+  - the 1st operand is the `destination` offset in the array
+  - the 2nd operand is the `source` offset in the segment
+  - the 3rd operand is the `length` of the array subrange
+  - traps if the array is null
+  - traps if `destination + length > len(array)`
+  - traps if `source + |t'|*length > len($d)`
+
+* An instruction to (re)initialise an array range from an element segment
+  - `array.init_elem $t $e : [(ref null $t) i32 i32 i32] -> []`
+    - iff `expand($t) = array (var t')`
+    - and `t'` is a reference type
+    - and `$e` is a defined element segment
+  - the 1st operand is the `destination` offset in the array
+  - the 2nd operand is the `source` offset in the segment
+  - the 3rd operand is the `length` of the array subrange
+  - traps if the array is null
+  - traps if `destination + length > len(array)`
+  - traps if `source + length > len($e)`
+
 
 
 ## Array with Fields
@@ -518,6 +552,48 @@ The basic idea would be introducing a notion of _static fields_ in a form of imm
 There are various ways in which this could be modelled, details are TBD.
 
 **Why Post-MVP:** Such a feature only saves space, so isn't critical for the MVP. Furthermore, there isn't much precedent for exposing such a mechanism to user code in low-level form, so no obvious design philosophy to follow.
+
+
+## Closures
+
+Function references could be generalised to represent closures by means of an instruction that takes a prefix of the function's arguments and returns a new function reference with those parameters bound.
+
+* `func.bind` creates or extends a closure by binding several parameters
+  - `func.bind $t' : [t0* (ref null $t)] -> [(ref $t')]`
+    - iff `$t = [t0* t1*] -> [t2*]`
+    - and `$t' = [t1'*] -> [t2'*]`
+    - and `t1'* <: t1*`
+    - and `t2* <: t2'*`
+  - traps on `null`
+
+With this extension, closures are interchangeable with regular function references. That is, conceptually, all function references would be closures of 0 or more parameters.
+
+An alternative design would be to distinguish closures from raw functions. In such a design, we would introduce:
+
+* `closure $t` is a new heap type
+  - `heaptype ::= ... | closure $t`
+  - `(closure $t) ok` iff `$t = [t1*] -> [t2*]`
+
+* `closure $t` also is a new reference type shorthand
+  - `reftype ::= ... | closure $t`
+   - shorthand for `(ref (closure $t))`
+
+There would be two bind instructions, both returning a closure:
+
+* `closure.new` creates a closure from a function
+  - `closure.new : [(ref null $t)] -> [(ref (closure $t))]`
+    - iff `$t = [t1*] -> [t2*]`
+  - traps on `null`
+
+* `closure.bind` creates a new closure by binding (additional) parameters of an existing closure
+  - `closure.bind $t' : [t0* (ref null (closure $t))] -> [(ref (closure $t'))]`
+    - iff `$t = [t0* t1*] -> [t2*]`
+    - and `$t' = [t1'*] -> [t2'*]`
+    - and `t1'* <: t1*`
+    - and `t2* <: t2'*`
+  - traps on `null`
+
+As a variant, `closure.new` could be generalised to `func.bind` like above, but returning a closure.
 
 
 ## Custom Function RTTs

@@ -181,7 +181,6 @@ let check_type (c : context) (t : type_) : context =
 
 
 
-
 (* Stack typing *)
 
 (*
@@ -756,8 +755,8 @@ let rec check_instr (c : context) (e : instr) (s : infer_result_type) : op_type 
     let StructType fts = struct_type c x in
     require
       ( initop = Explicit || List.for_all (fun ft ->
-          defaultable_value_type (unpacked_field_type ft)) fts ) e.at
-      ("field type is not defaultable");
+          defaultable_value_type (unpacked_field_type ft)) fts ) x.at
+      "field type is not defaultable";
     let ts = if initop = Implicit then [] else List.map unpacked_field_type fts in
     (ts @ [RefType (NonNullable, RttHeapType (SynVar x.it))]) -->
       [RefType (NonNullable, DefHeapType (SynVar x.it))]
@@ -785,10 +784,33 @@ let rec check_instr (c : context) (e : instr) (s : infer_result_type) : op_type 
     let ArrayType ft = array_type c x in
     require
       ( initop = Explicit ||
-        defaultable_value_type (unpacked_field_type ft) ) e.at
-      ("array type is not defaultable");
+        defaultable_value_type (unpacked_field_type ft) ) x.at
+      "array type is not defaultable";
     let ts = if initop = Implicit then [] else [unpacked_field_type ft] in
     (ts @ [NumType I32Type; RefType (NonNullable, RttHeapType (SynVar x.it))]) -->
+      [RefType (NonNullable, DefHeapType (SynVar x.it))]
+
+  | ArrayNewFixed (x, n) ->
+    let ArrayType ft = array_type c x in
+    let ts = Lib.List32.make n (unpacked_field_type ft) in
+    (ts @ [RefType (NonNullable, RttHeapType (SynVar x.it))]) -->
+      [RefType (NonNullable, DefHeapType (SynVar x.it))]
+
+  | ArrayNewElem (x, y) ->
+    let ArrayType ft = array_type c x in
+    let rt = elem c y in
+    require (match_value_type c.types (RefType rt) (unpacked_field_type ft)) x.at
+      ("type mismatch: element segment's type " ^ string_of_ref_type rt ^
+       " does not match array's field type " ^ string_of_field_type ft);
+    [NumType I32Type; NumType I32Type; RefType (NonNullable, RttHeapType (SynVar x.it))] -->
+      [RefType (NonNullable, DefHeapType (SynVar x.it))]
+
+  | ArrayNewData (x, y) ->
+    let ArrayType ft = array_type c x in
+    let () = data c y in
+    require (is_num_type (unpacked_field_type ft)) x.at
+      "array type is not numeric";
+    [NumType I32Type; NumType I32Type; RefType (NonNullable, RttHeapType (SynVar x.it))] -->
       [RefType (NonNullable, DefHeapType (SynVar x.it))]
 
   | ArrayGet (x, exto) ->
@@ -954,11 +976,9 @@ let check_func (c : context) (f : func) =
 
 let is_const (c : context) (e : instr) =
   match e.it with
-  | Const _
-  | VecConst _
-  | I31New
-  | RefNull _
-  | RefFunc _
+  | Const _ | VecConst _
+  | RefNull _ | RefFunc _
+  | I31New | StructNew _ | ArrayNew _ | ArrayNewFixed _
   | RttCanon _ -> true
   | GlobalGet x -> let GlobalType (_, mut) = global c x in mut = Immutable
   | _ -> false
@@ -1024,21 +1044,21 @@ let check_start (c : context) (start : idx option) =
       "start function must not have parameters or results"
   ) start
 
-let check_import (im : import) (c : context) : context =
+let check_import (c : context) (im : import) : context =
   let {module_name = _; item_name = _; idesc} = im.it in
   match idesc.it with
   | FuncImport x ->
     let ft = func_type c x in
-    {c with funcs = ft :: c.funcs}
+    {c with funcs = c.funcs @ [ft]}
   | TableImport tt ->
     check_table_type c tt idesc.at;
-    {c with tables = tt :: c.tables}
+    {c with tables = c.tables @ [tt]}
   | MemoryImport mt ->
     check_memory_type c mt idesc.at;
-    {c with memories = mt :: c.memories}
+    {c with memories = c.memories @ [mt]}
   | GlobalImport gt ->
     check_global_type c gt idesc.at;
-    {c with globals = gt :: c.globals}
+    {c with globals = c.globals @ [gt]}
 
 module NameSet = Set.Make(struct type t = Ast.name let compare = compare end)
 
@@ -1059,22 +1079,22 @@ let check_module (m : module_) =
     { types; imports; tables; memories; globals; funcs; start; elems; datas;
       exports } = m.it
   in
-  let c0 =
-    List.fold_right check_import imports
-      { (List.fold_left check_type empty_context types) with
-        refs = Free.module_ ({m.it with funcs = []; start = None} @@ m.at)
-      }
+  let c0 = List.fold_left check_type empty_context types in
+  let c1 = List.fold_left check_import c0 imports in
+  let c2 =
+    { c1 with
+      funcs = c1.funcs @ List.map (fun f -> func_type c1 f.it.ftype) funcs;
+      tables = c1.tables @ List.map (fun tab -> tab.it.ttype) tables;
+      memories = c1.memories @ List.map (fun mem -> mem.it.mtype) memories;
+      refs = Free.module_ ({m.it with funcs = []; start = None} @@ m.at);
+    }
   in
-  let c1 =
-    { c0 with
-      funcs = c0.funcs @ List.map (fun f -> func_type c0 f.it.ftype) funcs;
-      tables = c0.tables @ List.map (fun tab -> tab.it.ttype) tables;
-      memories = c0.memories @ List.map (fun mem -> mem.it.mtype) memories;
+  let c =
+    { (List.fold_left check_global c2 globals) with
       elems = List.map (fun elem -> elem.it.etype) elems;
       datas = List.map (fun _data -> ()) datas;
     }
   in
-  let c = List.fold_left check_global c1 globals in
   List.iter (check_table c) tables;
   List.iter (check_memory c) memories;
   List.iter (check_elem c) elems;
