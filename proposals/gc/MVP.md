@@ -49,6 +49,10 @@ Both proposals are prerequisites.
   - `heaptype ::= ... | rtt <typeidx>`
   - `rtt t ok` iff `t ok`
 
+* `none` is a new heap type
+  - `heaptype ::= ... | none`
+  - the common subtype of all referenceable types (a.k.a. the bottom heap type)
+
 * `extern` is renamed back to `any`
   - the common supertype of all referenceable types
   - the name `extern` is kept as an alias in the text format for backwards compatibility
@@ -78,6 +82,9 @@ New abbreviations are introduced for reference types in binary and text format, 
 
 * `rtt <typeidx>` is a new reference type
   - `(rtt $t) == (ref (rtt $t))`
+
+* `nullref` is a new reference type
+  - `nullref == (ref null none)`
 
 * `externref` is renamed to `anyref`
   - `anyref == (ref null any)`
@@ -291,6 +298,9 @@ In addition to the [existing rules](https://github.com/WebAssembly/function-refe
 * every type is a subtype of `any`
   - `t <: any`
 
+* every type is a supertype of `none`
+  - `none <: t`
+
 * `dataref` is a subtype of `eqref`
   - `data <: eq`
   - TODO: provide a way to make data types non-eq, especially immutable ones?
@@ -326,7 +336,8 @@ i31  data
        array
 ```
 All *concrete* heap types (of the form `(type $t)`) are situated below either `data` or `func`.
-RTTs are below `eq`.
+Not shown in the graph are RTTs, which are below `eq`,
+and `none` which is below every other "leaf" type.
 
 In addition, a host environment may introduce additional inhabitants of type `any`
 that are are in neither of the above three leaf type categories.
@@ -696,6 +707,7 @@ This extends the [encodings](https://github.com/WebAssembly/function-references/
 | ------ | --------------- | ---------- | ---- |
 | -0x10  | `funcref`       |            | shorthand, from reftype proposal |
 | -0x11  | `anyref`        |            | shorthand, from reftype proposal |
+| -0x12  | `nullref`       |            | shorthand |
 | -0x13  | `eqref`         |            | shorthand |
 | -0x14  | `(ref null ht)` | `ht : heaptype (s33)` | from funcref proposal |
 | -0x15  | `(ref ht)`      | `ht : heaptype (s33)` | from funcref proposal |
@@ -713,6 +725,7 @@ The opcode for heap types is encoded as an `s33`.
 | i >= 0 | `(type i)`      |            | from funcref proposal |
 | -0x10  | `func`          |            | from funcref proposal |
 | -0x11  | `any`           |            | from funcref proposal |
+| -0x12  | `none`          |            | |
 | -0x13  | `eq`            |            | |
 | -0x16  | `i31`           |            | |
 | -0x18  | `(rtt $t)`      | `$t : typeidx` | |
