@@ -654,6 +654,6 @@ Clearly, Wasm cannot build in all of them, so we need to be looking for a mechan
 
 ## Method Dispatch
 
-Right now OO-style method dispatch requires downcasting the reciever parameter from the top receiver type in the method's override group. As of May 2022, unsafely removing this reciever downcast improved performance by 3-4% across a suite of real-world j2wasm workloads. Introducing a method dispatch mechanism into WebAssembly and its type system would allow these reciever casts to be removed.
+Right now OO-style method dispatch requires downcasting the receiver parameter from the top receiver type in the method's override group. As of May 2022, unsafely removing this receiver downcast improved performance by 3-4% across a suite of real-world j2wasm workloads. Introducing a method dispatch mechanism into WebAssembly and its type system would allow these receiver casts to be removed and may enable additional engine optimizations for dispatch as well, making 3-4% a lower bound on the potential improvements.
 
 **Why Post-MVP:** Method dispatch can also be easily expressed without being built into WebAssembly, so this would be a fair amount of extra complexity for a modest performance improvement and no additional benefits. Considering this as an optimimzation after shipping the MVP makes the most sense.
