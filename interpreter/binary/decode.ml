@@ -173,12 +173,12 @@ let heap_type s =
     (match vs7 s with
     | -0x10 -> FuncHeapType
     | -0x11 -> AnyHeapType
-    | -0x12 -> NoneHeapType
     | -0x13 -> EqHeapType
     | -0x16 -> I31HeapType
     | -0x18 -> RttHeapType (var_type s)
     | -0x19 -> DataHeapType
     | -0x1a -> ArrayHeapType
+    | -0x1b -> NoneHeapType
     | _ -> error s pos "malformed heap type"
     )
   | _ ->
@@ -191,7 +191,6 @@ let ref_type s =
   match vs7 s with
   | -0x10 -> (Nullable, FuncHeapType)
   | -0x11 -> (Nullable, AnyHeapType)
-  | -0x12 -> (Nullable, NoneHeapType)
   | -0x13 -> (Nullable, EqHeapType)
   | -0x14 -> (Nullable, heap_type s)
   | -0x15 -> (NonNullable, heap_type s)
@@ -199,6 +198,7 @@ let ref_type s =
   | -0x18 -> (NonNullable, RttHeapType (var_type s))
   | -0x19 -> (Nullable, DataHeapType)
   | -0x1a -> (Nullable, ArrayHeapType)
+  | -0x1b -> (Nullable, NoneHeapType)
   | _ -> error s pos "malformed reference type"
 
 let value_type s =
