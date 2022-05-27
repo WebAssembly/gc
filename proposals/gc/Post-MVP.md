@@ -652,8 +652,11 @@ Clearly, Wasm cannot build in all of them, so we need to be looking for a mechan
 
 **Why Post-MVP:** Unfortunately, it is not clear at this point what a sufficiently simple and efficient set of primitives for weak references and finalisation could be. This requires more investigation, and should not block basic GC functionality.
 
-## Method Dispatch
 
-Right now OO-style method dispatch requires downcasting the receiver parameter from the top receiver type in the method's override group. As of May 2022, unsafely removing this receiver downcast improved performance by 3-4% across a suite of real-world j2wasm workloads. Introducing a method dispatch mechanism into WebAssembly and its type system would allow these receiver casts to be removed and may enable additional engine optimizations for dispatch as well, making 3-4% a lower bound on the potential improvements.
+## Method and Closure Typing
 
-**Why Post-MVP:** Method dispatch can also be easily expressed without being built into WebAssembly, so this would be a fair amount of extra complexity for a modest performance improvement and no additional benefits. Considering this as an optimimzation after shipping the MVP makes the most sense.
+Right now OO-style method dispatch requires downcasting the receiver parameter from the base class receiver type in the implementation of overriding methods. As of May 2022, unsafely removing this receiver downcast improved performance by 3-4% across a suite of real-world j2wasm workloads. A closely related problem exists for client-side encodings of closures.
+
+The problem could be addressed by extending the type system with features that allow typing the receiver/environment parameter more precisely, for which a number of solutions are known. A fallback solution could be the introduction of a primitive method dispatch mechanism, though it would be preferable to avoid conceptually redundant language mechanisms.
+
+**Why Post-MVP:** Methods and closures can be easily expressed without being built into WebAssembly, so this would be a fair amount of extra complexity for a modest performance improvement and no additional benefits. Considering this as an optimimzation after shipping the MVP makes the most sense.
