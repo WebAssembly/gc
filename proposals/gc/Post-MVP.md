@@ -657,6 +657,6 @@ Clearly, Wasm cannot build in all of them, so we need to be looking for a mechan
 
 Right now OO-style method dispatch requires downcasting the receiver parameter from the base class receiver type in the implementation of overriding methods. As of May 2022, unsafely removing this receiver downcast improved performance by 3-4% across a suite of real-world j2wasm workloads. A closely related problem exists for client-side encodings of closures.
 
-The problem could be addressed by extending the type system with features that allow typing the receiver/environment parameter more precisely, for which a number of solutions are known. A fallback solution could be the introduction of a primitive method dispatch mechanism, though it would be preferable to avoid conceptually redundant language mechanisms.
+The problem could be addressed by extending the type system with features that allow typing the receiver/environment parameter more precisely, for which a number of solutions are known (e.g., [1](https://dl.acm.org/doi/pdf/10.1145/354222.353192), [2](http://lucacardelli.name/Papers/ObjectEncodings.pdf)). A fallback solution could be the introduction of a primitive method and dispatch mechanism besides functions.
 
 **Why Post-MVP:** Methods and closures can be easily expressed without being built into WebAssembly, so this would be a fair amount of extra complexity for a modest performance improvement and no additional benefits. Considering this as an optimimzation after shipping the MVP makes the most sense.
