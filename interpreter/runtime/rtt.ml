@@ -1,10 +1,7 @@
 open Types
-open Value
 
 type rtt = Rtt of sem_var
 type t = rtt
-
-type ref_ += RttRef of rtt
 
 
 let alloc x = Rtt x
