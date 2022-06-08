@@ -58,7 +58,7 @@
       (br_on_func $l (table.get (local.get $i)))
       (return (i32.const -1))
     )
-    (ref.cast_canon (type $ft))
+    (ref.cast_canon $ft)
     (call_ref)
   )
 )

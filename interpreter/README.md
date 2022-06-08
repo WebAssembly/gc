@@ -293,10 +293,10 @@ op:
   ref.func <var>
   ref.is_null
   ref.is_<castop>
-  ref.test_canon (type <var>)
+  ref.test_canon <var>
   ref_as_non_null
   ref_as_<castop>
-  ref.cast_canon (type <var>)
+  ref.cast_canon <var>
   ref.eq
   i31.new
   i31.get_<sign>

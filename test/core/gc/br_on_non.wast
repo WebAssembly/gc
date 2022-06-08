@@ -56,7 +56,7 @@
   (func (export "br_on_non_func") (param $i i32) (result i32)
     (block $l (result anyref)
       (br_on_non_func $l (table.get (local.get $i)))
-      (ref.cast_canon (type $ft))
+      (ref.cast_canon $ft)
       (return (call_ref))
     )
     (return (i32.const -1))

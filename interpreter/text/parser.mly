@@ -586,8 +586,8 @@ plain_instr :
   | REF_FUNC var { fun c -> ref_func ($2 c func) }
   | REF_TEST { fun c -> $1 }
   | REF_CAST { fun c -> $1 }
-  | REF_TEST_CANON type_use { fun c -> ref_test_canon ($2 c type_) }
-  | REF_CAST_CANON type_use { fun c -> ref_cast_canon ($2 c type_) }
+  | REF_TEST_CANON var { fun c -> ref_test_canon ($2 c type_) }
+  | REF_CAST_CANON var { fun c -> ref_cast_canon ($2 c type_) }
   | REF_EQ { fun c -> ref_eq }
   | I31_NEW { fun c -> i31_new }
   | I31_GET { fun c -> $1 }
