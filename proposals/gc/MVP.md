@@ -331,6 +331,7 @@ In addition to the [existing rules](https://github.com/WebAssembly/function-refe
 * every external type is a subtype of `extern`
   - `t <: extern`
     - if `t = extern`
+  - note: there may be other subtypes of `extern` in the future
 
 * every external type is a supertype of `noextern`
   - `noextern <: t`
