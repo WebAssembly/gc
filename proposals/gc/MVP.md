@@ -659,30 +659,30 @@ Note: The `br_on_*` instructions allow an operand of unrelated reference type, e
 
 RTT-based casts can only be performed with respect to concrete types, and require a data or function reference as input, which are known to carry an RTT.
 
-* `ref.test_canon $t` tests whether a reference value's [runtime type](#values) is a [runtime subtype](#runtime) of a given type
+* `ref.test_canon <typeidx>` tests whether a reference value's [runtime type](#values) is a [runtime subtype](#runtime) of a given type
   - `ref.test_canon $t : [t'] -> [i32]`
-    - iff `t' <: (ref null data)` or `t' <: (ref null func)`
+    - iff `t' <: (ref null data)` and `$t <: data` or `t' <: (ref null func)` and `$t <: func`
   - returns 1 if the first operand is not null and its runtime type is a sub-RTT of the RTT operand, 0 otherwise
 
-* `ref.cast_canon $t` casts a reference value down to a type
+* `ref.cast_canon <typeidx>` casts a reference value down to a type
   - `ref.cast_canon $t : [(ref null1? ht)] -> [(ref null2? $t)]`
-    - iff `ht <: data` or `ht <: func`
+    - iff `ht <: data` and `$t <: data` or `ht <: func` and `$t <: func`
     - and `null1? = null2?`
   - returns null if the first operand is null
   - traps if the first operand is not null and its runtime type is not a sub-RTT of `$t`
 
-* `br_on_cast_canon <labelidx>` branches if a value can be cast down to a given reference type
-  - `br_on_cast_canon $l : [t0* t] -> [t0* t]`
+* `br_on_cast_canon <labelidx> <typeidx>` branches if a value can be cast down to a given reference type
+  - `br_on_cast_canon $l $t : [t0* t] -> [t0* t]`
     - iff `$l : [t0* t']`
-    - and `t <: (ref null data)` or `t <: (ref null func)`
-    - and `(ref $t') <: t'`
+    - and `t <: (ref null data)` and `$t <: data` or `t <: (ref null func)` and `$t <: func`
+    - and `(ref $t) <: t'`
   - branches iff the first operand is not null and its runtime type is a sub-RTT of `$t`
   - passes cast operand along with branch, plus possible extra args
 
-* `br_on_cast_canon_fail <labelidx>` branches if a value can not be cast down to a given reference type
-  - `br_on_cast_canon_fail $l $t' : [t0* t] -> [t0* (ref $t')]`
+* `br_on_cast_canon_fail <labelidx> <typeidx>` branches if a value can not be cast down to a given reference type
+  - `br_on_cast_canon_fail $l $t : [t0* t] -> [t0* (ref $t)]`
     - iff `$l : [t0* t']`
-    - and `t <: (ref null data)` or `t <: (ref null func)`
+    - and `t <: (ref null data)` and `$t <: data` or `t <: (ref null func)` and `$t <: func`
     - and `t <: t'`
   - branches iff the first operand is null or its runtime type is not a sub-RTT of `$t'`
   - passes operand along with branch, plus possible extra args
