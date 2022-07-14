@@ -27,13 +27,15 @@ Both proposals are prerequisites.
 
 #### Heap Types
 
-[Heap types](https://github.com/WebAssembly/function-references/blob/master/proposals/function-references/Overview.md#types) classify reference types and are extended. There are 3 disjoint universes of heap types:
+[Heap types](https://github.com/WebAssembly/function-references/blob/master/proposals/function-references/Overview.md#types) classify reference types and are extended. There now are 3 disjoint hierarchies of heap types:
 
-1. _Internal_ (proper Wasm objects, or host objects in Wasm representation)
-2. _External_ (host objects in a host-specific representation), represented by `extern`
-3. _Functions_, represented by `func`
+1. _Internal_ (values in Wasm representation)
+2. _External_ (values in a host-specific representation)
+3. _Functions_
 
-The following changes are made to the hierarchy of heap types:
+Heap types `extern` and `func` already exist via [reference types proposal](https://github.com/WebAssembly/reference-types), and `(ref null? $t)` via [typed references](https://github.com/WebAssembly/function-references); `extern` and `func` are the common supertypes (a.k.a. top) of all external and function types, respectively.
+
+The following additions are made to the hierarchies of heap types:
 
 * `any` is a new heap type
   - `heaptype ::= ... | any`
@@ -51,8 +53,6 @@ The following changes are made to the hierarchy of heap types:
   - `heaptype ::= ... | nofunc`
   - the common subtype (a.k.a. bottom) of all function types
 
-Note: heap types `extern` and `func` already exist via [reference types proposal](https://github.com/WebAssembly/reference-types), and `(ref null? $t)` via [typed references](https://github.com/WebAssembly/function-references); `extern` and `func` are the common supertypes (a.k.a. top) of all external and function types, respectively.
-
 * `eq` is a new heap type
   - `heaptype ::= ... | eq`
   - the common supertype of all referenceable types on which comparison (`ref.eq`) is allowed
@@ -69,9 +69,9 @@ Note: heap types `extern` and `func` already exist via [reference types proposal
   - `heaptype ::= ... | i31`
   - the type of unboxed scalars
 
-We distinguish these *abstract* heap types from *concrete* heap types `(type $t)`.
-Each abstract heap type is a supertype of a class of concrete heap types.
-Moreover, they form a small [subtype hierarchy](#subtyping).
+We distinguish these *abstract* heap types from *concrete* heap types `$t` that reference actual definitions in the type section.
+Most abstract heap types are a supertype of a class of concrete heap types.
+Moreover, they form a small [subtype hierarchy](#subtyping) among themselves.
 
 
 #### Reference Types
