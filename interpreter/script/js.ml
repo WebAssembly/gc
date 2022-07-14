@@ -214,7 +214,7 @@ type exports = extern_type NameMap.t
 type modules = {mutable env : exports Map.t; mutable current : int}
 
 let exports m : exports =
-  let ets = List.map (export_type_of m) m.it.exports in
+  let ModuleType (_, _, ets) = sem_module_type (module_type_of m) in
   List.fold_left (fun map (ExportType (et, name)) -> NameMap.add name et map)
     NameMap.empty ets
 
@@ -382,6 +382,7 @@ let assert_return ress ts at =
     | RefResult (RefTypePat t) ->
       let is_ref =
         match t with
+        | NoneHeapType -> Const (I32 0l @@ at)
         | AnyHeapType -> Const (I32 1l @@ at)
         | EqHeapType -> Call (is_eqref_idx @@ at)
         | I31HeapType -> RefTest I31Op
@@ -389,8 +390,6 @@ let assert_return ress ts at =
         | ArrayHeapType -> RefTest ArrayOp
         | FuncHeapType -> RefTest FuncOp
         | DefHeapType _ -> Const (I32 1l @@ at) (* TODO *)
-        | RttHeapType _ -> Const (I32 1l @@ at) (* TODO *)
-        | BotHeapType -> assert false
       in
       [ is_ref @@ at;
         Test (I32 I32Op.Eqz) @@ at;
@@ -570,9 +569,13 @@ let of_action mods act =
     "call(" ^ of_var_opt mods x_opt ^ ", " ^ of_name name ^ ", " ^
       "[" ^ String.concat ", " (List.map of_value vs) ^ "])",
     (match lookup mods x_opt name act.at with
-    | ExternFuncType ft when not (is_js_func_type ft) ->
-      let FuncType (_, out) = ft in
-      Some (of_wrapper mods x_opt name (invoke ft vs), out)
+    | ExternFuncType x ->
+      let FuncType (_, out) as ft =
+        as_func_str_type (expand_ctx_type (def_of (as_sem_var x))) in
+      if is_js_func_type ft then
+        None
+      else
+        Some (of_wrapper mods x_opt name (invoke ft vs), out)
     | _ -> None
     )
   | Get (x_opt, name) ->

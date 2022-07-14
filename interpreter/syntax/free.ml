@@ -73,9 +73,9 @@ let vec_type = function
   | V128Type -> empty
 
 let heap_type = function
-  | AnyHeapType | EqHeapType | I31HeapType | DataHeapType | ArrayHeapType
-  | FuncHeapType | BotHeapType -> empty
-  | DefHeapType x | RttHeapType x -> var_type x
+  | NoneHeapType | AnyHeapType | EqHeapType
+  | I31HeapType | DataHeapType | ArrayHeapType | FuncHeapType -> empty
+  | DefHeapType x -> var_type x
 
 let ref_type = function
   | (_, t) -> heap_type t
@@ -115,11 +115,16 @@ let block_type = function
   | VarBlockType x -> var_type x
   | ValBlockType t -> opt value_type t
 
+let castop = function
+  | RttOp x -> types (idx x)
+  | _ -> empty
+
 let rec instr (e : instr) =
   match e.it with
   | Unreachable | Nop | Drop -> empty
   | Select tso -> list value_type (Lib.Option.get tso [])
-  | RefTest _ | RefCast _ | RefEq -> empty
+  | RefTest op | RefCast op -> castop op
+  | RefEq -> empty
   | RefNull t -> heap_type t
   | RefFunc x -> funcs (idx x)
   | I31New | I31Get _ -> empty
@@ -129,14 +134,14 @@ let rec instr (e : instr) =
   | StructGet (x, _, _) | StructSet (x, _) -> types (idx x)
   | ArrayGet (x, _) | ArraySet x -> types (idx x)
   | ArrayLen -> empty
-  | RttCanon x -> types (idx x)
   | Const _ | Test _ | Compare _ | Unary _ | Binary _ | Convert _ -> empty
   | Block (bt, es) | Loop (bt, es) -> block_type bt ++ block es
   | If (bt, es1, es2) -> block_type bt ++ block es1 ++ block es2
   | Let (bt, ts, es) ->
     let free = block_type bt ++ block es in
     {free with locals = Lib.Fun.repeat (List.length ts) shift free.locals}
-  | Br x | BrIf x | BrCast (x, _) | BrCastFail (x, _) -> labels (idx x)
+  | Br x | BrIf x -> labels (idx x)
+  | BrCast (x, op) | BrCastFail (x, op) -> labels (idx x) ++ castop op
   | BrTable (xs, x) -> list (fun x -> labels (idx x)) (x::xs)
   | Return | CallRef | ReturnCallRef -> empty
   | Call x -> funcs (idx x)
@@ -202,7 +207,7 @@ let import_desc (d : import_desc) =
 let export (e : export) = export_desc e.it.edesc
 let import (i : import) = import_desc i.it.idesc
 
-let start (s : idx) = funcs (idx s)
+let start (s : start) = funcs (idx s.it.sfunc)
 
 let module_ (m : module_) =
   list type_ m.it.types ++

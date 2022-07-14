@@ -15,6 +15,7 @@ and num_type = I32Type | I64Type | F32Type | F64Type
 and vec_type = V128Type
 and ref_type = nullability * heap_type
 and heap_type =
+  | NoneHeapType
   | AnyHeapType
   | EqHeapType
   | I31HeapType
@@ -22,8 +23,6 @@ and heap_type =
   | ArrayHeapType
   | FuncHeapType
   | DefHeapType of var
-  | RttHeapType of var
-  | BotHeapType
 and value_type =
   NumType of num_type | VecType of vec_type | RefType of ref_type | BotType
 
@@ -51,7 +50,7 @@ type table_type = TableType of Int32.t limits * ref_type
 type memory_type = MemoryType of Int32.t limits
 type global_type = GlobalType of value_type * mutability
 type extern_type =
-  | ExternFuncType of func_type
+  | ExternFuncType of var
   | ExternTableType of table_type
   | ExternMemoryType of memory_type
   | ExternGlobalType of global_type
@@ -196,6 +195,7 @@ let subst_num_type s t = t
 let subst_vec_type s t = t
 
 let subst_heap_type s = function
+  | NoneHeapType -> NoneHeapType
   | AnyHeapType -> AnyHeapType
   | EqHeapType -> EqHeapType
   | I31HeapType -> I31HeapType
@@ -203,8 +203,6 @@ let subst_heap_type s = function
   | ArrayHeapType -> ArrayHeapType
   | FuncHeapType -> FuncHeapType
   | DefHeapType x -> DefHeapType (s x)
-  | RttHeapType x -> RttHeapType (s x)
-  | BotHeapType -> BotHeapType
 
 let subst_ref_type s = function
   | (nul, t) -> (nul, subst_heap_type s t)
@@ -262,7 +260,7 @@ let subst_global_type s (GlobalType (t, mut)) =
   GlobalType (subst_value_type s t, mut)
 
 let subst_extern_type s = function
-  | ExternFuncType ft -> ExternFuncType (subst_func_type s ft)
+  | ExternFuncType x -> ExternFuncType (s x)
   | ExternTableType tt -> ExternTableType (subst_table_type s tt)
   | ExternMemoryType mt -> ExternMemoryType (subst_memory_type s mt)
   | ExternGlobalType gt -> ExternGlobalType (subst_global_type s gt)
@@ -381,6 +379,7 @@ and string_of_vec_type = function
   | V128Type -> "v128"
 
 and string_of_heap_type = function
+  | NoneHeapType -> "none"
   | AnyHeapType -> "any"
   | EqHeapType -> "eq"
   | I31HeapType -> "i31"
@@ -388,8 +387,6 @@ and string_of_heap_type = function
   | ArrayHeapType -> "array"
   | FuncHeapType -> "func"
   | DefHeapType x -> string_of_var x
-  | RttHeapType x -> "(rtt " ^ string_of_var x ^ ")"
-  | BotHeapType -> "something"
 
 and string_of_ref_type = function
   | (nul, t) ->
@@ -460,7 +457,7 @@ let string_of_global_type = function
   | GlobalType (t, mut) -> string_of_mutability (string_of_value_type t) mut
 
 let string_of_extern_type = function
-  | ExternFuncType ft -> "func " ^ string_of_func_type ft
+  | ExternFuncType x -> "func " ^ string_of_var x
   | ExternTableType tt -> "table " ^ string_of_table_type tt
   | ExternMemoryType mt -> "memory " ^ string_of_memory_type mt
   | ExternGlobalType gt -> "global " ^ string_of_global_type gt

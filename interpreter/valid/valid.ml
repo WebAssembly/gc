@@ -18,7 +18,7 @@ let require b at s = if not b then error at s
 type context =
 {
   types : ctx_type list;
-  funcs : func_type list;
+  funcs : ctx_type list;
   tables : table_type list;
   memories : memory_type list;
   globals : global_type list;
@@ -93,11 +93,10 @@ let check_vec_type (c : context) (t : vec_type) at =
 
 let check_heap_type (c : context) (t : heap_type) at =
   match t with
-  | AnyHeapType | EqHeapType | I31HeapType | DataHeapType | ArrayHeapType
-  | FuncHeapType -> ()
+  | NoneHeapType | AnyHeapType | EqHeapType
+  | I31HeapType | DataHeapType | ArrayHeapType | FuncHeapType -> ()
   | DefHeapType (SynVar x) -> ignore (type_ c (x @@ at))
-  | RttHeapType (SynVar x) -> ignore (type_ c (x @@ at))
-  | DefHeapType _ | RttHeapType _ | BotHeapType -> assert false
+  | DefHeapType _ -> assert false
 
 let check_ref_type (c : context) (t : ref_type) at =
   match t with
@@ -227,21 +226,11 @@ let peek i (ell, ts) =
 let peek_ref i (ell, ts) at =
   match peek i (ell, ts) with
   | RefType rt -> rt
-  | BotType -> (NonNullable, BotHeapType)
+  | BotType -> (NonNullable, NoneHeapType)
   | t ->
     error at
       ("type mismatch: instruction requires reference type" ^
        " but stack has " ^ string_of_value_type t)
-
-let peek_rtt i s at =
-  let rt = peek_ref i s at in
-  match rt with
-  | _, RttHeapType x -> rt, DefHeapType x
-  | _, BotHeapType -> rt, BotHeapType
-  | _ ->
-    error at
-      ("type mismatch: instruction requires RTT reference type" ^
-       " but stack has " ^ string_of_value_type (RefType rt))
 
 
 (* Type Synthesis *)
@@ -313,7 +302,7 @@ let type_castop op ht =
   | DataOp -> DataHeapType
   | ArrayOp -> ArrayHeapType
   | FuncOp -> FuncHeapType
-  | RttOp -> assert false
+  | RttOp _ -> assert false
 
 
 (* Expressions *)
@@ -443,22 +432,22 @@ let rec check_instr (c : context) (e : instr) (s : infer_result_type) : op_type 
     List.iter (fun x' -> check_stack c ts (label c x') x'.at) xs;
     (ts @ [NumType I32Type]) -->... []
 
-  | BrCast (x, RttOp) ->
-    let rtt, ht = peek_rtt 0 s e.at in
-    let t = peek 1 s in
-    let t' = RefType (NonNullable, ht) in
+  | BrCast (x, RttOp y) ->
+    let _ = type_ c y in
+    let t = peek 0 s in
+    let t' = RefType (NonNullable, DefHeapType (SynVar y.it)) in
     require
       ( match_value_type c.types t (RefType (Nullable, DataHeapType)) ||
         match_value_type c.types t (RefType (Nullable, FuncHeapType)) ) e.at
       ("type mismatch: instruction requires data or function reference type" ^
-       " but stack has " ^ string_of_result_type [t; RefType rtt]);
+       " but stack has " ^ string_of_result_type [t]);
     require
       ( label c x <> [] &&
         match_value_type c.types t' (Lib.List.last (label c x)) ) e.at
       ("type mismatch: instruction requires type " ^ string_of_value_type t' ^
        " but label has " ^ string_of_result_type (label c x));
     let ts0 = Lib.List.lead (label c x) in
-    (ts0 @ [t; RefType rtt]) --> (ts0 @ [t])
+    (ts0 @ [t]) --> (ts0 @ [t])
 
   | BrCast (x, NullOp) ->
     let (_, ht) = peek_ref 0 s e.at in
@@ -481,22 +470,22 @@ let rec check_instr (c : context) (e : instr) (s : infer_result_type) : op_type 
     let ts0 = Lib.List.lead (label c x) in
     (ts0 @ [RefType rt]) --> (ts0 @ [RefType rt])
 
-  | BrCastFail (x, RttOp) ->
-    let rtt, ht = peek_rtt 0 s e.at in
-    let t = peek 1 s in
-    let t' = RefType (NonNullable, ht) in
+  | BrCastFail (x, RttOp y) ->
+    let _ = type_ c y in
+    let t = peek 0 s in
+    let t' = RefType (NonNullable, DefHeapType (SynVar y.it)) in
     require
       ( match_value_type c.types t (RefType (Nullable, DataHeapType)) ||
         match_value_type c.types t (RefType (Nullable, FuncHeapType)) ) e.at
       ("type mismatch: instruction requires data or function reference type" ^
-       " but stack has " ^ string_of_result_type [t; RefType rtt]);
+       " but stack has " ^ string_of_result_type [t]);
     require
       ( label c x <> [] &&
         match_value_type c.types t (Lib.List.last (label c x)) ) e.at
       ("type mismatch: instruction requires type " ^ string_of_value_type t ^
        " but label has " ^ string_of_result_type (label c x));
     let ts0 = Lib.List.lead (label c x) in
-    (ts0 @ [t; RefType rtt]) --> (ts0 @ [t'])
+    (ts0 @ [t]) --> (ts0 @ [t'])
 
   | BrCastFail (x, NullOp) ->
     let (_, ht) as rt = peek_ref 0 s e.at in
@@ -530,7 +519,7 @@ let rec check_instr (c : context) (e : instr) (s : infer_result_type) : op_type 
     c.results -->... []
 
   | Call x ->
-    let FuncType (ts1, ts2) = func c x in
+    let FuncType (ts1, ts2) = as_func_str_type (expand_ctx_type (func c x)) in
     ts1 --> ts2
 
   | CallRef ->
@@ -538,7 +527,7 @@ let rec check_instr (c : context) (e : instr) (s : infer_result_type) : op_type 
     | (nul, DefHeapType (SynVar x)) ->
       let FuncType (ts1, ts2) = func_type c (x @@ e.at) in
       (ts1 @ [RefType (nul, DefHeapType (SynVar x))]) --> ts2
-    | (_, BotHeapType) as rt ->
+    | (_, NoneHeapType) as rt ->
       [RefType rt] -->... []
     | rt ->
       error e.at
@@ -563,7 +552,7 @@ let rec check_instr (c : context) (e : instr) (s : infer_result_type) : op_type 
          string_of_result_type c.results ^
          " but callee returns " ^ string_of_result_type ts2);
       (ts1 @ [RefType (nul, DefHeapType (SynVar x))]) -->... []
-    | (_, BotHeapType) as rt ->
+    | (_, NoneHeapType) as rt ->
       [RefType rt] -->... []
     | rt ->
       error e.at
@@ -583,7 +572,7 @@ let rec check_instr (c : context) (e : instr) (s : infer_result_type) : op_type 
         "type mismatch in function type";
       (ts11 @ [RefType (nul, DefHeapType (SynVar y))]) -->
         [RefType (NonNullable, DefHeapType (SynVar x.it))]
-    | (_, BotHeapType) as rt ->
+    | (_, NoneHeapType) as rt ->
       [RefType rt] -->.. [RefType (NonNullable, DefHeapType (SynVar x.it))]
     | rt ->
       error e.at
@@ -707,34 +696,33 @@ let rec check_instr (c : context) (e : instr) (s : infer_result_type) : op_type 
     [] --> [RefType (Nullable, t)]
 
   | RefFunc x ->
-    let ft = func c x in
-    let y = Lib.Option.force (Lib.List32.index_where (fun ct -> expand_ctx_type ct = FuncDefType ft) c.types) in
+    let y = Lib.Option.force (Lib.List32.index_of (func c x) c.types) in
     refer_func c x;
     [] --> [RefType (NonNullable, DefHeapType (SynVar y))]
 
-  | RefTest RttOp ->
-    let rtt, _ht = peek_rtt 0 s e.at in
-    let t = peek 1 s in
+  | RefTest (RttOp y) ->
+    let _ = type_ c y in
+    let t = peek 0 s in
     require
       ( match_value_type c.types t (RefType (Nullable, DataHeapType)) ||
         match_value_type c.types t (RefType (Nullable, FuncHeapType)) ) e.at
       ("type mismatch: instruction requires data or function reference type" ^
-       " but stack has " ^ string_of_result_type [t; RefType rtt]);
-    [t; RefType rtt] --> [NumType I32Type]
+       " but stack has " ^ string_of_result_type [t]);
+    [t] --> [NumType I32Type]
 
   | RefTest castop ->
     [RefType (Nullable, AnyHeapType)] --> [NumType I32Type]
 
-  | RefCast RttOp ->
-    let rtt, ht = peek_rtt 0 s e.at in
-    let (nul, _) as rt = peek_ref 1 s e.at in
+  | RefCast (RttOp y) ->
+    let _ = type_ c y in
+    let (nul, _) as rt = peek_ref 0 s e.at in
     let t = RefType rt in
     require
       ( match_value_type c.types t (RefType (Nullable, DataHeapType)) ||
         match_value_type c.types t (RefType (Nullable, FuncHeapType)) ) e.at
       ("type mismatch: instruction requires data or function reference type" ^
-       " but stack has " ^ string_of_result_type [t; RefType rtt]);
-    [t; RefType rtt] --> [RefType (nul, ht)]
+       " but stack has " ^ string_of_result_type [t]);
+    [t] --> [RefType (nul, DefHeapType (SynVar y.it))]
 
   | RefCast castop ->
     let (_, ht) = peek_ref 0 s e.at in
@@ -758,8 +746,7 @@ let rec check_instr (c : context) (e : instr) (s : infer_result_type) : op_type 
           defaultable_value_type (unpacked_field_type ft)) fts ) x.at
       "field type is not defaultable";
     let ts = if initop = Implicit then [] else List.map unpacked_field_type fts in
-    (ts @ [RefType (NonNullable, RttHeapType (SynVar x.it))]) -->
-      [RefType (NonNullable, DefHeapType (SynVar x.it))]
+    ts --> [RefType (NonNullable, DefHeapType (SynVar x.it))]
 
   | StructGet (x, y, exto) ->
     let StructType fts = struct_type c x in
@@ -787,14 +774,13 @@ let rec check_instr (c : context) (e : instr) (s : infer_result_type) : op_type 
         defaultable_value_type (unpacked_field_type ft) ) x.at
       "array type is not defaultable";
     let ts = if initop = Implicit then [] else [unpacked_field_type ft] in
-    (ts @ [NumType I32Type; RefType (NonNullable, RttHeapType (SynVar x.it))]) -->
+    (ts @ [NumType I32Type]) -->
       [RefType (NonNullable, DefHeapType (SynVar x.it))]
 
   | ArrayNewFixed (x, n) ->
     let ArrayType ft = array_type c x in
     let ts = Lib.List32.make n (unpacked_field_type ft) in
-    (ts @ [RefType (NonNullable, RttHeapType (SynVar x.it))]) -->
-      [RefType (NonNullable, DefHeapType (SynVar x.it))]
+    ts --> [RefType (NonNullable, DefHeapType (SynVar x.it))]
 
   | ArrayNewElem (x, y) ->
     let ArrayType ft = array_type c x in
@@ -802,7 +788,7 @@ let rec check_instr (c : context) (e : instr) (s : infer_result_type) : op_type 
     require (match_value_type c.types (RefType rt) (unpacked_field_type ft)) x.at
       ("type mismatch: element segment's type " ^ string_of_ref_type rt ^
        " does not match array's field type " ^ string_of_field_type ft);
-    [NumType I32Type; NumType I32Type; RefType (NonNullable, RttHeapType (SynVar x.it))] -->
+    [NumType I32Type; NumType I32Type] -->
       [RefType (NonNullable, DefHeapType (SynVar x.it))]
 
   | ArrayNewData (x, y) ->
@@ -810,7 +796,7 @@ let rec check_instr (c : context) (e : instr) (s : infer_result_type) : op_type 
     let () = data c y in
     require (is_num_type (unpacked_field_type ft)) x.at
       "array type is not numeric";
-    [NumType I32Type; NumType I32Type; RefType (NonNullable, RttHeapType (SynVar x.it))] -->
+    [NumType I32Type; NumType I32Type] -->
       [RefType (NonNullable, DefHeapType (SynVar x.it))]
 
   | ArrayGet (x, exto) ->
@@ -828,10 +814,6 @@ let rec check_instr (c : context) (e : instr) (s : infer_result_type) : op_type 
 
   | ArrayLen ->
     [RefType (Nullable, ArrayHeapType)] --> [NumType I32Type]
-
-  | RttCanon x ->
-    ignore (type_ c x);
-    [] --> [RefType (NonNullable, RttHeapType (SynVar x.it))]
 
   | Const v ->
     let t = NumType (type_num v.it) in
@@ -978,8 +960,7 @@ let is_const (c : context) (e : instr) =
   match e.it with
   | Const _ | VecConst _
   | RefNull _ | RefFunc _
-  | I31New | StructNew _ | ArrayNew _ | ArrayNewFixed _
-  | RttCanon _ -> true
+  | I31New | StructNew _ | ArrayNew _ | ArrayNewFixed _ -> true
   | GlobalGet x -> let GlobalType (_, mut) = global c x in mut = Immutable
   | _ -> false
 
@@ -1038,18 +1019,18 @@ let check_global (c : context) (glob : global) : context =
 
 (* Modules *)
 
-let check_start (c : context) (start : idx option) =
-  Lib.Option.app (fun x ->
-    require (func c x = FuncType ([], [])) x.at
-      "start function must not have parameters or results"
-  ) start
+let check_start (c : context) (start : start) =
+  let {sfunc} = start.it in
+  let ft = as_func_str_type (expand_ctx_type (func c sfunc)) in
+  require (ft = FuncType ([], [])) start.at
+    "start function must not have parameters or results"
 
 let check_import (c : context) (im : import) : context =
   let {module_name = _; item_name = _; idesc} = im.it in
   match idesc.it with
   | FuncImport x ->
-    let ft = func_type c x in
-    {c with funcs = c.funcs @ [ft]}
+    let _ = func_type c x in
+    {c with funcs = c.funcs @ [type_ c x]}
   | TableImport tt ->
     check_table_type c tt idesc.at;
     {c with tables = c.tables @ [tt]}
@@ -1083,7 +1064,7 @@ let check_module (m : module_) =
   let c1 = List.fold_left check_import c0 imports in
   let c2 =
     { c1 with
-      funcs = c1.funcs @ List.map (fun f -> func_type c1 f.it.ftype) funcs;
+      funcs = c1.funcs @ List.map (fun f -> type_ c1 f.it.ftype) funcs;
       tables = c1.tables @ List.map (fun tab -> tab.it.ttype) tables;
       memories = c1.memories @ List.map (fun mem -> mem.it.mtype) memories;
       refs = Free.module_ ({m.it with funcs = []; start = None} @@ m.at);
@@ -1100,7 +1081,7 @@ let check_module (m : module_) =
   List.iter (check_elem c) elems;
   List.iter (check_data c) datas;
   List.iter (check_func c) funcs;
-  check_start c start;
+  Lib.Option.app (check_start c) start;
   ignore (List.fold_left (check_export c) NameSet.empty exports);
   require (List.length c.memories <= 1) m.at
     "multiple memories are not allowed (yet)"

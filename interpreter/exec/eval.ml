@@ -253,10 +253,8 @@ let rec step (c : config) : config =
           Ref r :: vs', []
         )
 
-      | BrCast (x, RttOp), Ref (NullRef _) :: vs' ->
-        vs', [Trapping "null RTT reference" @@ e.at]
-
-      | BrCast (x, RttOp), Ref (Rtt.RttRef rtt) :: Ref r :: vs' ->
+      | BrCast (x, RttOp y), Ref r :: vs' ->
+        let rtt = Rtt.alloc (type_ c.frame.inst y) in
         (match r with
         | NullRef _ ->
           Ref r :: vs', [Plain (Br x) @@ e.at]
@@ -310,10 +308,8 @@ let rec step (c : config) : config =
           Ref r :: vs', [Plain (Br x) @@ e.at]
         )
 
-      | BrCastFail (x, RttOp), Ref (NullRef _) :: vs' ->
-        vs', [Trapping "null RTT reference" @@ e.at]
-
-      | BrCastFail (x, RttOp), Ref (Rtt.RttRef rtt) :: Ref r :: vs' ->
+      | BrCastFail (x, RttOp y), Ref r :: vs' ->
+        let rtt = Rtt.alloc (type_ c.frame.inst y) in
         (match r with
         | NullRef _ ->
           Ref r :: vs', []
@@ -674,10 +670,8 @@ let rec step (c : config) : config =
       | RefTest FuncOp, Ref r :: vs' ->
         value_of_bool (match r with FuncRef _ -> true | _ -> false) :: vs', []
 
-      | RefTest RttOp, Ref (NullRef _) :: vs' ->
-        vs', [Trapping "null RTT reference" @@ e.at]
-
-      | RefTest RttOp, Ref (Rtt.RttRef rtt) :: Ref r :: vs' ->
+      | RefTest (RttOp x), Ref r :: vs' ->
+        let rtt = Rtt.alloc (type_ c.frame.inst x) in
         (match r with
         | NullRef _ ->
           value_of_bool false :: vs', []
@@ -733,10 +727,8 @@ let rec step (c : config) : config =
             string_of_value (Ref r)) @@ e.at]
         )
 
-      | RefCast RttOp, Ref (NullRef _) :: vs' ->
-        vs', [Trapping "null RTT reference" @@ e.at]
-
-      | RefCast RttOp, Ref (Rtt.RttRef rtt) :: Ref r :: vs' ->
+      | RefCast (RttOp x), Ref r :: vs' ->
+        let rtt = Rtt.alloc (type_ c.frame.inst x) in
         (match r with
         | NullRef _ ->
           Ref r :: vs', []
@@ -762,10 +754,14 @@ let rec step (c : config) : config =
       | I31New, Num (I32 i) :: vs' ->
         Ref (I31.I31Ref (I31.of_i32 i)) :: vs', []
 
+      | I31Get ext, Ref (NullRef _) :: vs' ->
+        vs', [Trapping "null i31 reference" @@ e.at]
+
       | I31Get ext, Ref (I31.I31Ref i) :: vs' ->
         Num (I32 (I31.to_i32 ext i)) :: vs', []
 
-      | StructNew (x, initop), Ref (Rtt.RttRef rtt) :: vs' ->
+      | StructNew (x, initop), vs' ->
+        let rtt = Rtt.alloc (type_ c.frame.inst x) in
         let StructType fts = struct_type c.frame.inst x in
         let args, vs'' =
           match initop with
@@ -804,7 +800,8 @@ let rec step (c : config) : config =
         (try Data.write_field f v; vs', []
         with Failure _ -> Crash.error e.at "type mismatch writing field")
 
-      | ArrayNew (x, initop), Ref (Rtt.RttRef rtt) :: Num (I32 n) :: vs' ->
+      | ArrayNew (x, initop), Num (I32 n) :: vs' ->
+        let rtt = Rtt.alloc (type_ c.frame.inst x) in
         let ArrayType (FieldType (st, _)) = array_type c.frame.inst x in
         let arg, vs'' =
           match initop with
@@ -818,18 +815,19 @@ let rec step (c : config) : config =
           with Failure _ -> Crash.error e.at "type mismatch packing value"
         in Ref (Data.DataRef data) :: vs'', []
 
-      | ArrayNewFixed (x, n), Ref (Rtt.RttRef rtt) :: vs' ->
+      | ArrayNewFixed (x, n), vs' ->
+        let rtt = Rtt.alloc (type_ c.frame.inst x) in
         let args, vs'' = split (I32.to_int_u n) vs' e.at in
         let data =
           try Data.alloc_array (type_ c.frame.inst x) rtt (List.rev args)
           with Failure _ -> Crash.error e.at "type mismatch packing value"
         in Ref (Data.DataRef data) :: vs'', []
 
-      | ArrayNewElem (x, y),
-        Ref (Rtt.RttRef rtt) :: Num (I32 n) :: Num (I32 s) :: vs' ->
+      | ArrayNewElem (x, y), Num (I32 n) :: Num (I32 s) :: vs' ->
         if elem_oob c.frame y s n then
           vs', [Trapping (table_error e.at Table.Bounds) @@ e.at]
         else
+          let rtt = Rtt.alloc (type_ c.frame.inst x) in
           let seg = elem c.frame.inst y in
           let args =
             List.map (fun r -> Ref r) (Lib.List32.take n (Lib.List32.drop s !seg)) in
@@ -838,11 +836,11 @@ let rec step (c : config) : config =
             with Failure _ -> Crash.error e.at "type mismatch packing value"
           in Ref (Data.DataRef data) :: vs', []
 
-      | ArrayNewData (x, y),
-        Ref (Rtt.RttRef rtt) :: Num (I32 n) :: Num (I32 s) :: vs' ->
+      | ArrayNewData (x, y), Num (I32 n) :: Num (I32 s) :: vs' ->
         if data_oob c.frame y s n then
           vs', [Trapping (memory_error e.at Memory.Bounds) @@ e.at]
         else
+          let rtt = Rtt.alloc (type_ c.frame.inst x) in
           let ArrayType (FieldType (st, _)) = array_type c.frame.inst x in
           let seg = data c.frame.inst y in
           let bs = Bytes.of_string !seg in
@@ -900,10 +898,6 @@ let rec step (c : config) : config =
 
       | ArrayLen, Ref (Data.DataRef (Data.Array (_, _, svs))) :: vs' ->
         Num (I32 (Lib.List32.length svs)) :: vs', []
-
-      | RttCanon x, vs ->
-        let rtt = Rtt.alloc (type_ c.frame.inst x) in
-        Ref (Rtt.RttRef rtt) :: vs, []
 
       | Const n, vs ->
         Num n.it :: vs, []
@@ -1222,7 +1216,7 @@ let run_data i data =
   | Declarative -> assert false
 
 let run_start start =
-  [Call start @@ start.at]
+  [Call start.it.sfunc @@ start.at]
 
 let init (m : module_) (exts : extern list) : module_inst =
   let

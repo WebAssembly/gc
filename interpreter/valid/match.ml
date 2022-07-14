@@ -51,7 +51,6 @@ and eq_vec_type c t1 t2 =
 and eq_heap_type c t1 t2 =
   match t1, t2 with
   | DefHeapType x1, DefHeapType x2 -> eq_var_type c x1 x2
-  | RttHeapType x1, RttHeapType x2 -> eq_var_type c x1 x2
   | _, _ -> t1 = t2
 
 and eq_ref_type c t1 t2 =
@@ -125,7 +124,7 @@ and eq_global_type c (GlobalType (t1, mut1)) (GlobalType (t2, mut2)) =
 
 and eq_extern_type c et1 et2 =
   match et1, et2 with
-  | ExternFuncType ft1, ExternFuncType ft2 -> eq_func_type c ft1 ft2
+  | ExternFuncType x1, ExternFuncType x2 -> eq_var_type c x1 x2
   | ExternTableType tt1, ExternTableType tt2 -> eq_table_type c tt1 tt2
   | ExternMemoryType mt1, ExternMemoryType mt2 -> eq_memory_type c mt1 mt2
   | ExternGlobalType gt1, ExternGlobalType gt2 -> eq_global_type c gt1 gt2
@@ -154,12 +153,12 @@ and match_vec_type c t1 t2 =
 
 and match_heap_type c t1 t2 =
   match t1, t2 with
+  | NoneHeapType, _ -> true
   | _, AnyHeapType -> true
   | I31HeapType, EqHeapType -> true
   | DataHeapType, EqHeapType -> true
   | ArrayHeapType, EqHeapType -> true
   | ArrayHeapType, DataHeapType -> true
-  | RttHeapType _, EqHeapType -> true
   | DefHeapType x1, EqHeapType ->
     (match expand_ctx_type (lookup c x1) with
     | StructDefType _ | ArrayDefType _ -> true
@@ -181,7 +180,6 @@ and match_heap_type c t1 t2 =
     | _ -> false
     )
   | DefHeapType x1, DefHeapType x2 -> match_var_type c x1 x2
-  | BotHeapType, _ -> true
   | _, _ -> eq_heap_type c t1 t2
 
 and match_ref_type c t1 t2 =
@@ -241,7 +239,7 @@ and match_global_type c (GlobalType (t1, mut1)) (GlobalType (t2, mut2)) =
 
 and match_extern_type c et1 et2 =
   match et1, et2 with
-  | ExternFuncType ft1, ExternFuncType ft2 -> match_func_type c ft1 ft2
+  | ExternFuncType x1, ExternFuncType x2 -> match_var_type c x1 x2
   | ExternTableType tt1, ExternTableType tt2 -> match_table_type c tt1 tt2
   | ExternMemoryType mt1, ExternMemoryType mt2 -> match_memory_type c mt1 mt2
   | ExternGlobalType gt1, ExternGlobalType gt2 -> match_global_type c gt1 gt2
