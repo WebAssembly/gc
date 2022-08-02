@@ -85,10 +85,10 @@ New abbreviations are introduced for reference types in binary and text format, 
   - `nullref == (ref null none)`
 
 * `nullexternref` is a new reference type
-  - `nullref == (ref null noextern)`
+  - `nullexternref == (ref null noextern)`
 
 * `nullfuncref` is a new reference type
-  - `nullref == (ref null nofunc)`
+  - `nullfuncref == (ref null nofunc)`
 
 * `eqref` is a new reference type
   - `eqref == (ref null eq)`
