@@ -391,6 +391,11 @@ Note: In the future, this hierarchy could be refined, e.g., to distinguish compo
 
 The subtyping rules for structural types are only invoked during validation of a `sub` [type definition](#type-definitions).
 
+* Function types are covariant on their results and contravariant on their parameters
+  - `func <valtype11>* -> <valtype12>* <: func <valtype21>* -> <valtype22>*`
+    - iff `(<valtype21> <: <valtype11>)*`
+    - and `(<valtype12> <: <valtype22>)*`
+
 * Structure types support width and depth subtyping
   - `struct <fieldtype1>* <fieldtype1'>* <: struct <fieldtype2>*`
     - iff `(<fieldtype1> <: <fieldtype2>)*`
@@ -477,7 +482,8 @@ This can compile to machine code that (1) reads the RTT from `$x`, (2) checks th
 
 * `struct.new_canon <typeidx>` allocates a structure with canonical [RTT](#values) and initialises its fields with given values
   - `struct.new_canon $t : [t'*] -> [(ref $t)]`
-    - iff `expand($t) = struct (mut t')*`
+    - iff `expand($t) = struct (mut t'')*`
+    - and `(t' = unpacked(t''))*`
   - this is a *constant instruction*
 
 * `struct.new_canon_default <typeidx>` allocates a structure of type `$t` with canonical [RTT](#values) and initialises its fields with default values
@@ -504,7 +510,8 @@ This can compile to machine code that (1) reads the RTT from `$x`, (2) checks th
 
 * `array.new_canon <typeidx>` allocates an array with canonical [RTT](#values)
   - `array.new_canon $t : [t' i32] -> [(ref $t)]`
-    - iff `expand($t) = array (mut t')`
+    - iff `expand($t) = array (mut t'')`
+    - and `t' = unpacked(t'')`
   - this is a *constant instruction*
 
 * `array.new_canon_default <typeidx>` allocates an array with canonical [RTT](#values) and initialises its fields with the default value
@@ -515,13 +522,14 @@ This can compile to machine code that (1) reads the RTT from `$x`, (2) checks th
 
 * `array.new_canon_fixed <typeidx> <N>` allocates an array with canonical [RTT](#values) of fixed size and initialises it from operands
   - `array.new_canon_fixed $t N : [t^N] -> [(ref $t)]`
-    - iff `expand($t) = array (mut t')`
+    - iff `expand($t) = array (mut t'')`
+    - and `t' = unpacked(t'')`
   - this is a *constant instruction*
 
 * `array.new_canon_data <typeidx> <dataidx>` allocates an array with canonical [RTT](#values) and initialises it from a data segment
   - `array.new_canon_data $t $d : [i32 i32] -> [(ref $t)]`
     - iff `expand($t) = array (mut t')`
-    - and `t'` is numeric or packed numeric
+    - and `t'` is numeric, vector, or packed
     - and `$d` is a defined data segment
   - the 1st operand is the `offset` into the segment
   - the 2nd operand is the `size` of the array
@@ -559,11 +567,11 @@ This can compile to machine code that (1) reads the RTT from `$x`, (2) checks th
 #### Unboxed Scalars
 
 * `i31.new` creates an `i31ref` from a 32 bit value, truncating high bit
-  - `i31.new : [i32] -> [i31ref]`
+  - `i31.new : [i32] -> [(ref i31)]`
   - this is a *constant instruction*
 
 * `i31.get_<sx>` extracts the value, zero- or sign-extending
-  - `i31.get_<sx> : [i31ref] -> [i32]`
+  - `i31.get_<sx> : [(ref null i31)] -> [i32]`
   - traps if the operand is null
 
 
@@ -815,12 +823,12 @@ The opcode for heap types is encoded as an `s33`.
 | 0xfb59 | `ref.as_data` | |
 | 0xfb5a | `ref.as_i31` | |
 | 0xfb5b | `ref.as_array` | |
-| 0xfb61 | `br_on_data` | |
-| 0xfb62 | `br_on_i31` | |
-| 0xfb64 | `br_on_non_data` | |
-| 0xfb65 | `br_on_non_i31` | |
-| 0xfb66 | `br_on_array` | |
-| 0xfb67 | `br_on_non_array` | |
+| 0xfb61 | `br_on_data` | `$l : labelidx` |
+| 0xfb62 | `br_on_i31` | `$l : labelidx` |
+| 0xfb64 | `br_on_non_data` | `$l : labelidx` |
+| 0xfb65 | `br_on_non_i31` | `$l : labelidx` |
+| 0xfb66 | `br_on_array` | `$l : labelidx` |
+| 0xfb67 | `br_on_non_array` | `$l : labelidx` |
 | 0xfb70 | `extern.internalize` | |
 | 0xfb71 | `extern.externalize` | |
 
