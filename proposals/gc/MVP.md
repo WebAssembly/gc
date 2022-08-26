@@ -725,11 +725,11 @@ This extends the [encodings](https://github.com/WebAssembly/function-references/
 | -0x14  | `(ref null ht)` | `ht : heaptype (s33)` | from funcref proposal |
 | -0x15  | `(ref ht)`      | `ht : heaptype (s33)` | from funcref proposal |
 | -0x16  | `i31ref`        |            | shorthand |
+| -0x17  | `nullfuncref`   |            | shorthand |
+| -0x18  | `nullexternref` |            | shorthand |
 | -0x19  | `dataref`       |            | shorthand |
 | -0x1a  | `arrayref`      |            | shorthand |
 | -0x1b  | `nullref`       |            | shorthand |
-| -0x1c  | `nullfuncref`   |            | shorthand |
-| -0x1d  | `nullexternref` |            | shorthand |
 
 #### Heap Types
 
@@ -743,11 +743,11 @@ The opcode for heap types is encoded as an `s33`.
 | -0x12  | `any`           |            | |
 | -0x13  | `eq`            |            | |
 | -0x16  | `i31`           |            | |
+| -0x17  | `nofunc`        |            | |
+| -0x18  | `noextern`      |            | |
 | -0x19  | `data`          |            | |
 | -0x1a  | `array`         |            | |
 | -0x1b  | `none`          |            | |
-| -0x1c  | `nofunc`        |            | |
-| -0x1d  | `noextern`      |            | |
 
 #### Structured Types
 
