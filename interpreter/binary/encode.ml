@@ -120,9 +120,9 @@ struct
     | DataHeapType -> s7 (-0x19)
     | ArrayHeapType -> s7 (-0x1a)
     | FuncHeapType -> s7 (-0x10)
-    | NoFuncHeapType -> s7 (-0x1c)
+    | NoFuncHeapType -> s7 (-0x17)
     | ExternHeapType -> s7 (-0x11)
-    | NoExternHeapType -> s7 (-0x1d)
+    | NoExternHeapType -> s7 (-0x18)
     | DefHeapType x -> var_type s33 x
     | BotHeapType -> assert false
 
@@ -134,9 +134,9 @@ struct
     | (Nullable, DataHeapType) -> s7 (-0x19)
     | (Nullable, ArrayHeapType) -> s7 (-0x1a)
     | (Nullable, FuncHeapType) -> s7 (-0x10)
-    | (Nullable, NoFuncHeapType) -> s7 (-0x1c)
+    | (Nullable, NoFuncHeapType) -> s7 (-0x17)
     | (Nullable, ExternHeapType) -> s7 (-0x11)
-    | (Nullable, NoExternHeapType) -> s7 (-0x1d)
+    | (Nullable, NoExternHeapType) -> s7 (-0x18)
     | (Nullable, t) -> s7 (-0x14); heap_type t
     | (NonNullable, t) -> s7 (-0x15); heap_type t
 

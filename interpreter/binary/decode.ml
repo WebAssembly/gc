@@ -180,11 +180,11 @@ let heap_type s =
       | -0x12 -> AnyHeapType
       | -0x13 -> EqHeapType
       | -0x16 -> I31HeapType
+      | -0x17 -> NoFuncHeapType
+      | -0x18 -> NoExternHeapType
       | -0x19 -> DataHeapType
       | -0x1a -> ArrayHeapType
       | -0x1b -> NoneHeapType
-      | -0x1c -> NoFuncHeapType
-      | -0x1d -> NoExternHeapType
       | _ -> error s pos "malformed heap type"
     )
   ] s
@@ -199,11 +199,11 @@ let ref_type s =
   | -0x14 -> (Nullable, heap_type s)
   | -0x15 -> (NonNullable, heap_type s)
   | -0x16 -> (Nullable, I31HeapType)
+  | -0x17 -> (Nullable, NoFuncHeapType)
+  | -0x18 -> (Nullable, NoExternHeapType)
   | -0x19 -> (Nullable, DataHeapType)
   | -0x1a -> (Nullable, ArrayHeapType)
   | -0x1b -> (Nullable, NoneHeapType)
-  | -0x1c -> (Nullable, NoFuncHeapType)
-  | -0x1d -> (Nullable, NoExternHeapType)
   | _ -> error s pos "malformed reference type"
 
 let value_type s =
