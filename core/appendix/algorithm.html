@@ -1,7 +1,7 @@
 
 <!DOCTYPE html>
 
-<html>
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
@@ -95,7 +95,9 @@ Consequently, it can be integrated directly into a decoder.</p>
 <p>The algorithm is expressed in typed pseudo code whose semantics is intended to be self-explanatory.</p>
 <section id="data-structures">
 <span id="index-1"></span><h2>Data Structures<a class="headerlink" href="#data-structures" title="Permalink to this headline">¶</a></h2>
-<p>Types are representable as a set of enumerations.</p>
+<section id="types">
+<h3>Types<a class="headerlink" href="#types" title="Permalink to this headline">¶</a></h3>
+<p>Value types are representable as a set of enumerations.</p>
 <div class="highlight-pseudo notranslate"><div class="highlight"><pre><span></span><span class="k">type</span> <span class="nf">num_type</span> = I32 | I64 | F32 | F64
 <span class="k">type</span> <span class="nf">vec_type</span> = V128
 <span class="k">type</span> <span class="nf">heap_type</span> = Def(<span class="nf">idx</span> : nat) | Func | Extern | Bot
@@ -105,11 +107,11 @@ Consequently, it can be integrated directly into a decoder.</p>
 <span class="k">func</span> <span class="nf">is_num</span>(<span class="nf">t</span> : val_type) : bool =
   <span class="k">return</span> t = I32 || t = I64 || t = F32 || t = F64 || t = Bot
 
-<span class="k">func</span> <span class="nf">is_vec</span>(<span class="nf">t</span> : val_type | Unknown) : bool =
-  <span class="k">return</span> t = V128 || t = Unknown
+<span class="k">func</span> <span class="nf">is_vec</span>(<span class="nf">t</span> : val_type) : bool =
+  <span class="k">return</span> t = V128 || t = Bot
 
-<span class="k">func</span> <span class="nf">is_ref</span>(<span class="nf">t</span> : val_type | Unknown) : bool =
-  <span class="k">return</span> t = not (is_num t || is_vec t) || t = Bot
+<span class="k">func</span> <span class="nf">is_ref</span>(<span class="nf">t</span> : val_type) : bool =
+  <span class="k">return</span> not (is_num t || is_vec t) || t = Bot
 </pre></div>
 </div>
 <p>Equivalence and subtyping checks can be defined on these types.</p>
@@ -134,31 +136,55 @@ Consequently, it can be integrated directly into a decoder.</p>
   <span class="k">return</span> matches_heap(t1.heap, t2.heap) &amp;&amp; matches_null(t1.null, t2.null)
 
 <span class="k">func</span> <span class="nf">matches</span>(<span class="nf">t1</span> : val_type, <span class="nf">t2</span> : val_type) : bool =
-  <span class="k">return</span>
-    (is_num t1 &amp;&amp; is_num t2 &amp; t1 = t2) ||
-    (is_ref t1 &amp;&amp; is_ref t2 &amp; matches_ref(t1, t2)) ||
-    t1 = Bot
+  <span class="k">switch</span> (t1, t2)
+    <span class="k">case</span> (Ref(_), Ref(_))
+      <span class="k">return</span> matches_ref(t1, t2)
+    <span class="k">case</span> (Bot, _)
+      <span class="k">return</span> true
+    <span class="k">case</span> (_, _)
+      <span class="k">return</span> t1 = t2
 </pre></div>
 </div>
-<p>The algorithm uses two separate stacks: the <em>value stack</em> and the <em>control stack</em>.
-The former tracks the <a class="reference internal" href="../syntax/types.html#syntax-valtype"><span class="std std-ref">types</span></a> of operand values on the <a class="reference internal" href="../exec/runtime.html#stack"><span class="std std-ref">stack</span></a>,
-the latter surrounding <a class="reference internal" href="../syntax/instructions.html#syntax-instr-control"><span class="std std-ref">structured control instructions</span></a> and their associated <a class="reference internal" href="../syntax/instructions.html#syntax-instr-control"><span class="std std-ref">blocks</span></a>.</p>
+</section>
+<section id="context">
+<h3>Context<a class="headerlink" href="#context" title="Permalink to this headline">¶</a></h3>
+<p>Validation requires a <a class="reference internal" href="../valid/conventions.html#context"><span class="std std-ref">context</span></a> for checking uses of <a class="reference internal" href="../syntax/modules.html#syntax-index"><span class="std std-ref">indices</span></a>.
+For the purpose of presenting the algorithm, it is maintained in a set of global variables:</p>
+<div class="highlight-pseudo notranslate"><div class="highlight"><pre><span></span><span class="k">var</span> <span class="nf">locals</span> : array(val_type)
+<span class="k">var</span> <span class="nf">locals_init</span> : array(bool)
+<span class="k">var</span> <span class="nf">globals</span> : array(global_type)
+<span class="k">var</span> <span class="nf">funcs</span> : array(func_type)
+<span class="k">var</span> <span class="nf">tables</span> : array(table_type)
+<span class="k">var</span> <span class="nf">mems</span> : array(mem_type)
+</pre></div>
+</div>
+<p>This assumes suitable representations for the various <a class="reference internal" href="../syntax/types.html#syntax-type"><span class="std std-ref">types</span></a> besides <code class="code docutils literal notranslate"><span class="pre">val_type</span></code>, which are omitted here.</p>
+<p>For locals, there is an additional array recording the initialization status of each local.</p>
+</section>
+<section id="stacks">
+<h3>Stacks<a class="headerlink" href="#stacks" title="Permalink to this headline">¶</a></h3>
+<p>The algorithm uses three separate stacks: the <em>value stack</em>, the <em>control stack</em>, and the <em>initialization stack</em>.
+The value stack tracks the <a class="reference internal" href="../syntax/types.html#syntax-valtype"><span class="std std-ref">types</span></a> of operand values on the <a class="reference internal" href="../exec/runtime.html#stack"><span class="std std-ref">stack</span></a>.
+The control stack tracks surrounding <a class="reference internal" href="../syntax/instructions.html#syntax-instr-control"><span class="std std-ref">structured control instructions</span></a> and their associated <a class="reference internal" href="../syntax/instructions.html#syntax-instr-control"><span class="std std-ref">blocks</span></a>.
+The initialization stack records all <a class="reference internal" href="../syntax/modules.html#syntax-local"><span class="std std-ref">locals</span></a> that have been initialized since the beginning of the function.</p>
 <div class="highlight-pseudo notranslate"><div class="highlight"><pre><span></span><span class="k">type</span> <span class="nf">val_stack</span> = stack(val_type)
+<span class="k">type</span> <span class="nf">init_stack</span> = stack(u32)
 
 <span class="k">type</span> <span class="nf">ctrl_stack</span> = stack(ctrl_frame)
 <span class="k">type</span> <span class="nf">ctrl_frame</span> = {
   <span class="nf">opcode</span> : opcode
   <span class="nf">start_types</span> : list(val_type)
   <span class="nf">end_types</span> : list(val_type)
-  <span class="nf">height</span> : nat
+  <span class="nf">val_height</span> : nat
+  <span class="nf">init_height</span> : nat
   <span class="nf">unreachable</span> : bool
 }
 </pre></div>
 </div>
-<p>For each value, the value stack records its <a class="reference internal" href="../syntax/types.html#syntax-valtype"><span class="std std-ref">value type</span></a>.
-For each entered block, the control stack records a <em>control frame</em> with the originating opcode, the types on the top of the operand stack at the start and end of the block (used to check its result as well as branches), the height of the operand stack at the start of the block (used to check that operands do not underflow the current block), and a flag recording whether the remainder of the block is unreachable (used to handle <a class="reference internal" href="../valid/instructions.html#polymorphism"><span class="std std-ref">stack-polymorphic</span></a> typing after branches).</p>
-<p>For the purpose of presenting the algorithm, the operand and control stacks are simply maintained as global variables:</p>
+<p>For each entered block, the control stack records a <em>control frame</em> with the originating opcode, the types on the top of the operand stack at the start and end of the block (used to check its result as well as branches), the height of the operand stack at the start of the block (used to check that operands do not underflow the current block), the height of the initialization stack at the start of the block (used to reset initialization status at the end of the block), and a flag recording whether the remainder of the block is unreachable (used to handle <a class="reference internal" href="../valid/instructions.html#polymorphism"><span class="std std-ref">stack-polymorphic</span></a> typing after branches).</p>
+<p>For the purpose of presenting the algorithm, these stacks are simply maintained as global variables:</p>
 <div class="highlight-pseudo notranslate"><div class="highlight"><pre><span></span><span class="k">var</span> <span class="nf">vals</span> : val_stack
+<span class="k">var</span> <span class="nf">inits</span> : init_stack
 <span class="k">var</span> <span class="nf">ctrls</span> : ctrl_stack
 </pre></div>
 </div>
@@ -184,7 +210,7 @@ For each entered block, the control stack records a <em>control frame</em> with 
 <span class="k">func</span> <span class="nf">pop_ref</span>() : ref_type =
   <span class="k">let</span> <span class="nf">actual</span> = pop_val()
   error_if(not is_ref(actual))
-  <span class="k">if</span> actual = Bot then <span class="k">return</span> Ref(Bot, false)
+  <span class="k">if</span> (actual = Bot) <span class="k">return</span> Ref(Bot, false)
   <span class="k">return</span> actual
 
 <span class="k">func</span> <span class="nf">push_vals</span>(<span class="nf">types</span> : list(val_type)) = <span class="k">foreach</span> (t <span class="k">in</span> types) push_val(t)
@@ -208,9 +234,28 @@ The function returns the actual type popped from the stack.</p>
 <p>The notation <code class="code docutils literal notranslate"><span class="pre">stack[i]</span></code> is meant to index the stack from the top,
 so that, e.g., <code class="code docutils literal notranslate"><span class="pre">ctrls[0]</span></code> accesses the element pushed last.</p>
 </div>
+<p>The initialization stack and the initialization status of locals is manipulated through the following functions:</p>
+<div class="highlight-pseudo notranslate"><div class="highlight"><pre><span></span><span class="k">func</span> <span class="nf">get_local</span>(<span class="nf">idx</span> : u32) =
+  error_if(not locals_init[idx])
+
+<span class="k">func</span> <span class="nf">set_local</span>(<span class="nf">idx</span> : u32) =
+  <span class="k">if</span> (not locals_init[idx])
+    inits.push(idx)
+    locals_init[idx] := true
+
+<span class="k">func</span> <span class="nf">reset_locals</span>(<span class="nf">height</span> : nat) =
+  while (inits.size() &gt; height)
+    locals_init[inits.pop()] := false
+</pre></div>
+</div>
+<p>Getting a local verifies that it is known to be initialized.
+When a local is set that was not set already,
+then its initialization status is updated and the change is recorded in the initialization stack.
+Thus, the initialization status of all locals can be reset to a previous state by denoting a specific height in the initialization stack.</p>
+<p>The size of the initialization stack is bounded by the number of (non-defaultable) locals in a function, so can be preallocated by an algorithm.</p>
 <p>The control stack is likewise manipulated through auxiliary functions:</p>
 <div class="highlight-pseudo notranslate"><div class="highlight"><pre><span></span><span class="k">func</span> <span class="nf">push_ctrl</span>(<span class="nf">opcode</span> : opcode, <span class="k">in</span> : list(val_type), <span class="nf">out</span> : list(val_type)) =
-  <span class="k">let</span> <span class="nf">frame</span> = ctrl_frame(opcode, <span class="k">in</span>, out, vals.size(), false)
+  <span class="k">let</span> <span class="nf">frame</span> = ctrl_frame(opcode, <span class="k">in</span>, out, vals.size(), inits.size(), false)
   ctrls.push(frame)
   push_vals(<span class="k">in</span>)
 
@@ -218,12 +263,13 @@ so that, e.g., <code class="code docutils literal notranslate"><span class="pre"
   error_if(ctrls.is_empty())
   <span class="k">let</span> <span class="nf">frame</span> = ctrls[0]
   pop_vals(frame.end_types)
-  error_if(vals.size() =/= frame.height)
+  error_if(vals.size() =/= frame.val_height)
+  reset_locals(frame.init_height)
   ctrls.pop()
   <span class="k">return</span> frame
 
 <span class="k">func</span> <span class="nf">label_types</span>(<span class="nf">frame</span> : ctrl_frame) : list(val_types) =
-  <span class="k">return</span> (if frame.opcode == loop then frame.start_types else frame.end_types)
+  <span class="k">return</span> (if (frame.opcode = loop) frame.start_types else frame.end_types)
 
 <span class="k">func</span> <span class="nf">unreachable</span>() =
   vals.resize(ctrls[0].height)
@@ -234,10 +280,13 @@ so that, e.g., <code class="code docutils literal notranslate"><span class="pre"
 It allocates a new frame record recording them along with the current height of the operand stack and marks the block as reachable.</p>
 <p>Popping a frame first checks that the control stack is not empty.
 It then verifies that the operand stack contains the right types of values expected at the end of the exited block and pops them off the operand stack.
-Afterwards, it checks that the stack has shrunk back to its initial height.</p>
+Afterwards, it checks that the stack has shrunk back to its initial height.
+Finally, it undoes all changes to the initialization status of locals that happend inside the block.</p>
 <p>The type of the <a class="reference internal" href="../exec/runtime.html#syntax-label"><span class="std std-ref">label</span></a> associated with a control frame is either that of the stack at the start or the end of the frame, determined by the opcode that it originates from.</p>
 <p>Finally, the current frame can be marked as unreachable.
-In that case, all existing operand types are purged from the value stack, in order to allow for the <a class="reference internal" href="../valid/instructions.html#polymorphism"><span class="std std-ref">stack-polymorphism</span></a> logic in <code class="code docutils literal notranslate"><span class="pre">pop_val</span></code> to take effect.</p>
+In that case, all existing operand types are purged from the value stack, in order to allow for the <a class="reference internal" href="../valid/instructions.html#polymorphism"><span class="std std-ref">stack-polymorphism</span></a> logic in <code class="code docutils literal notranslate"><span class="pre">pop_val</span></code> to take effect.
+Because every function has an implicit outermost label that corresponds to an implicit block frame,
+it is an invariant of the validation algorithm that there always is at least one frame on the control stack when validating an instruction, and hence, <cite>ctrls[0]</cite> is always defined.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>Even with the unreachable flag set, consecutive operands are still pushed to and popped from the operand stack.
@@ -245,15 +294,11 @@ That is necessary to detect invalid <a class="reference internal" href="../valid
 However, a polymorphic stack cannot underflow, but instead generates <code class="code docutils literal notranslate"><span class="pre">Bot</span></code> types as needed.</p>
 </div>
 </section>
+</section>
 <section id="validation-of-opcode-sequences">
 <span id="index-2"></span><h2>Validation of Opcode Sequences<a class="headerlink" href="#validation-of-opcode-sequences" title="Permalink to this headline">¶</a></h2>
 <p>The following function shows the validation of a number of representative instructions that manipulate the stack.
 Other instructions are checked in a similar manner.</p>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>Various instructions not shown here will additionally require the presence of a validation <a class="reference internal" href="../valid/conventions.html#context"><span class="std std-ref">context</span></a> for checking uses of <a class="reference internal" href="../syntax/modules.html#syntax-index"><span class="std std-ref">indices</span></a>.
-That is an easy addition and therefore omitted from this presentation.</p>
-</div>
 <div class="highlight-pseudo notranslate"><div class="highlight"><pre><span></span><span class="k">func</span> <span class="nf">validate</span>(opcode) =
   <span class="k">switch</span> (opcode)
     <span class="k">case</span> (i32.add)
@@ -270,7 +315,7 @@ That is an easy addition and therefore omitted from this presentation.</p>
       <span class="k">let</span> <span class="nf">t2</span> = pop_val()
       error_if(not (is_num(t1) &amp;&amp; is_num(t2) || is_vec(t1) &amp;&amp; is_vec(t2)))
       error_if(t1 =/= t2 &amp;&amp; t1 =/= Bot &amp;&amp; t2 =/= Bot)
-      push_val(if (t1 == Bot) t2 else t1)
+      push_val(if (t1 = Bot) t2 else t1)
 
     <span class="k">case</span> (select t)
       pop_val(I32)
@@ -285,6 +330,14 @@ That is an easy addition and therefore omitted from this presentation.</p>
     <span class="k">case</span> (ref.as_non_null)
       <span class="k">let</span> <span class="nf">rt</span> = pop_ref()
       push_val(Ref(rt.heap, false))
+
+    <span class="k">case</span> (local.get x)
+      get_local(x)
+      push_val(locals[x])
+
+    <span class="k">case</span> (local.set x)
+      pop_val(locals[x])
+      set_local(x)
 
     <span class="k">case</span> (unreachable)
       unreachable()
@@ -344,7 +397,7 @@ That is an easy addition and therefore omitted from this presentation.</p>
       <span class="k">let</span> <span class="nf">rt</span> = pop_ref()
       <span class="k">if</span> (rt.heap =/= Bot)
         error_if(not is_def(rt.heap))
-        <span class="k">let</span> <span class="nf">ft</span> = lookup_func_type(rt.heap.idx)  // TODO
+        <span class="k">let</span> <span class="nf">ft</span> = funcs[rt.heap.idx]
         pop_vals(ft.params)
         push_vals(ft.results)
 </pre></div>

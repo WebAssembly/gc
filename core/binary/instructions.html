@@ -1,7 +1,7 @@
 
 <!DOCTYPE html>
 
-<html>
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
@@ -122,9 +122,9 @@ The only exception are <a class="reference internal" href="#binary-instr-control
   \def\mathdef1424#1{\mathtt{0x#1}}\mathdef1424{0F} &amp;\Rightarrow&amp; \href{../syntax/instructions.html#syntax-instr-control}{\mathsf{return}} \\ &amp;&amp;|&amp;
   \def\mathdef1425#1{\mathtt{0x#1}}\mathdef1425{10}~~x{:}\href{../binary/modules.html#binary-funcidx}{\mathtt{funcidx}} &amp;\Rightarrow&amp; \href{../syntax/instructions.html#syntax-instr-control}{\mathsf{call}}~x \\ &amp;&amp;|&amp;
   \def\mathdef1426#1{\mathtt{0x#1}}\mathdef1426{11}~~y{:}\href{../binary/modules.html#binary-typeidx}{\mathtt{typeidx}}~~x{:}\href{../binary/modules.html#binary-tableidx}{\mathtt{tableidx}} &amp;\Rightarrow&amp; \href{../syntax/instructions.html#syntax-instr-control}{\mathsf{call\_indirect}}~x~y \\ &amp;&amp;|&amp;
-  \def\mathdef1427#1{\mathtt{0x#1}}\mathdef1427{14} &amp;\Rightarrow&amp; \href{../syntax/instructions.html#syntax-instr-control}{\mathsf{call\_ref}} \\ &amp;&amp;|&amp;
-  \def\mathdef1428#1{\mathtt{0x#1}}\mathdef1428{D4}~~x{:}\href{../binary/modules.html#binary-funcidx}{\mathtt{funcidx}} &amp;\Rightarrow&amp; \href{../syntax/instructions.html#syntax-instr-control}{\mathsf{br\_on\_null}} \\ &amp;&amp;|&amp;
-  \def\mathdef1429#1{\mathtt{0x#1}}\mathdef1429{D6}~~x{:}\href{../binary/modules.html#binary-funcidx}{\mathtt{funcidx}} &amp;\Rightarrow&amp; \href{../syntax/instructions.html#syntax-instr-control}{\mathsf{br\_on\_non\_null}} \\
+  \def\mathdef1427#1{\mathtt{0x#1}}\mathdef1427{14}~~x{:}\href{../binary/modules.html#binary-typeidx}{\mathtt{typeidx}} &amp;\Rightarrow&amp; \href{../syntax/instructions.html#syntax-instr-control}{\mathsf{call\_ref}}~x \\ &amp;&amp;|&amp;
+  \def\mathdef1428#1{\mathtt{0x#1}}\mathdef1428{D4}~~l{:}\href{../binary/modules.html#binary-labelidx}{\mathtt{labelidx}} &amp;\Rightarrow&amp; \href{../syntax/instructions.html#syntax-instr-control}{\mathsf{br\_on\_null}}~l \\ &amp;&amp;|&amp;
+  \def\mathdef1429#1{\mathtt{0x#1}}\mathdef1429{D6}~~l{:}\href{../binary/modules.html#binary-labelidx}{\mathtt{labelidx}} &amp;\Rightarrow&amp; \href{../syntax/instructions.html#syntax-instr-control}{\mathsf{br\_on\_non\_null}}~l \\
 \end{array}\end{split}\]</div>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
@@ -139,10 +139,10 @@ To avoid any loss in the range of allowed indices, it is treated as a 33 bit sig
 <div class="math notranslate nohighlight" id="binary-ref-as-non-null">
 <span id="binary-ref-is-null"></span><span id="binary-ref-func"></span><span id="binary-ref-null"></span>\[\begin{split}\begin{array}{llclll}
 \def\mathdef1369#1{{}}\mathdef1369{instruction} &amp; \href{../binary/instructions.html#binary-instr}{\mathtt{instr}} &amp;::=&amp; \dots \\ &amp;&amp;|&amp;
-  \def\mathdef1432#1{\mathtt{0x#1}}\mathdef1432{D0}~~t{:}\href{../binary/types.html#binary-heaptype}{\mathtt{heaptype}} &amp;\Rightarrow&amp; \href{../syntax/instructions.html#syntax-instr-ref}{\mathsf{ref{.}null}}~t \\ &amp;&amp;|&amp;
-  \def\mathdef1433#1{\mathtt{0x#1}}\mathdef1433{D1} &amp;\Rightarrow&amp; \href{../syntax/instructions.html#syntax-instr-ref}{\mathsf{ref{.}is\_null}} \\ &amp;&amp;|&amp;
-  \def\mathdef1434#1{\mathtt{0x#1}}\mathdef1434{D2}~~x{:}\href{../binary/modules.html#binary-funcidx}{\mathtt{funcidx}} &amp;\Rightarrow&amp; \href{../syntax/instructions.html#syntax-instr-ref}{\mathsf{ref{.}func}}~x \\ &amp;&amp;|&amp;
-  \def\mathdef1435#1{\mathtt{0x#1}}\mathdef1435{D3} &amp;\Rightarrow&amp; \href{../syntax/instructions.html#syntax-instr-ref}{\mathsf{ref{.}as\_non\_null}} \\
+  \def\mathdef1432#1{\mathtt{0x#1}}\mathdef1432{D0}~~t{:}\href{../binary/types.html#binary-heaptype}{\mathtt{heaptype}} &amp;\Rightarrow&amp; \href{../syntax/instructions.html#syntax-instr-ref}{\mathsf{ref.null}}~t \\ &amp;&amp;|&amp;
+  \def\mathdef1433#1{\mathtt{0x#1}}\mathdef1433{D1} &amp;\Rightarrow&amp; \href{../syntax/instructions.html#syntax-instr-ref}{\mathsf{ref.is\_null}} \\ &amp;&amp;|&amp;
+  \def\mathdef1434#1{\mathtt{0x#1}}\mathdef1434{D2}~~x{:}\href{../binary/modules.html#binary-funcidx}{\mathtt{funcidx}} &amp;\Rightarrow&amp; \href{../syntax/instructions.html#syntax-instr-ref}{\mathsf{ref.func}}~x \\ &amp;&amp;|&amp;
+  \def\mathdef1435#1{\mathtt{0x#1}}\mathdef1435{D3} &amp;\Rightarrow&amp; \href{../syntax/instructions.html#syntax-instr-ref}{\mathsf{ref.as\_non\_null}} \\
 \end{array}\end{split}\]</div>
 </section>
 <section id="parametric-instructions">
@@ -551,7 +551,7 @@ They all have a one byte prefix, whereas the actual opcode is encoded by a varia
   \def\mathdef1704#1{\mathtt{0x#1}}\mathdef1704{FD}~~216{:}\href{../binary/values.html#binary-int}{\def\mathdef1374#1{{\mathtt{u}#1}}\mathdef1374{\mathtt{32}}} &amp;\Rightarrow&amp; \href{../syntax/types.html#syntax-valtype}{\mathsf{i64x2}}.\href{../syntax/instructions.html#syntax-instr-vec}{\mathsf{lt}}\mathsf{\_s} \\ &amp;&amp;|&amp;
   \def\mathdef1705#1{\mathtt{0x#1}}\mathdef1705{FD}~~217{:}\href{../binary/values.html#binary-int}{\def\mathdef1374#1{{\mathtt{u}#1}}\mathdef1374{\mathtt{32}}} &amp;\Rightarrow&amp; \href{../syntax/types.html#syntax-valtype}{\mathsf{i64x2}}.\href{../syntax/instructions.html#syntax-instr-vec}{\mathsf{gt}}\mathsf{\_s} \\ &amp;&amp;|&amp;
   \def\mathdef1706#1{\mathtt{0x#1}}\mathdef1706{FD}~~218{:}\href{../binary/values.html#binary-int}{\def\mathdef1374#1{{\mathtt{u}#1}}\mathdef1374{\mathtt{32}}} &amp;\Rightarrow&amp; \href{../syntax/types.html#syntax-valtype}{\mathsf{i64x2}}.\href{../syntax/instructions.html#syntax-instr-vec}{\mathsf{le}}\mathsf{\_s} \\ &amp;&amp;|&amp;
-  \def\mathdef1707#1{\mathtt{0x#1}}\mathdef1707{FD}~~219{:}\href{../binary/values.html#binary-int}{\def\mathdef1374#1{{\mathtt{u}#1}}\mathdef1374{\mathtt{32}}} &amp;\Rightarrow&amp; \href{../syntax/types.html#syntax-valtype}{\mathsf{i64x2}}.\href{../syntax/instructions.html#syntax-instr-vec}{\mathsf{ge}}\mathsf{\_s} \\ &amp;&amp;|&amp;
+  \def\mathdef1707#1{\mathtt{0x#1}}\mathdef1707{FD}~~219{:}\href{../binary/values.html#binary-int}{\def\mathdef1374#1{{\mathtt{u}#1}}\mathdef1374{\mathtt{32}}} &amp;\Rightarrow&amp; \href{../syntax/types.html#syntax-valtype}{\mathsf{i64x2}}.\href{../syntax/instructions.html#syntax-instr-vec}{\mathsf{ge}}\mathsf{\_s} \\
 \end{array}\end{split}\]</div>
 <div class="math notranslate nohighlight" id="binary-vfrelop">
 \[\begin{split}\begin{array}{llclll}

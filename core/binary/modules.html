@@ -1,7 +1,7 @@
 
 <!DOCTYPE html>
 
-<html>
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
@@ -252,8 +252,18 @@ It decodes into a vector of <a class="reference internal" href="../syntax/module
 \def\mathdef1865#1{{}}\mathdef1865{table section} &amp; \href{../binary/modules.html#binary-tablesec}{\mathtt{tablesec}} &amp;::=&amp;
   \mathit{tab}^\ast{:}\href{../binary/modules.html#binary-section}{\mathtt{section}}_4(\href{../binary/conventions.html#binary-vec}{\mathtt{vec}}(\href{../binary/modules.html#binary-table}{\mathtt{table}})) &amp;\Rightarrow&amp; \mathit{tab}^\ast \\
 \def\mathdef1865#1{{}}\mathdef1865{table} &amp; \href{../binary/modules.html#binary-table}{\mathtt{table}} &amp;::=&amp;
-  \mathit{tt}{:}\href{../binary/types.html#binary-tabletype}{\mathtt{tabletype}} &amp;\Rightarrow&amp; \{ \href{../syntax/modules.html#syntax-table}{\mathsf{type}}~\mathit{tt} \} \\
+  \mathit{tt}{:}\href{../binary/types.html#binary-tabletype}{\mathtt{tabletype}}
+    &amp;\Rightarrow&amp; \{ \href{../syntax/modules.html#syntax-table}{\mathsf{type}}~\mathit{tt}, \href{../syntax/modules.html#syntax-table}{\mathsf{init}}~(\href{../syntax/instructions.html#syntax-instr-ref}{\mathsf{ref.null}}~\mathit{ht}) \}
+      \qquad \mathrel{\mbox{if}} \mathit{tt} = \href{../syntax/types.html#syntax-limits}{\mathit{limits}}~(\href{../syntax/types.html#syntax-reftype}{\mathsf{ref}}~\href{../syntax/types.html#syntax-reftype}{\mathsf{null}}^?~\mathit{ht}) \\
+  \def\mathdef1908#1{\mathtt{0x#1}}\mathdef1908{40}~~\def\mathdef1909#1{\mathtt{0x#1}}\mathdef1909{00}~~\mathit{tt}{:}\href{../binary/types.html#binary-tabletype}{\mathtt{tabletype}}~~e{:}\href{../binary/instructions.html#binary-expr}{\mathtt{expr}}
+    &amp;\Rightarrow&amp; \{ \href{../syntax/modules.html#syntax-table}{\mathsf{type}}~\mathit{tt}, \href{../syntax/modules.html#syntax-table}{\mathsf{init}}~e \} \\
 \end{array}\end{split}\]</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The encoding of a table type cannot start with byte <span class="math notranslate nohighlight">\(\def\mathdef1910#1{\mathtt{0x#1}}\mathdef1910{40}\)</span>,
+hence decoding is unambiguous.
+The zero byte following it is reserved for futre extensions.</p>
+</div>
 </section>
 <section id="memory-section">
 <span id="binary-memsec"></span><span id="binary-mem"></span><span id="index-7"></span><h2>Memory Section<a class="headerlink" href="#memory-section" title="Permalink to this headline">¶</a></h2>
@@ -292,10 +302,10 @@ It decodes into a vector of <a class="reference internal" href="../syntax/module
   \mathit{nm}{:}\href{../binary/values.html#binary-name}{\mathtt{name}}~~d{:}\href{../binary/modules.html#binary-exportdesc}{\mathtt{exportdesc}}
     &amp;\Rightarrow&amp; \{ \href{../syntax/modules.html#syntax-export}{\mathsf{name}}~\mathit{nm}, \href{../syntax/modules.html#syntax-export}{\mathsf{desc}}~d \} \\
 \def\mathdef1865#1{{}}\mathdef1865{export description} &amp; \href{../binary/modules.html#binary-exportdesc}{\mathtt{exportdesc}} &amp;::=&amp;
-  \def\mathdef1908#1{\mathtt{0x#1}}\mathdef1908{00}~~x{:}\href{../binary/modules.html#binary-funcidx}{\mathtt{funcidx}} &amp;\Rightarrow&amp; \href{../syntax/modules.html#syntax-exportdesc}{\mathsf{func}}~x \\ &amp;&amp;|&amp;
-  \def\mathdef1909#1{\mathtt{0x#1}}\mathdef1909{01}~~x{:}\href{../binary/modules.html#binary-tableidx}{\mathtt{tableidx}} &amp;\Rightarrow&amp; \href{../syntax/modules.html#syntax-exportdesc}{\mathsf{table}}~x \\ &amp;&amp;|&amp;
-  \def\mathdef1910#1{\mathtt{0x#1}}\mathdef1910{02}~~x{:}\href{../binary/modules.html#binary-memidx}{\mathtt{memidx}} &amp;\Rightarrow&amp; \href{../syntax/modules.html#syntax-exportdesc}{\mathsf{mem}}~x \\ &amp;&amp;|&amp;
-  \def\mathdef1911#1{\mathtt{0x#1}}\mathdef1911{03}~~x{:}\href{../binary/modules.html#binary-globalidx}{\mathtt{globalidx}} &amp;\Rightarrow&amp; \href{../syntax/modules.html#syntax-exportdesc}{\mathsf{global}}~x \\
+  \def\mathdef1911#1{\mathtt{0x#1}}\mathdef1911{00}~~x{:}\href{../binary/modules.html#binary-funcidx}{\mathtt{funcidx}} &amp;\Rightarrow&amp; \href{../syntax/modules.html#syntax-exportdesc}{\mathsf{func}}~x \\ &amp;&amp;|&amp;
+  \def\mathdef1912#1{\mathtt{0x#1}}\mathdef1912{01}~~x{:}\href{../binary/modules.html#binary-tableidx}{\mathtt{tableidx}} &amp;\Rightarrow&amp; \href{../syntax/modules.html#syntax-exportdesc}{\mathsf{table}}~x \\ &amp;&amp;|&amp;
+  \def\mathdef1913#1{\mathtt{0x#1}}\mathdef1913{02}~~x{:}\href{../binary/modules.html#binary-memidx}{\mathtt{memidx}} &amp;\Rightarrow&amp; \href{../syntax/modules.html#syntax-exportdesc}{\mathsf{mem}}~x \\ &amp;&amp;|&amp;
+  \def\mathdef1914#1{\mathtt{0x#1}}\mathdef1914{03}~~x{:}\href{../binary/modules.html#binary-globalidx}{\mathtt{globalidx}} &amp;\Rightarrow&amp; \href{../syntax/modules.html#syntax-exportdesc}{\mathsf{global}}~x \\
 \end{array}\end{split}\]</div>
 </section>
 <section id="start-section">
@@ -321,16 +331,16 @@ It decodes into a vector of <a class="reference internal" href="../syntax/module
 \def\mathdef1865#1{{}}\mathdef1865{element segment} &amp; \href{../binary/modules.html#binary-elem}{\mathtt{elem}} &amp;::=&amp;
   0{:}\href{../binary/values.html#binary-int}{\def\mathdef1870#1{{\mathtt{u}#1}}\mathdef1870{\mathtt{32}}}~~e{:}\href{../binary/instructions.html#binary-expr}{\mathtt{expr}}~~y^\ast{:}\href{../binary/conventions.html#binary-vec}{\mathtt{vec}}(\href{../binary/modules.html#binary-funcidx}{\mathtt{funcidx}})
     &amp;\Rightarrow&amp; \\&amp;&amp;&amp;\quad
-    \{ \href{../syntax/modules.html#syntax-elem}{\mathsf{type}}~\href{../syntax/types.html#syntax-heaptype}{\mathsf{funcref}}, \href{../syntax/modules.html#syntax-elem}{\mathsf{init}}~((\href{../syntax/instructions.html#syntax-instr-ref}{\mathsf{ref{.}func}}~y)~\href{../syntax/instructions.html#syntax-instr-control}{\mathsf{end}})^\ast, \href{../syntax/modules.html#syntax-elem}{\mathsf{mode}}~\href{../syntax/modules.html#syntax-elemmode}{\mathsf{active}}~\{ \href{../syntax/modules.html#syntax-elem}{\mathsf{table}}~0, \href{../syntax/modules.html#syntax-elem}{\mathsf{offset}}~e \} \} \\ &amp;&amp;|&amp;
+    \{ \href{../syntax/modules.html#syntax-elem}{\mathsf{type}}~\href{../syntax/types.html#syntax-heaptype}{\mathsf{funcref}}, \href{../syntax/modules.html#syntax-elem}{\mathsf{init}}~((\href{../syntax/instructions.html#syntax-instr-ref}{\mathsf{ref.func}}~y)~\href{../syntax/instructions.html#syntax-instr-control}{\mathsf{end}})^\ast, \href{../syntax/modules.html#syntax-elem}{\mathsf{mode}}~\href{../syntax/modules.html#syntax-elemmode}{\mathsf{active}}~\{ \href{../syntax/modules.html#syntax-elem}{\mathsf{table}}~0, \href{../syntax/modules.html#syntax-elem}{\mathsf{offset}}~e \} \} \\ &amp;&amp;|&amp;
   1{:}\href{../binary/values.html#binary-int}{\def\mathdef1870#1{{\mathtt{u}#1}}\mathdef1870{\mathtt{32}}}~~\mathit{et}:\href{../binary/modules.html#binary-elemkind}{\mathtt{elemkind}}~~y^\ast{:}\href{../binary/conventions.html#binary-vec}{\mathtt{vec}}(\href{../binary/modules.html#binary-funcidx}{\mathtt{funcidx}})
     &amp;\Rightarrow&amp; \\&amp;&amp;&amp;\quad
-    \{ \href{../syntax/modules.html#syntax-elem}{\mathsf{type}}~\mathit{et}, \href{../syntax/modules.html#syntax-elem}{\mathsf{init}}~((\href{../syntax/instructions.html#syntax-instr-ref}{\mathsf{ref{.}func}}~y)~\href{../syntax/instructions.html#syntax-instr-control}{\mathsf{end}})^\ast, \href{../syntax/modules.html#syntax-elem}{\mathsf{mode}}~\href{../syntax/modules.html#syntax-elemmode}{\mathsf{passive}} \} \\ &amp;&amp;|&amp;
+    \{ \href{../syntax/modules.html#syntax-elem}{\mathsf{type}}~\mathit{et}, \href{../syntax/modules.html#syntax-elem}{\mathsf{init}}~((\href{../syntax/instructions.html#syntax-instr-ref}{\mathsf{ref.func}}~y)~\href{../syntax/instructions.html#syntax-instr-control}{\mathsf{end}})^\ast, \href{../syntax/modules.html#syntax-elem}{\mathsf{mode}}~\href{../syntax/modules.html#syntax-elemmode}{\mathsf{passive}} \} \\ &amp;&amp;|&amp;
   2{:}\href{../binary/values.html#binary-int}{\def\mathdef1870#1{{\mathtt{u}#1}}\mathdef1870{\mathtt{32}}}~~x{:}\href{../binary/modules.html#binary-tableidx}{\mathtt{tableidx}}~~e{:}\href{../binary/instructions.html#binary-expr}{\mathtt{expr}}~~\mathit{et}:\href{../binary/modules.html#binary-elemkind}{\mathtt{elemkind}}~~y^\ast{:}\href{../binary/conventions.html#binary-vec}{\mathtt{vec}}(\href{../binary/modules.html#binary-funcidx}{\mathtt{funcidx}})
     &amp;\Rightarrow&amp; \\&amp;&amp;&amp;\quad
-    \{ \href{../syntax/modules.html#syntax-elem}{\mathsf{type}}~\mathit{et}, \href{../syntax/modules.html#syntax-elem}{\mathsf{init}}~((\href{../syntax/instructions.html#syntax-instr-ref}{\mathsf{ref{.}func}}~y)~\href{../syntax/instructions.html#syntax-instr-control}{\mathsf{end}})^\ast, \href{../syntax/modules.html#syntax-elem}{\mathsf{mode}}~\href{../syntax/modules.html#syntax-elemmode}{\mathsf{active}}~\{ \href{../syntax/modules.html#syntax-elem}{\mathsf{table}}~x, \href{../syntax/modules.html#syntax-elem}{\mathsf{offset}}~e \} \} \\ &amp;&amp;|&amp;
+    \{ \href{../syntax/modules.html#syntax-elem}{\mathsf{type}}~\mathit{et}, \href{../syntax/modules.html#syntax-elem}{\mathsf{init}}~((\href{../syntax/instructions.html#syntax-instr-ref}{\mathsf{ref.func}}~y)~\href{../syntax/instructions.html#syntax-instr-control}{\mathsf{end}})^\ast, \href{../syntax/modules.html#syntax-elem}{\mathsf{mode}}~\href{../syntax/modules.html#syntax-elemmode}{\mathsf{active}}~\{ \href{../syntax/modules.html#syntax-elem}{\mathsf{table}}~x, \href{../syntax/modules.html#syntax-elem}{\mathsf{offset}}~e \} \} \\ &amp;&amp;|&amp;
   3{:}\href{../binary/values.html#binary-int}{\def\mathdef1870#1{{\mathtt{u}#1}}\mathdef1870{\mathtt{32}}}~~\mathit{et}:\href{../binary/modules.html#binary-elemkind}{\mathtt{elemkind}}~~y^\ast{:}\href{../binary/conventions.html#binary-vec}{\mathtt{vec}}(\href{../binary/modules.html#binary-funcidx}{\mathtt{funcidx}})
     &amp;\Rightarrow&amp; \\&amp;&amp;&amp;\quad
-    \{ \href{../syntax/modules.html#syntax-elem}{\mathsf{type}}~\mathit{et}, \href{../syntax/modules.html#syntax-elem}{\mathsf{init}}~((\href{../syntax/instructions.html#syntax-instr-ref}{\mathsf{ref{.}func}}~y)~\href{../syntax/instructions.html#syntax-instr-control}{\mathsf{end}})^\ast, \href{../syntax/modules.html#syntax-elem}{\mathsf{mode}}~\href{../syntax/modules.html#syntax-elemmode}{\mathsf{declarative}} \} \\ &amp;&amp;|&amp;
+    \{ \href{../syntax/modules.html#syntax-elem}{\mathsf{type}}~\mathit{et}, \href{../syntax/modules.html#syntax-elem}{\mathsf{init}}~((\href{../syntax/instructions.html#syntax-instr-ref}{\mathsf{ref.func}}~y)~\href{../syntax/instructions.html#syntax-instr-control}{\mathsf{end}})^\ast, \href{../syntax/modules.html#syntax-elem}{\mathsf{mode}}~\href{../syntax/modules.html#syntax-elemmode}{\mathsf{declarative}} \} \\ &amp;&amp;|&amp;
   4{:}\href{../binary/values.html#binary-int}{\def\mathdef1870#1{{\mathtt{u}#1}}\mathdef1870{\mathtt{32}}}~~e{:}\href{../binary/instructions.html#binary-expr}{\mathtt{expr}}~~\mathit{el}^\ast{:}\href{../binary/conventions.html#binary-vec}{\mathtt{vec}}(\href{../binary/instructions.html#binary-expr}{\mathtt{expr}})
     &amp;\Rightarrow&amp; \\&amp;&amp;&amp;\quad
     \{ \href{../syntax/modules.html#syntax-elem}{\mathsf{type}}~\href{../syntax/types.html#syntax-heaptype}{\mathsf{funcref}}, \href{../syntax/modules.html#syntax-elem}{\mathsf{init}}~\mathit{el}^\ast, \href{../syntax/modules.html#syntax-elem}{\mathsf{mode}}~\href{../syntax/modules.html#syntax-elemmode}{\mathsf{active}}~\{ \href{../syntax/modules.html#syntax-elem}{\mathsf{table}}~0, \href{../syntax/modules.html#syntax-elem}{\mathsf{offset}}~e \} \} \\ &amp;&amp;|&amp;
@@ -344,7 +354,7 @@ It decodes into a vector of <a class="reference internal" href="../syntax/module
     &amp;\Rightarrow&amp; \\&amp;&amp;&amp;\quad
     \{ \href{../syntax/modules.html#syntax-elem}{\mathsf{type}}~et, \href{../syntax/modules.html#syntax-elem}{\mathsf{init}}~\mathit{el}^\ast, \href{../syntax/modules.html#syntax-elem}{\mathsf{mode}}~\href{../syntax/modules.html#syntax-elemmode}{\mathsf{declarative}} \} \\
 \def\mathdef1865#1{{}}\mathdef1865{element kind} &amp; \href{../binary/modules.html#binary-elemkind}{\mathtt{elemkind}} &amp;::=&amp;
-  \def\mathdef1912#1{\mathtt{0x#1}}\mathdef1912{00} &amp;\Rightarrow&amp; \href{../syntax/types.html#syntax-heaptype}{\mathsf{funcref}} \\
+  \def\mathdef1915#1{\mathtt{0x#1}}\mathdef1915{00} &amp;\Rightarrow&amp; \href{../syntax/types.html#syntax-heaptype}{\mathsf{funcref}} \\
 \end{array}\end{split}\]</div>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
@@ -386,14 +396,14 @@ The <span class="math notranslate nohighlight">\(\href{../syntax/modules.html#sy
   \mathit{size}{:}\href{../binary/values.html#binary-int}{\def\mathdef1870#1{{\mathtt{u}#1}}\mathdef1870{\mathtt{32}}}~~\mathit{code}{:}\href{../binary/modules.html#binary-func}{\mathtt{func}}
     &amp;\Rightarrow&amp; \mathit{code} &amp; (\mathrel{\mbox{if}} \mathit{size} = ||\href{../binary/modules.html#binary-func}{\mathtt{func}}||) \\
 \def\mathdef1865#1{{}}\mathdef1865{function} &amp; \href{../binary/modules.html#binary-func}{\mathtt{func}} &amp;::=&amp;
-  (t^\ast)^\ast{:}\href{../binary/conventions.html#binary-vec}{\mathtt{vec}}(\href{../binary/modules.html#binary-local}{\mathtt{locals}})~~e{:}\href{../binary/instructions.html#binary-expr}{\mathtt{expr}}
-    &amp;\Rightarrow&amp; \href{../syntax/conventions.html#notation-concat}{\mathrm{concat}}((t^\ast)^\ast), e
-      &amp; (\mathrel{\mbox{if}} |\href{../syntax/conventions.html#notation-concat}{\mathrm{concat}}((t^\ast)^\ast)| &lt; 2^{32}) \\
+  (\href{../syntax/modules.html#syntax-local}{\mathit{local}}^\ast)^\ast{:}\href{../binary/conventions.html#binary-vec}{\mathtt{vec}}(\href{../binary/modules.html#binary-local}{\mathtt{locals}})~~e{:}\href{../binary/instructions.html#binary-expr}{\mathtt{expr}}
+    &amp;\Rightarrow&amp; \href{../syntax/conventions.html#notation-concat}{\mathrm{concat}}((\href{../syntax/modules.html#syntax-local}{\mathit{local}}^\ast)^\ast), e
+      &amp; (\mathrel{\mbox{if}} |\href{../syntax/conventions.html#notation-concat}{\mathrm{concat}}((\href{../syntax/modules.html#syntax-local}{\mathit{local}}^\ast)^\ast)| &lt; 2^{32}) \\
 \def\mathdef1865#1{{}}\mathdef1865{locals} &amp; \href{../binary/modules.html#binary-local}{\mathtt{locals}} &amp;::=&amp;
-  n{:}\href{../binary/values.html#binary-int}{\def\mathdef1870#1{{\mathtt{u}#1}}\mathdef1870{\mathtt{32}}}~~t{:}\href{../binary/types.html#binary-valtype}{\mathtt{valtype}} &amp;\Rightarrow&amp; t^n \\
+  n{:}\href{../binary/values.html#binary-int}{\def\mathdef1870#1{{\mathtt{u}#1}}\mathdef1870{\mathtt{32}}}~~t{:}\href{../binary/types.html#binary-valtype}{\mathtt{valtype}} &amp;\Rightarrow&amp; \{ \href{../syntax/modules.html#syntax-local}{\mathsf{type}}~t \}^n \\
 \end{array}\end{split}\]</div>
 <p>Here, <span class="math notranslate nohighlight">\(\mathit{code}\)</span> ranges over pairs <span class="math notranslate nohighlight">\((\href{../syntax/types.html#syntax-valtype}{\mathit{valtype}}^\ast, \href{../syntax/instructions.html#syntax-expr}{\mathit{expr}})\)</span>.
-The meta function <span class="math notranslate nohighlight">\(\href{../syntax/conventions.html#notation-concat}{\mathrm{concat}}((t^\ast)^\ast)\)</span> concatenates all sequences <span class="math notranslate nohighlight">\(t_i^\ast\)</span> in <span class="math notranslate nohighlight">\((t^\ast)^\ast\)</span>.
+The meta function <span class="math notranslate nohighlight">\(\href{../syntax/conventions.html#notation-concat}{\mathrm{concat}}((\href{../syntax/modules.html#syntax-local}{\mathit{local}}^\ast)^\ast)\)</span> concatenates all sequences <span class="math notranslate nohighlight">\(\href{../syntax/modules.html#syntax-local}{\mathit{local}}_i^\ast\)</span> in <span class="math notranslate nohighlight">\((\href{../syntax/modules.html#syntax-local}{\mathit{local}}^\ast)^\ast\)</span>.
 Any code for which the length of the resulting sequence is out of bounds of the maximum size of a <a class="reference internal" href="../syntax/conventions.html#syntax-vec"><span class="std std-ref">vector</span></a> is malformed.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
@@ -448,7 +458,7 @@ instead of deferring validation.</p>
 </section>
 <section id="binary-module">
 <span id="binary-version"></span><span id="binary-magic"></span><span id="index-15"></span><span id="id1"></span><h2>Modules<a class="headerlink" href="#binary-module" title="Permalink to this headline">¶</a></h2>
-<p>The encoding of a <a class="reference internal" href="../syntax/modules.html#syntax-module"><span class="std std-ref">module</span></a> starts with a preamble containing a 4-byte magic number (the string <span class="math notranslate nohighlight">\(\def\mathdef1913#1{\mbox{‘}\mathtt{#1}\mbox{’}}\mathdef1913{\backslash0asm}\)</span>) and a version field.
+<p>The encoding of a <a class="reference internal" href="../syntax/modules.html#syntax-module"><span class="std std-ref">module</span></a> starts with a preamble containing a 4-byte magic number (the string <span class="math notranslate nohighlight">\(\def\mathdef1916#1{\mbox{‘}\mathtt{#1}\mbox{’}}\mathdef1916{\backslash0asm}\)</span>) and a version field.
 The current version of the WebAssembly binary format is 1.</p>
 <p>The preamble is followed by a sequence of <a class="reference internal" href="#binary-section"><span class="std std-ref">sections</span></a>.
 <a class="reference internal" href="#binary-customsec"><span class="std std-ref">Custom sections</span></a> may be inserted at any place in this sequence,
@@ -460,9 +470,9 @@ Furthermore, it must be present if any <a class="reference internal" href="../sy
 <div class="math notranslate nohighlight">
 \[\begin{split}\begin{array}{llcllll}
 \def\mathdef1865#1{{}}\mathdef1865{magic} &amp; \href{../binary/modules.html#binary-magic}{\mathtt{magic}} &amp;::=&amp;
-  \def\mathdef1914#1{\mathtt{0x#1}}\mathdef1914{00}~\def\mathdef1915#1{\mathtt{0x#1}}\mathdef1915{61}~\def\mathdef1916#1{\mathtt{0x#1}}\mathdef1916{73}~\def\mathdef1917#1{\mathtt{0x#1}}\mathdef1917{6D} \\
+  \def\mathdef1917#1{\mathtt{0x#1}}\mathdef1917{00}~\def\mathdef1918#1{\mathtt{0x#1}}\mathdef1918{61}~\def\mathdef1919#1{\mathtt{0x#1}}\mathdef1919{73}~\def\mathdef1920#1{\mathtt{0x#1}}\mathdef1920{6D} \\
 \def\mathdef1865#1{{}}\mathdef1865{version} &amp; \href{../binary/modules.html#binary-version}{\mathtt{version}} &amp;::=&amp;
-  \def\mathdef1918#1{\mathtt{0x#1}}\mathdef1918{01}~\def\mathdef1919#1{\mathtt{0x#1}}\mathdef1919{00}~\def\mathdef1920#1{\mathtt{0x#1}}\mathdef1920{00}~\def\mathdef1921#1{\mathtt{0x#1}}\mathdef1921{00} \\
+  \def\mathdef1921#1{\mathtt{0x#1}}\mathdef1921{01}~\def\mathdef1922#1{\mathtt{0x#1}}\mathdef1922{00}~\def\mathdef1923#1{\mathtt{0x#1}}\mathdef1923{00}~\def\mathdef1924#1{\mathtt{0x#1}}\mathdef1924{00} \\
 \def\mathdef1865#1{{}}\mathdef1865{module} &amp; \href{../binary/modules.html#binary-module}{\mathtt{module}} &amp;::=&amp;
   \href{../binary/modules.html#binary-magic}{\mathtt{magic}} \\ &amp;&amp;&amp;
   \href{../binary/modules.html#binary-version}{\mathtt{version}} \\ &amp;&amp;&amp;

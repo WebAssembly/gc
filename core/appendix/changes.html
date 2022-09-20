@@ -1,7 +1,7 @@
 
 <!DOCTYPE html>
 
-<html>
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
@@ -117,8 +117,8 @@ The following sections provide an overview of what has changed.</p>
 <p>Added <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathsf{funcref}}\)</span> and <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathsf{externref}}\)</span> as new value types and respective instructions <a class="footnote-reference brackets" href="#proposal-reftype" id="id4">4</a>.</p>
 <ul class="simple">
 <li><p>New <a class="reference internal" href="../syntax/types.html#syntax-valtype"><span class="std std-ref">value types</span></a>: <a class="reference internal" href="../syntax/types.html#syntax-reftype"><span class="std std-ref">reference types</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathsf{funcref}}\)</span> and <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathsf{externref}}\)</span></p></li>
-<li><p>New <a class="reference internal" href="../syntax/instructions.html#syntax-instr-ref"><span class="std std-ref">reference instructions</span></a>: <span class="math notranslate nohighlight">\(\href{../syntax/instructions.html#syntax-instr-ref}{\mathsf{ref{.}null}}\)</span>, <span class="math notranslate nohighlight">\(\href{../syntax/instructions.html#syntax-instr-ref}{\mathsf{ref{.}func}}\)</span>, <span class="math notranslate nohighlight">\(\href{../syntax/instructions.html#syntax-instr-ref}{\mathsf{ref{.}is\_null}}\)</span></p></li>
-<li><p>Enrich <a class="reference internal" href="../syntax/instructions.html#syntax-instr-parametric"><span class="std std-ref">parametric instruction</span></a>: <span class="math notranslate nohighlight">\(\href{../syntax/instructions.html#syntax-instr-parametric}{\mathsf{select}}\)</span> with optional type immediate</p></li>
+<li><p>New <a class="reference internal" href="../syntax/instructions.html#syntax-instr-ref"><span class="std std-ref">reference instructions</span></a>: <span class="math notranslate nohighlight">\(\href{../syntax/instructions.html#syntax-instr-ref}{\mathsf{ref.null}}\)</span>, <span class="math notranslate nohighlight">\(\href{../syntax/instructions.html#syntax-instr-ref}{\mathsf{ref.func}}\)</span>, <span class="math notranslate nohighlight">\(\href{../syntax/instructions.html#syntax-instr-ref}{\mathsf{ref.is\_null}}\)</span></p></li>
+<li><p>Extended <a class="reference internal" href="../syntax/instructions.html#syntax-instr-parametric"><span class="std std-ref">parametric instruction</span></a>: <span class="math notranslate nohighlight">\(\href{../syntax/instructions.html#syntax-instr-parametric}{\mathsf{select}}\)</span> with optional type immediate</p></li>
 <li><p>New <a class="reference internal" href="../syntax/modules.html#syntax-elemmode"><span class="std std-ref">declarative</span></a> form of <a class="reference internal" href="../syntax/modules.html#syntax-elem"><span class="std std-ref">element segment</span></a></p></li>
 </ul>
 </section>
@@ -169,6 +169,23 @@ The following sections provide an overview of what has changed.</p>
 <li><p>New byte reordering <a class="reference internal" href="../syntax/instructions.html#syntax-instr-vec"><span class="std std-ref">vector instructions</span></a>: <span class="math notranslate nohighlight">\(\mathsf{i8x16.shuffle}\)</span>, <span class="math notranslate nohighlight">\(\mathsf{i8x16.swizzle}\)</span></p></li>
 <li><p>New injection/projection <a class="reference internal" href="../syntax/instructions.html#syntax-instr-vec"><span class="std std-ref">vector instructions</span></a>: <span class="math notranslate nohighlight">\(\mathsf{i}\!N\!\mathsf{x}\!M\!\mathsf{.splat}\)</span>, <span class="math notranslate nohighlight">\(\mathsf{f}\!N\!\mathsf{x}\!M\!\mathsf{.splat}\)</span>, <span class="math notranslate nohighlight">\(\mathsf{i}\!N\!\mathsf{x}\!M\!\mathsf{.bitmask}\)</span></p></li>
 </ul>
+</section>
+</section>
+<section id="release-2">
+<h2>Release 2.?<a class="headerlink" href="#release-2" title="Permalink to this headline">¶</a></h2>
+<section id="typeful-references">
+<span id="index-9"></span><h3>Typeful References<a class="headerlink" href="#typeful-references" title="Permalink to this headline">¶</a></h3>
+<p>Added more precise types for references <a class="footnote-reference brackets" href="#proposal-typedref" id="id10">7</a>.</p>
+<ul class="simple">
+<li><p>New generalised form of <a class="reference internal" href="../syntax/types.html#syntax-reftype"><span class="std std-ref">reference types</span></a>: <span class="math notranslate nohighlight">\((\href{../syntax/types.html#syntax-reftype}{\mathsf{ref}}~\href{../syntax/types.html#syntax-reftype}{\mathsf{null}}^?~\href{../syntax/types.html#syntax-heaptype}{\mathit{heaptype}})\)</span></p></li>
+<li><p>New class of <a class="reference internal" href="../syntax/types.html#syntax-heaptype"><span class="std std-ref">heap types</span></a>: <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathsf{func}}\)</span>, <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathsf{extern}}\)</span>, <span class="math notranslate nohighlight">\(\href{../syntax/modules.html#syntax-typeidx}{\mathit{typeidx}}\)</span></p></li>
+<li><p>Basic <a class="reference internal" href="../valid/matching.html#match"><span class="std std-ref">subtyping</span></a> on <a class="reference internal" href="../valid/matching.html#match-reftype"><span class="std std-ref">reference</span></a> and <a class="reference internal" href="../valid/matching.html#match-valtype"><span class="std std-ref">value</span></a> types</p></li>
+<li><p>New <a class="reference internal" href="../syntax/instructions.html#syntax-instr-ref"><span class="std std-ref">reference instructions</span></a>: <span class="math notranslate nohighlight">\(\href{../syntax/instructions.html#syntax-instr-ref}{\mathsf{ref.as\_non\_null}}\)</span>, <span class="math notranslate nohighlight">\(\href{../syntax/instructions.html#syntax-instr-control}{\mathsf{br\_on\_null}}\)</span>, <span class="math notranslate nohighlight">\(\href{../syntax/instructions.html#syntax-instr-control}{\mathsf{br\_on\_non\_null}}\)</span></p></li>
+<li><p>New <a class="reference internal" href="../syntax/instructions.html#syntax-instr-control"><span class="std std-ref">control instruction</span></a>: <span class="math notranslate nohighlight">\(\href{../syntax/instructions.html#syntax-instr-control}{\mathsf{call\_ref}}\)</span></p></li>
+<li><p>Refined typing of <a class="reference internal" href="../syntax/instructions.html#syntax-instr-ref"><span class="std std-ref">reference instruction</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/instructions.html#syntax-instr-ref}{\mathsf{ref.func}}\)</span> with more precise result type</p></li>
+<li><p>Refined typing of <a class="reference internal" href="../valid/instructions.html#valid-instr-variable"><span class="std std-ref">local instructions</span></a> and <a class="reference internal" href="../valid/instructions.html#valid-instr-seq"><span class="std std-ref">instruction sequences</span></a> to track the <a class="reference internal" href="../syntax/types.html#syntax-init"><span class="std std-ref">initialization status</span></a> of <a class="reference internal" href="../syntax/modules.html#syntax-local"><span class="std std-ref">locals</span></a> with non-<a class="reference internal" href="../valid/types.html#valid-defaultable"><span class="std std-ref">defaultable</span></a> type</p></li>
+<li><p>Extended <a class="reference internal" href="../syntax/modules.html#syntax-table"><span class="std std-ref">table definitions</span></a> with optional initializer expression</p></li>
+</ul>
 <dl class="footnote brackets">
 <dt class="label" id="proposal-signext"><span class="brackets"><a class="fn-backref" href="#id1">1</a></span></dt>
 <dd><p><a class="reference external" href="https://github.com/WebAssembly/spec/tree/main/proposals/sign-extension-ops/">https://github.com/WebAssembly/spec/tree/main/proposals/sign-extension-ops/</a></p>
@@ -187,6 +204,9 @@ The following sections provide an overview of what has changed.</p>
 </dd>
 <dt class="label" id="proposal-vectype"><span class="brackets"><a class="fn-backref" href="#id9">6</a></span></dt>
 <dd><p><a class="reference external" href="https://github.com/WebAssembly/spec/tree/main/proposals/simd/">https://github.com/WebAssembly/spec/tree/main/proposals/simd/</a></p>
+</dd>
+<dt class="label" id="proposal-typedref"><span class="brackets"><a class="fn-backref" href="#id10">7</a></span></dt>
+<dd><p><a class="reference external" href="https://github.com/WebAssembly/spec/tree/main/proposals/function-references/">https://github.com/WebAssembly/spec/tree/main/proposals/function-references/</a></p>
 </dd>
 </dl>
 </section>

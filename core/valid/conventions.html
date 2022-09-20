@@ -1,7 +1,7 @@
 
 <!DOCTYPE html>
 
-<html>
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
@@ -115,7 +115,7 @@ which collects relevant information about the surrounding <a class="reference in
 <li><p><em>Globals</em>: the list of globals declared in the current module, represented by their global type.</p></li>
 <li><p><em>Element Segments</em>: the list of element segments declared in the current module, represented by their element type.</p></li>
 <li><p><em>Data Segments</em>: the list of data segments declared in the current module, each represented by an <span class="math notranslate nohighlight">\(\mathrel{\mbox{ok}}\)</span> entry.</p></li>
-<li><p><em>Locals</em>: the list of locals declared in the current function (including parameters), represented by their value type.</p></li>
+<li><p><em>Locals</em>: the list of locals declared in the current function (including parameters), represented by their local type.</p></li>
 <li><p><em>Labels</em>: the stack of labels accessible from the current position, represented by their result type.</p></li>
 <li><p><em>Return</em>: the return type of the current function, represented as an optional result type that is absent when no return is allowed, as in free-standing expressions.</p></li>
 <li><p><em>References</em>: the list of <a class="reference internal" href="../syntax/modules.html#syntax-funcidx"><span class="std std-ref">function indices</span></a> that occur in the module outside functions and can hence be used to form references inside them.</p></li>
@@ -127,7 +127,7 @@ The label stack is the only part of the context that changes as validation of an
 <p>More concretely, contexts are defined as <a class="reference internal" href="../syntax/conventions.html#notation-record"><span class="std std-ref">records</span></a> <span class="math notranslate nohighlight">\(C\)</span> with abstract syntax:</p>
 <div class="math notranslate nohighlight">
 \[\begin{split}\begin{array}{llll}
-\def\mathdef4026#1{{}}\mathdef4026{(context)} &amp; C &amp;::=&amp;
+\def\mathdef4070#1{{}}\mathdef4070{(context)} &amp; C &amp;::=&amp;
   \begin{array}[t]{l&#64;{~}ll}
   \{ &amp; \href{../valid/conventions.html#context}{\mathsf{types}} &amp; \href{../syntax/types.html#syntax-functype}{\mathit{functype}}^\ast, \\
      &amp; \href{../valid/conventions.html#context}{\mathsf{funcs}} &amp; \href{../syntax/types.html#syntax-functype}{\mathit{functype}}^\ast, \\
@@ -136,11 +136,11 @@ The label stack is the only part of the context that changes as validation of an
      &amp; \href{../valid/conventions.html#context}{\mathsf{globals}} &amp; \href{../syntax/types.html#syntax-globaltype}{\mathit{globaltype}}^\ast, \\
      &amp; \href{../valid/conventions.html#context}{\mathsf{elems}} &amp; \href{../syntax/types.html#syntax-reftype}{\mathit{reftype}}^\ast, \\
      &amp; \href{../valid/conventions.html#context}{\mathsf{datas}} &amp; {\mathrel{\mbox{ok}}}^\ast, \\
-     &amp; \href{../valid/conventions.html#context}{\mathsf{locals}} &amp; \href{../syntax/types.html#syntax-valtype}{\mathit{valtype}}^\ast, \\
+     &amp; \href{../valid/conventions.html#context}{\mathsf{locals}} &amp; \href{../syntax/types.html#syntax-localtype}{\mathit{localtype}}^\ast, \\
      &amp; \href{../valid/conventions.html#context}{\mathsf{labels}} &amp; \href{../syntax/types.html#syntax-resulttype}{\mathit{resulttype}}^\ast, \\
      &amp; \href{../valid/conventions.html#context}{\mathsf{return}} &amp; \href{../syntax/types.html#syntax-resulttype}{\mathit{resulttype}}^?, \\
      &amp; \href{../valid/conventions.html#context}{\mathsf{refs}} &amp; \href{../syntax/modules.html#syntax-funcidx}{\mathit{funcidx}}^\ast ~\} \\
-  \end{array}
+  \end{array} \\
 \end{array}\end{split}\]</div>
 <p id="notation-extend">In addition to field access written <span class="math notranslate nohighlight">\(C.\mathsf{field}\)</span> the following notation is adopted for manipulating contexts:</p>
 <ul class="simple">
@@ -149,7 +149,7 @@ The label stack is the only part of the context that changes as validation of an
 </ul>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>We use <a class="reference internal" href="../syntax/conventions.html#notation-index"><span class="std std-ref">indexing notation</span></a> like <span class="math notranslate nohighlight">\(C.\href{../valid/conventions.html#context}{\mathsf{labels}}[i]\)</span> to look up indices in their respective <a class="reference internal" href="../syntax/modules.html#syntax-index"><span class="std std-ref">index space</span></a> in the context.
+<p><a class="reference internal" href="../syntax/conventions.html#notation-index"><span class="std std-ref">Indexing notation</span></a> like <span class="math notranslate nohighlight">\(C.\href{../valid/conventions.html#context}{\mathsf{labels}}[i]\)</span> is used to look up indices in their respective <a class="reference internal" href="../syntax/modules.html#syntax-index"><span class="std std-ref">index space</span></a> in the context.
 Context extension notation <span class="math notranslate nohighlight">\(C,\mathsf{field}\,A\)</span> is primarily used to locally extend <em>relative</em> index spaces, such as <a class="reference internal" href="../syntax/modules.html#syntax-labelidx"><span class="std std-ref">label indices</span></a>.
 Accordingly, the notation is defined to append at the <em>front</em> of the respective sequence, introducing a new relative index <span class="math notranslate nohighlight">\(0\)</span> and shifting the existing ones.</p>
 </div>
@@ -215,14 +215,14 @@ independent of any side conditions.</p>
 <p>An instruction like <span class="math notranslate nohighlight">\(\href{../syntax/instructions.html#syntax-instr-variable}{\mathsf{local.get}}\)</span> can be typed as follows:</p>
 <div class="math notranslate nohighlight">
 \[\frac{
-  C.\href{../valid/conventions.html#context}{\mathsf{locals}}[x] = t
+  C.\href{../valid/conventions.html#context}{\mathsf{globals}}[x] = \href{../syntax/types.html#syntax-mut}{\mathit{mut}}~t
 }{
-  C \vdash \href{../syntax/instructions.html#syntax-instr-variable}{\mathsf{local.get}}~x : [] \href{../syntax/types.html#syntax-functype}{\rightarrow} [t]
+  C \vdash \href{../syntax/instructions.html#syntax-instr-variable}{\mathsf{global.get}}~x : [] \href{../syntax/types.html#syntax-functype}{\rightarrow} [t]
 }\]</div>
-<p>Here, the premise enforces that the immediate <a class="reference internal" href="../syntax/modules.html#syntax-localidx"><span class="std std-ref">local index</span></a> <span class="math notranslate nohighlight">\(x\)</span> exists in the context.
+<p>Here, the premise enforces that the immediate <a class="reference internal" href="../syntax/modules.html#syntax-globalidx"><span class="std std-ref">global index</span></a> <span class="math notranslate nohighlight">\(x\)</span> exists in the context.
 The instruction produces a value of its respective type <span class="math notranslate nohighlight">\(t\)</span>
 (and does not consume any values).
-If <span class="math notranslate nohighlight">\(C.\href{../valid/conventions.html#context}{\mathsf{locals}}[x]\)</span> does not exist then the premise does not hold,
+If <span class="math notranslate nohighlight">\(C.\href{../valid/conventions.html#context}{\mathsf{globals}}[x]\)</span> does not exist then the premise does not hold,
 and the instruction is ill-typed.</p>
 <p>Finally, a <a class="reference internal" href="../syntax/instructions.html#syntax-instr-control"><span class="std std-ref">structured</span></a> instruction requires
 a recursive rule, where the premise is itself a typing judgement:</p>
