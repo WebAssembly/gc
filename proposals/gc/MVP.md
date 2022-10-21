@@ -487,13 +487,13 @@ In particular, `ref.null` is typed as before, despite the introduction of `none`
 
 * `struct.new_canon <typeidx>` allocates a structure with canonical [RTT](#values) and initialises its fields with given values
   - `struct.new_canon $t : [t'*] -> [(ref $t)]`
-    - iff `expand($t) = struct (mut t'')*`
+    - iff `expand($t) = struct (mut? t'')*`
     - and `(t' = unpacked(t''))*`
   - this is a *constant instruction*
 
 * `struct.new_canon_default <typeidx>` allocates a structure of type `$t` with canonical [RTT](#values) and initialises its fields with default values
   - `struct.new_canon_default $t : [] -> [(ref $t)]`
-    - iff `expand($t) = struct (mut t')*`
+    - iff `expand($t) = struct (mut? t')*`
     - and all `t'*` are defaultable
   - this is a *constant instruction*
 
