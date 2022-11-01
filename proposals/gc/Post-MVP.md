@@ -20,7 +20,7 @@ See [overview](Overview.md) for addition background.
 * [Threads and shared references](#threads-and-shared-references)
 * [Weak references](#weak-references)
 * [Method dispatch](#method-dispatch)
-* [Handle nondefaultable fields in `struct.new_default`](#handle-nondefaultable-fields)
+* [Handle nondefaultable fields in `struct.new_default`](#handle-nondefaultable-fields-in-structnew_default)
 
 ## Bulk Operations
 
