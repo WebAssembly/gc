@@ -780,7 +780,7 @@ As proposed in #174. The idea is that `struct.new_default` would take values for
 
 Some language implementers have expressed interest in having throwing versions of operations like `struct.get` to simplify the implementation of e.g. Java's `NullPointerException`. It may be worth investigating what the potential code size or performance benefits of these instructions would be. See [#208](https://github.com/WebAssembly/gc/issues/208) for details and previous discussion.
 
-**Why Post-MVP:** Null checks followed by throws are easily expressible in the MVP, so there is no pressing need to add additional instructions for this pattern.
+**Why Post-MVP:** Null checks followed by throws are easily expressible in the MVP, so there is no pressing need to add additional instructions for this pattern. Also, throwing instructions would depend on the exception handling proposal, and we would prefer to avoid that dependency in the MVP.
 
 
 ## Equality-comparable funcref
