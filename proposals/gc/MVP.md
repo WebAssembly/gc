@@ -610,9 +610,8 @@ Casts work for both abstract and concrete types. In the latter case, they test i
   - if `null?` is present, returns 1 for null, otherwise 0
 
 * `ref.cast null? <heaptype>` tries to convert to a given heap type
-  - `ref.cast null? ht : [(ref null ht')] -> [(ref null2? ht)]`
+  - `ref.cast null? ht : [(ref null ht')] -> [(ref null? ht)]`
     - iff `ht <: tht` and `ht' <: tht` where `tht` is a common super type
-    - and `null? = null2?`
   - traps if reference is not of requested type
   - if `null?` is present, a null operand is passed through, otherwise traps on null
   - equivalent to `(block $l (param (ref null tht)) (result (ref null? ht)) (br_on_cast $l null? ht) (unreachable))`
