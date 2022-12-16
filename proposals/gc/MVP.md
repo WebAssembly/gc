@@ -615,7 +615,7 @@ Casts work for both abstract and concrete types. In the latter case, they test i
     - and `null? = null2?`
   - traps if reference is not of requested type
   - if `null?` is present, a null operand is passed through, otherwise traps on null
-  - equivalent to `(block $l (param anyref) (result (ref null? ht)) (br_on_cast null? ht $l) (unreachable))`
+  - equivalent to `(block $l (param null tht) (result ref null? ht) (br_on_cast $l null? ht) (unreachable))`
 
 * `br_on_cast <labelidx> null? <heaptype>` branches if a reference has a given heap type
   - `br_on_cast $l null? ht : [t0* (ref null3? ht')] -> [t0* (ref null2? ht')]`
