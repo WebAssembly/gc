@@ -602,7 +602,7 @@ In particular, `ref.null` is typed as before, despite the introduction of `none`
 
 #### Casts
 
-TODO: ensure that this section is kept in sync with the results of the conversation [here](https://github.com/WebAssembly/gc/issues/342).
+TODO: ensure that this section (and implementations, and tests) is kept in sync with the results of the conversation [here](https://github.com/WebAssembly/gc/issues/342).
 
 Casts work for both abstract and concrete types. In the latter case, they test if the operand's RTT is a sub-RTT of the target type.
 
