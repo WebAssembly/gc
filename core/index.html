@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
-    <title>WebAssembly Specification &#8212; WebAssembly 2.0 + function references + gc (Draft 2023-01-24)</title>
+    <title>WebAssembly Specification &#8212; WebAssembly 2.0 + tail calls + function references + gc (Draft 2023-03-22)</title>
     <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="_static/alabaster.css" />
     <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
@@ -79,7 +79,7 @@
   <section id="webassembly-specification">
 <h1>WebAssembly Specification<a class="headerlink" href="#webassembly-specification" title="Permalink to this heading">¶</a></h1>
 <div class="line-block">
-<div class="line">Release 2.0 + function references + gc (Draft 2023-01-24)</div>
+<div class="line">Release 2.0 + tail calls + function references + gc (Draft 2023-03-22)</div>
 </div>
 <div class="line-block">
 <div class="line">Editor: Andreas Rossberg</div>
@@ -116,6 +116,7 @@
 <li class="toctree-l2"><a class="reference internal" href="exec/runtime.html">Runtime Structure</a></li>
 <li class="toctree-l2"><a class="reference internal" href="exec/numerics.html">Numerics</a></li>
 <li class="toctree-l2"><a class="reference internal" href="exec/types.html">Types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="exec/values.html">Values</a></li>
 <li class="toctree-l2"><a class="reference internal" href="exec/instructions.html">Instructions</a></li>
 <li class="toctree-l2"><a class="reference internal" href="exec/modules.html">Modules</a></li>
 </ul>
@@ -140,9 +141,10 @@
 <li class="toctree-l1"><a class="reference internal" href="appendix/index.html">Appendix</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="appendix/embedding.html">Embedding</a></li>
 <li class="toctree-l2"><a class="reference internal" href="appendix/implementation.html">Implementation Limitations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="appendix/properties.html">Type Soundness</a></li>
+<li class="toctree-l2"><a class="reference internal" href="appendix/properties.html#type-system-properties">Type System Properties</a></li>
 <li class="toctree-l2"><a class="reference internal" href="appendix/algorithm.html">Validation Algorithm</a></li>
 <li class="toctree-l2"><a class="reference internal" href="appendix/custom.html">Custom Sections</a></li>
-<li class="toctree-l2"><a class="reference internal" href="appendix/properties.html">Soundness</a></li>
 <li class="toctree-l2"><a class="reference internal" href="appendix/changes.html">Change History</a></li>
 </ul>
 </li>

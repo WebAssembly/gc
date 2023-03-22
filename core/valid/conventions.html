@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
-    <title>Conventions &#8212; WebAssembly 2.0 + function references + gc (Draft 2023-01-24)</title>
+    <title>Conventions &#8212; WebAssembly 2.0 + tail calls + function references + gc (Draft 2023-03-22)</title>
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
     <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
@@ -109,16 +109,16 @@ The skeleton of a sound and complete algorithm for type-checking instruction seq
 <p>Validity of an individual definition is specified relative to a <em>context</em>,
 which collects relevant information about the surrounding <a class="reference internal" href="../syntax/modules.html#syntax-module"><span class="std std-ref">module</span></a> and the definitions in scope:</p>
 <ul class="simple">
-<li><p><em>Types</em>: the list of types defined in the current module.</p></li>
-<li><p><em>Functions</em>: the list of functions declared in the current module, represented by their function type.</p></li>
-<li><p><em>Tables</em>: the list of tables declared in the current module, represented by their table type.</p></li>
-<li><p><em>Memories</em>: the list of memories declared in the current module, represented by their memory type.</p></li>
-<li><p><em>Globals</em>: the list of globals declared in the current module, represented by their global type.</p></li>
-<li><p><em>Element Segments</em>: the list of element segments declared in the current module, represented by their element type.</p></li>
-<li><p><em>Data Segments</em>: the list of data segments declared in the current module, each represented by an <span class="math notranslate nohighlight">\(\mathrel{\mbox{ok}}\)</span> entry.</p></li>
-<li><p><em>Locals</em>: the list of locals declared in the current function (including parameters), represented by their local type.</p></li>
-<li><p><em>Labels</em>: the stack of labels accessible from the current position, represented by their result type.</p></li>
-<li><p><em>Return</em>: the return type of the current function, represented as an optional result type that is absent when no return is allowed, as in free-standing expressions.</p></li>
+<li><p><em>Types</em>: the list of <a class="reference internal" href="../syntax/types.html#syntax-type"><span class="std std-ref">types</span></a> defined in the current module.</p></li>
+<li><p><em>Functions</em>: the list of <a class="reference internal" href="../syntax/modules.html#syntax-func"><span class="std std-ref">functions</span></a> declared in the current module, represented by a <a class="reference internal" href="../syntax/types.html#syntax-typeid"><span class="std std-ref">type identifier</span></a> for their <a class="reference internal" href="../syntax/types.html#syntax-functype"><span class="std std-ref">function type</span></a>.</p></li>
+<li><p><em>Tables</em>: the list of <a class="reference internal" href="../syntax/modules.html#syntax-table"><span class="std std-ref">tables</span></a> declared in the current module, represented by their <a class="reference internal" href="../syntax/types.html#syntax-tabletype"><span class="std std-ref">table type</span></a>.</p></li>
+<li><p><em>Memories</em>: the list of <a class="reference internal" href="../syntax/modules.html#syntax-mem"><span class="std std-ref">memories</span></a> declared in the current module, represented by their <a class="reference internal" href="../syntax/types.html#syntax-memtype"><span class="std std-ref">memory type</span></a>.</p></li>
+<li><p><em>Globals</em>: the list of <a class="reference internal" href="../syntax/modules.html#syntax-global"><span class="std std-ref">globals</span></a> declared in the current module, represented by their <a class="reference internal" href="../syntax/types.html#syntax-globaltype"><span class="std std-ref">global type</span></a>.</p></li>
+<li><p><em>Element Segments</em>: the list of <a class="reference internal" href="../syntax/modules.html#syntax-elem"><span class="std std-ref">element segments</span></a> declared in the current module, represented by the elements’ <a class="reference internal" href="../syntax/types.html#syntax-reftype"><span class="std std-ref">reference type</span></a>.</p></li>
+<li><p><em>Data Segments</em>: the list of <a class="reference internal" href="../syntax/modules.html#syntax-data"><span class="std std-ref">data segments</span></a> declared in the current module, each represented by an <span class="math notranslate nohighlight">\(\mathrel{\mbox{ok}}\)</span> entry.</p></li>
+<li><p><em>Locals</em>: the list of <a class="reference internal" href="../syntax/modules.html#syntax-local"><span class="std std-ref">locals</span></a> declared in the current <a class="reference internal" href="../syntax/modules.html#syntax-func"><span class="std std-ref">function</span></a> (including parameters), represented by their <a class="reference internal" href="../syntax/types.html#syntax-localtype"><span class="std std-ref">local type</span></a>.</p></li>
+<li><p><em>Labels</em>: the stack of <a class="reference internal" href="../exec/runtime.html#syntax-label"><span class="std std-ref">labels</span></a> accessible from the current position, represented by their <a class="reference internal" href="../syntax/types.html#syntax-resulttype"><span class="std std-ref">result type</span></a>.</p></li>
+<li><p><em>Return</em>: the return type of the current <a class="reference internal" href="../syntax/modules.html#syntax-func"><span class="std std-ref">function</span></a>, represented as an optional <a class="reference internal" href="../syntax/types.html#syntax-resulttype"><span class="std std-ref">result type</span></a> that is absent when no return is allowed, as in free-standing expressions.</p></li>
 <li><p><em>References</em>: the list of <a class="reference internal" href="../syntax/modules.html#syntax-funcidx"><span class="std std-ref">function indices</span></a> that occur in the module outside functions and can hence be used to form references inside them.</p></li>
 </ul>
 <p>In other words, a context contains a sequence of suitable <a class="reference internal" href="../syntax/types.html#syntax-type"><span class="std std-ref">types</span></a> for each <a class="reference internal" href="../syntax/modules.html#syntax-index"><span class="std std-ref">index space</span></a>,
@@ -128,10 +128,10 @@ The label stack is the only part of the context that changes as validation of an
 <p>More concretely, contexts are defined as <a class="reference internal" href="../syntax/conventions.html#notation-record"><span class="std std-ref">records</span></a> <span class="math notranslate nohighlight">\(C\)</span> with abstract syntax:</p>
 <div class="math notranslate nohighlight">
 \[\begin{split}\begin{array}{llll}
-\def\mathdef4070#1{{}}\mathdef4070{(context)} &amp; C &amp;::=&amp;
+\def\mathdef4143#1{{}}\mathdef4143{context} &amp; C &amp;::=&amp;
   \begin{array}[t]{l&#64;{~}ll}
   \{ &amp; \href{../valid/conventions.html#context}{\mathsf{types}} &amp; \href{../syntax/types.html#syntax-functype}{\mathit{functype}}^\ast, \\
-     &amp; \href{../valid/conventions.html#context}{\mathsf{funcs}} &amp; \href{../syntax/types.html#syntax-functype}{\mathit{functype}}^\ast, \\
+     &amp; \href{../valid/conventions.html#context}{\mathsf{funcs}} &amp; \href{../syntax/types.html#syntax-typeid}{\mathit{typeid}}^\ast, \\
      &amp; \href{../valid/conventions.html#context}{\mathsf{tables}} &amp; \href{../syntax/types.html#syntax-tabletype}{\mathit{tabletype}}^\ast, \\
      &amp; \href{../valid/conventions.html#context}{\mathsf{mems}} &amp; \href{../syntax/types.html#syntax-memtype}{\mathit{memtype}}^\ast, \\
      &amp; \href{../valid/conventions.html#context}{\mathsf{globals}} &amp; \href{../syntax/types.html#syntax-globaltype}{\mathit{globaltype}}^\ast, \\
@@ -208,9 +208,9 @@ and there is one respective rule for each relevant construct <span class="math n
 <div class="math notranslate nohighlight">
 \[\frac{
 }{
-  C \vdash \href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{add}} : [\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}~\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}] \href{../syntax/types.html#syntax-functype}{\rightarrow} [\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}]
+  C \vdash \href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{add}} : [\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}~\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}] \href{../syntax/types.html#syntax-instrtype}{\rightarrow} [\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}]
 }\]</div>
-<p>The instruction is always valid with type <span class="math notranslate nohighlight">\([\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}~\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}] \href{../syntax/types.html#syntax-functype}{\rightarrow} [\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}]\)</span>
+<p>The instruction is always valid with type <span class="math notranslate nohighlight">\([\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}~\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}] \href{../syntax/types.html#syntax-instrtype}{\rightarrow} [\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}]\)</span>
 (saying that it consumes two <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}\)</span> values and produces one),
 independent of any side conditions.</p>
 <p>An instruction like <span class="math notranslate nohighlight">\(\href{../syntax/instructions.html#syntax-instr-variable}{\mathsf{local.get}}\)</span> can be typed as follows:</p>
@@ -218,7 +218,7 @@ independent of any side conditions.</p>
 \[\frac{
   C.\href{../valid/conventions.html#context}{\mathsf{globals}}[x] = \href{../syntax/types.html#syntax-mut}{\mathit{mut}}~t
 }{
-  C \vdash \href{../syntax/instructions.html#syntax-instr-variable}{\mathsf{global.get}}~x : [] \href{../syntax/types.html#syntax-functype}{\rightarrow} [t]
+  C \vdash \href{../syntax/instructions.html#syntax-instr-variable}{\mathsf{global.get}}~x : [] \href{../syntax/types.html#syntax-instrtype}{\rightarrow} [t]
 }\]</div>
 <p>Here, the premise enforces that the immediate <a class="reference internal" href="../syntax/modules.html#syntax-globalidx"><span class="std std-ref">global index</span></a> <span class="math notranslate nohighlight">\(x\)</span> exists in the context.
 The instruction produces a value of its respective type <span class="math notranslate nohighlight">\(t\)</span>
@@ -229,11 +229,11 @@ and the instruction is ill-typed.</p>
 a recursive rule, where the premise is itself a typing judgement:</p>
 <div class="math notranslate nohighlight">
 \[\frac{
-  C \vdash \href{../syntax/instructions.html#syntax-blocktype}{\mathit{blocktype}} : [t_1^\ast] \href{../syntax/types.html#syntax-functype}{\rightarrow} [t_2^\ast]
+  C \vdash \href{../syntax/instructions.html#syntax-blocktype}{\mathit{blocktype}} : [t_1^\ast] \href{../syntax/types.html#syntax-instrtype}{\rightarrow} [t_2^\ast]
   \qquad
-  C,\href{../exec/runtime.html#syntax-label}{\mathsf{label}}\,[t_2^\ast] \vdash \href{../syntax/instructions.html#syntax-instr}{\mathit{instr}}^\ast : [t_1^\ast] \href{../syntax/types.html#syntax-functype}{\rightarrow} [t_2^\ast]
+  C,\href{../exec/runtime.html#syntax-label}{\mathsf{label}}\,[t_2^\ast] \vdash \href{../syntax/instructions.html#syntax-instr}{\mathit{instr}}^\ast : [t_1^\ast] \href{../syntax/types.html#syntax-instrtype}{\rightarrow} [t_2^\ast]
 }{
-  C \vdash \href{../syntax/instructions.html#syntax-instr-control}{\mathsf{block}}~\href{../syntax/instructions.html#syntax-blocktype}{\mathit{blocktype}}~\href{../syntax/instructions.html#syntax-instr}{\mathit{instr}}^\ast~\href{../syntax/instructions.html#syntax-instr-control}{\mathsf{end}} : [t_1^\ast] \href{../syntax/types.html#syntax-functype}{\rightarrow} [t_2^\ast]
+  C \vdash \href{../syntax/instructions.html#syntax-instr-control}{\mathsf{block}}~\href{../syntax/instructions.html#syntax-blocktype}{\mathit{blocktype}}~\href{../syntax/instructions.html#syntax-instr}{\mathit{instr}}^\ast~\href{../syntax/instructions.html#syntax-instr-control}{\mathsf{end}} : [t_1^\ast] \href{../syntax/types.html#syntax-instrtype}{\rightarrow} [t_2^\ast]
 }\]</div>
 <p>A <span class="math notranslate nohighlight">\(\href{../syntax/instructions.html#syntax-instr-control}{\mathsf{block}}\)</span> instruction is only valid when the instruction sequence in its body is.
 Moreover, the result type must match the block’s annotation <span class="math notranslate nohighlight">\(\href{../syntax/instructions.html#syntax-blocktype}{\mathit{blocktype}}\)</span>.
