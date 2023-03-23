@@ -779,19 +779,9 @@ The opcode for heap types is encoded as an `s33`.
 | 0xfb70 | `extern.internalize` | |
 | 0xfb71 | `extern.externalize` | |
 
-## Implementation-defined Limits
-
-The following limits will be added to the Implementation-defined Limits [section](https://webassembly.github.io/spec/js-api/index.html#limits) of the JS API.
-
- - The maximum number of recursion groups is 1000000. (The maximum number of individual types remains unchanged and is also 1000000.)
- - The maximum number of struct fields is 10000.
- - The maximum number of operands to `array.new_fixed` is 10000.
- - The maximum length of a supertype chain is 63. (A type declared with no supertypes has a supertype chain of length 0)
-
 ## JS API
 
-See [GC JS API document](MVP-JS.md) .
-
+See [GC JS API document](../../document/js-api/index.bs).
 
 ## Questions
 

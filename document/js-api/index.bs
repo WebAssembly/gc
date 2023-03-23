@@ -1398,6 +1398,8 @@ In practice, an implementation may run out of resources for valid modules below 
 <ul>
 <li>The maximum size of a module is 1073741824 bytes (1 GiB).</li>
 <li>The maximum number of types defined in the types section is 1000000.</li>
+<li>The maximum number of recursion groups defined in the types sections is 1000000.</li>
+<li>The maximum depth of a defined subtype hierarchy is 63 (where a type defined with no supertype has depth 0).
 <li>The maximum number of functions defined in a module is 1000000.</li>
 <li>The maximum number of imports declared in a module is 100000.</li>
 <li>The maximum number of exports declared in a module is 100000.</li>
@@ -1413,6 +1415,8 @@ In practice, an implementation may run out of resources for valid modules below 
 <li>The maximum number of return values for any function or block is 1000.</li>
 <li>The maximum size of a function body, including locals declarations, is 7654321 bytes.</li>
 <li>The maximum number of locals declared in a function, including implicitly declared as parameters, is 50000.</li>
+<li>The maximum number of fields in a struct is 10000.</li>
+<li>The maximum number of operands to `array.new_fixed` is 10000.</li>
 </ul>
 
 An implementation must throw a {{RuntimeError}} if one of the following limits is exceeded during runtime:
