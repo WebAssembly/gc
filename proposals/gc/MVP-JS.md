@@ -44,7 +44,8 @@ passed into WebAssembly in a location that expects an internal reference, the
 `ToWebAssemblyValue` algorithm will implicitly call `extern.internalize` on it
 to get an internal reference. `ToWebAssemblyValue` will then cast the internal
 reference to the specific expected type, and if that fails, it will throw a
-`TypeError`.
+`TypeError`. JS `null` converts to and is converted from WebAssembly `null`
+values.
 
 In JS hosts, `extern.internalize` will behave differently depending on the JS
 value that is being internalized:
@@ -61,5 +62,10 @@ internal reference value that is being externalized:
 
  - If the value is an i31 reference, convert it to a JS number.
  - If the value is a struct or array reference, create a new JS wrapper for it.
+   _TODO: re-use existing wrapper instead of get bidirectional identity
+   preservation._
  - Otherwise if the reference is an internalized host reference, return the
    original external host reference.
+
+_TODO: avoid having to patch the behavior of `extern.internalize` and
+`extern.internalize` by converting to/from JS numbers separately._
