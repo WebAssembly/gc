@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
-    <title>Types &#8212; WebAssembly 2.0 + tail calls + function references + gc (Draft 2023-03-22)</title>
+    <title>Types &#8212; WebAssembly 2.0 + tail calls + function references + gc (Draft 2023-05-09)</title>
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
     <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
@@ -88,52 +88,17 @@
             
   <section id="types">
 <span id="exec-type"></span><span id="index-0"></span><h1>Types<a class="headerlink" href="#types" title="Permalink to this heading">¶</a></h1>
-<p>Execution has to check and compare <a class="reference internal" href="../syntax/types.html#syntax-type"><span class="std std-ref">types</span></a> and <a class="reference internal" href="runtime.html#syntax-typeinst"><span class="std std-ref">type instances</span></a> in a few places, such as <a class="reference internal" href="instructions.html#exec-call-indirect"><span class="std std-ref">executing</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/instructions.html#syntax-instr-control}{\mathsf{call\_indirect}}\)</span> or <a class="reference internal" href="modules.html#exec-instantiation"><span class="std std-ref">instantiating</span></a> <a class="reference internal" href="../syntax/modules.html#syntax-module"><span class="std std-ref">modules</span></a>.
-During execution, types of all forms are represented as <a class="reference internal" href="../syntax/types.html#syntax-type-dyn"><span class="std std-ref">dynamic</span></a> types, where all occurring <a class="reference internal" href="../syntax/types.html#syntax-typeid"><span class="std std-ref">type identifiers</span></a> are interpreted as <a class="reference internal" href="runtime.html#syntax-typeaddr"><span class="std std-ref">type addresses</span></a>.
-Relevant type relations need to be redefined accordingly.</p>
+<p>Execution has to check and compare <a class="reference internal" href="../syntax/types.html#syntax-type"><span class="std std-ref">types</span></a> in a few places, such as <a class="reference internal" href="instructions.html#exec-call-indirect"><span class="std std-ref">executing</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/instructions.html#syntax-instr-control}{\mathsf{call\_indirect}}\)</span> or <a class="reference internal" href="modules.html#exec-instantiation"><span class="std std-ref">instantiating</span></a> <a class="reference internal" href="../syntax/modules.html#syntax-module"><span class="std std-ref">modules</span></a>.</p>
+<p>It is an invariant of the semantics that all types occurring during execution are <a class="reference internal" href="../syntax/types.html#type-closed"><span class="std std-ref">closed</span></a>.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>Runtime type checks generally involve types from multiple modules or types not defined by a module at all, such that module-local <a class="reference internal" href="../syntax/modules.html#syntax-typeidx"><span class="std std-ref">type indices</span></a> are not meaningful.
-Type addresses are global to a <a class="reference internal" href="runtime.html#syntax-store"><span class="std std-ref">store</span></a> and can hence be interpreted independent of module boundaries.</p>
+<p>Runtime type checks generally involve types from multiple modules or types not defined by a module at all, such that module-local <a class="reference internal" href="../syntax/modules.html#syntax-typeidx"><span class="std std-ref">type indices</span></a> are not meaningful.</p>
 </div>
-<section id="type-identifiers">
-<span id="valid-typeaddr"></span><span id="index-1"></span><h2>Type Identifiers<a class="headerlink" href="#type-identifiers" title="Permalink to this heading">¶</a></h2>
-<p>During execution, <a class="reference internal" href="../syntax/types.html#syntax-typeid"><span class="std std-ref">type identifiers</span></a> are represented as <a class="reference internal" href="runtime.html#syntax-typeaddr"><span class="std std-ref">type addresses</span></a>, which are looked up as <a class="reference internal" href="../syntax/types.html#syntax-functype"><span class="std std-ref">function types</span></a> in the <a class="reference internal" href="runtime.html#syntax-store"><span class="std std-ref">store</span></a> by the following rule.</p>
-<section id="xref-exec-runtime-syntax-typeaddr-mathit-typeaddr">
-<h3><span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-typeaddr}{\mathit{typeaddr}}\)</span><a class="headerlink" href="#xref-exec-runtime-syntax-typeaddr-mathit-typeaddr" title="Permalink to this heading">¶</a></h3>
-<ul class="simple">
-<li><p>The type <span class="math notranslate nohighlight">\(S.\href{../exec/runtime.html#syntax-store}{\mathsf{types}}[\href{../exec/runtime.html#syntax-typeaddr}{\mathit{typeaddr}}]\)</span> must be defined in the store.</p></li>
-<li><p>Then the type address is valid as <a class="reference internal" href="../syntax/types.html#syntax-functype"><span class="std std-ref">function type</span></a> <span class="math notranslate nohighlight">\(S.\href{../exec/runtime.html#syntax-store}{\mathsf{types}}[\href{../exec/runtime.html#syntax-typeaddr}{\mathit{typeaddr}}]\)</span>.</p></li>
-</ul>
-<div class="math notranslate nohighlight">
-\[\frac{
-  S.\href{../exec/runtime.html#syntax-store}{\mathsf{types}}[\href{../exec/runtime.html#syntax-typeaddr}{\mathit{typeaddr}}] = \href{../syntax/types.html#syntax-functype}{\mathit{functype}}
-}{
-  S; C \href{../valid/types.html#valid-typeid}{\vdash} \href{../exec/runtime.html#syntax-typeaddr}{\mathit{typeaddr}} : \href{../syntax/types.html#syntax-functype}{\mathit{functype}}
-}\]</div>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>Unlike <a class="reference internal" href="../syntax/modules.html#syntax-typeidx"><span class="std std-ref">type indices</span></a> recorded in a context, the number of type addresses in a store is not bounded by <span class="math notranslate nohighlight">\(2^{32}\)</span>.</p>
-</div>
-</section>
-</section>
 <section id="instantiation">
-<span id="dyn"></span><span id="index-2"></span><h2>Instantiation<a class="headerlink" href="#instantiation" title="Permalink to this heading">¶</a></h2>
-<p>Any form of <a class="reference internal" href="../syntax/types.html#syntax-type-stat"><span class="std std-ref">static</span></a> <a class="reference internal" href="../syntax/types.html#syntax-type"><span class="std std-ref">type</span></a> can be <em>instantiated</em> into a <a class="reference internal" href="../syntax/types.html#syntax-type-dyn"><span class="std std-ref">dynamic</span></a> type inside a <a class="reference internal" href="runtime.html#syntax-moduleinst"><span class="std std-ref">module instance</span></a> by <a class="reference internal" href="../syntax/types.html#notation-subst"><span class="std std-ref">substituting</span></a> each <a class="reference internal" href="../syntax/modules.html#syntax-typeidx"><span class="std std-ref">type index</span></a> <span class="math notranslate nohighlight">\(x\)</span> occurring in it with the corresponding <a class="reference internal" href="runtime.html#syntax-typeaddr"><span class="std std-ref">type address</span></a> <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-moduleinst}{\mathit{moduleinst}}.\href{../exec/runtime.html#syntax-moduleinst}{\mathsf{types}}[x]\)</span>.</p>
+<span id="type-inst"></span><span id="index-1"></span><h2>Instantiation<a class="headerlink" href="#instantiation" title="Permalink to this heading">¶</a></h2>
+<p>Any form of <a class="reference internal" href="../syntax/types.html#syntax-type"><span class="std std-ref">type</span></a> can be <em>instantiated</em> into a <a class="reference internal" href="../syntax/types.html#type-closed"><span class="std std-ref">closed</span></a> type inside a <a class="reference internal" href="runtime.html#syntax-moduleinst"><span class="std std-ref">module instance</span></a> by <a class="reference internal" href="../syntax/types.html#notation-subst"><span class="std std-ref">substituting</span></a> each <a class="reference internal" href="../syntax/modules.html#syntax-typeidx"><span class="std std-ref">type index</span></a> <span class="math notranslate nohighlight">\(x\)</span> occurring in it with the corresponding <a class="reference internal" href="../syntax/types.html#syntax-deftype"><span class="std std-ref">defined type</span></a> <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-moduleinst}{\mathit{moduleinst}}.\href{../exec/runtime.html#syntax-moduleinst}{\mathsf{types}}[x]\)</span>.</p>
 <div class="math notranslate nohighlight">
-\[\href{../exec/types.html#dyn}{\mathrm{dyn}}_{\href{../exec/runtime.html#syntax-moduleinst}{\mathit{moduleinst}}}(t) = t[\href{../syntax/conventions.html#notation-subst}{\mathrel{\mathbf{:=}}} \href{../exec/runtime.html#syntax-moduleinst}{\mathit{moduleinst}}.\href{../exec/runtime.html#syntax-moduleinst}{\mathsf{types}}]\]</div>
-</section>
-<section id="dynamic-typing">
-<span id="exec-match"></span><span id="exec-valid-type"></span><span id="index-3"></span><h2>Dynamic Typing<a class="headerlink" href="#dynamic-typing" title="Permalink to this heading">¶</a></h2>
-<p>To handle <a class="reference internal" href="../syntax/types.html#syntax-type-dyn"><span class="std std-ref">dynamic</span></a> types, all static judgements <span class="math notranslate nohighlight">\(C \vdash \mathit{prop}\)</span> on types (such as <a class="reference internal" href="../valid/types.html#valid-type"><span class="std std-ref">validity</span></a> and <a class="reference internal" href="../valid/matching.html#match"><span class="std std-ref">matching</span></a>) are generalized to include the store, as in <span class="math notranslate nohighlight">\(S; C \vdash \mathit{prop}\)</span>, by implicitly adding a <a class="reference internal" href="runtime.html#syntax-store"><span class="std std-ref">store</span></a> <span class="math notranslate nohighlight">\(S\)</span> to all rules – <span class="math notranslate nohighlight">\(S\)</span> is never modified by the pre-existing rules, but it is accessed in the extra rule for <a class="reference internal" href="runtime.html#syntax-typeaddr"><span class="std std-ref">type addresses</span></a> given <a class="reference internal" href="#valid-typeaddr"><span class="std std-ref">above</span></a>.</p>
-<p>It is an invariant of the semantics that all types inspected by execution rules are dynamic, i.e., the <a class="reference internal" href="../valid/conventions.html#context"><span class="std std-ref">context</span></a> is always empty and never used.
-To avoid unnecessary clutter, empty contexts are omitted from the rules, writing just <span class="math notranslate nohighlight">\(S \vdash \mathit{prop}\)</span>.</p>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>Only matching rules are invoked during execution.
-Dynamic validity is only needed to prove <a class="reference internal" href="../appendix/properties.html#soundness"><span class="std std-ref">type soundness</span></a>
-and for specifying parts of the <a class="reference internal" href="../appendix/embedding.html#embed"><span class="std std-ref">embedder</span></a> interface.</p>
-</div>
+\[\href{../exec/types.html#type-inst}{\mathrm{clos}}_{\href{../exec/runtime.html#syntax-moduleinst}{\mathit{moduleinst}}}(t) = t[\href{../syntax/conventions.html#notation-subst}{\mathrel{\mathbf{:=}}} \href{../exec/runtime.html#syntax-moduleinst}{\mathit{moduleinst}}.\href{../exec/runtime.html#syntax-moduleinst}{\mathsf{types}}]\]</div>
 </section>
 </section>
 

@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
-    <title>Index of Semantic Rules &#8212; WebAssembly 2.0 + tail calls + function references + gc (Draft 2023-03-22)</title>
+    <title>Index of Semantic Rules &#8212; WebAssembly 2.0 + tail calls + function references + gc (Draft 2023-05-09)</title>
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
     <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
@@ -145,7 +145,7 @@
 <td><p><span class="math notranslate nohighlight">\(C \href{../valid/instructions.html#valid-expr}{\vdash} \href{../syntax/instructions.html#syntax-expr}{\mathit{expr}} : \href{../syntax/types.html#syntax-resulttype}{\mathit{resulttype}}\)</span></p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="../valid/modules.html#valid-func"><span class="std std-ref">Function</span></a></p></td>
-<td><p><span class="math notranslate nohighlight">\(C \href{../valid/modules.html#valid-func}{\vdash} \href{../syntax/modules.html#syntax-func}{\mathit{func}} : \href{../syntax/types.html#syntax-typeid}{\mathit{typeid}}\)</span></p></td>
+<td><p><span class="math notranslate nohighlight">\(C \href{../valid/modules.html#valid-func}{\vdash} \href{../syntax/modules.html#syntax-func}{\mathit{func}} : \href{../syntax/types.html#syntax-functype}{\mathit{functype}}\)</span></p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="../valid/modules.html#valid-local"><span class="std std-ref">Local</span></a></p></td>
 <td><p><span class="math notranslate nohighlight">\(C \href{../valid/modules.html#valid-local}{\vdash} \href{../syntax/modules.html#syntax-local}{\mathit{local}} : \href{../syntax/types.html#syntax-localtype}{\mathit{localtype}}\)</span></p></td>
@@ -210,43 +210,40 @@
 <tr class="row-even"><td><p><a class="reference internal" href="../exec/values.html#valid-externval"><span class="std std-ref">External value</span></a></p></td>
 <td><p><span class="math notranslate nohighlight">\(S \href{../exec/values.html#valid-externval}{\vdash} \href{../exec/runtime.html#syntax-externval}{\mathit{externval}} : \href{../syntax/types.html#syntax-externtype}{\mathit{externtype}}\)</span></p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="properties.html#valid-typeinst"><span class="std std-ref">Type instance</span></a></p></td>
-<td><p><span class="math notranslate nohighlight">\(S \href{../appendix/properties.html#valid-typeinst}{\vdash} \href{../exec/runtime.html#syntax-typeinst}{\mathit{typeinst}} \mathrel{\mbox{ok}}\)</span></p></td>
-</tr>
-<tr class="row-even"><td><p><a class="reference internal" href="properties.html#valid-funcinst"><span class="std std-ref">Function instance</span></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="properties.html#valid-funcinst"><span class="std std-ref">Function instance</span></a></p></td>
 <td><p><span class="math notranslate nohighlight">\(S \href{../appendix/properties.html#valid-funcinst}{\vdash} \href{../exec/runtime.html#syntax-funcinst}{\mathit{funcinst}} : \href{../syntax/types.html#syntax-functype}{\mathit{functype}}\)</span></p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="properties.html#valid-tableinst"><span class="std std-ref">Table instance</span></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="properties.html#valid-tableinst"><span class="std std-ref">Table instance</span></a></p></td>
 <td><p><span class="math notranslate nohighlight">\(S \href{../appendix/properties.html#valid-tableinst}{\vdash} \href{../exec/runtime.html#syntax-tableinst}{\mathit{tableinst}} : \href{../syntax/types.html#syntax-tabletype}{\mathit{tabletype}}\)</span></p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="properties.html#valid-meminst"><span class="std std-ref">Memory instance</span></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="properties.html#valid-meminst"><span class="std std-ref">Memory instance</span></a></p></td>
 <td><p><span class="math notranslate nohighlight">\(S \href{../appendix/properties.html#valid-meminst}{\vdash} \href{../exec/runtime.html#syntax-meminst}{\mathit{meminst}} : \href{../syntax/types.html#syntax-memtype}{\mathit{memtype}}\)</span></p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="properties.html#valid-globalinst"><span class="std std-ref">Global instance</span></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="properties.html#valid-globalinst"><span class="std std-ref">Global instance</span></a></p></td>
 <td><p><span class="math notranslate nohighlight">\(S \href{../appendix/properties.html#valid-globalinst}{\vdash} \href{../exec/runtime.html#syntax-globalinst}{\mathit{globalinst}} : \href{../syntax/types.html#syntax-globaltype}{\mathit{globaltype}}\)</span></p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="properties.html#valid-eleminst"><span class="std std-ref">Element instance</span></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="properties.html#valid-eleminst"><span class="std std-ref">Element instance</span></a></p></td>
 <td><p><span class="math notranslate nohighlight">\(S \href{../appendix/properties.html#valid-eleminst}{\vdash} \href{../exec/runtime.html#syntax-eleminst}{\mathit{eleminst}} : t\)</span></p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="properties.html#valid-datainst"><span class="std std-ref">Data instance</span></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="properties.html#valid-datainst"><span class="std std-ref">Data instance</span></a></p></td>
 <td><p><span class="math notranslate nohighlight">\(S \href{../appendix/properties.html#valid-datainst}{\vdash} \href{../exec/runtime.html#syntax-datainst}{\mathit{datainst}} \mathrel{\mbox{ok}}\)</span></p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="properties.html#valid-exportinst"><span class="std std-ref">Export instance</span></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="properties.html#valid-exportinst"><span class="std std-ref">Export instance</span></a></p></td>
 <td><p><span class="math notranslate nohighlight">\(S \href{../appendix/properties.html#valid-exportinst}{\vdash} \href{../exec/runtime.html#syntax-exportinst}{\mathit{exportinst}} \mathrel{\mbox{ok}}\)</span></p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="properties.html#valid-moduleinst"><span class="std std-ref">Module instance</span></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="properties.html#valid-moduleinst"><span class="std std-ref">Module instance</span></a></p></td>
 <td><p><span class="math notranslate nohighlight">\(S \href{../appendix/properties.html#valid-moduleinst}{\vdash} \href{../exec/runtime.html#syntax-moduleinst}{\mathit{moduleinst}} : C\)</span></p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="properties.html#valid-store"><span class="std std-ref">Store</span></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="properties.html#valid-store"><span class="std std-ref">Store</span></a></p></td>
 <td><p><span class="math notranslate nohighlight">\(\href{../appendix/properties.html#valid-store}{\vdash} \href{../exec/runtime.html#syntax-store}{\mathit{store}} \mathrel{\mbox{ok}}\)</span></p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="properties.html#valid-config"><span class="std std-ref">Configuration</span></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="properties.html#valid-config"><span class="std std-ref">Configuration</span></a></p></td>
 <td><p><span class="math notranslate nohighlight">\(\href{../appendix/properties.html#valid-config}{\vdash} \href{../exec/runtime.html#syntax-config}{\mathit{config}} \mathrel{\mbox{ok}}\)</span></p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="properties.html#valid-thread"><span class="std std-ref">Thread</span></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="properties.html#valid-thread"><span class="std std-ref">Thread</span></a></p></td>
 <td><p><span class="math notranslate nohighlight">\(S;\href{../syntax/types.html#syntax-resulttype}{\mathit{resulttype}}^? \href{../appendix/properties.html#valid-thread}{\vdash} \href{../exec/runtime.html#syntax-thread}{\mathit{thread}} : \href{../syntax/types.html#syntax-resulttype}{\mathit{resulttype}}\)</span></p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="properties.html#valid-frame"><span class="std std-ref">Frame</span></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="properties.html#valid-frame"><span class="std std-ref">Frame</span></a></p></td>
 <td><p><span class="math notranslate nohighlight">\(S \href{../appendix/properties.html#valid-frame}{\vdash} \href{../exec/runtime.html#syntax-frame}{\mathit{frame}} : C\)</span></p></td>
 </tr>
 </tbody>
@@ -342,28 +339,25 @@
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p><a class="reference internal" href="properties.html#extend-typeinst"><span class="std std-ref">Type instance</span></a></p></td>
-<td><p><span class="math notranslate nohighlight">\(\href{../appendix/properties.html#extend-typeinst}{\vdash} \href{../exec/runtime.html#syntax-typeinst}{\mathit{typeinst}}_1 \href{../appendix/properties.html#extend}{\preceq} \href{../exec/runtime.html#syntax-typeinst}{\mathit{typeinst}}_2\)</span></p></td>
-</tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="properties.html#extend-funcinst"><span class="std std-ref">Function instance</span></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="properties.html#extend-funcinst"><span class="std std-ref">Function instance</span></a></p></td>
 <td><p><span class="math notranslate nohighlight">\(\href{../appendix/properties.html#extend-funcinst}{\vdash} \href{../exec/runtime.html#syntax-funcinst}{\mathit{funcinst}}_1 \href{../appendix/properties.html#extend}{\preceq} \href{../exec/runtime.html#syntax-funcinst}{\mathit{funcinst}}_2\)</span></p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="properties.html#extend-tableinst"><span class="std std-ref">Table instance</span></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="properties.html#extend-tableinst"><span class="std std-ref">Table instance</span></a></p></td>
 <td><p><span class="math notranslate nohighlight">\(\href{../appendix/properties.html#extend-tableinst}{\vdash} \href{../exec/runtime.html#syntax-tableinst}{\mathit{tableinst}}_1 \href{../appendix/properties.html#extend}{\preceq} \href{../exec/runtime.html#syntax-tableinst}{\mathit{tableinst}}_2\)</span></p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="properties.html#extend-meminst"><span class="std std-ref">Memory instance</span></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="properties.html#extend-meminst"><span class="std std-ref">Memory instance</span></a></p></td>
 <td><p><span class="math notranslate nohighlight">\(\href{../appendix/properties.html#extend-meminst}{\vdash} \href{../exec/runtime.html#syntax-meminst}{\mathit{meminst}}_1 \href{../appendix/properties.html#extend}{\preceq} \href{../exec/runtime.html#syntax-meminst}{\mathit{meminst}}_2\)</span></p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="properties.html#extend-globalinst"><span class="std std-ref">Global instance</span></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="properties.html#extend-globalinst"><span class="std std-ref">Global instance</span></a></p></td>
 <td><p><span class="math notranslate nohighlight">\(\href{../appendix/properties.html#extend-globalinst}{\vdash} \href{../exec/runtime.html#syntax-globalinst}{\mathit{globalinst}}_1 \href{../appendix/properties.html#extend}{\preceq} \href{../exec/runtime.html#syntax-globalinst}{\mathit{globalinst}}_2\)</span></p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="properties.html#extend-eleminst"><span class="std std-ref">Element instance</span></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="properties.html#extend-eleminst"><span class="std std-ref">Element instance</span></a></p></td>
 <td><p><span class="math notranslate nohighlight">\(\href{../appendix/properties.html#extend-eleminst}{\vdash} \href{../exec/runtime.html#syntax-eleminst}{\mathit{eleminst}}_1 \href{../appendix/properties.html#extend}{\preceq} \href{../exec/runtime.html#syntax-eleminst}{\mathit{eleminst}}_2\)</span></p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="properties.html#extend-datainst"><span class="std std-ref">Data instance</span></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="properties.html#extend-datainst"><span class="std std-ref">Data instance</span></a></p></td>
 <td><p><span class="math notranslate nohighlight">\(\href{../appendix/properties.html#extend-datainst}{\vdash} \href{../exec/runtime.html#syntax-datainst}{\mathit{datainst}}_1 \href{../appendix/properties.html#extend}{\preceq} \href{../exec/runtime.html#syntax-datainst}{\mathit{datainst}}_2\)</span></p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="properties.html#extend-store"><span class="std std-ref">Store</span></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="properties.html#extend-store"><span class="std std-ref">Store</span></a></p></td>
 <td><p><span class="math notranslate nohighlight">\(\href{../appendix/properties.html#extend-store}{\vdash} \href{../exec/runtime.html#syntax-store}{\mathit{store}}_1 \href{../appendix/properties.html#extend}{\preceq} \href{../exec/runtime.html#syntax-store}{\mathit{store}}_2\)</span></p></td>
 </tr>
 </tbody>
