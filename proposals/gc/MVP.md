@@ -781,8 +781,8 @@ The opcode for heap types is encoded as an `s33`.
 | 0xfb38 | `extern.internalize` | | extern conversions (0x38+) |
 | 0xfb39 | `extern.externalize` | |
 | 0xfb40 | `ref.test (ref ht)` | `ht : heaptype` | cast instructions (0x40+) |
-| 0xfb41 | `ref.cast (ref ht)` | `ht : heaptype` |
-| 0xfb42 | `ref.test (ref null ht)` | `ht : heaptype` |
+| 0xfb41 | `ref.test (ref null ht)` | `ht : heaptype` |
+| 0xfb42 | `ref.cast (ref ht)` | `ht : heaptype` |
 | 0xfb43 | `ref.cast (ref null ht)` | `ht : heaptype` |
 | 0xfb48 | `br_on_cast $l (ref null1? ht1) (ref null2? ht2)` | `flags : u8`, $l : labelidx`, `ht1 : heaptype`, `ht2 : heaptype` |
 | 0xfb49 | `br_on_cast_fail $l (ref null1? ht1) (ref null2? ht2)` | `flags : u8`, $l : labelidx`, `ht1 : heaptype`, `ht2 : heaptype` |
