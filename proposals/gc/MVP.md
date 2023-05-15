@@ -576,8 +576,8 @@ In particular, `ref.null` is typed as before, despite the introduction of `none`
   - `array.len : [(ref null array)] -> [i32]`
   - traps on `null`
 
-* `array.fill` fills a slice of an array with a given value
-  - `array.fill $t : [(ref null $t), i32, t, i32] -> []`
+* `array.fill <typeidx>` fills a slice of an array with a given value
+  - `array.fill $t : [(ref null $t) i32 t i32] -> []`
     - iff `expand($t) = array (mut t')`
     - and `t = unpacked(t')`
   - the 1st operand is the `array` to fill
@@ -586,8 +586,8 @@ In particular, `ref.null` is typed as before, despite the introduction of `none`
   - the 4th operand is the `size` of the filled slice
   - traps if `array` is null or `offset + size > len(array)`
 
-* `array.copy` copies a sequence of elements between two arrays
-  - `array.copy $t1 $t2 : [(ref null $t1), i32, (ref null $t2), i32, i32] -> []`
+* `array.copy <typeidx> <typeidx>` copies a sequence of elements between two arrays
+  - `array.copy $t1 $t2 : [(ref null $t1) i32 (ref null $t2) i32 i32] -> []`
     - iff `expand($t1) = array (mut t1)`
     - and `expand($t2) = array (mut? t2)`
     - and `t2 <: t1`
@@ -602,8 +602,8 @@ In particular, `ref.null` is typed as before, despite the introduction of `none`
     regions may overlap. This must be handled correctly just like it is for
     `memory.copy`.
 
-* `array.init_elem` copies a sequence of elements from an element segment to an array
-  - `array.init_elem $t $e : [(ref null $t), i32, i32, i32] -> []`
+* `array.init_elem <typeidx> <elemidx>` copies a sequence of elements from an element segment to an array
+  - `array.init_elem $t $e : [(ref null $t) i32 i32 i32] -> []`
     - iff `expand($t) = array (mut t)`
     - and `$e : rt`
     - and `rt <: t`
@@ -614,8 +614,8 @@ In particular, `ref.null` is typed as before, despite the introduction of `none`
   - traps if `array` is null
   - traps if `dest_offset + size > len(array)` or `src_offset + size > len($e)`
 
-* `array.init_data` copies a sequence of values from a data segment to an array
-  - `array.init_data $t $d : [(ref null $t), i32, i32, i32 ] -> []`
+* `array.init_data <typeidx> <dataidx>` copies a sequence of values from a data segment to an array
+  - `array.init_data $t $d : [(ref null $t) i32 i32 i32] -> []`
     - iff `expand($t) = array (mut t)`
     - and `t` is numeric, vector, or packed
     - and `$d` is a defined data segment
@@ -624,7 +624,7 @@ In particular, `ref.null` is typed as before, despite the introduction of `none`
   - the 3rd operand is the `src_offset` at which the copy will begin in `$d`
   - the 4th operand is the `size` of the copy in array slots
   - traps if `array` is null
-  - traps if `dest_offset + size > len(array)` or `src_offset + size * bytes(t) > len($d)`
+  - traps if `dest_offset + size > len(array)` or `src_offset + size * |t| > len($d)`
 
 #### Unboxed Scalars
 
