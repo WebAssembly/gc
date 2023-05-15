@@ -623,6 +623,8 @@ In particular, `ref.null` is typed as before, despite the introduction of `none`
   - the 2nd operand is the `dest_offset` at which the copy will begin in `array`
   - the 3rd operand is the `src_offset` at which the copy will begin in `$d`
   - the 4th operand is the `size` of the copy in array slots
+  - note: The size of the source region is `size * |t|`. If `t` is a packed
+    type, the source is interpreted as packed in the same way.
   - traps if `array` is null
   - traps if `dest_offset + size > len(array)` or `src_offset + size * |t| > len($d)`
 
