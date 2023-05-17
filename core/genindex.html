@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Index &#8212; WebAssembly 2.0 + tail calls + function references + gc (Draft 2023-05-09)</title>
+    <title>Index &#8212; WebAssembly 2.0 + tail calls + function references + gc (Draft 2023-05-17)</title>
     <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="_static/alabaster.css" />
     <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
@@ -107,7 +107,7 @@
     : abstract syntax
 
       <ul>
-        <li><a href="exec/runtime.html#index-15">administrative instruction</a>
+        <li><a href="exec/runtime.html#index-16">administrative instruction</a>
 </li>
       </ul></li>
   </ul></td>
@@ -121,7 +121,11 @@
       <li><a href="syntax/conventions.html#index-0"><strong>abstract syntax</strong></a>, <a href="appendix/implementation.html#index-1">[1]</a>, <a href="binary/conventions.html#index-0">[2]</a>, <a href="text/conventions.html#index-0">[3]</a>
 
       <ul>
-        <li><a href="syntax/instructions.html#index-8">block type</a>, <a href="valid/types.html#index-5">[1]</a>
+        <li><a href="exec/runtime.html#index-4">array address</a>
+</li>
+        <li><a href="exec/runtime.html#index-14">array instance</a>
+</li>
+        <li><a href="syntax/instructions.html#index-9">block type</a>, <a href="valid/types.html#index-5">[1]</a>
 </li>
         <li><a href="syntax/values.html#index-1">byte</a>
 </li>
@@ -149,15 +153,17 @@
 </li>
         <li><a href="exec/runtime.html#index-12">export instance</a>
 </li>
-        <li><a href="exec/instructions.html#index-12">expression</a>, <a href="syntax/instructions.html#index-9">[1]</a>, <a href="valid/instructions.html#index-10">[2]</a>
+        <li><a href="exec/instructions.html#index-12">expression</a>, <a href="syntax/instructions.html#index-10">[1]</a>, <a href="valid/instructions.html#index-10">[2]</a>
 </li>
         <li><a href="syntax/types.html#index-15">external type</a>, <a href="valid/types.html#index-13">[1]</a>
 </li>
         <li><a href="exec/runtime.html#index-13">external value</a>
 </li>
+        <li><a href="exec/runtime.html#index-14">field value</a>
+</li>
         <li><a href="syntax/values.html#index-3">floating-point number</a>
 </li>
-        <li><a href="exec/runtime.html#index-14">frame</a>
+        <li><a href="exec/runtime.html#index-15">frame</a>
 </li>
         <li><a href="syntax/modules.html#index-3">function</a>, <a href="valid/modules.html#index-0">[1]</a>, <a href="valid/modules.html#index-0">[2]</a>
 </li>
@@ -187,13 +193,13 @@
 </li>
         <li><a href="syntax/modules.html#index-11">import</a>, <a href="valid/modules.html#index-9">[1]</a>
 </li>
-        <li><a href="exec/instructions.html#index-1">instruction</a>, <a href="exec/instructions.html#index-2">[1]</a>, <a href="exec/instructions.html#index-3">[2]</a>, <a href="exec/instructions.html#index-4">[3]</a>, <a href="exec/instructions.html#index-5">[4]</a>, <a href="exec/instructions.html#index-6">[5]</a>, <a href="exec/instructions.html#index-7">[6]</a>, <a href="exec/instructions.html#index-8">[7]</a>, <a href="syntax/instructions.html#index-0">[8]</a>, <a href="syntax/instructions.html#index-1">[9]</a>, <a href="syntax/instructions.html#index-2">[10]</a>, <a href="syntax/instructions.html#index-3">[11]</a>, <a href="syntax/instructions.html#index-4">[12]</a>, <a href="syntax/instructions.html#index-5">[13]</a>, <a href="syntax/instructions.html#index-6">[14]</a>, <a href="syntax/instructions.html#index-7">[15]</a>, <a href="syntax/instructions.html#index-8">[16]</a>, <a href="valid/instructions.html#index-1">[17]</a>, <a href="valid/instructions.html#index-2">[18]</a>, <a href="valid/instructions.html#index-3">[19]</a>, <a href="valid/instructions.html#index-4">[20]</a>, <a href="valid/instructions.html#index-5">[21]</a>, <a href="valid/instructions.html#index-6">[22]</a>, <a href="valid/instructions.html#index-7">[23]</a>, <a href="valid/instructions.html#index-8">[24]</a>
+        <li><a href="exec/instructions.html#index-1">instruction</a>, <a href="exec/instructions.html#index-2">[1]</a>, <a href="exec/instructions.html#index-3">[2]</a>, <a href="exec/instructions.html#index-4">[3]</a>, <a href="exec/instructions.html#index-5">[4]</a>, <a href="exec/instructions.html#index-6">[5]</a>, <a href="exec/instructions.html#index-7">[6]</a>, <a href="exec/instructions.html#index-8">[7]</a>, <a href="syntax/instructions.html#index-0">[8]</a>, <a href="syntax/instructions.html#index-1">[9]</a>, <a href="syntax/instructions.html#index-2">[10]</a>, <a href="syntax/instructions.html#index-3">[11]</a>, <a href="syntax/instructions.html#index-4">[12]</a>, <a href="syntax/instructions.html#index-5">[13]</a>, <a href="syntax/instructions.html#index-6">[14]</a>, <a href="syntax/instructions.html#index-7">[15]</a>, <a href="syntax/instructions.html#index-8">[16]</a>, <a href="syntax/instructions.html#index-9">[17]</a>, <a href="valid/instructions.html#index-1">[18]</a>, <a href="valid/instructions.html#index-2">[19]</a>, <a href="valid/instructions.html#index-3">[20]</a>, <a href="valid/instructions.html#index-4">[21]</a>, <a href="valid/instructions.html#index-5">[22]</a>, <a href="valid/instructions.html#index-6">[23]</a>, <a href="valid/instructions.html#index-7">[24]</a>, <a href="valid/instructions.html#index-8">[25]</a>
 </li>
         <li><a href="syntax/types.html#index-7">instruction type</a>, <a href="valid/types.html#index-7">[1]</a>
 </li>
         <li><a href="syntax/values.html#index-2">integer</a>
 </li>
-        <li><a href="exec/runtime.html#index-14">label</a>
+        <li><a href="exec/runtime.html#index-15">label</a>
 </li>
         <li><a href="syntax/modules.html#index-1">label index</a>
 </li>
@@ -227,6 +233,8 @@
 </li>
         <li><a href="syntax/types.html#index-1">number type</a>, <a href="syntax/types.html#index-2">[1]</a>, <a href="valid/types.html#index-0">[2]</a>
 </li>
+        <li><a href="exec/runtime.html#index-14">packed value</a>
+</li>
         <li><a href="syntax/types.html#index-4">reference type</a>, <a href="valid/types.html#index-3">[1]</a>
 </li>
         <li><a href="exec/runtime.html#index-2">result</a>
@@ -238,6 +246,10 @@
         <li><a href="syntax/modules.html#index-9">start function</a>, <a href="valid/modules.html#index-7">[1]</a>
 </li>
         <li><a href="exec/runtime.html#index-3">store</a>
+</li>
+        <li><a href="exec/runtime.html#index-4">structure address</a>
+</li>
+        <li><a href="exec/runtime.html#index-14">structure instance</a>
 </li>
         <li><a href="syntax/modules.html#index-4">table</a>, <a href="valid/modules.html#index-2">[1]</a>
 </li>
@@ -270,13 +282,17 @@
       </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="exec/runtime.html#index-14">activation</a>
+      <li><a href="syntax/types.html#index-3"><strong>abstract type</strong></a>
+</li>
+      <li><a href="exec/runtime.html#index-15">activation</a>
 </li>
       <li><a href="syntax/modules.html#index-7"><strong>active</strong></a>, <a href="syntax/modules.html#index-8">[1]</a>
 </li>
       <li><a href="exec/runtime.html#index-4"><strong>address</strong></a>, <a href="exec/instructions.html#index-5">[1]</a>, <a href="exec/instructions.html#index-6">[2]</a>, <a href="exec/instructions.html#index-7">[3]</a>, <a href="exec/instructions.html#index-8">[4]</a>, <a href="exec/modules.html#index-0">[5]</a>
 
       <ul>
+        <li><a href="exec/runtime.html#index-4">array</a>
+</li>
         <li><a href="exec/runtime.html#index-4">data</a>
 </li>
         <li><a href="exec/runtime.html#index-4">element</a>
@@ -289,22 +305,47 @@
 </li>
         <li><a href="exec/runtime.html#index-4">memory</a>
 </li>
+        <li><a href="exec/runtime.html#index-4">structure</a>
+</li>
         <li><a href="exec/runtime.html#index-4">table</a>
 </li>
       </ul></li>
       <li><a href="appendix/properties.html#index-12">administrative instruction</a>, <a href="appendix/properties.html#index-16">[1]</a>
 
       <ul>
-        <li><a href="exec/runtime.html#index-15">: abstract syntax</a>
+        <li><a href="exec/runtime.html#index-16">: abstract syntax</a>
 </li>
       </ul></li>
-      <li><a href="exec/runtime.html#index-15"><strong>administrative instructions</strong></a>
+      <li><a href="exec/runtime.html#index-16"><strong>administrative instructions</strong></a>
 </li>
       <li><a href="appendix/algorithm.html#index-0">algorithm</a>
 </li>
       <li><a href="exec/modules.html#index-0"><strong>allocation</strong></a>, <a href="appendix/embedding.html#index-1">[1]</a>, <a href="appendix/implementation.html#index-5">[2]</a>, <a href="exec/runtime.html#index-3">[3]</a>
 </li>
       <li><a href="syntax/values.html#index-3">arithmetic NaN</a>
+</li>
+      <li><a href="exec/runtime.html#index-1">array</a>, <a href="exec/values.html#index-1">[1]</a>
+
+      <ul>
+        <li><a href="exec/runtime.html#index-4">address</a>
+</li>
+        <li><a href="exec/runtime.html#index-14">instance</a>
+</li>
+      </ul></li>
+      <li>
+    array address
+
+      <ul>
+        <li><a href="exec/runtime.html#index-4">abstract syntax</a>
+</li>
+      </ul></li>
+      <li><a href="exec/runtime.html#index-14"><strong>array instance</strong></a>, <a href="exec/runtime.html#index-3">[1]</a>, <a href="exec/runtime.html#index-4">[2]</a>, <a href="exec/values.html#index-1">[3]</a>
+
+      <ul>
+        <li><a href="exec/runtime.html#index-14">abstract syntax</a>
+</li>
+      </ul></li>
+      <li><a href="exec/runtime.html#index-14">array type</a>, <a href="exec/values.html#index-1">[1]</a>
 </li>
       <li><a href="text/lexical.html#index-1">ASCII</a>, <a href="text/lexical.html#index-3">[1]</a>, <a href="text/values.html#index-3">[2]</a>
 </li>
@@ -426,18 +467,18 @@
 </li>
       <li><a href="exec/instructions.html#index-7">bit width</a>, <a href="exec/numerics.html#index-0">[1]</a>, <a href="syntax/types.html#index-1">[2]</a>, <a href="syntax/types.html#index-2">[3]</a>, <a href="syntax/values.html#index-2">[4]</a>, <a href="syntax/values.html#index-3">[5]</a>
 </li>
-      <li><a href="syntax/instructions.html#index-8"><strong>block</strong></a>, <a href="appendix/changes.html#index-3">[1]</a>, <a href="binary/instructions.html#index-1">[2]</a>, <a href="exec/instructions.html#index-8">[3]</a>, <a href="exec/instructions.html#index-9">[4]</a>, <a href="text/instructions.html#index-2">[5]</a>, <a href="valid/instructions.html#index-8">[6]</a>
+      <li><a href="syntax/instructions.html#index-9"><strong>block</strong></a>, <a href="appendix/changes.html#index-3">[1]</a>, <a href="binary/instructions.html#index-1">[2]</a>, <a href="exec/instructions.html#index-8">[3]</a>, <a href="exec/instructions.html#index-9">[4]</a>, <a href="text/instructions.html#index-2">[5]</a>, <a href="valid/instructions.html#index-8">[6]</a>
 
       <ul>
-        <li><a href="syntax/instructions.html#index-8">type</a>
+        <li><a href="syntax/instructions.html#index-9">type</a>
 </li>
       </ul></li>
-      <li><a href="exec/runtime.html#index-16"><strong>block context</strong></a>
+      <li><a href="exec/runtime.html#index-17"><strong>block context</strong></a>
 </li>
-      <li><a href="syntax/instructions.html#index-8"><strong>block type</strong></a>, <a href="binary/instructions.html#index-1">[1]</a>, <a href="valid/instructions.html#index-8">[2]</a>, <a href="valid/types.html#index-5">[3]</a>
+      <li><a href="syntax/instructions.html#index-9"><strong>block type</strong></a>, <a href="binary/instructions.html#index-1">[1]</a>, <a href="valid/instructions.html#index-8">[2]</a>, <a href="valid/types.html#index-5">[3]</a>
 
       <ul>
-        <li><a href="syntax/instructions.html#index-8">abstract syntax</a>
+        <li><a href="syntax/instructions.html#index-9">abstract syntax</a>
 </li>
         <li><a href="binary/instructions.html#index-1">binary format</a>
 </li>
@@ -448,7 +489,7 @@
 </li>
       <li><a href="syntax/types.html#index-5"><strong>bottom type</strong></a>, <a href="valid/types.html#index-4">[1]</a>
 </li>
-      <li><a href="syntax/instructions.html#index-8"><strong>branch</strong></a>, <a href="binary/instructions.html#index-1">[1]</a>, <a href="exec/instructions.html#index-8">[2]</a>, <a href="exec/runtime.html#index-16">[3]</a>, <a href="text/instructions.html#index-2">[4]</a>, <a href="valid/instructions.html#index-8">[5]</a>
+      <li><a href="syntax/instructions.html#index-9"><strong>branch</strong></a>, <a href="binary/instructions.html#index-1">[1]</a>, <a href="exec/instructions.html#index-8">[2]</a>, <a href="exec/runtime.html#index-17">[3]</a>, <a href="text/instructions.html#index-2">[4]</a>, <a href="valid/instructions.html#index-8">[5]</a>
 </li>
       <li><a href="syntax/values.html#index-1"><strong>byte</strong></a>, <a href="appendix/embedding.html#index-14">[1]</a>, <a href="appendix/properties.html#index-6">[2]</a>, <a href="appendix/properties.html#index-9">[3]</a>, <a href="binary/conventions.html#index-0">[4]</a>, <a href="binary/conventions.html#index-1">[5]</a>, <a href="binary/modules.html#index-13">[6]</a>, <a href="binary/values.html#index-1">[7]</a>, <a href="binary/values.html#index-4">[8]</a>, <a href="exec/modules.html#index-4">[9]</a>, <a href="exec/numerics.html#index-4">[10]</a>, <a href="exec/runtime.html#index-11">[11]</a>, <a href="exec/runtime.html#index-8">[12]</a>, <a href="syntax/modules.html#index-8">[13]</a>, <a href="syntax/values.html#index-5">[14]</a>, <a href="text/modules.html#index-14">[15]</a>, <a href="text/modules.html#index-21">[16]</a>, <a href="text/values.html#index-3">[17]</a>, <a href="text/values.html#index-4">[18]</a>, <a href="valid/modules.html#index-6">[19]</a>
 
@@ -466,9 +507,11 @@
 <h2 id="C">C</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="exec/instructions.html#index-10"><strong>call</strong></a>, <a href="exec/runtime.html#index-14">[1]</a>, <a href="exec/runtime.html#index-15">[2]</a>
+      <li><a href="exec/instructions.html#index-10"><strong>call</strong></a>, <a href="exec/runtime.html#index-15">[1]</a>, <a href="exec/runtime.html#index-16">[2]</a>
 </li>
       <li><a href="syntax/values.html#index-3">canonical NaN</a>
+</li>
+      <li><a href="syntax/instructions.html#index-3">cast</a>
 </li>
       <li><a href="appendix/changes.html#index-0"><strong>changes</strong></a>
 </li>
@@ -494,17 +537,19 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="text/lexical.html#index-4"><strong>comment</strong></a>, <a href="text/lexical.html#index-2">[1]</a>
 </li>
-      <li><a href="appendix/properties.html#index-35"><strong>compositionality</strong></a>
+      <li><a href="appendix/properties.html#index-34"><strong>compositionality</strong></a>
 </li>
       <li><a href="intro/overview.html#index-0">concepts</a>
 </li>
-      <li><a href="exec/runtime.html#index-17"><strong>configuration</strong></a>, <a href="appendix/properties.html#index-12">[1]</a>, <a href="appendix/properties.html#index-31">[2]</a>, <a href="exec/conventions.html#index-1">[3]</a>
+      <li><a href="syntax/types.html#index-3"><strong>concrete type</strong></a>
 </li>
-      <li><a href="valid/instructions.html#index-11"><strong>constant</strong></a>, <a href="exec/runtime.html#index-1">[1]</a>, <a href="syntax/instructions.html#index-9">[2]</a>, <a href="syntax/modules.html#index-6">[3]</a>, <a href="syntax/modules.html#index-7">[4]</a>, <a href="syntax/modules.html#index-8">[5]</a>, <a href="valid/modules.html#index-2">[6]</a>, <a href="valid/modules.html#index-4">[7]</a>, <a href="valid/modules.html#index-5">[8]</a>, <a href="valid/modules.html#index-6">[9]</a>
+      <li><a href="exec/runtime.html#index-18"><strong>configuration</strong></a>, <a href="appendix/properties.html#index-12">[1]</a>, <a href="appendix/properties.html#index-30">[2]</a>, <a href="exec/conventions.html#index-1">[3]</a>
+</li>
+      <li><a href="valid/instructions.html#index-11"><strong>constant</strong></a>, <a href="exec/runtime.html#index-1">[1]</a>, <a href="syntax/instructions.html#index-10">[2]</a>, <a href="syntax/modules.html#index-6">[3]</a>, <a href="syntax/modules.html#index-7">[4]</a>, <a href="syntax/modules.html#index-8">[5]</a>, <a href="valid/modules.html#index-2">[6]</a>, <a href="valid/modules.html#index-4">[7]</a>, <a href="valid/modules.html#index-5">[8]</a>, <a href="valid/modules.html#index-6">[9]</a>
 </li>
       <li><a href="valid/conventions.html#index-1"><strong>context</strong></a>, <a href="appendix/properties.html#index-11">[1]</a>, <a href="appendix/properties.html#index-14">[2]</a>, <a href="appendix/properties.html#index-15">[3]</a>, <a href="appendix/properties.html#index-16">[4]</a>, <a href="binary/modules.html#index-15">[5]</a>, <a href="valid/instructions.html#index-0">[6]</a>, <a href="valid/instructions.html#index-5">[7]</a>, <a href="valid/instructions.html#index-6">[8]</a>, <a href="valid/instructions.html#index-7">[9]</a>, <a href="valid/instructions.html#index-8">[10]</a>, <a href="valid/modules.html#index-10">[11]</a>
 </li>
-      <li><a href="syntax/instructions.html#index-8"><strong>control instruction</strong></a>
+      <li><a href="syntax/instructions.html#index-9"><strong>control instruction</strong></a>
 </li>
       <li><a href="binary/instructions.html#index-1">control instructions</a>, <a href="exec/instructions.html#index-8">[1]</a>, <a href="text/instructions.html#index-2">[2]</a>, <a href="valid/instructions.html#index-8">[3]</a>
 </li>
@@ -520,7 +565,7 @@
 <h2 id="D">D</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="syntax/modules.html#index-8"><strong>data</strong></a>, <a href="appendix/implementation.html#index-1">[1]</a>, <a href="binary/modules.html#index-13">[2]</a>, <a href="binary/modules.html#index-15">[3]</a>, <a href="exec/modules.html#index-7">[4]</a>, <a href="exec/runtime.html#index-15">[5]</a>, <a href="syntax/instructions.html#index-9">[6]</a>, <a href="syntax/modules.html#index-0">[7]</a>, <a href="syntax/modules.html#index-1">[8]</a>, <a href="syntax/modules.html#index-5">[9]</a>, <a href="text/modules.html#index-14">[10]</a>, <a href="text/modules.html#index-21">[11]</a>, <a href="text/modules.html#index-22">[12]</a>, <a href="valid/modules.html#index-10">[13]</a>, <a href="valid/modules.html#index-6">[14]</a>
+      <li><a href="syntax/modules.html#index-8"><strong>data</strong></a>, <a href="appendix/implementation.html#index-1">[1]</a>, <a href="binary/modules.html#index-13">[2]</a>, <a href="binary/modules.html#index-15">[3]</a>, <a href="exec/modules.html#index-7">[4]</a>, <a href="exec/runtime.html#index-16">[5]</a>, <a href="syntax/instructions.html#index-10">[6]</a>, <a href="syntax/modules.html#index-0">[7]</a>, <a href="syntax/modules.html#index-1">[8]</a>, <a href="syntax/modules.html#index-5">[9]</a>, <a href="text/modules.html#index-14">[10]</a>, <a href="text/modules.html#index-21">[11]</a>, <a href="text/modules.html#index-22">[12]</a>, <a href="valid/modules.html#index-10">[13]</a>, <a href="valid/modules.html#index-6">[14]</a>
 
       <ul>
         <li><a href="syntax/modules.html#index-8">abstract syntax</a>
@@ -570,7 +615,7 @@
         <li><a href="text/modules.html#index-0">text format</a>
 </li>
       </ul></li>
-      <li><a href="exec/runtime.html#index-11"><strong>data instance</strong></a>, <a href="appendix/properties.html#index-30">[1]</a>, <a href="appendix/properties.html#index-9">[2]</a>, <a href="exec/modules.html#index-7">[3]</a>, <a href="exec/runtime.html#index-4">[4]</a>, <a href="exec/runtime.html#index-5">[5]</a>
+      <li><a href="exec/runtime.html#index-11"><strong>data instance</strong></a>, <a href="appendix/properties.html#index-29">[1]</a>, <a href="appendix/properties.html#index-9">[2]</a>, <a href="exec/modules.html#index-7">[3]</a>, <a href="exec/runtime.html#index-4">[4]</a>, <a href="exec/runtime.html#index-5">[5]</a>
 
       <ul>
         <li><a href="exec/runtime.html#index-11">abstract syntax</a>
@@ -606,7 +651,7 @@
 <h2 id="E">E</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="syntax/modules.html#index-7"><strong>element</strong></a>, <a href="appendix/embedding.html#index-13">[1]</a>, <a href="appendix/implementation.html#index-1">[2]</a>, <a href="binary/modules.html#index-11">[3]</a>, <a href="binary/modules.html#index-15">[4]</a>, <a href="exec/modules.html#index-6">[5]</a>, <a href="exec/runtime.html#index-15">[6]</a>, <a href="syntax/instructions.html#index-9">[7]</a>, <a href="syntax/modules.html#index-0">[8]</a>, <a href="syntax/modules.html#index-1">[9]</a>, <a href="syntax/modules.html#index-4">[10]</a>, <a href="syntax/types.html#index-13">[11]</a>, <a href="text/modules.html#index-10">[12]</a>, <a href="text/modules.html#index-20">[13]</a>, <a href="text/modules.html#index-22">[14]</a>, <a href="valid/modules.html#index-10">[15]</a>, <a href="valid/modules.html#index-5">[16]</a>
+      <li><a href="syntax/modules.html#index-7"><strong>element</strong></a>, <a href="appendix/embedding.html#index-13">[1]</a>, <a href="appendix/implementation.html#index-1">[2]</a>, <a href="binary/modules.html#index-11">[3]</a>, <a href="binary/modules.html#index-15">[4]</a>, <a href="exec/modules.html#index-6">[5]</a>, <a href="exec/runtime.html#index-16">[6]</a>, <a href="syntax/instructions.html#index-10">[7]</a>, <a href="syntax/modules.html#index-0">[8]</a>, <a href="syntax/modules.html#index-1">[9]</a>, <a href="syntax/modules.html#index-4">[10]</a>, <a href="syntax/types.html#index-13">[11]</a>, <a href="text/modules.html#index-10">[12]</a>, <a href="text/modules.html#index-20">[13]</a>, <a href="text/modules.html#index-22">[14]</a>, <a href="valid/modules.html#index-10">[15]</a>, <a href="valid/modules.html#index-5">[16]</a>
 
       <ul>
         <li><a href="syntax/modules.html#index-7">abstract syntax</a>
@@ -648,7 +693,7 @@
         <li><a href="text/modules.html#index-0">text format</a>
 </li>
       </ul></li>
-      <li><a href="exec/runtime.html#index-10"><strong>element instance</strong></a>, <a href="appendix/properties.html#index-29">[1]</a>, <a href="appendix/properties.html#index-8">[2]</a>, <a href="exec/instructions.html#index-6">[3]</a>, <a href="exec/modules.html#index-6">[4]</a>, <a href="exec/runtime.html#index-4">[5]</a>, <a href="exec/runtime.html#index-5">[6]</a>
+      <li><a href="exec/runtime.html#index-10"><strong>element instance</strong></a>, <a href="appendix/properties.html#index-28">[1]</a>, <a href="appendix/properties.html#index-8">[2]</a>, <a href="exec/instructions.html#index-6">[3]</a>, <a href="exec/modules.html#index-6">[4]</a>, <a href="exec/runtime.html#index-4">[5]</a>, <a href="exec/runtime.html#index-5">[6]</a>
 
       <ul>
         <li><a href="exec/runtime.html#index-10">abstract syntax</a>
@@ -670,7 +715,7 @@
 </li>
       <li><a href="appendix/embedding.html#index-0"><strong>embedding</strong></a>
 </li>
-      <li><a href="exec/runtime.html#index-18"><strong>evaluation context</strong></a>, <a href="exec/conventions.html#index-1">[1]</a>
+      <li><a href="exec/runtime.html#index-19"><strong>evaluation context</strong></a>, <a href="exec/conventions.html#index-1">[1]</a>
 </li>
       <li><a href="exec/conventions.html#index-0"><strong>execution</strong></a>, <a href="appendix/implementation.html#index-5">[1]</a>, <a href="intro/overview.html#index-1">[2]</a>, <a href="syntax/types.html#index-0">[3]</a>, <a href="syntax/types.html#index-6">[4]</a>
 
@@ -708,14 +753,14 @@
       </ul></li>
       <li><a href="binary/modules.html#index-9"><strong>export section</strong></a>
 </li>
-      <li><a href="syntax/instructions.html#index-9"><strong>expression</strong></a>, <a href="binary/instructions.html#index-9">[1]</a>, <a href="binary/modules.html#index-11">[2]</a>, <a href="binary/modules.html#index-13">[3]</a>, <a href="binary/modules.html#index-8">[4]</a>, <a href="exec/instructions.html#index-12">[5]</a>, <a href="syntax/modules.html#index-3">[6]</a>, <a href="syntax/modules.html#index-6">[7]</a>, <a href="syntax/modules.html#index-7">[8]</a>, <a href="syntax/modules.html#index-8">[9]</a>, <a href="text/instructions.html#index-11">[10]</a>, <a href="text/modules.html#index-14">[11]</a>, <a href="text/modules.html#index-15">[12]</a>, <a href="text/modules.html#index-20">[13]</a>, <a href="text/modules.html#index-21">[14]</a>, <a href="valid/instructions.html#index-10">[15]</a>, <a href="valid/modules.html#index-0">[16]</a>, <a href="valid/modules.html#index-2">[17]</a>, <a href="valid/modules.html#index-4">[18]</a>, <a href="valid/modules.html#index-5">[19]</a>, <a href="valid/modules.html#index-6">[20]</a>
+      <li><a href="syntax/instructions.html#index-10"><strong>expression</strong></a>, <a href="binary/instructions.html#index-9">[1]</a>, <a href="binary/modules.html#index-11">[2]</a>, <a href="binary/modules.html#index-13">[3]</a>, <a href="binary/modules.html#index-8">[4]</a>, <a href="exec/instructions.html#index-12">[5]</a>, <a href="syntax/modules.html#index-3">[6]</a>, <a href="syntax/modules.html#index-6">[7]</a>, <a href="syntax/modules.html#index-7">[8]</a>, <a href="syntax/modules.html#index-8">[9]</a>, <a href="text/instructions.html#index-11">[10]</a>, <a href="text/modules.html#index-14">[11]</a>, <a href="text/modules.html#index-15">[12]</a>, <a href="text/modules.html#index-20">[13]</a>, <a href="text/modules.html#index-21">[14]</a>, <a href="valid/instructions.html#index-10">[15]</a>, <a href="valid/modules.html#index-0">[16]</a>, <a href="valid/modules.html#index-2">[17]</a>, <a href="valid/modules.html#index-4">[18]</a>, <a href="valid/modules.html#index-5">[19]</a>, <a href="valid/modules.html#index-6">[20]</a>
 
       <ul>
-        <li><a href="syntax/instructions.html#index-9">abstract syntax</a>
+        <li><a href="syntax/instructions.html#index-10">abstract syntax</a>
 </li>
         <li><a href="binary/instructions.html#index-9">binary format</a>
 </li>
-        <li><a href="binary/instructions.html#index-9">constant</a>, <a href="syntax/instructions.html#index-9">[1]</a>, <a href="text/instructions.html#index-11">[2]</a>, <a href="valid/instructions.html#index-10">[3]</a>
+        <li><a href="binary/instructions.html#index-9">constant</a>, <a href="syntax/instructions.html#index-10">[1]</a>, <a href="text/instructions.html#index-11">[2]</a>, <a href="valid/instructions.html#index-10">[3]</a>
 </li>
         <li><a href="exec/instructions.html#index-12">execution</a>
 </li>
@@ -724,11 +769,9 @@
         <li><a href="valid/instructions.html#index-10">validation</a>
 </li>
       </ul></li>
-      <li><a href="appendix/properties.html#index-18">extern address</a>
+      <li><a href="appendix/properties.html#index-19">extern type</a>
 </li>
-      <li><a href="appendix/properties.html#index-19">extern type</a>, <a href="appendix/properties.html#index-20">[1]</a>
-</li>
-      <li><a href="appendix/properties.html#index-19">extern value</a>, <a href="appendix/properties.html#index-20">[1]</a>
+      <li><a href="appendix/properties.html#index-19">extern value</a>
 </li>
       <li>
     external
@@ -739,6 +782,8 @@
         <li><a href="exec/runtime.html#index-13">value</a>
 </li>
       </ul></li>
+      <li><a href="exec/runtime.html#index-1">external reference</a>
+</li>
       <li><a href="syntax/types.html#index-15"><strong>external type</strong></a>, <a href="appendix/properties.html#index-10">[1]</a>, <a href="exec/modules.html#index-10">[2]</a>, <a href="exec/values.html#index-2">[3]</a>, <a href="valid/matching.html#index-13">[4]</a>, <a href="valid/types.html#index-13">[5]</a>
 
       <ul>
@@ -759,6 +804,12 @@
 <h2 id="F">F</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="exec/runtime.html#index-14"><strong>field value</strong></a>
+
+      <ul>
+        <li><a href="exec/runtime.html#index-14">abstract syntax</a>
+</li>
+      </ul></li>
       <li><a href="binary/conventions.html#index-0">file extension</a>, <a href="text/conventions.html#index-0">[1]</a>
 </li>
       <li><a href="intro/introduction.html#index-2">floating point</a>
@@ -777,13 +828,13 @@
       </ul></li>
       <li><a href="text/instructions.html#index-10"><strong>folded instruction</strong></a>
 </li>
-      <li><a href="exec/runtime.html#index-14"><strong>frame</strong></a>, <a href="appendix/algorithm.html#index-1">[1]</a>, <a href="appendix/implementation.html#index-5">[2]</a>, <a href="appendix/properties.html#index-12">[3]</a>, <a href="appendix/properties.html#index-14">[4]</a>, <a href="appendix/properties.html#index-15">[5]</a>, <a href="appendix/properties.html#index-22">[6]</a>, <a href="exec/instructions.html#index-10">[7]</a>, <a href="exec/instructions.html#index-5">[8]</a>, <a href="exec/instructions.html#index-6">[9]</a>, <a href="exec/instructions.html#index-7">[10]</a>, <a href="exec/instructions.html#index-8">[11]</a>, <a href="exec/runtime.html#index-15">[12]</a>, <a href="exec/runtime.html#index-17">[13]</a>, <a href="exec/runtime.html#index-18">[14]</a>
+      <li><a href="exec/runtime.html#index-15"><strong>frame</strong></a>, <a href="appendix/algorithm.html#index-1">[1]</a>, <a href="appendix/implementation.html#index-5">[2]</a>, <a href="appendix/properties.html#index-12">[3]</a>, <a href="appendix/properties.html#index-14">[4]</a>, <a href="appendix/properties.html#index-15">[5]</a>, <a href="appendix/properties.html#index-21">[6]</a>, <a href="exec/instructions.html#index-10">[7]</a>, <a href="exec/instructions.html#index-5">[8]</a>, <a href="exec/instructions.html#index-6">[9]</a>, <a href="exec/instructions.html#index-7">[10]</a>, <a href="exec/instructions.html#index-8">[11]</a>, <a href="exec/runtime.html#index-16">[12]</a>, <a href="exec/runtime.html#index-18">[13]</a>, <a href="exec/runtime.html#index-19">[14]</a>
 
       <ul>
-        <li><a href="exec/runtime.html#index-14">abstract syntax</a>
+        <li><a href="exec/runtime.html#index-15">abstract syntax</a>
 </li>
       </ul></li>
-      <li><a href="syntax/modules.html#index-3"><strong>function</strong></a>, <a href="appendix/changes.html#index-3">[1]</a>, <a href="appendix/changes.html#index-9">[2]</a>, <a href="appendix/custom.html#index-4">[3]</a>, <a href="appendix/custom.html#index-5">[4]</a>, <a href="appendix/embedding.html#index-11">[5]</a>, <a href="appendix/implementation.html#index-1">[6]</a>, <a href="appendix/implementation.html#index-2">[7]</a>, <a href="appendix/implementation.html#index-4">[8]</a>, <a href="binary/modules.html#index-12">[9]</a>, <a href="binary/modules.html#index-15">[10]</a>, <a href="binary/modules.html#index-5">[11]</a>, <a href="exec/instructions.html#index-10">[12]</a>, <a href="exec/modules.html#index-1">[13]</a>, <a href="exec/modules.html#index-10">[14]</a>, <a href="exec/modules.html#index-12">[15]</a>, <a href="exec/runtime.html#index-13">[16]</a>, <a href="exec/runtime.html#index-14">[17]</a>, <a href="exec/runtime.html#index-15">[18]</a>, <a href="exec/runtime.html#index-6">[19]</a>, <a href="intro/introduction.html#index-1">[20]</a>, <a href="intro/overview.html#index-0">[21]</a>, <a href="syntax/instructions.html#index-8">[22]</a>, <a href="syntax/modules.html#index-0">[23]</a>, <a href="syntax/modules.html#index-1">[24]</a>, <a href="syntax/modules.html#index-10">[25]</a>, <a href="syntax/modules.html#index-11">[26]</a>, <a href="syntax/modules.html#index-9">[27]</a>, <a href="syntax/types.html#index-4">[28]</a>, <a href="syntax/types.html#index-6">[29]</a>, <a href="syntax/types.html#index-9">[30]</a>, <a href="text/modules.html#index-22">[31]</a>, <a href="text/modules.html#index-4">[32]</a>, <a href="valid/conventions.html#index-1">[33]</a>, <a href="valid/modules.html#index-0">[34]</a>, <a href="valid/modules.html#index-10">[35]</a>
+      <li><a href="syntax/modules.html#index-3"><strong>function</strong></a>, <a href="appendix/changes.html#index-3">[1]</a>, <a href="appendix/changes.html#index-9">[2]</a>, <a href="appendix/custom.html#index-4">[3]</a>, <a href="appendix/custom.html#index-5">[4]</a>, <a href="appendix/embedding.html#index-11">[5]</a>, <a href="appendix/implementation.html#index-1">[6]</a>, <a href="appendix/implementation.html#index-2">[7]</a>, <a href="appendix/implementation.html#index-4">[8]</a>, <a href="binary/modules.html#index-12">[9]</a>, <a href="binary/modules.html#index-15">[10]</a>, <a href="binary/modules.html#index-5">[11]</a>, <a href="exec/instructions.html#index-10">[12]</a>, <a href="exec/modules.html#index-1">[13]</a>, <a href="exec/modules.html#index-10">[14]</a>, <a href="exec/modules.html#index-12">[15]</a>, <a href="exec/runtime.html#index-13">[16]</a>, <a href="exec/runtime.html#index-15">[17]</a>, <a href="exec/runtime.html#index-16">[18]</a>, <a href="exec/runtime.html#index-6">[19]</a>, <a href="exec/values.html#index-1">[20]</a>, <a href="intro/introduction.html#index-1">[21]</a>, <a href="intro/overview.html#index-0">[22]</a>, <a href="syntax/instructions.html#index-9">[23]</a>, <a href="syntax/modules.html#index-0">[24]</a>, <a href="syntax/modules.html#index-1">[25]</a>, <a href="syntax/modules.html#index-10">[26]</a>, <a href="syntax/modules.html#index-11">[27]</a>, <a href="syntax/modules.html#index-9">[28]</a>, <a href="syntax/types.html#index-4">[29]</a>, <a href="syntax/types.html#index-6">[30]</a>, <a href="syntax/types.html#index-9">[31]</a>, <a href="text/modules.html#index-22">[32]</a>, <a href="text/modules.html#index-4">[33]</a>, <a href="valid/conventions.html#index-1">[34]</a>, <a href="valid/modules.html#index-0">[35]</a>, <a href="valid/modules.html#index-10">[36]</a>
 
       <ul>
         <li><a href="syntax/modules.html#index-3">abstract syntax</a>, <a href="valid/modules.html#index-0">[1]</a>
@@ -809,13 +860,13 @@
       </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="appendix/embedding.html#index-11">function address</a>, <a href="appendix/embedding.html#index-13">[1]</a>, <a href="appendix/properties.html#index-19">[2]</a>, <a href="appendix/properties.html#index-20">[3]</a>, <a href="appendix/properties.html#index-5">[4]</a>, <a href="exec/modules.html#index-1">[5]</a>, <a href="exec/modules.html#index-10">[6]</a>, <a href="exec/modules.html#index-12">[7]</a>, <a href="exec/modules.html#index-2">[8]</a>, <a href="exec/runtime.html#index-13">[9]</a>, <a href="exec/runtime.html#index-15">[10]</a>, <a href="exec/runtime.html#index-7">[11]</a>, <a href="exec/values.html#index-3">[12]</a>
+      <li><a href="appendix/embedding.html#index-11">function address</a>, <a href="appendix/embedding.html#index-13">[1]</a>, <a href="appendix/properties.html#index-19">[2]</a>, <a href="appendix/properties.html#index-5">[3]</a>, <a href="exec/modules.html#index-1">[4]</a>, <a href="exec/modules.html#index-10">[5]</a>, <a href="exec/modules.html#index-12">[6]</a>, <a href="exec/modules.html#index-2">[7]</a>, <a href="exec/runtime.html#index-13">[8]</a>, <a href="exec/runtime.html#index-16">[9]</a>, <a href="exec/runtime.html#index-7">[10]</a>, <a href="exec/values.html#index-3">[11]</a>
 
       <ul>
         <li><a href="exec/runtime.html#index-4">abstract syntax</a>
 </li>
       </ul></li>
-      <li><a href="syntax/modules.html#index-1"><strong>function index</strong></a>, <a href="appendix/custom.html#index-4">[1]</a>, <a href="appendix/custom.html#index-5">[2]</a>, <a href="binary/instructions.html#index-1">[3]</a>, <a href="binary/modules.html#index-0">[4]</a>, <a href="binary/modules.html#index-10">[5]</a>, <a href="binary/modules.html#index-11">[6]</a>, <a href="binary/modules.html#index-9">[7]</a>, <a href="exec/instructions.html#index-8">[8]</a>, <a href="exec/modules.html#index-10">[9]</a>, <a href="syntax/instructions.html#index-8">[10]</a>, <a href="syntax/modules.html#index-10">[11]</a>, <a href="syntax/modules.html#index-11">[12]</a>, <a href="syntax/modules.html#index-3">[13]</a>, <a href="syntax/modules.html#index-7">[14]</a>, <a href="syntax/modules.html#index-9">[15]</a>, <a href="text/instructions.html#index-2">[16]</a>, <a href="text/modules.html#index-0">[17]</a>, <a href="text/modules.html#index-10">[18]</a>, <a href="text/modules.html#index-18">[19]</a>, <a href="text/modules.html#index-19">[20]</a>, <a href="text/modules.html#index-20">[21]</a>, <a href="text/modules.html#index-6">[22]</a>, <a href="valid/instructions.html#index-8">[23]</a>, <a href="valid/modules.html#index-0">[24]</a>, <a href="valid/modules.html#index-5">[25]</a>, <a href="valid/modules.html#index-7">[26]</a>, <a href="valid/modules.html#index-8">[27]</a>
+      <li><a href="syntax/modules.html#index-1"><strong>function index</strong></a>, <a href="appendix/custom.html#index-4">[1]</a>, <a href="appendix/custom.html#index-5">[2]</a>, <a href="binary/instructions.html#index-1">[3]</a>, <a href="binary/modules.html#index-0">[4]</a>, <a href="binary/modules.html#index-10">[5]</a>, <a href="binary/modules.html#index-11">[6]</a>, <a href="binary/modules.html#index-9">[7]</a>, <a href="exec/instructions.html#index-8">[8]</a>, <a href="exec/modules.html#index-10">[9]</a>, <a href="syntax/instructions.html#index-9">[10]</a>, <a href="syntax/modules.html#index-10">[11]</a>, <a href="syntax/modules.html#index-11">[12]</a>, <a href="syntax/modules.html#index-3">[13]</a>, <a href="syntax/modules.html#index-7">[14]</a>, <a href="syntax/modules.html#index-9">[15]</a>, <a href="text/instructions.html#index-2">[16]</a>, <a href="text/modules.html#index-0">[17]</a>, <a href="text/modules.html#index-10">[18]</a>, <a href="text/modules.html#index-18">[19]</a>, <a href="text/modules.html#index-19">[20]</a>, <a href="text/modules.html#index-20">[21]</a>, <a href="text/modules.html#index-6">[22]</a>, <a href="valid/instructions.html#index-8">[23]</a>, <a href="valid/modules.html#index-0">[24]</a>, <a href="valid/modules.html#index-5">[25]</a>, <a href="valid/modules.html#index-7">[26]</a>, <a href="valid/modules.html#index-8">[27]</a>
 
       <ul>
         <li><a href="syntax/modules.html#index-1">abstract syntax</a>
@@ -825,7 +876,7 @@
         <li><a href="text/modules.html#index-0">text format</a>
 </li>
       </ul></li>
-      <li><a href="exec/runtime.html#index-6"><strong>function instance</strong></a>, <a href="appendix/embedding.html#index-11">[1]</a>, <a href="appendix/implementation.html#index-5">[2]</a>, <a href="appendix/properties.html#index-2">[3]</a>, <a href="appendix/properties.html#index-24">[4]</a>, <a href="appendix/properties.html#index-25">[5]</a>, <a href="appendix/properties.html#index-3">[6]</a>, <a href="appendix/properties.html#index-4">[7]</a>, <a href="exec/instructions.html#index-10">[8]</a>, <a href="exec/modules.html#index-1">[9]</a>, <a href="exec/modules.html#index-10">[10]</a>, <a href="exec/modules.html#index-12">[11]</a>, <a href="exec/modules.html#index-2">[12]</a>, <a href="exec/runtime.html#index-15">[13]</a>, <a href="exec/runtime.html#index-3">[14]</a>, <a href="exec/runtime.html#index-4">[15]</a>, <a href="exec/runtime.html#index-5">[16]</a>
+      <li><a href="exec/runtime.html#index-6"><strong>function instance</strong></a>, <a href="appendix/embedding.html#index-11">[1]</a>, <a href="appendix/implementation.html#index-5">[2]</a>, <a href="appendix/properties.html#index-2">[3]</a>, <a href="appendix/properties.html#index-23">[4]</a>, <a href="appendix/properties.html#index-24">[5]</a>, <a href="appendix/properties.html#index-3">[6]</a>, <a href="appendix/properties.html#index-4">[7]</a>, <a href="exec/instructions.html#index-10">[8]</a>, <a href="exec/modules.html#index-1">[9]</a>, <a href="exec/modules.html#index-10">[10]</a>, <a href="exec/modules.html#index-12">[11]</a>, <a href="exec/modules.html#index-2">[12]</a>, <a href="exec/runtime.html#index-16">[13]</a>, <a href="exec/runtime.html#index-3">[14]</a>, <a href="exec/runtime.html#index-4">[15]</a>, <a href="exec/runtime.html#index-5">[16]</a>, <a href="exec/values.html#index-1">[17]</a>
 
       <ul>
         <li><a href="exec/runtime.html#index-6">abstract syntax</a>
@@ -833,7 +884,7 @@
       </ul></li>
       <li><a href="binary/modules.html#index-5"><strong>function section</strong></a>
 </li>
-      <li><a href="syntax/types.html#index-9"><strong>function type</strong></a>, <a href="appendix/changes.html#index-9">[1]</a>, <a href="appendix/embedding.html#index-11">[2]</a>, <a href="appendix/properties.html#index-19">[3]</a>, <a href="appendix/properties.html#index-2">[4]</a>, <a href="appendix/properties.html#index-20">[5]</a>, <a href="appendix/properties.html#index-3">[6]</a>, <a href="appendix/properties.html#index-4">[7]</a>, <a href="binary/modules.html#index-12">[8]</a>, <a href="binary/modules.html#index-15">[9]</a>, <a href="binary/modules.html#index-4">[10]</a>, <a href="binary/modules.html#index-5">[11]</a>, <a href="binary/types.html#index-7">[12]</a>, <a href="exec/instructions.html#index-0">[13]</a>, <a href="exec/modules.html#index-1">[14]</a>, <a href="exec/modules.html#index-12">[15]</a>, <a href="exec/modules.html#index-2">[16]</a>, <a href="exec/runtime.html#index-5">[17]</a>, <a href="exec/values.html#index-3">[18]</a>, <a href="syntax/instructions.html#index-8">[19]</a>, <a href="syntax/modules.html#index-0">[20]</a>, <a href="syntax/modules.html#index-11">[21]</a>, <a href="syntax/modules.html#index-2">[22]</a>, <a href="syntax/types.html#index-10">[23]</a>, <a href="syntax/types.html#index-15">[24]</a>, <a href="syntax/types.html#index-4">[25]</a>, <a href="text/modules.html#index-22">[26]</a>, <a href="text/modules.html#index-3">[27]</a>, <a href="text/modules.html#index-4">[28]</a>, <a href="text/types.html#index-6">[29]</a>, <a href="valid/conventions.html#index-0">[30]</a>, <a href="valid/conventions.html#index-1">[31]</a>, <a href="valid/matching.html#index-13">[32]</a>, <a href="valid/matching.html#index-8">[33]</a>, <a href="valid/modules.html#index-0">[34]</a>, <a href="valid/modules.html#index-10">[35]</a>, <a href="valid/modules.html#index-9">[36]</a>, <a href="valid/types.html#index-13">[37]</a>, <a href="valid/types.html#index-8">[38]</a>
+      <li><a href="syntax/types.html#index-9"><strong>function type</strong></a>, <a href="appendix/changes.html#index-9">[1]</a>, <a href="appendix/embedding.html#index-11">[2]</a>, <a href="appendix/properties.html#index-19">[3]</a>, <a href="appendix/properties.html#index-2">[4]</a>, <a href="appendix/properties.html#index-3">[5]</a>, <a href="appendix/properties.html#index-4">[6]</a>, <a href="binary/modules.html#index-12">[7]</a>, <a href="binary/modules.html#index-15">[8]</a>, <a href="binary/modules.html#index-4">[9]</a>, <a href="binary/modules.html#index-5">[10]</a>, <a href="binary/types.html#index-7">[11]</a>, <a href="exec/instructions.html#index-0">[12]</a>, <a href="exec/modules.html#index-1">[13]</a>, <a href="exec/modules.html#index-12">[14]</a>, <a href="exec/modules.html#index-2">[15]</a>, <a href="exec/runtime.html#index-5">[16]</a>, <a href="exec/values.html#index-1">[17]</a>, <a href="exec/values.html#index-3">[18]</a>, <a href="syntax/instructions.html#index-9">[19]</a>, <a href="syntax/modules.html#index-0">[20]</a>, <a href="syntax/modules.html#index-11">[21]</a>, <a href="syntax/modules.html#index-2">[22]</a>, <a href="syntax/types.html#index-10">[23]</a>, <a href="syntax/types.html#index-15">[24]</a>, <a href="syntax/types.html#index-4">[25]</a>, <a href="text/modules.html#index-22">[26]</a>, <a href="text/modules.html#index-3">[27]</a>, <a href="text/modules.html#index-4">[28]</a>, <a href="text/types.html#index-6">[29]</a>, <a href="valid/conventions.html#index-0">[30]</a>, <a href="valid/conventions.html#index-1">[31]</a>, <a href="valid/matching.html#index-13">[32]</a>, <a href="valid/matching.html#index-8">[33]</a>, <a href="valid/modules.html#index-0">[34]</a>, <a href="valid/modules.html#index-10">[35]</a>, <a href="valid/modules.html#index-9">[36]</a>, <a href="valid/types.html#index-13">[37]</a>, <a href="valid/types.html#index-8">[38]</a>
 
       <ul>
         <li><a href="syntax/types.html#index-9">abstract syntax</a>
@@ -851,7 +902,7 @@
 <h2 id="G">G</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="syntax/modules.html#index-6"><strong>global</strong></a>, <a href="appendix/embedding.html#index-15">[1]</a>, <a href="appendix/implementation.html#index-1">[2]</a>, <a href="binary/modules.html#index-15">[3]</a>, <a href="binary/modules.html#index-8">[4]</a>, <a href="exec/modules.html#index-10">[5]</a>, <a href="exec/modules.html#index-5">[6]</a>, <a href="exec/runtime.html#index-13">[7]</a>, <a href="exec/runtime.html#index-9">[8]</a>, <a href="syntax/instructions.html#index-5">[9]</a>, <a href="syntax/instructions.html#index-9">[10]</a>, <a href="syntax/modules.html#index-0">[11]</a>, <a href="syntax/modules.html#index-1">[12]</a>, <a href="syntax/modules.html#index-10">[13]</a>, <a href="syntax/modules.html#index-11">[14]</a>, <a href="syntax/types.html#index-14">[15]</a>, <a href="text/modules.html#index-15">[16]</a>, <a href="text/modules.html#index-22">[17]</a>, <a href="valid/modules.html#index-10">[18]</a>, <a href="valid/modules.html#index-4">[19]</a>
+      <li><a href="syntax/modules.html#index-6"><strong>global</strong></a>, <a href="appendix/embedding.html#index-15">[1]</a>, <a href="appendix/implementation.html#index-1">[2]</a>, <a href="binary/modules.html#index-15">[3]</a>, <a href="binary/modules.html#index-8">[4]</a>, <a href="exec/modules.html#index-10">[5]</a>, <a href="exec/modules.html#index-5">[6]</a>, <a href="exec/runtime.html#index-13">[7]</a>, <a href="exec/runtime.html#index-9">[8]</a>, <a href="syntax/instructions.html#index-10">[9]</a>, <a href="syntax/instructions.html#index-6">[10]</a>, <a href="syntax/modules.html#index-0">[11]</a>, <a href="syntax/modules.html#index-1">[12]</a>, <a href="syntax/modules.html#index-10">[13]</a>, <a href="syntax/modules.html#index-11">[14]</a>, <a href="syntax/types.html#index-14">[15]</a>, <a href="text/modules.html#index-15">[16]</a>, <a href="text/modules.html#index-22">[17]</a>, <a href="valid/modules.html#index-10">[18]</a>, <a href="valid/modules.html#index-4">[19]</a>
 
       <ul>
         <li><a href="syntax/modules.html#index-6">abstract syntax</a>
@@ -887,7 +938,7 @@
       </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="syntax/modules.html#index-1"><strong>global index</strong></a>, <a href="binary/instructions.html#index-4">[1]</a>, <a href="binary/modules.html#index-0">[2]</a>, <a href="binary/modules.html#index-9">[3]</a>, <a href="exec/instructions.html#index-5">[4]</a>, <a href="exec/modules.html#index-10">[5]</a>, <a href="syntax/instructions.html#index-5">[6]</a>, <a href="syntax/modules.html#index-10">[7]</a>, <a href="syntax/modules.html#index-11">[8]</a>, <a href="syntax/modules.html#index-6">[9]</a>, <a href="text/instructions.html#index-5">[10]</a>, <a href="text/modules.html#index-0">[11]</a>, <a href="text/modules.html#index-17">[12]</a>, <a href="text/modules.html#index-18">[13]</a>, <a href="valid/instructions.html#index-5">[14]</a>, <a href="valid/modules.html#index-8">[15]</a>
+      <li><a href="syntax/modules.html#index-1"><strong>global index</strong></a>, <a href="binary/instructions.html#index-4">[1]</a>, <a href="binary/modules.html#index-0">[2]</a>, <a href="binary/modules.html#index-9">[3]</a>, <a href="exec/instructions.html#index-5">[4]</a>, <a href="exec/modules.html#index-10">[5]</a>, <a href="syntax/instructions.html#index-6">[6]</a>, <a href="syntax/modules.html#index-10">[7]</a>, <a href="syntax/modules.html#index-11">[8]</a>, <a href="syntax/modules.html#index-6">[9]</a>, <a href="text/instructions.html#index-5">[10]</a>, <a href="text/modules.html#index-0">[11]</a>, <a href="text/modules.html#index-17">[12]</a>, <a href="text/modules.html#index-18">[13]</a>, <a href="valid/instructions.html#index-5">[14]</a>, <a href="valid/modules.html#index-8">[15]</a>
 
       <ul>
         <li><a href="syntax/modules.html#index-1">abstract syntax</a>
@@ -897,7 +948,7 @@
         <li><a href="text/modules.html#index-0">text format</a>
 </li>
       </ul></li>
-      <li><a href="exec/runtime.html#index-9"><strong>global instance</strong></a>, <a href="appendix/embedding.html#index-15">[1]</a>, <a href="appendix/implementation.html#index-5">[2]</a>, <a href="appendix/properties.html#index-2">[3]</a>, <a href="appendix/properties.html#index-24">[4]</a>, <a href="appendix/properties.html#index-28">[5]</a>, <a href="appendix/properties.html#index-7">[6]</a>, <a href="exec/instructions.html#index-5">[7]</a>, <a href="exec/modules.html#index-10">[8]</a>, <a href="exec/modules.html#index-5">[9]</a>, <a href="exec/runtime.html#index-3">[10]</a>, <a href="exec/runtime.html#index-4">[11]</a>, <a href="exec/runtime.html#index-5">[12]</a>
+      <li><a href="exec/runtime.html#index-9"><strong>global instance</strong></a>, <a href="appendix/embedding.html#index-15">[1]</a>, <a href="appendix/implementation.html#index-5">[2]</a>, <a href="appendix/properties.html#index-2">[3]</a>, <a href="appendix/properties.html#index-23">[4]</a>, <a href="appendix/properties.html#index-27">[5]</a>, <a href="appendix/properties.html#index-7">[6]</a>, <a href="exec/instructions.html#index-5">[7]</a>, <a href="exec/modules.html#index-10">[8]</a>, <a href="exec/modules.html#index-5">[9]</a>, <a href="exec/runtime.html#index-3">[10]</a>, <a href="exec/runtime.html#index-4">[11]</a>, <a href="exec/runtime.html#index-5">[12]</a>
 
       <ul>
         <li><a href="exec/runtime.html#index-9">abstract syntax</a>
@@ -921,7 +972,7 @@
 </li>
       <li><a href="syntax/conventions.html#index-1"><strong>grammar notation</strong></a>, <a href="binary/conventions.html#index-1">[1]</a>, <a href="text/conventions.html#index-1">[2]</a>
 </li>
-      <li><a href="appendix/properties.html#index-34">greatest lower bound</a>
+      <li><a href="appendix/properties.html#index-33">greatest lower bound</a>
 </li>
       <li><a href="exec/modules.html#index-8">grow</a>, <a href="exec/modules.html#index-9">[1]</a>
 </li>
@@ -931,7 +982,7 @@
 <h2 id="H">H</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="syntax/types.html#index-3"><strong>heap type</strong></a>, <a href="appendix/changes.html#index-9">[1]</a>, <a href="binary/types.html#index-3">[2]</a>, <a href="syntax/types.html#index-4">[3]</a>, <a href="text/types.html#index-3">[4]</a>, <a href="valid/matching.html#index-3">[5]</a>, <a href="valid/types.html#index-2">[6]</a>, <a href="valid/types.html#index-3">[7]</a>, <a href="valid/types.html#index-4">[8]</a>
+      <li><a href="syntax/types.html#index-3"><strong>heap type</strong></a>, <a href="appendix/changes.html#index-9">[1]</a>, <a href="binary/types.html#index-3">[2]</a>, <a href="syntax/instructions.html#index-3">[3]</a>, <a href="syntax/instructions.html#index-4">[4]</a>, <a href="syntax/types.html#index-4">[5]</a>, <a href="text/types.html#index-3">[6]</a>, <a href="valid/matching.html#index-3">[7]</a>, <a href="valid/types.html#index-2">[8]</a>, <a href="valid/types.html#index-3">[9]</a>, <a href="valid/types.html#index-4">[10]</a>
 
       <ul>
         <li><a href="syntax/types.html#index-3">abstract syntax</a>
@@ -945,7 +996,7 @@
       </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="appendix/embedding.html#index-0">host</a>, <a href="intro/introduction.html#index-1">[1]</a>
+      <li><a href="appendix/embedding.html#index-0">host</a>, <a href="exec/runtime.html#index-4">[1]</a>, <a href="intro/introduction.html#index-1">[2]</a>
 
       <ul>
         <li><a href="exec/runtime.html#index-4">address</a>
@@ -1024,6 +1075,8 @@
       <li><a href="exec/runtime.html#index-5"><strong>instance</strong></a>, <a href="exec/modules.html#index-11">[1]</a>
 
       <ul>
+        <li><a href="exec/runtime.html#index-14">array</a>
+</li>
         <li><a href="exec/runtime.html#index-11">data</a>
 </li>
         <li><a href="exec/runtime.html#index-10">element</a>
@@ -1038,19 +1091,21 @@
 </li>
         <li><a href="exec/runtime.html#index-5">module</a>
 </li>
+        <li><a href="exec/runtime.html#index-14">structure</a>
+</li>
         <li><a href="exec/runtime.html#index-7">table</a>
 </li>
       </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="exec/modules.html#index-11"><strong>instantiation</strong></a>, <a href="appendix/embedding.html#index-6">[1]</a>, <a href="appendix/properties.html#index-31">[2]</a>, <a href="intro/overview.html#index-1">[3]</a>, <a href="syntax/modules.html#index-10">[4]</a>, <a href="syntax/modules.html#index-11">[5]</a>, <a href="syntax/modules.html#index-9">[6]</a>, <a href="syntax/types.html#index-0">[7]</a>
+      <li><a href="exec/modules.html#index-11"><strong>instantiation</strong></a>, <a href="appendix/embedding.html#index-6">[1]</a>, <a href="appendix/properties.html#index-30">[2]</a>, <a href="intro/overview.html#index-1">[3]</a>, <a href="syntax/modules.html#index-10">[4]</a>, <a href="syntax/modules.html#index-11">[5]</a>, <a href="syntax/modules.html#index-9">[6]</a>, <a href="syntax/types.html#index-0">[7]</a>
 </li>
       <li><a href="valid/conventions.html#index-0">instantiation. module</a>
 </li>
-      <li><a href="syntax/instructions.html#index-0"><strong>instruction</strong></a>, <a href="appendix/algorithm.html#index-0">[1]</a>, <a href="appendix/algorithm.html#index-1">[2]</a>, <a href="appendix/changes.html#index-1">[3]</a>, <a href="appendix/changes.html#index-2">[4]</a>, <a href="appendix/changes.html#index-4">[5]</a>, <a href="appendix/changes.html#index-5">[6]</a>, <a href="appendix/changes.html#index-6">[7]</a>, <a href="appendix/changes.html#index-7">[8]</a>, <a href="appendix/changes.html#index-9">[9]</a>, <a href="appendix/implementation.html#index-1">[10]</a>, <a href="appendix/index-instructions.html#index-0">[11]</a>, <a href="appendix/properties.html#index-14">[12]</a>, <a href="appendix/properties.html#index-21">[13]</a>, <a href="appendix/properties.html#index-22">[14]</a>, <a href="appendix/properties.html#index-33">[15]</a>, <a href="binary/instructions.html#index-0">[16]</a>, <a href="exec/instructions.html#index-0">[17]</a>, <a href="exec/instructions.html#index-9">[18]</a>, <a href="exec/runtime.html#index-14">[19]</a>, <a href="exec/runtime.html#index-15">[20]</a>, <a href="exec/runtime.html#index-16">[21]</a>, <a href="exec/runtime.html#index-17">[22]</a>, <a href="exec/runtime.html#index-18">[23]</a>, <a href="exec/runtime.html#index-8">[24]</a>, <a href="exec/runtime.html#index-9">[25]</a>, <a href="intro/overview.html#index-0">[26]</a>, <a href="syntax/instructions.html#index-9">[27]</a>, <a href="syntax/types.html#index-6">[28]</a>, <a href="syntax/types.html#index-7">[29]</a>, <a href="text/instructions.html#index-0">[30]</a>, <a href="valid/instructions.html#index-0">[31]</a>, <a href="valid/instructions.html#index-9">[32]</a>
+      <li><a href="syntax/instructions.html#index-0"><strong>instruction</strong></a>, <a href="appendix/algorithm.html#index-0">[1]</a>, <a href="appendix/algorithm.html#index-1">[2]</a>, <a href="appendix/changes.html#index-1">[3]</a>, <a href="appendix/changes.html#index-2">[4]</a>, <a href="appendix/changes.html#index-4">[5]</a>, <a href="appendix/changes.html#index-5">[6]</a>, <a href="appendix/changes.html#index-6">[7]</a>, <a href="appendix/changes.html#index-7">[8]</a>, <a href="appendix/changes.html#index-9">[9]</a>, <a href="appendix/implementation.html#index-1">[10]</a>, <a href="appendix/index-instructions.html#index-0">[11]</a>, <a href="appendix/properties.html#index-14">[12]</a>, <a href="appendix/properties.html#index-20">[13]</a>, <a href="appendix/properties.html#index-21">[14]</a>, <a href="appendix/properties.html#index-32">[15]</a>, <a href="binary/instructions.html#index-0">[16]</a>, <a href="exec/instructions.html#index-0">[17]</a>, <a href="exec/instructions.html#index-9">[18]</a>, <a href="exec/runtime.html#index-15">[19]</a>, <a href="exec/runtime.html#index-16">[20]</a>, <a href="exec/runtime.html#index-17">[21]</a>, <a href="exec/runtime.html#index-18">[22]</a>, <a href="exec/runtime.html#index-19">[23]</a>, <a href="exec/runtime.html#index-8">[24]</a>, <a href="exec/runtime.html#index-9">[25]</a>, <a href="intro/overview.html#index-0">[26]</a>, <a href="syntax/instructions.html#index-10">[27]</a>, <a href="syntax/types.html#index-6">[28]</a>, <a href="syntax/types.html#index-7">[29]</a>, <a href="text/instructions.html#index-0">[30]</a>, <a href="valid/instructions.html#index-0">[31]</a>, <a href="valid/instructions.html#index-9">[32]</a>
 
       <ul>
-        <li><a href="syntax/instructions.html#index-0">abstract syntax</a>, <a href="syntax/instructions.html#index-1">[1]</a>, <a href="syntax/instructions.html#index-2">[2]</a>, <a href="syntax/instructions.html#index-3">[3]</a>, <a href="syntax/instructions.html#index-4">[4]</a>, <a href="syntax/instructions.html#index-5">[5]</a>, <a href="syntax/instructions.html#index-6">[6]</a>, <a href="syntax/instructions.html#index-7">[7]</a>, <a href="syntax/instructions.html#index-8">[8]</a>
+        <li><a href="syntax/instructions.html#index-0">abstract syntax</a>, <a href="syntax/instructions.html#index-1">[1]</a>, <a href="syntax/instructions.html#index-2">[2]</a>, <a href="syntax/instructions.html#index-3">[3]</a>, <a href="syntax/instructions.html#index-4">[4]</a>, <a href="syntax/instructions.html#index-5">[5]</a>, <a href="syntax/instructions.html#index-6">[6]</a>, <a href="syntax/instructions.html#index-7">[7]</a>, <a href="syntax/instructions.html#index-8">[8]</a>, <a href="syntax/instructions.html#index-9">[9]</a>
 </li>
         <li><a href="binary/instructions.html#index-1">binary format</a>, <a href="binary/instructions.html#index-2">[1]</a>, <a href="binary/instructions.html#index-3">[2]</a>, <a href="binary/instructions.html#index-4">[3]</a>, <a href="binary/instructions.html#index-5">[4]</a>, <a href="binary/instructions.html#index-6">[5]</a>, <a href="binary/instructions.html#index-7">[6]</a>, <a href="binary/instructions.html#index-8">[7]</a>
 </li>
@@ -1065,7 +1120,7 @@
       </ul></li>
       <li><a href="exec/instructions.html#index-9">instruction sequence</a>, <a href="valid/instructions.html#index-9">[1]</a>
 </li>
-      <li><a href="syntax/types.html#index-7"><strong>instruction type</strong></a>, <a href="valid/instructions.html#index-0"><strong>[1]</strong></a>, <a href="appendix/changes.html#index-9">[2]</a>, <a href="appendix/properties.html#index-33">[3]</a>, <a href="appendix/properties.html#index-34">[4]</a>, <a href="appendix/properties.html#index-35">[5]</a>, <a href="exec/runtime.html#index-13">[6]</a>, <a href="valid/matching.html#index-7">[7]</a>, <a href="valid/types.html#index-5">[8]</a>, <a href="valid/types.html#index-7">[9]</a>
+      <li><a href="syntax/types.html#index-7"><strong>instruction type</strong></a>, <a href="valid/instructions.html#index-0"><strong>[1]</strong></a>, <a href="appendix/changes.html#index-9">[2]</a>, <a href="appendix/properties.html#index-32">[3]</a>, <a href="appendix/properties.html#index-33">[4]</a>, <a href="appendix/properties.html#index-34">[5]</a>, <a href="exec/runtime.html#index-13">[6]</a>, <a href="valid/matching.html#index-7">[7]</a>, <a href="valid/types.html#index-5">[8]</a>, <a href="valid/types.html#index-7">[9]</a>
 
       <ul>
         <li><a href="syntax/types.html#index-7">abstract syntax</a>
@@ -1091,7 +1146,7 @@
         <li><a href="syntax/values.html#index-2">unsigned</a>
 </li>
       </ul></li>
-      <li><a href="exec/modules.html#index-12"><strong>invocation</strong></a>, <a href="appendix/embedding.html#index-12">[1]</a>, <a href="appendix/properties.html#index-31">[2]</a>, <a href="exec/runtime.html#index-6">[3]</a>, <a href="intro/overview.html#index-1">[4]</a>
+      <li><a href="exec/modules.html#index-12"><strong>invocation</strong></a>, <a href="appendix/embedding.html#index-12">[1]</a>, <a href="appendix/properties.html#index-30">[2]</a>, <a href="exec/runtime.html#index-6">[3]</a>, <a href="intro/overview.html#index-1">[4]</a>
 </li>
   </ul></td>
 </tr></table>
@@ -1107,15 +1162,15 @@
 <h2 id="L">L</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="exec/runtime.html#index-14"><strong>label</strong></a>, <a href="syntax/instructions.html#index-8"><strong>[1]</strong></a>, <a href="appendix/algorithm.html#index-1">[2]</a>, <a href="appendix/implementation.html#index-5">[3]</a>, <a href="appendix/properties.html#index-21">[4]</a>, <a href="binary/instructions.html#index-1">[5]</a>, <a href="exec/instructions.html#index-10">[6]</a>, <a href="exec/instructions.html#index-8">[7]</a>, <a href="exec/runtime.html#index-15">[8]</a>, <a href="exec/runtime.html#index-18">[9]</a>, <a href="text/instructions.html#index-2">[10]</a>, <a href="valid/instructions.html#index-8">[11]</a>
+      <li><a href="exec/runtime.html#index-15"><strong>label</strong></a>, <a href="syntax/instructions.html#index-9"><strong>[1]</strong></a>, <a href="appendix/algorithm.html#index-1">[2]</a>, <a href="appendix/implementation.html#index-5">[3]</a>, <a href="appendix/properties.html#index-20">[4]</a>, <a href="binary/instructions.html#index-1">[5]</a>, <a href="exec/instructions.html#index-10">[6]</a>, <a href="exec/instructions.html#index-8">[7]</a>, <a href="exec/runtime.html#index-16">[8]</a>, <a href="exec/runtime.html#index-19">[9]</a>, <a href="text/instructions.html#index-2">[10]</a>, <a href="valid/instructions.html#index-8">[11]</a>
 
       <ul>
-        <li><a href="exec/runtime.html#index-14">abstract syntax</a>
+        <li><a href="exec/runtime.html#index-15">abstract syntax</a>
 </li>
         <li><a href="syntax/modules.html#index-1">index</a>
 </li>
       </ul></li>
-      <li><a href="syntax/modules.html#index-1"><strong>label index</strong></a>, <a href="binary/instructions.html#index-1">[1]</a>, <a href="binary/modules.html#index-0">[2]</a>, <a href="exec/instructions.html#index-8">[3]</a>, <a href="syntax/instructions.html#index-8">[4]</a>, <a href="text/instructions.html#index-1">[5]</a>, <a href="text/instructions.html#index-2">[6]</a>, <a href="text/modules.html#index-0">[7]</a>, <a href="valid/instructions.html#index-8">[8]</a>
+      <li><a href="syntax/modules.html#index-1"><strong>label index</strong></a>, <a href="binary/instructions.html#index-1">[1]</a>, <a href="binary/modules.html#index-0">[2]</a>, <a href="exec/instructions.html#index-8">[3]</a>, <a href="syntax/instructions.html#index-9">[4]</a>, <a href="text/instructions.html#index-1">[5]</a>, <a href="text/instructions.html#index-2">[6]</a>, <a href="text/modules.html#index-0">[7]</a>, <a href="valid/instructions.html#index-8">[8]</a>
 
       <ul>
         <li><a href="syntax/modules.html#index-1">abstract syntax</a>
@@ -1127,7 +1182,7 @@
       </ul></li>
       <li><a href="syntax/values.html#index-4">lane</a>
 </li>
-      <li><a href="appendix/properties.html#index-34">least upper bound</a>
+      <li><a href="appendix/properties.html#index-33">least upper bound</a>
 </li>
       <li><a href="binary/instructions.html#index-1">LEB128</a>, <a href="binary/values.html#index-2">[1]</a>
 </li>
@@ -1153,9 +1208,9 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="intro/overview.html#index-0">linear memory</a>
 </li>
-      <li><a href="binary/values.html#index-3">little endian</a>, <a href="exec/numerics.html#index-4">[1]</a>, <a href="syntax/instructions.html#index-7">[2]</a>
+      <li><a href="binary/values.html#index-3">little endian</a>, <a href="exec/numerics.html#index-4">[1]</a>, <a href="syntax/instructions.html#index-8">[2]</a>
 </li>
-      <li><a href="syntax/modules.html#index-3"><strong>local</strong></a>, <a href="appendix/changes.html#index-9">[1]</a>, <a href="appendix/custom.html#index-5">[2]</a>, <a href="appendix/implementation.html#index-1">[3]</a>, <a href="appendix/properties.html#index-15">[4]</a>, <a href="binary/modules.html#index-12">[5]</a>, <a href="exec/runtime.html#index-14">[6]</a>, <a href="syntax/instructions.html#index-5">[7]</a>, <a href="syntax/modules.html#index-1">[8]</a>, <a href="syntax/types.html#index-7">[9]</a>, <a href="syntax/types.html#index-8">[10]</a>, <a href="text/modules.html#index-4">[11]</a>, <a href="valid/modules.html#index-0">[12]</a>, <a href="valid/modules.html#index-1">[13]</a>
+      <li><a href="syntax/modules.html#index-3"><strong>local</strong></a>, <a href="appendix/changes.html#index-9">[1]</a>, <a href="appendix/custom.html#index-5">[2]</a>, <a href="appendix/implementation.html#index-1">[3]</a>, <a href="appendix/properties.html#index-15">[4]</a>, <a href="binary/modules.html#index-12">[5]</a>, <a href="exec/runtime.html#index-15">[6]</a>, <a href="syntax/instructions.html#index-6">[7]</a>, <a href="syntax/modules.html#index-1">[8]</a>, <a href="syntax/types.html#index-7">[9]</a>, <a href="syntax/types.html#index-8">[10]</a>, <a href="text/modules.html#index-4">[11]</a>, <a href="valid/modules.html#index-0">[12]</a>, <a href="valid/modules.html#index-1">[13]</a>
 
       <ul>
         <li><a href="syntax/modules.html#index-3">abstract syntax</a>
@@ -1171,7 +1226,7 @@
         <li><a href="valid/modules.html#index-1">validation</a>
 </li>
       </ul></li>
-      <li><a href="syntax/modules.html#index-1"><strong>local index</strong></a>, <a href="appendix/custom.html#index-5">[1]</a>, <a href="binary/instructions.html#index-4">[2]</a>, <a href="binary/modules.html#index-0">[3]</a>, <a href="exec/instructions.html#index-5">[4]</a>, <a href="syntax/instructions.html#index-5">[5]</a>, <a href="syntax/modules.html#index-3">[6]</a>, <a href="syntax/types.html#index-7">[7]</a>, <a href="syntax/types.html#index-8">[8]</a>, <a href="text/instructions.html#index-5">[9]</a>, <a href="text/modules.html#index-0">[10]</a>, <a href="valid/instructions.html#index-5">[11]</a>, <a href="valid/modules.html#index-0">[12]</a>
+      <li><a href="syntax/modules.html#index-1"><strong>local index</strong></a>, <a href="appendix/custom.html#index-5">[1]</a>, <a href="binary/instructions.html#index-4">[2]</a>, <a href="binary/modules.html#index-0">[3]</a>, <a href="exec/instructions.html#index-5">[4]</a>, <a href="syntax/instructions.html#index-6">[5]</a>, <a href="syntax/modules.html#index-3">[6]</a>, <a href="syntax/types.html#index-7">[7]</a>, <a href="syntax/types.html#index-8">[8]</a>, <a href="text/instructions.html#index-5">[9]</a>, <a href="text/modules.html#index-0">[10]</a>, <a href="valid/instructions.html#index-5">[11]</a>, <a href="valid/modules.html#index-0">[12]</a>
 
       <ul>
         <li><a href="syntax/modules.html#index-1">abstract syntax</a>
@@ -1197,7 +1252,7 @@
 </li>
       <li><a href="valid/matching.html#index-0"><strong>matching</strong></a>, <a href="appendix/changes.html#index-9">[1]</a>, <a href="exec/modules.html#index-10">[2]</a>
 </li>
-      <li><a href="syntax/modules.html#index-5"><strong>memory</strong></a>, <a href="appendix/changes.html#index-7">[1]</a>, <a href="appendix/embedding.html#index-14">[2]</a>, <a href="appendix/implementation.html#index-1">[3]</a>, <a href="binary/modules.html#index-13">[4]</a>, <a href="binary/modules.html#index-15">[5]</a>, <a href="binary/modules.html#index-7">[6]</a>, <a href="exec/modules.html#index-10">[7]</a>, <a href="exec/modules.html#index-4">[8]</a>, <a href="exec/modules.html#index-9">[9]</a>, <a href="exec/numerics.html#index-4">[10]</a>, <a href="exec/runtime.html#index-13">[11]</a>, <a href="exec/runtime.html#index-15">[12]</a>, <a href="exec/runtime.html#index-8">[13]</a>, <a href="intro/overview.html#index-0">[14]</a>, <a href="syntax/instructions.html#index-7">[15]</a>, <a href="syntax/modules.html#index-0">[16]</a>, <a href="syntax/modules.html#index-1">[17]</a>, <a href="syntax/modules.html#index-10">[18]</a>, <a href="syntax/modules.html#index-11">[19]</a>, <a href="syntax/modules.html#index-8">[20]</a>, <a href="syntax/modules.html#index-9">[21]</a>, <a href="syntax/types.html#index-1">[22]</a>, <a href="syntax/types.html#index-12">[23]</a>, <a href="syntax/types.html#index-2">[24]</a>, <a href="text/modules.html#index-11">[25]</a>, <a href="text/modules.html#index-14">[26]</a>, <a href="text/modules.html#index-21">[27]</a>, <a href="text/modules.html#index-22">[28]</a>, <a href="valid/modules.html#index-10">[29]</a>, <a href="valid/modules.html#index-3">[30]</a>, <a href="valid/modules.html#index-6">[31]</a>
+      <li><a href="syntax/modules.html#index-5"><strong>memory</strong></a>, <a href="appendix/changes.html#index-7">[1]</a>, <a href="appendix/embedding.html#index-14">[2]</a>, <a href="appendix/implementation.html#index-1">[3]</a>, <a href="binary/modules.html#index-13">[4]</a>, <a href="binary/modules.html#index-15">[5]</a>, <a href="binary/modules.html#index-7">[6]</a>, <a href="exec/modules.html#index-10">[7]</a>, <a href="exec/modules.html#index-4">[8]</a>, <a href="exec/modules.html#index-9">[9]</a>, <a href="exec/numerics.html#index-4">[10]</a>, <a href="exec/runtime.html#index-13">[11]</a>, <a href="exec/runtime.html#index-16">[12]</a>, <a href="exec/runtime.html#index-8">[13]</a>, <a href="intro/overview.html#index-0">[14]</a>, <a href="syntax/instructions.html#index-8">[15]</a>, <a href="syntax/modules.html#index-0">[16]</a>, <a href="syntax/modules.html#index-1">[17]</a>, <a href="syntax/modules.html#index-10">[18]</a>, <a href="syntax/modules.html#index-11">[19]</a>, <a href="syntax/modules.html#index-8">[20]</a>, <a href="syntax/modules.html#index-9">[21]</a>, <a href="syntax/types.html#index-1">[22]</a>, <a href="syntax/types.html#index-12">[23]</a>, <a href="syntax/types.html#index-2">[24]</a>, <a href="text/modules.html#index-11">[25]</a>, <a href="text/modules.html#index-14">[26]</a>, <a href="text/modules.html#index-21">[27]</a>, <a href="text/modules.html#index-22">[28]</a>, <a href="valid/modules.html#index-10">[29]</a>, <a href="valid/modules.html#index-3">[30]</a>, <a href="valid/modules.html#index-6">[31]</a>
 
       <ul>
         <li><a href="syntax/modules.html#index-5">abstract syntax</a>
@@ -1233,7 +1288,7 @@
         <li><a href="exec/runtime.html#index-4">abstract syntax</a>
 </li>
       </ul></li>
-      <li><a href="syntax/modules.html#index-1"><strong>memory index</strong></a>, <a href="binary/instructions.html#index-6">[1]</a>, <a href="binary/modules.html#index-0">[2]</a>, <a href="binary/modules.html#index-13">[3]</a>, <a href="binary/modules.html#index-9">[4]</a>, <a href="exec/instructions.html#index-7">[5]</a>, <a href="exec/modules.html#index-10">[6]</a>, <a href="syntax/instructions.html#index-7">[7]</a>, <a href="syntax/modules.html#index-10">[8]</a>, <a href="syntax/modules.html#index-11">[9]</a>, <a href="syntax/modules.html#index-5">[10]</a>, <a href="syntax/modules.html#index-8">[11]</a>, <a href="text/instructions.html#index-7">[12]</a>, <a href="text/modules.html#index-0">[13]</a>, <a href="text/modules.html#index-13">[14]</a>, <a href="text/modules.html#index-14">[15]</a>, <a href="text/modules.html#index-18">[16]</a>, <a href="text/modules.html#index-21">[17]</a>, <a href="valid/instructions.html#index-7">[18]</a>, <a href="valid/modules.html#index-6">[19]</a>, <a href="valid/modules.html#index-8">[20]</a>
+      <li><a href="syntax/modules.html#index-1"><strong>memory index</strong></a>, <a href="binary/instructions.html#index-6">[1]</a>, <a href="binary/modules.html#index-0">[2]</a>, <a href="binary/modules.html#index-13">[3]</a>, <a href="binary/modules.html#index-9">[4]</a>, <a href="exec/instructions.html#index-7">[5]</a>, <a href="exec/modules.html#index-10">[6]</a>, <a href="syntax/instructions.html#index-8">[7]</a>, <a href="syntax/modules.html#index-10">[8]</a>, <a href="syntax/modules.html#index-11">[9]</a>, <a href="syntax/modules.html#index-5">[10]</a>, <a href="syntax/modules.html#index-8">[11]</a>, <a href="text/instructions.html#index-7">[12]</a>, <a href="text/modules.html#index-0">[13]</a>, <a href="text/modules.html#index-13">[14]</a>, <a href="text/modules.html#index-14">[15]</a>, <a href="text/modules.html#index-18">[16]</a>, <a href="text/modules.html#index-21">[17]</a>, <a href="valid/instructions.html#index-7">[18]</a>, <a href="valid/modules.html#index-6">[19]</a>, <a href="valid/modules.html#index-8">[20]</a>
 
       <ul>
         <li><a href="syntax/modules.html#index-1">abstract syntax</a>
@@ -1245,13 +1300,13 @@
       </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="exec/runtime.html#index-8"><strong>memory instance</strong></a>, <a href="appendix/embedding.html#index-14">[1]</a>, <a href="appendix/implementation.html#index-5">[2]</a>, <a href="appendix/properties.html#index-2">[3]</a>, <a href="appendix/properties.html#index-24">[4]</a>, <a href="appendix/properties.html#index-27">[5]</a>, <a href="appendix/properties.html#index-6">[6]</a>, <a href="exec/instructions.html#index-7">[7]</a>, <a href="exec/modules.html#index-10">[8]</a>, <a href="exec/modules.html#index-4">[9]</a>, <a href="exec/modules.html#index-9">[10]</a>, <a href="exec/runtime.html#index-15">[11]</a>, <a href="exec/runtime.html#index-3">[12]</a>, <a href="exec/runtime.html#index-4">[13]</a>, <a href="exec/runtime.html#index-5">[14]</a>
+      <li><a href="exec/runtime.html#index-8"><strong>memory instance</strong></a>, <a href="appendix/embedding.html#index-14">[1]</a>, <a href="appendix/implementation.html#index-5">[2]</a>, <a href="appendix/properties.html#index-2">[3]</a>, <a href="appendix/properties.html#index-23">[4]</a>, <a href="appendix/properties.html#index-26">[5]</a>, <a href="appendix/properties.html#index-6">[6]</a>, <a href="exec/instructions.html#index-7">[7]</a>, <a href="exec/modules.html#index-10">[8]</a>, <a href="exec/modules.html#index-4">[9]</a>, <a href="exec/modules.html#index-9">[10]</a>, <a href="exec/runtime.html#index-16">[11]</a>, <a href="exec/runtime.html#index-3">[12]</a>, <a href="exec/runtime.html#index-4">[13]</a>, <a href="exec/runtime.html#index-5">[14]</a>
 
       <ul>
         <li><a href="exec/runtime.html#index-8">abstract syntax</a>
 </li>
       </ul></li>
-      <li><a href="syntax/instructions.html#index-7"><strong>memory instruction</strong></a>, <a href="binary/instructions.html#index-6">[1]</a>, <a href="exec/instructions.html#index-7">[2]</a>, <a href="text/instructions.html#index-7">[3]</a>, <a href="valid/instructions.html#index-7">[4]</a>
+      <li><a href="syntax/instructions.html#index-8"><strong>memory instruction</strong></a>, <a href="binary/instructions.html#index-6">[1]</a>, <a href="exec/instructions.html#index-7">[2]</a>, <a href="text/instructions.html#index-7">[3]</a>, <a href="valid/instructions.html#index-7">[4]</a>
 </li>
       <li><a href="binary/modules.html#index-7"><strong>memory section</strong></a>
 </li>
@@ -1267,7 +1322,7 @@
         <li><a href="valid/types.html#index-11">validation</a>
 </li>
       </ul></li>
-      <li><a href="syntax/modules.html#index-0"><strong>module</strong></a>, <a href="appendix/algorithm.html#index-0">[1]</a>, <a href="appendix/custom.html#index-3">[2]</a>, <a href="appendix/embedding.html#index-2">[3]</a>, <a href="appendix/embedding.html#index-9">[4]</a>, <a href="appendix/implementation.html#index-1">[5]</a>, <a href="appendix/implementation.html#index-2">[6]</a>, <a href="appendix/properties.html#index-31">[7]</a>, <a href="binary/conventions.html#index-0">[8]</a>, <a href="binary/modules.html#index-15">[9]</a>, <a href="exec/modules.html#index-10">[10]</a>, <a href="exec/modules.html#index-11">[11]</a>, <a href="exec/modules.html#index-12">[12]</a>, <a href="exec/runtime.html#index-3">[13]</a>, <a href="exec/runtime.html#index-6">[14]</a>, <a href="intro/introduction.html#index-1">[15]</a>, <a href="intro/overview.html#index-0">[16]</a>, <a href="text/modules.html#index-22">[17]</a>, <a href="valid/conventions.html#index-1">[18]</a>, <a href="valid/modules.html#index-10">[19]</a>
+      <li><a href="syntax/modules.html#index-0"><strong>module</strong></a>, <a href="appendix/algorithm.html#index-0">[1]</a>, <a href="appendix/custom.html#index-3">[2]</a>, <a href="appendix/embedding.html#index-2">[3]</a>, <a href="appendix/embedding.html#index-9">[4]</a>, <a href="appendix/implementation.html#index-1">[5]</a>, <a href="appendix/implementation.html#index-2">[6]</a>, <a href="appendix/properties.html#index-30">[7]</a>, <a href="binary/conventions.html#index-0">[8]</a>, <a href="binary/modules.html#index-15">[9]</a>, <a href="exec/modules.html#index-10">[10]</a>, <a href="exec/modules.html#index-11">[11]</a>, <a href="exec/modules.html#index-12">[12]</a>, <a href="exec/runtime.html#index-3">[13]</a>, <a href="exec/runtime.html#index-6">[14]</a>, <a href="intro/introduction.html#index-1">[15]</a>, <a href="intro/overview.html#index-0">[16]</a>, <a href="text/modules.html#index-22">[17]</a>, <a href="valid/conventions.html#index-1">[18]</a>, <a href="valid/modules.html#index-10">[19]</a>
 
       <ul>
         <li><a href="syntax/modules.html#index-0">abstract syntax</a>
@@ -1281,15 +1336,15 @@
         <li><a href="valid/modules.html#index-10">validation</a>
 </li>
       </ul></li>
-      <li><a href="appendix/embedding.html#index-6">module instance</a>, <a href="appendix/embedding.html#index-9">[1]</a>, <a href="appendix/implementation.html#index-5">[2]</a>, <a href="appendix/properties.html#index-11">[3]</a>, <a href="appendix/properties.html#index-15">[4]</a>, <a href="exec/modules.html#index-1">[5]</a>, <a href="exec/modules.html#index-10">[6]</a>, <a href="exec/modules.html#index-12">[7]</a>, <a href="exec/runtime.html#index-14">[8]</a>, <a href="exec/runtime.html#index-6">[9]</a>, <a href="exec/types.html#index-1">[10]</a>
+      <li><a href="appendix/embedding.html#index-6">module instance</a>, <a href="appendix/embedding.html#index-9">[1]</a>, <a href="appendix/implementation.html#index-5">[2]</a>, <a href="appendix/properties.html#index-11">[3]</a>, <a href="appendix/properties.html#index-15">[4]</a>, <a href="exec/modules.html#index-1">[5]</a>, <a href="exec/modules.html#index-10">[6]</a>, <a href="exec/modules.html#index-12">[7]</a>, <a href="exec/runtime.html#index-15">[8]</a>, <a href="exec/runtime.html#index-6">[9]</a>, <a href="exec/types.html#index-1">[10]</a>
 
       <ul>
         <li><a href="exec/runtime.html#index-5">abstract syntax</a>
 </li>
       </ul></li>
-      <li><a href="exec/runtime.html#index-17">module instruction</a>
+      <li><a href="exec/runtime.html#index-18">module instruction</a>
 </li>
-      <li><a href="syntax/types.html#index-14"><strong>mutability</strong></a>, <a href="appendix/properties.html#index-28">[1]</a>, <a href="appendix/properties.html#index-7">[2]</a>, <a href="binary/types.html#index-11">[3]</a>, <a href="exec/modules.html#index-5">[4]</a>, <a href="exec/runtime.html#index-9">[5]</a>, <a href="exec/values.html#index-6">[6]</a>, <a href="syntax/modules.html#index-6">[7]</a>, <a href="syntax/types.html#index-14">[8]</a>, <a href="text/types.html#index-10">[9]</a>, <a href="valid/matching.html#index-12">[10]</a>, <a href="valid/types.html#index-12">[11]</a>
+      <li><a href="syntax/types.html#index-14"><strong>mutability</strong></a>, <a href="appendix/properties.html#index-27">[1]</a>, <a href="appendix/properties.html#index-7">[2]</a>, <a href="binary/types.html#index-11">[3]</a>, <a href="exec/modules.html#index-5">[4]</a>, <a href="exec/runtime.html#index-9">[5]</a>, <a href="exec/values.html#index-6">[6]</a>, <a href="syntax/modules.html#index-6">[7]</a>, <a href="syntax/types.html#index-14">[8]</a>, <a href="text/types.html#index-10">[9]</a>, <a href="valid/matching.html#index-12">[10]</a>, <a href="valid/types.html#index-12">[11]</a>
 
       <ul>
         <li><a href="syntax/types.html#index-14">abstract syntax</a>
@@ -1343,7 +1398,9 @@
       </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="syntax/instructions.html#index-3">null</a>, <a href="syntax/types.html#index-4">[1]</a>
+      <li><a href="syntax/instructions.html#index-3">null</a>, <a href="syntax/instructions.html#index-4">[1]</a>, <a href="syntax/types.html#index-4">[2]</a>
+</li>
+      <li><a href="exec/values.html#index-1">null reference</a>
 </li>
       <li><a href="exec/runtime.html#index-1">number</a>, <a href="syntax/instructions.html#index-2">[1]</a>
 
@@ -1373,7 +1430,7 @@
 <h2 id="O">O</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="syntax/instructions.html#index-9">offset</a>
+      <li><a href="syntax/instructions.html#index-10">offset</a>
 </li>
       <li><a href="binary/instructions.html#index-0"><strong>opcode</strong></a>, <a href="appendix/algorithm.html#index-0">[1]</a>, <a href="appendix/algorithm.html#index-2">[2]</a>
 </li>
@@ -1389,31 +1446,37 @@
 <h2 id="P">P</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="exec/runtime.html#index-8"><strong>page size</strong></a>, <a href="binary/types.html#index-9">[1]</a>, <a href="syntax/instructions.html#index-7">[2]</a>, <a href="syntax/modules.html#index-5">[3]</a>, <a href="syntax/types.html#index-12">[4]</a>, <a href="text/modules.html#index-14">[5]</a>, <a href="text/types.html#index-8">[6]</a>
+      <li><a href="exec/runtime.html#index-14"><strong>packed value</strong></a>
+
+      <ul>
+        <li><a href="exec/runtime.html#index-14">abstract syntax</a>
+</li>
+      </ul></li>
+      <li><a href="exec/runtime.html#index-8"><strong>page size</strong></a>, <a href="binary/types.html#index-9">[1]</a>, <a href="syntax/instructions.html#index-8">[2]</a>, <a href="syntax/modules.html#index-5">[3]</a>, <a href="syntax/types.html#index-12">[4]</a>, <a href="text/modules.html#index-14">[5]</a>, <a href="text/types.html#index-8">[6]</a>
 </li>
       <li><a href="appendix/implementation.html#index-1">parameter</a>, <a href="syntax/modules.html#index-1">[1]</a>, <a href="syntax/types.html#index-9">[2]</a>
 </li>
-      <li><a href="syntax/instructions.html#index-4"><strong>parametric instruction</strong></a>, <a href="binary/instructions.html#index-3">[1]</a>, <a href="text/instructions.html#index-4">[2]</a>
+      <li><a href="syntax/instructions.html#index-5"><strong>parametric instruction</strong></a>, <a href="binary/instructions.html#index-3">[1]</a>, <a href="text/instructions.html#index-4">[2]</a>
 </li>
       <li><a href="exec/instructions.html#index-4">parametric instructions</a>, <a href="valid/instructions.html#index-4">[1]</a>
 </li>
       <li><a href="syntax/modules.html#index-7"><strong>passive</strong></a>, <a href="syntax/modules.html#index-8">[1]</a>
 </li>
-      <li><a href="syntax/values.html#index-3">payload</a>
-</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="syntax/values.html#index-3">payload</a>
+</li>
       <li><a href="intro/overview.html#index-1">phases</a>
 </li>
-      <li><a href="valid/instructions.html#index-0"><strong>polymorphism</strong></a>, <a href="appendix/properties.html#index-33">[1]</a>, <a href="binary/instructions.html#index-1">[2]</a>, <a href="binary/instructions.html#index-3">[3]</a>, <a href="text/instructions.html#index-2">[4]</a>, <a href="text/instructions.html#index-4">[5]</a>, <a href="valid/instructions.html#index-4">[6]</a>, <a href="valid/instructions.html#index-8">[7]</a>
+      <li><a href="valid/instructions.html#index-0"><strong>polymorphism</strong></a>, <a href="appendix/properties.html#index-32">[1]</a>, <a href="binary/instructions.html#index-1">[2]</a>, <a href="binary/instructions.html#index-3">[3]</a>, <a href="text/instructions.html#index-2">[4]</a>, <a href="text/instructions.html#index-4">[5]</a>, <a href="valid/instructions.html#index-4">[6]</a>, <a href="valid/instructions.html#index-8">[7]</a>
 </li>
       <li><a href="intro/introduction.html#index-0">portability</a>
 </li>
-      <li><a href="appendix/properties.html#index-31"><strong>preservation</strong></a>
+      <li><a href="appendix/properties.html#index-30"><strong>preservation</strong></a>
 </li>
-      <li><a href="appendix/properties.html#index-33"><strong>principal types</strong></a>
+      <li><a href="appendix/properties.html#index-32"><strong>principal types</strong></a>
 </li>
-      <li><a href="appendix/properties.html#index-31"><strong>progress</strong></a>
+      <li><a href="appendix/properties.html#index-30"><strong>progress</strong></a>
 </li>
   </ul></td>
 </tr></table>
@@ -1423,17 +1486,17 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="exec/conventions.html#index-1"><strong>reduction rules</strong></a>
 </li>
-      <li><a href="appendix/changes.html#index-4">reference</a>, <a href="appendix/changes.html#index-5">[1]</a>, <a href="appendix/changes.html#index-9">[2]</a>, <a href="appendix/properties.html#index-8">[3]</a>, <a href="exec/instructions.html#index-2">[4]</a>, <a href="exec/instructions.html#index-6">[5]</a>, <a href="exec/runtime.html#index-1">[6]</a>, <a href="syntax/instructions.html#index-3">[7]</a>, <a href="syntax/types.html#index-4">[8]</a>
+      <li><a href="appendix/changes.html#index-4">reference</a>, <a href="appendix/changes.html#index-5">[1]</a>, <a href="appendix/changes.html#index-9">[2]</a>, <a href="appendix/properties.html#index-8">[3]</a>, <a href="exec/instructions.html#index-2">[4]</a>, <a href="exec/instructions.html#index-6">[5]</a>, <a href="exec/runtime.html#index-1">[6]</a>, <a href="syntax/instructions.html#index-3">[7]</a>, <a href="syntax/instructions.html#index-4">[8]</a>, <a href="syntax/types.html#index-4">[9]</a>
 
       <ul>
         <li><a href="syntax/types.html#index-4">type</a>
 </li>
       </ul></li>
-      <li><a href="syntax/instructions.html#index-3"><strong>reference instruction</strong></a>, <a href="binary/instructions.html#index-2">[1]</a>, <a href="text/instructions.html#index-3">[2]</a>
+      <li><a href="syntax/instructions.html#index-3"><strong>reference instruction</strong></a>, <a href="binary/instructions.html#index-2">[1]</a>, <a href="syntax/instructions.html#index-4">[2]</a>, <a href="text/instructions.html#index-3">[3]</a>
 </li>
       <li><a href="exec/instructions.html#index-2">reference instructions</a>, <a href="valid/instructions.html#index-2">[1]</a>
 </li>
-      <li><a href="syntax/types.html#index-4"><strong>reference type</strong></a>, <a href="appendix/changes.html#index-4">[1]</a>, <a href="appendix/changes.html#index-9">[2]</a>, <a href="binary/types.html#index-10">[3]</a>, <a href="binary/types.html#index-4">[4]</a>, <a href="binary/types.html#index-5">[5]</a>, <a href="exec/instructions.html#index-6">[6]</a>, <a href="exec/runtime.html#index-1">[7]</a>, <a href="syntax/types.html#index-13">[8]</a>, <a href="syntax/types.html#index-5">[9]</a>, <a href="text/types.html#index-4">[10]</a>, <a href="text/types.html#index-5">[11]</a>, <a href="text/types.html#index-9">[12]</a>, <a href="valid/instructions.html#index-2">[13]</a>, <a href="valid/matching.html#index-4">[14]</a>, <a href="valid/matching.html#index-5">[15]</a>, <a href="valid/modules.html#index-2">[16]</a>, <a href="valid/types.html#index-10">[17]</a>, <a href="valid/types.html#index-14">[18]</a>, <a href="valid/types.html#index-3">[19]</a>, <a href="valid/types.html#index-4">[20]</a>
+      <li><a href="syntax/types.html#index-4"><strong>reference type</strong></a>, <a href="appendix/changes.html#index-4">[1]</a>, <a href="appendix/changes.html#index-9">[2]</a>, <a href="binary/types.html#index-10">[3]</a>, <a href="binary/types.html#index-4">[4]</a>, <a href="binary/types.html#index-5">[5]</a>, <a href="exec/instructions.html#index-6">[6]</a>, <a href="exec/runtime.html#index-1">[7]</a>, <a href="syntax/instructions.html#index-3">[8]</a>, <a href="syntax/instructions.html#index-4">[9]</a>, <a href="syntax/types.html#index-13">[10]</a>, <a href="syntax/types.html#index-5">[11]</a>, <a href="text/types.html#index-4">[12]</a>, <a href="text/types.html#index-5">[13]</a>, <a href="text/types.html#index-9">[14]</a>, <a href="valid/instructions.html#index-2">[15]</a>, <a href="valid/matching.html#index-4">[16]</a>, <a href="valid/matching.html#index-5">[17]</a>, <a href="valid/modules.html#index-2">[18]</a>, <a href="valid/types.html#index-10">[19]</a>, <a href="valid/types.html#index-14">[20]</a>, <a href="valid/types.html#index-3">[21]</a>, <a href="valid/types.html#index-4">[22]</a>
 
       <ul>
         <li><a href="syntax/types.html#index-4">abstract syntax</a>
@@ -1455,7 +1518,7 @@
         <li><a href="syntax/types.html#index-6">type</a>
 </li>
       </ul></li>
-      <li><a href="syntax/types.html#index-6"><strong>result type</strong></a>, <a href="appendix/changes.html#index-3">[1]</a>, <a href="appendix/properties.html#index-1">[2]</a>, <a href="appendix/properties.html#index-13">[3]</a>, <a href="appendix/properties.html#index-14">[4]</a>, <a href="appendix/properties.html#index-21">[5]</a>, <a href="appendix/properties.html#index-22">[6]</a>, <a href="binary/instructions.html#index-1">[7]</a>, <a href="binary/types.html#index-6">[8]</a>, <a href="binary/types.html#index-7">[9]</a>, <a href="exec/instructions.html#index-8">[10]</a>, <a href="syntax/types.html#index-7">[11]</a>, <a href="syntax/types.html#index-9">[12]</a>, <a href="text/instructions.html#index-2">[13]</a>, <a href="text/types.html#index-6">[14]</a>, <a href="valid/conventions.html#index-1">[15]</a>, <a href="valid/instructions.html#index-10">[16]</a>, <a href="valid/matching.html#index-6">[17]</a>, <a href="valid/matching.html#index-7">[18]</a>, <a href="valid/matching.html#index-8">[19]</a>, <a href="valid/types.html#index-6">[20]</a>
+      <li><a href="syntax/types.html#index-6"><strong>result type</strong></a>, <a href="appendix/changes.html#index-3">[1]</a>, <a href="appendix/properties.html#index-1">[2]</a>, <a href="appendix/properties.html#index-13">[3]</a>, <a href="appendix/properties.html#index-14">[4]</a>, <a href="appendix/properties.html#index-20">[5]</a>, <a href="appendix/properties.html#index-21">[6]</a>, <a href="binary/instructions.html#index-1">[7]</a>, <a href="binary/types.html#index-6">[8]</a>, <a href="binary/types.html#index-7">[9]</a>, <a href="exec/instructions.html#index-8">[10]</a>, <a href="syntax/types.html#index-7">[11]</a>, <a href="syntax/types.html#index-9">[12]</a>, <a href="text/instructions.html#index-2">[13]</a>, <a href="text/types.html#index-6">[14]</a>, <a href="valid/conventions.html#index-1">[15]</a>, <a href="valid/instructions.html#index-10">[16]</a>, <a href="valid/matching.html#index-6">[17]</a>, <a href="valid/matching.html#index-7">[18]</a>, <a href="valid/matching.html#index-8">[19]</a>, <a href="valid/types.html#index-6">[20]</a>
 
       <ul>
         <li><a href="syntax/types.html#index-6">abstract syntax</a>
@@ -1480,6 +1543,8 @@
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="text/conventions.html#index-0">S-expression</a>, <a href="text/instructions.html#index-10">[1]</a>
+</li>
+      <li><a href="exec/values.html#index-1">scalar reference</a>
 </li>
       <li><a href="binary/modules.html#index-1"><strong>section</strong></a>, <a href="appendix/custom.html#index-0">[1]</a>, <a href="appendix/implementation.html#index-2">[2]</a>, <a href="binary/modules.html#index-15">[3]</a>
 
@@ -1517,7 +1582,7 @@
       </ul></li>
       <li><a href="intro/introduction.html#index-1"><strong>security</strong></a>
 </li>
-      <li><a href="exec/runtime.html#index-15">segment</a>
+      <li><a href="exec/runtime.html#index-16">segment</a>
 </li>
       <li><a href="exec/numerics.html#index-5">shape</a>
 </li>
@@ -1533,21 +1598,21 @@
         <li><a href="text/values.html#index-1">text format</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="exec/numerics.html#index-3">significand</a>, <a href="syntax/values.html#index-3">[1]</a>
 </li>
       <li><a href="appendix/changes.html#index-8">SIMD</a>, <a href="syntax/instructions.html#index-2">[1]</a>, <a href="syntax/types.html#index-2">[2]</a>, <a href="syntax/values.html#index-4">[3]</a>
 </li>
-      <li><a href="appendix/properties.html#index-0"><strong>soundness</strong></a>, <a href="appendix/properties.html#index-31">[1]</a>
+      <li><a href="appendix/properties.html#index-0"><strong>soundness</strong></a>, <a href="appendix/properties.html#index-30">[1]</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="text/lexical.html#index-1"><strong>source text</strong></a>, <a href="appendix/implementation.html#index-3">[1]</a>, <a href="text/lexical.html#index-2">[2]</a>
 </li>
-      <li><a href="exec/runtime.html#index-14"><strong>stack</strong></a>, <a href="appendix/algorithm.html#index-1">[1]</a>, <a href="exec/conventions.html#index-0">[2]</a>, <a href="exec/modules.html#index-12">[3]</a>
+      <li><a href="exec/runtime.html#index-15"><strong>stack</strong></a>, <a href="appendix/algorithm.html#index-1">[1]</a>, <a href="exec/conventions.html#index-0">[2]</a>, <a href="exec/modules.html#index-12">[3]</a>
 </li>
       <li><a href="syntax/instructions.html#index-0">stack machine</a>
 </li>
-      <li><a href="syntax/instructions.html#index-8">stack type</a>
+      <li><a href="syntax/instructions.html#index-9">stack type</a>
 </li>
       <li><a href="syntax/modules.html#index-9"><strong>start function</strong></a>, <a href="binary/modules.html#index-10">[1]</a>, <a href="binary/modules.html#index-15">[2]</a>, <a href="syntax/modules.html#index-0">[3]</a>, <a href="text/modules.html#index-19">[4]</a>, <a href="text/modules.html#index-22">[5]</a>, <a href="valid/modules.html#index-10">[6]</a>, <a href="valid/modules.html#index-7">[7]</a>
 
@@ -1565,13 +1630,13 @@
       </ul></li>
       <li><a href="binary/modules.html#index-10"><strong>start section</strong></a>
 </li>
-      <li><a href="exec/runtime.html#index-3"><strong>store</strong></a>, <a href="appendix/embedding.html#index-1">[1]</a>, <a href="appendix/embedding.html#index-11">[2]</a>, <a href="appendix/embedding.html#index-13">[3]</a>, <a href="appendix/embedding.html#index-14">[4]</a>, <a href="appendix/embedding.html#index-15">[5]</a>, <a href="appendix/properties.html#index-12">[6]</a>, <a href="appendix/properties.html#index-16">[7]</a>, <a href="appendix/properties.html#index-2">[8]</a>, <a href="appendix/properties.html#index-23">[9]</a>, <a href="appendix/properties.html#index-24">[10]</a>, <a href="exec/conventions.html#index-0">[11]</a>, <a href="exec/instructions.html#index-0">[12]</a>, <a href="exec/instructions.html#index-11">[13]</a>, <a href="exec/instructions.html#index-5">[14]</a>, <a href="exec/instructions.html#index-6">[15]</a>, <a href="exec/instructions.html#index-7">[16]</a>, <a href="exec/instructions.html#index-8">[17]</a>, <a href="exec/modules.html#index-0">[18]</a>, <a href="exec/modules.html#index-11">[19]</a>, <a href="exec/modules.html#index-12">[20]</a>, <a href="exec/runtime.html#index-13">[21]</a>, <a href="exec/runtime.html#index-14">[22]</a>, <a href="exec/runtime.html#index-17">[23]</a>, <a href="exec/runtime.html#index-4">[24]</a>, <a href="exec/values.html#index-2">[25]</a>, <a href="syntax/types.html#index-3">[26]</a>
+      <li><a href="exec/runtime.html#index-3"><strong>store</strong></a>, <a href="appendix/embedding.html#index-1">[1]</a>, <a href="appendix/embedding.html#index-11">[2]</a>, <a href="appendix/embedding.html#index-13">[3]</a>, <a href="appendix/embedding.html#index-14">[4]</a>, <a href="appendix/embedding.html#index-15">[5]</a>, <a href="appendix/properties.html#index-12">[6]</a>, <a href="appendix/properties.html#index-16">[7]</a>, <a href="appendix/properties.html#index-2">[8]</a>, <a href="appendix/properties.html#index-22">[9]</a>, <a href="appendix/properties.html#index-23">[10]</a>, <a href="exec/conventions.html#index-0">[11]</a>, <a href="exec/instructions.html#index-0">[12]</a>, <a href="exec/instructions.html#index-11">[13]</a>, <a href="exec/instructions.html#index-5">[14]</a>, <a href="exec/instructions.html#index-6">[15]</a>, <a href="exec/instructions.html#index-7">[16]</a>, <a href="exec/instructions.html#index-8">[17]</a>, <a href="exec/modules.html#index-0">[18]</a>, <a href="exec/modules.html#index-11">[19]</a>, <a href="exec/modules.html#index-12">[20]</a>, <a href="exec/runtime.html#index-13">[21]</a>, <a href="exec/runtime.html#index-15">[22]</a>, <a href="exec/runtime.html#index-18">[23]</a>, <a href="exec/runtime.html#index-4">[24]</a>, <a href="exec/values.html#index-1">[25]</a>, <a href="exec/values.html#index-2">[26]</a>, <a href="syntax/types.html#index-3">[27]</a>
 
       <ul>
         <li><a href="exec/runtime.html#index-3">abstract syntax</a>
 </li>
       </ul></li>
-      <li><a href="appendix/properties.html#index-23"><strong>store extension</strong></a>
+      <li><a href="appendix/properties.html#index-22"><strong>store extension</strong></a>
 </li>
       <li><a href="text/values.html#index-3"><strong>string</strong></a>
 
@@ -1579,15 +1644,38 @@
         <li><a href="text/values.html#index-3">text format</a>
 </li>
       </ul></li>
-      <li><a href="syntax/instructions.html#index-8"><strong>structured control</strong></a>, <a href="binary/instructions.html#index-1">[1]</a>, <a href="exec/instructions.html#index-8">[2]</a>, <a href="text/instructions.html#index-2">[3]</a>, <a href="valid/instructions.html#index-8">[4]</a>
+      <li><a href="exec/runtime.html#index-1">structure</a>, <a href="exec/values.html#index-1">[1]</a>
+
+      <ul>
+        <li><a href="exec/runtime.html#index-4">address</a>
+</li>
+        <li><a href="exec/runtime.html#index-14">instance</a>
+</li>
+      </ul></li>
+      <li>
+    structure address
+
+      <ul>
+        <li><a href="exec/runtime.html#index-4">abstract syntax</a>
+</li>
+      </ul></li>
+      <li><a href="exec/runtime.html#index-14"><strong>structure instance</strong></a>, <a href="exec/runtime.html#index-3">[1]</a>, <a href="exec/runtime.html#index-4">[2]</a>, <a href="exec/values.html#index-1">[3]</a>
+
+      <ul>
+        <li><a href="exec/runtime.html#index-14">abstract syntax</a>
+</li>
+      </ul></li>
+      <li><a href="exec/runtime.html#index-14">structure type</a>, <a href="exec/values.html#index-1">[1]</a>
+</li>
+      <li><a href="syntax/instructions.html#index-9"><strong>structured control</strong></a>, <a href="binary/instructions.html#index-1">[1]</a>, <a href="exec/instructions.html#index-8">[2]</a>, <a href="text/instructions.html#index-2">[3]</a>, <a href="valid/instructions.html#index-8">[4]</a>
 </li>
       <li><a href="appendix/implementation.html#index-1">structured control instruction</a>
 </li>
       <li><a href="syntax/types.html#index-3"><strong>substitution</strong></a>
 </li>
-      <li><a href="valid/matching.html#index-0"><strong>subtyping</strong></a>, <a href="appendix/changes.html#index-9">[1]</a>, <a href="appendix/properties.html#index-33">[2]</a>, <a href="appendix/properties.html#index-34">[3]</a>, <a href="appendix/properties.html#index-35">[4]</a>
+      <li><a href="valid/matching.html#index-0"><strong>subtyping</strong></a>, <a href="appendix/changes.html#index-9">[1]</a>, <a href="appendix/properties.html#index-32">[2]</a>, <a href="appendix/properties.html#index-33">[3]</a>, <a href="appendix/properties.html#index-34">[4]</a>
 </li>
-      <li><a href="appendix/properties.html#index-33">syntax</a>
+      <li><a href="appendix/properties.html#index-32">syntax</a>
 </li>
   </ul></td>
 </tr></table>
@@ -1595,7 +1683,7 @@
 <h2 id="T">T</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="syntax/modules.html#index-4"><strong>table</strong></a>, <a href="appendix/changes.html#index-5">[1]</a>, <a href="appendix/changes.html#index-6">[2]</a>, <a href="appendix/changes.html#index-7">[3]</a>, <a href="appendix/changes.html#index-9">[4]</a>, <a href="appendix/embedding.html#index-13">[5]</a>, <a href="appendix/implementation.html#index-1">[6]</a>, <a href="binary/modules.html#index-15">[7]</a>, <a href="binary/modules.html#index-6">[8]</a>, <a href="exec/modules.html#index-10">[9]</a>, <a href="exec/modules.html#index-3">[10]</a>, <a href="exec/modules.html#index-8">[11]</a>, <a href="exec/runtime.html#index-13">[12]</a>, <a href="exec/runtime.html#index-15">[13]</a>, <a href="exec/runtime.html#index-7">[14]</a>, <a href="intro/overview.html#index-0">[15]</a>, <a href="syntax/instructions.html#index-6">[16]</a>, <a href="syntax/instructions.html#index-8">[17]</a>, <a href="syntax/modules.html#index-0">[18]</a>, <a href="syntax/modules.html#index-1">[19]</a>, <a href="syntax/modules.html#index-10">[20]</a>, <a href="syntax/modules.html#index-11">[21]</a>, <a href="syntax/modules.html#index-7">[22]</a>, <a href="syntax/modules.html#index-9">[23]</a>, <a href="syntax/types.html#index-13">[24]</a>, <a href="syntax/types.html#index-4">[25]</a>, <a href="text/modules.html#index-22">[26]</a>, <a href="text/modules.html#index-7">[27]</a>, <a href="valid/modules.html#index-10">[28]</a>, <a href="valid/modules.html#index-2">[29]</a>, <a href="valid/modules.html#index-5">[30]</a>
+      <li><a href="syntax/modules.html#index-4"><strong>table</strong></a>, <a href="appendix/changes.html#index-5">[1]</a>, <a href="appendix/changes.html#index-6">[2]</a>, <a href="appendix/changes.html#index-7">[3]</a>, <a href="appendix/changes.html#index-9">[4]</a>, <a href="appendix/embedding.html#index-13">[5]</a>, <a href="appendix/implementation.html#index-1">[6]</a>, <a href="binary/modules.html#index-15">[7]</a>, <a href="binary/modules.html#index-6">[8]</a>, <a href="exec/modules.html#index-10">[9]</a>, <a href="exec/modules.html#index-3">[10]</a>, <a href="exec/modules.html#index-8">[11]</a>, <a href="exec/runtime.html#index-13">[12]</a>, <a href="exec/runtime.html#index-16">[13]</a>, <a href="exec/runtime.html#index-7">[14]</a>, <a href="intro/overview.html#index-0">[15]</a>, <a href="syntax/instructions.html#index-7">[16]</a>, <a href="syntax/instructions.html#index-9">[17]</a>, <a href="syntax/modules.html#index-0">[18]</a>, <a href="syntax/modules.html#index-1">[19]</a>, <a href="syntax/modules.html#index-10">[20]</a>, <a href="syntax/modules.html#index-11">[21]</a>, <a href="syntax/modules.html#index-7">[22]</a>, <a href="syntax/modules.html#index-9">[23]</a>, <a href="syntax/types.html#index-13">[24]</a>, <a href="syntax/types.html#index-4">[25]</a>, <a href="text/modules.html#index-22">[26]</a>, <a href="text/modules.html#index-7">[27]</a>, <a href="valid/modules.html#index-10">[28]</a>, <a href="valid/modules.html#index-2">[29]</a>, <a href="valid/modules.html#index-5">[30]</a>
 
       <ul>
         <li><a href="syntax/modules.html#index-4">abstract syntax</a>
@@ -1631,7 +1719,7 @@
         <li><a href="exec/runtime.html#index-4">abstract syntax</a>
 </li>
       </ul></li>
-      <li><a href="syntax/modules.html#index-1"><strong>table index</strong></a>, <a href="appendix/changes.html#index-6">[1]</a>, <a href="binary/instructions.html#index-5">[2]</a>, <a href="binary/modules.html#index-0">[3]</a>, <a href="binary/modules.html#index-11">[4]</a>, <a href="binary/modules.html#index-9">[5]</a>, <a href="exec/instructions.html#index-6">[6]</a>, <a href="exec/modules.html#index-10">[7]</a>, <a href="syntax/instructions.html#index-6">[8]</a>, <a href="syntax/modules.html#index-10">[9]</a>, <a href="syntax/modules.html#index-11">[10]</a>, <a href="syntax/modules.html#index-4">[11]</a>, <a href="syntax/modules.html#index-7">[12]</a>, <a href="text/instructions.html#index-6">[13]</a>, <a href="text/modules.html#index-0">[14]</a>, <a href="text/modules.html#index-10">[15]</a>, <a href="text/modules.html#index-18">[16]</a>, <a href="text/modules.html#index-20">[17]</a>, <a href="text/modules.html#index-9">[18]</a>, <a href="valid/instructions.html#index-6">[19]</a>, <a href="valid/modules.html#index-5">[20]</a>, <a href="valid/modules.html#index-8">[21]</a>
+      <li><a href="syntax/modules.html#index-1"><strong>table index</strong></a>, <a href="appendix/changes.html#index-6">[1]</a>, <a href="binary/instructions.html#index-5">[2]</a>, <a href="binary/modules.html#index-0">[3]</a>, <a href="binary/modules.html#index-11">[4]</a>, <a href="binary/modules.html#index-9">[5]</a>, <a href="exec/instructions.html#index-6">[6]</a>, <a href="exec/modules.html#index-10">[7]</a>, <a href="syntax/instructions.html#index-7">[8]</a>, <a href="syntax/modules.html#index-10">[9]</a>, <a href="syntax/modules.html#index-11">[10]</a>, <a href="syntax/modules.html#index-4">[11]</a>, <a href="syntax/modules.html#index-7">[12]</a>, <a href="text/instructions.html#index-6">[13]</a>, <a href="text/modules.html#index-0">[14]</a>, <a href="text/modules.html#index-10">[15]</a>, <a href="text/modules.html#index-18">[16]</a>, <a href="text/modules.html#index-20">[17]</a>, <a href="text/modules.html#index-9">[18]</a>, <a href="valid/instructions.html#index-6">[19]</a>, <a href="valid/modules.html#index-5">[20]</a>, <a href="valid/modules.html#index-8">[21]</a>
 
       <ul>
         <li><a href="syntax/modules.html#index-1">abstract syntax</a>
@@ -1641,13 +1729,13 @@
         <li><a href="text/modules.html#index-0">text format</a>
 </li>
       </ul></li>
-      <li><a href="exec/runtime.html#index-7"><strong>table instance</strong></a>, <a href="appendix/embedding.html#index-13">[1]</a>, <a href="appendix/implementation.html#index-5">[2]</a>, <a href="appendix/properties.html#index-2">[3]</a>, <a href="appendix/properties.html#index-24">[4]</a>, <a href="appendix/properties.html#index-26">[5]</a>, <a href="appendix/properties.html#index-5">[6]</a>, <a href="exec/instructions.html#index-6">[7]</a>, <a href="exec/instructions.html#index-8">[8]</a>, <a href="exec/modules.html#index-10">[9]</a>, <a href="exec/modules.html#index-3">[10]</a>, <a href="exec/modules.html#index-8">[11]</a>, <a href="exec/runtime.html#index-15">[12]</a>, <a href="exec/runtime.html#index-3">[13]</a>, <a href="exec/runtime.html#index-4">[14]</a>, <a href="exec/runtime.html#index-5">[15]</a>
+      <li><a href="exec/runtime.html#index-7"><strong>table instance</strong></a>, <a href="appendix/embedding.html#index-13">[1]</a>, <a href="appendix/implementation.html#index-5">[2]</a>, <a href="appendix/properties.html#index-2">[3]</a>, <a href="appendix/properties.html#index-23">[4]</a>, <a href="appendix/properties.html#index-25">[5]</a>, <a href="appendix/properties.html#index-5">[6]</a>, <a href="exec/instructions.html#index-6">[7]</a>, <a href="exec/instructions.html#index-8">[8]</a>, <a href="exec/modules.html#index-10">[9]</a>, <a href="exec/modules.html#index-3">[10]</a>, <a href="exec/modules.html#index-8">[11]</a>, <a href="exec/runtime.html#index-16">[12]</a>, <a href="exec/runtime.html#index-3">[13]</a>, <a href="exec/runtime.html#index-4">[14]</a>, <a href="exec/runtime.html#index-5">[15]</a>
 
       <ul>
         <li><a href="exec/runtime.html#index-7">abstract syntax</a>
 </li>
       </ul></li>
-      <li><a href="syntax/instructions.html#index-6"><strong>table instruction</strong></a>, <a href="binary/instructions.html#index-5">[1]</a>, <a href="exec/instructions.html#index-6">[2]</a>, <a href="text/instructions.html#index-6">[3]</a>, <a href="valid/instructions.html#index-6">[4]</a>
+      <li><a href="syntax/instructions.html#index-7"><strong>table instruction</strong></a>, <a href="binary/instructions.html#index-5">[1]</a>, <a href="exec/instructions.html#index-6">[2]</a>, <a href="text/instructions.html#index-6">[3]</a>, <a href="valid/instructions.html#index-6">[4]</a>
 </li>
       <li><a href="binary/modules.html#index-6"><strong>table section</strong></a>
 </li>
@@ -1663,7 +1751,7 @@
         <li><a href="valid/types.html#index-10">validation</a>
 </li>
       </ul></li>
-      <li><a href="appendix/properties.html#index-31">terminal configuration</a>
+      <li><a href="appendix/properties.html#index-30">terminal configuration</a>
 </li>
       <li><a href="text/conventions.html#index-0"><strong>text format</strong></a>, <a href="appendix/embedding.html#index-4">[1]</a>, <a href="appendix/implementation.html#index-3">[2]</a>, <a href="intro/introduction.html#index-2">[3]</a>
 
@@ -1777,11 +1865,11 @@
       </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="exec/runtime.html#index-17"><strong>thread</strong></a>, <a href="appendix/properties.html#index-13">[1]</a>, <a href="appendix/properties.html#index-14">[2]</a>, <a href="appendix/properties.html#index-31">[3]</a>
+      <li><a href="exec/runtime.html#index-18"><strong>thread</strong></a>, <a href="appendix/properties.html#index-13">[1]</a>, <a href="appendix/properties.html#index-14">[2]</a>, <a href="appendix/properties.html#index-30">[3]</a>
 </li>
       <li><a href="text/lexical.html#index-2"><strong>token</strong></a>, <a href="appendix/implementation.html#index-3">[1]</a>
 </li>
-      <li><a href="appendix/changes.html#index-2">trap</a>, <a href="appendix/properties.html#index-1">[1]</a>, <a href="appendix/properties.html#index-17">[2]</a>, <a href="exec/instructions.html#index-1">[3]</a>, <a href="exec/modules.html#index-11">[4]</a>, <a href="exec/modules.html#index-12">[5]</a>, <a href="exec/runtime.html#index-15">[6]</a>, <a href="exec/runtime.html#index-18">[7]</a>, <a href="exec/runtime.html#index-2">[8]</a>, <a href="intro/overview.html#index-0">[9]</a>, <a href="syntax/instructions.html#index-6">[10]</a>, <a href="syntax/instructions.html#index-7">[11]</a>, <a href="syntax/instructions.html#index-8">[12]</a>
+      <li><a href="appendix/changes.html#index-2">trap</a>, <a href="appendix/properties.html#index-1">[1]</a>, <a href="appendix/properties.html#index-17">[2]</a>, <a href="exec/instructions.html#index-1">[3]</a>, <a href="exec/modules.html#index-11">[4]</a>, <a href="exec/modules.html#index-12">[5]</a>, <a href="exec/runtime.html#index-16">[6]</a>, <a href="exec/runtime.html#index-19">[7]</a>, <a href="exec/runtime.html#index-2">[8]</a>, <a href="intro/overview.html#index-0">[9]</a>, <a href="syntax/instructions.html#index-7">[10]</a>, <a href="syntax/instructions.html#index-8">[11]</a>, <a href="syntax/instructions.html#index-9">[12]</a>
 </li>
       <li><a href="binary/values.html#index-2">two&#39;s complement</a>, <a href="exec/numerics.html#index-7">[1]</a>, <a href="intro/overview.html#index-0">[2]</a>, <a href="syntax/instructions.html#index-1">[3]</a>, <a href="syntax/values.html#index-2">[4]</a>
 </li>
@@ -1792,7 +1880,7 @@
 </li>
         <li><a href="binary/types.html#index-0">binary format</a>
 </li>
-        <li><a href="syntax/instructions.html#index-8">block</a>
+        <li><a href="syntax/instructions.html#index-9">block</a>
 </li>
         <li><a href="syntax/types.html#index-15">external</a>
 </li>
@@ -1833,7 +1921,7 @@
       </ul></li>
       <li><a href="syntax/types.html#index-3">type identifier</a>, <a href="valid/types.html#index-2">[1]</a>
 </li>
-      <li><a href="syntax/modules.html#index-1"><strong>type index</strong></a>, <a href="binary/instructions.html#index-1">[1]</a>, <a href="binary/modules.html#index-0">[2]</a>, <a href="binary/modules.html#index-12">[3]</a>, <a href="binary/modules.html#index-5">[4]</a>, <a href="exec/instructions.html#index-8">[5]</a>, <a href="exec/types.html#index-1">[6]</a>, <a href="syntax/instructions.html#index-8">[7]</a>, <a href="syntax/instructions.html#index-8">[8]</a>, <a href="syntax/modules.html#index-11">[9]</a>, <a href="syntax/modules.html#index-2">[10]</a>, <a href="syntax/modules.html#index-3">[11]</a>, <a href="text/instructions.html#index-2">[12]</a>, <a href="text/modules.html#index-0">[13]</a>, <a href="text/modules.html#index-4">[14]</a>, <a href="valid/instructions.html#index-8">[15]</a>, <a href="valid/modules.html#index-0">[16]</a>
+      <li><a href="syntax/modules.html#index-1"><strong>type index</strong></a>, <a href="binary/instructions.html#index-1">[1]</a>, <a href="binary/modules.html#index-0">[2]</a>, <a href="binary/modules.html#index-12">[3]</a>, <a href="binary/modules.html#index-5">[4]</a>, <a href="exec/instructions.html#index-8">[5]</a>, <a href="exec/types.html#index-1">[6]</a>, <a href="syntax/instructions.html#index-9">[7]</a>, <a href="syntax/instructions.html#index-9">[8]</a>, <a href="syntax/modules.html#index-11">[9]</a>, <a href="syntax/modules.html#index-2">[10]</a>, <a href="syntax/modules.html#index-3">[11]</a>, <a href="text/instructions.html#index-2">[12]</a>, <a href="text/modules.html#index-0">[13]</a>, <a href="text/modules.html#index-4">[14]</a>, <a href="valid/instructions.html#index-8">[15]</a>, <a href="valid/modules.html#index-0">[16]</a>
 
       <ul>
         <li><a href="syntax/modules.html#index-1">abstract syntax</a>
@@ -1847,7 +1935,7 @@
 </li>
       <li><a href="exec/types.html#index-1">type instantiation</a>
 </li>
-      <li><a href="appendix/properties.html#index-34"><strong>type lattice</strong></a>
+      <li><a href="appendix/properties.html#index-33"><strong>type lattice</strong></a>
 </li>
       <li><a href="binary/modules.html#index-3"><strong>type section</strong></a>
 
@@ -1855,7 +1943,7 @@
         <li><a href="binary/modules.html#index-3">binary format</a>
 </li>
       </ul></li>
-      <li><a href="valid/conventions.html#index-0"><strong>type system</strong></a>, <a href="appendix/properties.html#index-0">[1]</a>, <a href="appendix/properties.html#index-32">[2]</a>, <a href="appendix/properties.html#index-33">[3]</a>
+      <li><a href="valid/conventions.html#index-0"><strong>type system</strong></a>, <a href="appendix/properties.html#index-0">[1]</a>, <a href="appendix/properties.html#index-31">[2]</a>, <a href="appendix/properties.html#index-32">[3]</a>
 </li>
       <li><a href="text/modules.html#index-2">type use</a>
 
@@ -1871,6 +1959,8 @@
 <h2 id="U">U</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="syntax/types.html#index-3"><strong>unboxed scalar</strong></a>, <a href="exec/runtime.html#index-1">[1]</a>
+</li>
       <li><a href="appendix/implementation.html#index-1">Unicode</a>, <a href="binary/values.html#index-4">[1]</a>, <a href="intro/introduction.html#index-2">[2]</a>, <a href="syntax/values.html#index-5">[3]</a>, <a href="text/conventions.html#index-0">[4]</a>, <a href="text/conventions.html#index-1">[5]</a>, <a href="text/lexical.html#index-1">[6]</a>, <a href="text/values.html#index-3">[7]</a>
 </li>
       <li><a href="appendix/implementation.html#index-3">unicode</a>
@@ -1899,7 +1989,7 @@
         <li><a href="text/values.html#index-1">text format</a>
 </li>
       </ul></li>
-      <li><a href="syntax/instructions.html#index-8"><strong>unwinding</strong></a>
+      <li><a href="syntax/instructions.html#index-9"><strong>unwinding</strong></a>
 </li>
       <li><a href="binary/values.html#index-4"><strong>UTF-8</strong></a>, <a href="intro/introduction.html#index-2">[1]</a>, <a href="syntax/values.html#index-5">[2]</a>, <a href="text/conventions.html#index-0">[3]</a>, <a href="text/values.html#index-3">[4]</a>
 </li>
@@ -1967,11 +2057,11 @@
       </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="appendix/properties.html#index-31">validity</a>
+      <li><a href="appendix/properties.html#index-30">validity</a>
 </li>
       <li><a href="valid/conventions.html#index-0">valtype</a>
 </li>
-      <li><a href="exec/runtime.html#index-1"><strong>value</strong></a>, <a href="syntax/values.html#index-0"><strong>[1]</strong></a>, <a href="appendix/embedding.html#index-12">[2]</a>, <a href="appendix/embedding.html#index-15">[3]</a>, <a href="appendix/implementation.html#index-5">[4]</a>, <a href="appendix/properties.html#index-1">[5]</a>, <a href="appendix/properties.html#index-15">[6]</a>, <a href="appendix/properties.html#index-28">[7]</a>, <a href="appendix/properties.html#index-7">[8]</a>, <a href="binary/values.html#index-0">[9]</a>, <a href="exec/instructions.html#index-1">[10]</a>, <a href="exec/instructions.html#index-4">[11]</a>, <a href="exec/instructions.html#index-5">[12]</a>, <a href="exec/instructions.html#index-6">[13]</a>, <a href="exec/instructions.html#index-7">[14]</a>, <a href="exec/modules.html#index-12">[15]</a>, <a href="exec/modules.html#index-5">[16]</a>, <a href="exec/numerics.html#index-0">[17]</a>, <a href="exec/runtime.html#index-18">[18]</a>, <a href="exec/runtime.html#index-2">[19]</a>, <a href="exec/runtime.html#index-9">[20]</a>, <a href="exec/values.html#index-0">[21]</a>, <a href="exec/values.html#index-1">[22]</a>, <a href="intro/overview.html#index-0">[23]</a>, <a href="syntax/instructions.html#index-1">[24]</a>, <a href="syntax/instructions.html#index-2">[25]</a>, <a href="syntax/modules.html#index-6">[26]</a>, <a href="text/values.html#index-0">[27]</a>, <a href="valid/instructions.html#index-0">[28]</a>
+      <li><a href="exec/runtime.html#index-1"><strong>value</strong></a>, <a href="syntax/values.html#index-0"><strong>[1]</strong></a>, <a href="appendix/embedding.html#index-12">[2]</a>, <a href="appendix/embedding.html#index-15">[3]</a>, <a href="appendix/implementation.html#index-5">[4]</a>, <a href="appendix/properties.html#index-1">[5]</a>, <a href="appendix/properties.html#index-15">[6]</a>, <a href="appendix/properties.html#index-18">[7]</a>, <a href="appendix/properties.html#index-27">[8]</a>, <a href="appendix/properties.html#index-7">[9]</a>, <a href="binary/values.html#index-0">[10]</a>, <a href="exec/instructions.html#index-1">[11]</a>, <a href="exec/instructions.html#index-4">[12]</a>, <a href="exec/instructions.html#index-5">[13]</a>, <a href="exec/instructions.html#index-6">[14]</a>, <a href="exec/instructions.html#index-7">[15]</a>, <a href="exec/modules.html#index-12">[16]</a>, <a href="exec/modules.html#index-5">[17]</a>, <a href="exec/numerics.html#index-0">[18]</a>, <a href="exec/runtime.html#index-19">[19]</a>, <a href="exec/runtime.html#index-2">[20]</a>, <a href="exec/runtime.html#index-9">[21]</a>, <a href="exec/values.html#index-0">[22]</a>, <a href="exec/values.html#index-1">[23]</a>, <a href="intro/overview.html#index-0">[24]</a>, <a href="syntax/instructions.html#index-1">[25]</a>, <a href="syntax/instructions.html#index-2">[26]</a>, <a href="syntax/modules.html#index-6">[27]</a>, <a href="text/values.html#index-0">[28]</a>, <a href="valid/instructions.html#index-0">[29]</a>
 
       <ul>
         <li><a href="exec/runtime.html#index-1">abstract syntax</a>, <a href="syntax/values.html#index-0">[1]</a>
@@ -1985,7 +2075,7 @@
         <li><a href="syntax/types.html#index-5">type</a>
 </li>
       </ul></li>
-      <li><a href="syntax/types.html#index-5"><strong>value type</strong></a>, <a href="appendix/algorithm.html#index-1">[1]</a>, <a href="appendix/changes.html#index-3">[2]</a>, <a href="appendix/changes.html#index-4">[3]</a>, <a href="appendix/changes.html#index-8">[4]</a>, <a href="appendix/changes.html#index-9">[5]</a>, <a href="appendix/properties.html#index-1">[6]</a>, <a href="appendix/properties.html#index-15">[7]</a>, <a href="appendix/properties.html#index-16">[8]</a>, <a href="binary/instructions.html#index-1">[9]</a>, <a href="binary/instructions.html#index-3">[10]</a>, <a href="binary/types.html#index-11">[11]</a>, <a href="binary/types.html#index-5">[12]</a>, <a href="binary/types.html#index-6">[13]</a>, <a href="binary/types.html#index-7">[14]</a>, <a href="exec/instructions.html#index-1">[15]</a>, <a href="exec/instructions.html#index-7">[16]</a>, <a href="exec/modules.html#index-5">[17]</a>, <a href="exec/runtime.html#index-1">[18]</a>, <a href="exec/values.html#index-1">[19]</a>, <a href="exec/values.html#index-6">[20]</a>, <a href="syntax/instructions.html#index-1">[21]</a>, <a href="syntax/instructions.html#index-2">[22]</a>, <a href="syntax/instructions.html#index-4">[23]</a>, <a href="syntax/instructions.html#index-8">[24]</a>, <a href="syntax/modules.html#index-3">[25]</a>, <a href="syntax/types.html#index-14">[26]</a>, <a href="syntax/types.html#index-6">[27]</a>, <a href="syntax/types.html#index-7">[28]</a>, <a href="syntax/types.html#index-8">[29]</a>, <a href="syntax/types.html#index-9">[30]</a>, <a href="text/instructions.html#index-4">[31]</a>, <a href="text/types.html#index-10">[32]</a>, <a href="text/types.html#index-5">[33]</a>, <a href="text/types.html#index-6">[34]</a>, <a href="valid/conventions.html#index-1">[35]</a>, <a href="valid/instructions.html#index-4">[36]</a>, <a href="valid/matching.html#index-12">[37]</a>, <a href="valid/matching.html#index-5">[38]</a>, <a href="valid/matching.html#index-6">[39]</a>, <a href="valid/modules.html#index-0">[40]</a>, <a href="valid/modules.html#index-1">[41]</a>, <a href="valid/types.html#index-12">[42]</a>, <a href="valid/types.html#index-14">[43]</a>, <a href="valid/types.html#index-4">[44]</a>, <a href="valid/types.html#index-6">[45]</a>
+      <li><a href="syntax/types.html#index-5"><strong>value type</strong></a>, <a href="appendix/algorithm.html#index-1">[1]</a>, <a href="appendix/changes.html#index-3">[2]</a>, <a href="appendix/changes.html#index-4">[3]</a>, <a href="appendix/changes.html#index-8">[4]</a>, <a href="appendix/changes.html#index-9">[5]</a>, <a href="appendix/properties.html#index-1">[6]</a>, <a href="appendix/properties.html#index-15">[7]</a>, <a href="appendix/properties.html#index-16">[8]</a>, <a href="appendix/properties.html#index-18">[9]</a>, <a href="binary/instructions.html#index-1">[10]</a>, <a href="binary/instructions.html#index-3">[11]</a>, <a href="binary/types.html#index-11">[12]</a>, <a href="binary/types.html#index-5">[13]</a>, <a href="binary/types.html#index-6">[14]</a>, <a href="binary/types.html#index-7">[15]</a>, <a href="exec/instructions.html#index-1">[16]</a>, <a href="exec/instructions.html#index-7">[17]</a>, <a href="exec/modules.html#index-5">[18]</a>, <a href="exec/runtime.html#index-1">[19]</a>, <a href="exec/values.html#index-1">[20]</a>, <a href="exec/values.html#index-6">[21]</a>, <a href="syntax/instructions.html#index-1">[22]</a>, <a href="syntax/instructions.html#index-2">[23]</a>, <a href="syntax/instructions.html#index-5">[24]</a>, <a href="syntax/instructions.html#index-9">[25]</a>, <a href="syntax/modules.html#index-3">[26]</a>, <a href="syntax/types.html#index-14">[27]</a>, <a href="syntax/types.html#index-6">[28]</a>, <a href="syntax/types.html#index-7">[29]</a>, <a href="syntax/types.html#index-8">[30]</a>, <a href="syntax/types.html#index-9">[31]</a>, <a href="text/instructions.html#index-4">[32]</a>, <a href="text/types.html#index-10">[33]</a>, <a href="text/types.html#index-5">[34]</a>, <a href="text/types.html#index-6">[35]</a>, <a href="valid/conventions.html#index-1">[36]</a>, <a href="valid/instructions.html#index-4">[37]</a>, <a href="valid/matching.html#index-12">[38]</a>, <a href="valid/matching.html#index-5">[39]</a>, <a href="valid/matching.html#index-6">[40]</a>, <a href="valid/modules.html#index-0">[41]</a>, <a href="valid/modules.html#index-1">[42]</a>, <a href="valid/types.html#index-12">[43]</a>, <a href="valid/types.html#index-14">[44]</a>, <a href="valid/types.html#index-4">[45]</a>, <a href="valid/types.html#index-6">[46]</a>
 
       <ul>
         <li><a href="syntax/types.html#index-5">abstract syntax</a>
@@ -1997,11 +2087,11 @@
         <li><a href="valid/types.html#index-4">validation</a>
 </li>
       </ul></li>
-      <li><a href="syntax/instructions.html#index-5"><strong>variable instruction</strong></a>
+      <li><a href="syntax/instructions.html#index-6"><strong>variable instruction</strong></a>
 </li>
       <li><a href="binary/instructions.html#index-4">variable instructions</a>, <a href="exec/instructions.html#index-5">[1]</a>, <a href="text/instructions.html#index-5">[2]</a>, <a href="valid/instructions.html#index-5">[3]</a>
 </li>
-      <li><a href="syntax/conventions.html#index-2"><strong>vector</strong></a>, <a href="binary/conventions.html#index-2">[1]</a>, <a href="binary/instructions.html#index-1">[2]</a>, <a href="exec/instructions.html#index-8">[3]</a>, <a href="syntax/instructions.html#index-8">[4]</a>, <a href="syntax/modules.html#index-7">[5]</a>, <a href="syntax/modules.html#index-8">[6]</a>, <a href="syntax/types.html#index-9">[7]</a>, <a href="text/conventions.html#index-4">[8]</a>, <a href="text/instructions.html#index-2">[9]</a>, <a href="valid/instructions.html#index-8">[10]</a>
+      <li><a href="syntax/conventions.html#index-2"><strong>vector</strong></a>, <a href="binary/conventions.html#index-2">[1]</a>, <a href="binary/instructions.html#index-1">[2]</a>, <a href="exec/instructions.html#index-8">[3]</a>, <a href="syntax/instructions.html#index-9">[4]</a>, <a href="syntax/modules.html#index-7">[5]</a>, <a href="syntax/modules.html#index-8">[6]</a>, <a href="syntax/types.html#index-9">[7]</a>, <a href="text/conventions.html#index-4">[8]</a>, <a href="text/instructions.html#index-2">[9]</a>, <a href="valid/instructions.html#index-8">[10]</a>
 
       <ul>
         <li><a href="syntax/conventions.html#index-2">abstract syntax</a>, <a href="syntax/values.html#index-4">[1]</a>

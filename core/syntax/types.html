@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
-    <title>Types &#8212; WebAssembly 2.0 + tail calls + function references + gc (Draft 2023-05-09)</title>
+    <title>Types &#8212; WebAssembly 2.0 + tail calls + function references + gc (Draft 2023-05-17)</title>
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
     <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
@@ -92,7 +92,7 @@ Types are checked during <a class="reference internal" href="../valid/index.html
 <span id="syntax-numtype"></span><span id="index-1"></span><h2>Number Types<a class="headerlink" href="#number-types" title="Permalink to this heading">¶</a></h2>
 <p><em>Number types</em> classify numeric values.</p>
 <div class="math notranslate nohighlight">
-\[\begin{split}\begin{array}{llll}
+\[\begin{split}\begin{array}{llrl}
 \def\mathdef2716#1{{}}\mathdef2716{number type} &amp; \href{../syntax/types.html#syntax-numtype}{\mathit{numtype}} &amp;::=&amp;
   \href{../syntax/types.html#syntax-valtype}{\mathsf{i32}} ~|~ \href{../syntax/types.html#syntax-valtype}{\mathsf{i64}} ~|~ \href{../syntax/types.html#syntax-valtype}{\mathsf{f32}} ~|~ \href{../syntax/types.html#syntax-valtype}{\mathsf{f64}} \\
 \end{array}\end{split}\]</div>
@@ -114,7 +114,7 @@ That is, <span class="math notranslate nohighlight">\(|\href{../syntax/types.htm
 <span id="syntax-vectype"></span><span id="index-2"></span><h2>Vector Types<a class="headerlink" href="#vector-types" title="Permalink to this heading">¶</a></h2>
 <p><em>Vector types</em> classify vectors of <a class="reference internal" href="#syntax-numtype"><span class="std std-ref">numeric</span></a> values processed by vector instructions (also known as <em>SIMD</em> instructions, single instruction multiple data).</p>
 <div class="math notranslate nohighlight">
-\[\begin{split}\begin{array}{llll}
+\[\begin{split}\begin{array}{llrl}
 \def\mathdef2716#1{{}}\mathdef2716{vector type} &amp; \href{../syntax/types.html#syntax-vectype}{\mathit{vectype}} &amp;::=&amp;
   \href{../syntax/types.html#syntax-valtype}{\mathsf{v128}} \\
 \end{array}\end{split}\]</div>
@@ -131,24 +131,61 @@ Values of vector type can be stored in <a class="reference internal" href="modul
 </section>
 </section>
 <section id="heap-types">
-<span id="syntax-heaptype"></span><span id="type-closed"></span><span id="type-subst"></span><span id="index-3"></span><h2>Heap Types<a class="headerlink" href="#heap-types" title="Permalink to this heading">¶</a></h2>
-<p><em>Heap types</em> classify objects in the runtime <a class="reference internal" href="../exec/runtime.html#store"><span class="std std-ref">store</span></a>.</p>
+<span id="syntax-heaptype"></span><span id="syntax-i31"></span><span id="type-concrete"></span><span id="type-abstract"></span><span id="type-closed"></span><span id="type-subst"></span><span id="index-3"></span><h2>Heap Types<a class="headerlink" href="#heap-types" title="Permalink to this heading">¶</a></h2>
+<p><em>Heap types</em> classify objects in the runtime <a class="reference internal" href="../exec/runtime.html#store"><span class="std std-ref">store</span></a>.
+There are three disjoint hierarchies of heap types:</p>
+<ul class="simple">
+<li><p><em>function types</em> classify <a class="reference internal" href="modules.html#syntax-func"><span class="std std-ref">functions</span></a>,</p></li>
+<li><p><em>aggregate types</em> classify dynamically allocated <em>managed</em> data, such as <em>structures</em>, <em>arrays</em>, or <em>unboxed scalars</em>,</p></li>
+<li><p><em>external types</em> classify <em>external</em> references possibly owned by the <a class="reference internal" href="../intro/overview.html#embedder"><span class="std std-ref">embedder</span></a>.</p></li>
+</ul>
+<p>The values from the latter two hierarchies are interconvertible by ways of the <span class="math notranslate nohighlight">\(\href{../syntax/instructions.html#syntax-instr-extern}{\mathsf{extern.internalize}}\)</span> and <span class="math notranslate nohighlight">\(\href{../syntax/instructions.html#syntax-instr-extern}{\mathsf{extern.internalize}}\)</span> instructions.
+That is, both type hierarchies are inhabited by an isomorphic set of values, but may have different, incompatible representations in practice.</p>
 <div class="math notranslate nohighlight">
-\[\begin{split}\begin{array}{llll}
+\[\begin{split}\begin{array}{llrl}
 \def\mathdef2716#1{{}}\mathdef2716{heap type} &amp; \href{../syntax/types.html#syntax-heaptype}{\mathit{heaptype}} &amp;::=&amp;
-  \href{../syntax/types.html#syntax-heaptype}{\mathsf{func}} ~|~ \href{../syntax/types.html#syntax-heaptype}{\mathsf{extern}} ~|~ \href{../syntax/modules.html#syntax-typeidx}{\mathit{typeidx}} ~|~ \href{../syntax/types.html#syntax-functype}{\mathit{functype}} ~|~ \href{../syntax/types.html#syntax-valtype}{\mathsf{bot}} \\
+  \href{../syntax/types.html#syntax-heaptype}{\mathsf{func}} ~|~ \href{../syntax/types.html#syntax-heaptype}{\mathsf{nofunc}} \\&amp;&amp;|&amp;
+  \href{../syntax/types.html#syntax-heaptype}{\mathsf{extern}} ~|~ \href{../syntax/types.html#syntax-heaptype}{\mathsf{noextern}} \\&amp;&amp;|&amp;
+  \href{../syntax/types.html#syntax-heaptype}{\mathsf{any}} ~|~ \href{../syntax/types.html#syntax-heaptype}{\mathsf{eq}} ~|~ \href{../syntax/types.html#syntax-heaptype}{\mathsf{i31}} ~|~ \href{../syntax/types.html#syntax-heaptype}{\mathsf{struct}} ~|~ \href{../syntax/types.html#syntax-heaptype}{\mathsf{array}} ~|~ \href{../syntax/types.html#syntax-heaptype}{\mathsf{none}} \\&amp;&amp;|&amp;
+  \href{../syntax/modules.html#syntax-typeidx}{\mathit{typeidx}} ~|~ \href{../syntax/types.html#syntax-deftype}{\mathit{deftype}} ~|~ \href{../syntax/types.html#syntax-valtype}{\mathsf{bot}} \\
 \end{array}\end{split}\]</div>
-<p>The type <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathsf{func}}\)</span> denotes the infinite union of all types of <a class="reference internal" href="modules.html#syntax-func"><span class="std std-ref">functions</span></a>, regardless of their concrete <a class="reference internal" href="#syntax-functype"><span class="std std-ref">function types</span></a>.</p>
-<p>The type <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathsf{extern}}\)</span> denotes the infinite union of all objects owned by the <a class="reference internal" href="../intro/overview.html#embedder"><span class="std std-ref">embedder</span></a> and that can be passed into WebAssembly under this type.</p>
-<p>A <em>concrete</em> heap type consists of a <a class="reference internal" href="modules.html#syntax-typeidx"><span class="std std-ref">type index</span></a> and classifies an object of the respective <a class="reference internal" href="#syntax-type"><span class="std std-ref">type</span></a> defined in some module.</p>
-<p>A concrete heap type can also consist of a <a class="reference internal" href="#syntax-functype"><span class="std std-ref">function type</span></a> directly.
+<p>A heap type is either <em>abstract</em> or <em>concrete</em>.</p>
+<p>The abstract type <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathsf{func}}\)</span> denotes the common supertype of all <a class="reference internal" href="#syntax-functype"><span class="std std-ref">function types</span></a>, regardless of their concrete definition.
+Dually, the type <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathsf{nofunc}}\)</span> denotes the common subtype of all <a class="reference internal" href="#syntax-functype"><span class="std std-ref">function types</span></a>, regardless of their concrete definition.
+This type has no values.</p>
+<p>The abstract type <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathsf{extern}}\)</span> denotes the common supertype of all external references received through the <a class="reference internal" href="../intro/overview.html#embedder"><span class="std std-ref">embedder</span></a>.
+This type has no concrete subtypes.
+Dually, the type <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathsf{noextern}}\)</span> denotes the common subtype of all forms of external references.
+This type has no values.</p>
+<p>The abstract type <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathsf{any}}\)</span> denotes the common supertype of all aggregate types, as well as possibly abstract values produced by <em>internalizing</em> an external reference of type <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathsf{extern}}\)</span>.
+Dually, the type <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathsf{none}}\)</span> denotes the common subtype of all forms of aggregate types.
+This type has no values.</p>
+<p>The abstract type <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathsf{eq}}\)</span> is a subtype of <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathsf{any}}\)</span> that includes all types for which references can be compared, i.e., aggregate values and <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathsf{i31}}\)</span>.</p>
+<p>The abstract types <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathsf{struct}}\)</span> and <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathsf{array}}\)</span> denote the common supertypes of all <span class="xref std std-ref">structure</span> and <span class="xref std std-ref">array</span> aggregates, respectively.</p>
+<p>The abstract type <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathsf{i31}}\)</span> denotes <em>unboxed scalars</em>, that is, integers injected into references.
+Their observable value range is limited to 31 bits.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>An <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathsf{i31}}\)</span> is not actually allocated in the store,
+but represented in a way that allows them to be mixed with actual references into the store without ambiguity.
+Engines need to perform some form of <em>pointer tagging</em> to achieve this,
+which is why 1 bit is reserved.</p>
+</div>
+<p>A concrete heap type consists of a <a class="reference internal" href="modules.html#syntax-typeidx"><span class="std std-ref">type index</span></a> and classifies an object of the respective <a class="reference internal" href="#syntax-type"><span class="std std-ref">type</span></a> defined in some module.</p>
+<p>A concrete heap type can also consist of a <a class="reference internal" href="#syntax-deftype"><span class="std std-ref">defined type</span></a> directly.
 However, this form is representable in neither the <a class="reference internal" href="../binary/types.html#binary-valtype"><span class="std std-ref">binary format</span></a> nor the <a class="reference internal" href="../text/types.html#text-valtype"><span class="std std-ref">text format</span></a>, such that it cannot be used in a program;
 it only occurs during <a class="reference internal" href="../valid/index.html#valid"><span class="std std-ref">validation</span></a> or <a class="reference internal" href="../exec/index.html#exec"><span class="std std-ref">execution</span></a>, as the result of <em>substituting</em> a <a class="reference internal" href="modules.html#syntax-typeidx"><span class="std std-ref">type index</span></a> with its definition.</p>
-<p>The type <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-valtype}{\mathsf{bot}}\)</span> is a <a class="reference internal" href="../valid/matching.html#match-heaptype"><span class="std std-ref">subtype</span></a> of all other heap types.
-By virtue of being representable in neither the <a class="reference internal" href="../binary/types.html#binary-valtype"><span class="std std-ref">binary format</span></a> nor the <a class="reference internal" href="../text/types.html#text-valtype"><span class="std std-ref">text format</span></a>, it cannot be used in a program;
-it only occurs during <a class="reference internal" href="../valid/index.html#valid"><span class="std std-ref">validation</span></a>, as a part of a possible operand type for instructions.</p>
 <p>A type of any form is <em>closed</em> when it does not contain a heap type that is a <a class="reference internal" href="modules.html#syntax-typeidx"><span class="std std-ref">type index</span></a>,
 i.e., all <a class="reference internal" href="modules.html#syntax-typeidx"><span class="std std-ref">type indices</span></a> have been <a class="reference internal" href="#notation-subst"><span class="std std-ref">substituted</span></a> with their <a class="reference internal" href="#syntax-deftype"><span class="std std-ref">defined type</span></a>.</p>
+<p>The type <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-valtype}{\mathsf{bot}}\)</span> is a <a class="reference internal" href="../valid/matching.html#match-heaptype"><span class="std std-ref">subtype</span></a> of all heap types.
+By virtue of being representable in neither the <a class="reference internal" href="../binary/types.html#binary-valtype"><span class="std std-ref">binary format</span></a> nor the <a class="reference internal" href="../text/types.html#text-valtype"><span class="std std-ref">text format</span></a>, it cannot be used in a program;
+it only occurs during <a class="reference internal" href="../valid/index.html#valid"><span class="std std-ref">validation</span></a>, as a part of a possible operand type for instructions.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Although the types <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathsf{none}}\)</span>, <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathsf{nofunc}}\)</span>, and <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathsf{noextern}}\)</span> are not inhabited by any values,
+they can be used to form the types of all null <a class="reference internal" href="#syntax-reftype"><span class="std std-ref">references</span></a> in their respective hierarchy.
+For example, <span class="math notranslate nohighlight">\((\href{../syntax/types.html#syntax-reftype}{\mathsf{ref}}~\href{../syntax/types.html#syntax-reftype}{\mathsf{null}}~\href{../syntax/types.html#syntax-heaptype}{\mathsf{nofunc}})\)</span> is the generic type of a null reference compatible with all function reference types.</p>
+</div>
 <section id="convention">
 <span id="notation-subst"></span><h3>Convention<a class="headerlink" href="#convention" title="Permalink to this heading">¶</a></h3>
 <ul class="simple">
@@ -161,7 +198,7 @@ i.e., all <a class="reference internal" href="modules.html#syntax-typeidx"><span
 <span id="syntax-nullable"></span><span id="syntax-reftype"></span><span id="index-4"></span><h2>Reference Types<a class="headerlink" href="#reference-types" title="Permalink to this heading">¶</a></h2>
 <p><em>Reference types</em> classify <a class="reference internal" href="values.html#syntax-value"><span class="std std-ref">values</span></a> that are first-class references to objects in the runtime <a class="reference internal" href="../exec/runtime.html#store"><span class="std std-ref">store</span></a>.</p>
 <div class="math notranslate nohighlight">
-\[\begin{split}\begin{array}{llll}
+\[\begin{split}\begin{array}{llrl}
 \def\mathdef2716#1{{}}\mathdef2716{reference type} &amp; \href{../syntax/types.html#syntax-reftype}{\mathit{reftype}} &amp;::=&amp;
   \href{../syntax/types.html#syntax-reftype}{\mathsf{ref}}~\href{../syntax/types.html#syntax-reftype}{\mathsf{null}}^?~\href{../syntax/types.html#syntax-heaptype}{\mathit{heaptype}} \\
 \end{array}\end{split}\]</div>
@@ -179,7 +216,7 @@ They are either <a class="reference internal" href="#syntax-numtype"><span class
 By virtue of being representable in neither the <a class="reference internal" href="../binary/types.html#binary-valtype"><span class="std std-ref">binary format</span></a> nor the <a class="reference internal" href="../text/types.html#text-valtype"><span class="std std-ref">text format</span></a>, it cannot be used in a program;
 it only occurs during <a class="reference internal" href="../valid/index.html#valid"><span class="std std-ref">validation</span></a>, as a possible operand type for instructions.</p>
 <div class="math notranslate nohighlight">
-\[\begin{split}\begin{array}{llll}
+\[\begin{split}\begin{array}{llrl}
 \def\mathdef2716#1{{}}\mathdef2716{value type} &amp; \href{../syntax/types.html#syntax-valtype}{\mathit{valtype}} &amp;::=&amp;
   \href{../syntax/types.html#syntax-numtype}{\mathit{numtype}} ~|~ \href{../syntax/types.html#syntax-vectype}{\mathit{vectype}} ~|~ \href{../syntax/types.html#syntax-reftype}{\mathit{reftype}} ~|~ \href{../syntax/types.html#syntax-valtype}{\mathsf{bot}} \\
 \end{array}\end{split}\]</div>
@@ -195,7 +232,7 @@ it only occurs during <a class="reference internal" href="../valid/index.html#va
 <p><em>Result types</em> classify the result of <a class="reference internal" href="../exec/instructions.html#exec-instr"><span class="std std-ref">executing</span></a> <a class="reference internal" href="instructions.html#syntax-instr"><span class="std std-ref">instructions</span></a> or <a class="reference internal" href="modules.html#syntax-func"><span class="std std-ref">functions</span></a>,
 which is a sequence of values, written with brackets.</p>
 <div class="math notranslate nohighlight">
-\[\begin{split}\begin{array}{llll}
+\[\begin{split}\begin{array}{llrl}
 \def\mathdef2716#1{{}}\mathdef2716{result type} &amp; \href{../syntax/types.html#syntax-resulttype}{\mathit{resulttype}} &amp;::=&amp;
   [\href{../syntax/conventions.html#syntax-vec}{\mathit{vec}}(\href{../syntax/types.html#syntax-valtype}{\mathit{valtype}})] \\
 \end{array}\end{split}\]</div>
@@ -204,7 +241,7 @@ which is a sequence of values, written with brackets.</p>
 <span id="syntax-instrtype"></span><span id="index-7"></span><h2>Instruction Types<a class="headerlink" href="#instruction-types" title="Permalink to this heading">¶</a></h2>
 <p><em>Instruction types</em> classify the behaviour of <a class="reference internal" href="instructions.html#syntax-instr"><span class="std std-ref">instructions</span></a> or instruction sequences, by describing how they manipulate the <a class="reference internal" href="../exec/runtime.html#stack"><span class="std std-ref">operand stack</span></a> and the initialization status of <a class="reference internal" href="modules.html#syntax-local"><span class="std std-ref">locals</span></a>:</p>
 <div class="math notranslate nohighlight">
-\[\begin{split}\begin{array}{llll}
+\[\begin{split}\begin{array}{llrl}
 \def\mathdef2716#1{{}}\mathdef2716{instruction type} &amp; \href{../syntax/types.html#syntax-instrtype}{\mathit{instrtype}} &amp;::=&amp;
   \href{../syntax/types.html#syntax-resulttype}{\mathit{resulttype}} \def\mathdef2755#1{\href{../syntax/types.html#syntax-instrtype}{\rightarrow_{#1}}}\mathdef2755{\href{../syntax/modules.html#syntax-localidx}{\mathit{localidx}}^\ast} \href{../syntax/types.html#syntax-resulttype}{\mathit{resulttype}} \\
 \end{array}\end{split}\]</div>
@@ -221,7 +258,7 @@ they do not occur in programs.</p>
 <span id="syntax-localtype"></span><span id="syntax-init"></span><span id="index-8"></span><h2>Local Types<a class="headerlink" href="#local-types" title="Permalink to this heading">¶</a></h2>
 <p><em>Local types</em> classify <a class="reference internal" href="modules.html#syntax-local"><span class="std std-ref">locals</span></a>, by describing their <a class="reference internal" href="#syntax-valtype"><span class="std std-ref">value type</span></a> as well as their <em>initialization status</em>:</p>
 <div class="math notranslate nohighlight">
-\[\begin{split}\begin{array}{llll}
+\[\begin{split}\begin{array}{llrl}
 \def\mathdef2716#1{{}}\mathdef2716{initialization status} &amp; \href{../syntax/types.html#syntax-init}{\mathit{init}} &amp;::=&amp;
   \href{../syntax/types.html#syntax-init}{\mathrel{\mbox{set}}} ~|~ \href{../syntax/types.html#syntax-init}{\mathrel{\mbox{unset}}} \\
 \def\mathdef2716#1{{}}\mathdef2716{local type} &amp; \href{../syntax/types.html#syntax-localtype}{\mathit{localtype}} &amp;::=&amp;
@@ -239,16 +276,20 @@ they do not occur in programs.</p>
 mapping a vector of parameters to a vector of results.
 They are also used to classify the inputs and outputs of <a class="reference internal" href="instructions.html#syntax-instr"><span class="std std-ref">instructions</span></a>.</p>
 <div class="math notranslate nohighlight">
-\[\begin{split}\begin{array}{llll}
+\[\begin{split}\begin{array}{llrl}
 \def\mathdef2716#1{{}}\mathdef2716{function type} &amp; \href{../syntax/types.html#syntax-functype}{\mathit{functype}} &amp;::=&amp;
   \href{../syntax/types.html#syntax-resulttype}{\mathit{resulttype}} \href{../syntax/types.html#syntax-instrtype}{\rightarrow} \href{../syntax/types.html#syntax-resulttype}{\mathit{resulttype}} \\
 \end{array}\end{split}\]</div>
 </section>
 <section id="defined-types">
 <span id="syntax-deftype"></span><span id="index-10"></span><h2>Defined Types<a class="headerlink" href="#defined-types" title="Permalink to this heading">¶</a></h2>
+<div class="admonition-todo admonition" id="id3">
+<p class="admonition-title">Todo</p>
+<p>structured types, recrusive types, etc.</p>
+</div>
 <p><em>Defined types</em> are the ones that can be defined in a <a class="reference internal" href="modules.html#syntax-module"><span class="std std-ref">module</span></a>, assigning them a <a class="reference internal" href="modules.html#syntax-typeidx"><span class="std std-ref">type index</span></a>.</p>
 <div class="math notranslate nohighlight">
-\[\begin{split}\begin{array}{llll}
+\[\begin{split}\begin{array}{llrl}
 \def\mathdef2716#1{{}}\mathdef2716{defined type} &amp; \href{../syntax/types.html#syntax-deftype}{\mathit{deftype}} &amp;::=&amp;
   \href{../syntax/types.html#syntax-functype}{\mathit{functype}} \\
 \end{array}\end{split}\]</div>
@@ -261,7 +302,7 @@ They are also used to classify the inputs and outputs of <a class="reference int
 <span id="syntax-limits"></span><span id="index-11"></span><h2>Limits<a class="headerlink" href="#limits" title="Permalink to this heading">¶</a></h2>
 <p><em>Limits</em> classify the size range of resizeable storage associated with <a class="reference internal" href="#syntax-memtype"><span class="std std-ref">memory types</span></a> and <a class="reference internal" href="#syntax-tabletype"><span class="std std-ref">table types</span></a>.</p>
 <div class="math notranslate nohighlight">
-\[\begin{split}\begin{array}{llll}
+\[\begin{split}\begin{array}{llrl}
 \def\mathdef2716#1{{}}\mathdef2716{limits} &amp; \href{../syntax/types.html#syntax-limits}{\mathit{limits}} &amp;::=&amp;
   \{ \href{../syntax/types.html#syntax-limits}{\mathsf{min}}~\href{../syntax/values.html#syntax-int}{\mathit{u32}}, \href{../syntax/types.html#syntax-limits}{\mathsf{max}}~\href{../syntax/values.html#syntax-int}{\mathit{u32}}^? \} \\
 \end{array}\end{split}\]</div>
@@ -271,7 +312,7 @@ They are also used to classify the inputs and outputs of <a class="reference int
 <span id="syntax-memtype"></span><span id="index-12"></span><h2>Memory Types<a class="headerlink" href="#memory-types" title="Permalink to this heading">¶</a></h2>
 <p><em>Memory types</em> classify linear <a class="reference internal" href="modules.html#syntax-mem"><span class="std std-ref">memories</span></a> and their size range.</p>
 <div class="math notranslate nohighlight">
-\[\begin{split}\begin{array}{llll}
+\[\begin{split}\begin{array}{llrl}
 \def\mathdef2716#1{{}}\mathdef2716{memory type} &amp; \href{../syntax/types.html#syntax-memtype}{\mathit{memtype}} &amp;::=&amp;
   \href{../syntax/types.html#syntax-limits}{\mathit{limits}} \\
 \end{array}\end{split}\]</div>
@@ -282,7 +323,7 @@ The limits are given in units of <a class="reference internal" href="../exec/run
 <span id="syntax-tabletype"></span><span id="index-13"></span><h2>Table Types<a class="headerlink" href="#table-types" title="Permalink to this heading">¶</a></h2>
 <p><em>Table types</em> classify <a class="reference internal" href="modules.html#syntax-table"><span class="std std-ref">tables</span></a> over elements of <a class="reference internal" href="#syntax-reftype"><span class="std std-ref">reference type</span></a> within a size range.</p>
 <div class="math notranslate nohighlight">
-\[\begin{split}\begin{array}{llll}
+\[\begin{split}\begin{array}{llrl}
 \def\mathdef2716#1{{}}\mathdef2716{table type} &amp; \href{../syntax/types.html#syntax-tabletype}{\mathit{tabletype}} &amp;::=&amp;
   \href{../syntax/types.html#syntax-limits}{\mathit{limits}}~\href{../syntax/types.html#syntax-reftype}{\mathit{reftype}} \\
 \end{array}\end{split}\]</div>
@@ -297,7 +338,7 @@ The limits are given in numbers of entries.</p>
 <span id="syntax-globaltype"></span><span id="syntax-mut"></span><span id="index-14"></span><h2>Global Types<a class="headerlink" href="#global-types" title="Permalink to this heading">¶</a></h2>
 <p><em>Global types</em> classify <a class="reference internal" href="modules.html#syntax-global"><span class="std std-ref">global</span></a> variables, which hold a value and can either be mutable or immutable.</p>
 <div class="math notranslate nohighlight">
-\[\begin{split}\begin{array}{llll}
+\[\begin{split}\begin{array}{llrl}
 \def\mathdef2716#1{{}}\mathdef2716{global type} &amp; \href{../syntax/types.html#syntax-globaltype}{\mathit{globaltype}} &amp;::=&amp;
   \href{../syntax/types.html#syntax-mut}{\mathit{mut}}~\href{../syntax/types.html#syntax-valtype}{\mathit{valtype}} \\
 \def\mathdef2716#1{{}}\mathdef2716{mutability} &amp; \href{../syntax/types.html#syntax-mut}{\mathit{mut}} &amp;::=&amp;
@@ -309,15 +350,15 @@ The limits are given in numbers of entries.</p>
 <span id="syntax-externtype"></span><span id="index-15"></span><h2>External Types<a class="headerlink" href="#external-types" title="Permalink to this heading">¶</a></h2>
 <p><em>External types</em> classify <a class="reference internal" href="modules.html#syntax-import"><span class="std std-ref">imports</span></a> and <a class="reference internal" href="../exec/runtime.html#syntax-externval"><span class="std std-ref">external values</span></a> with their respective types.</p>
 <div class="math notranslate nohighlight">
-\[\begin{split}\begin{array}{llll}
+\[\begin{split}\begin{array}{llrl}
 \def\mathdef2716#1{{}}\mathdef2716{external types} &amp; \href{../syntax/types.html#syntax-externtype}{\mathit{externtype}} &amp;::=&amp;
   \href{../syntax/types.html#syntax-externtype}{\mathsf{func}}~\href{../syntax/types.html#syntax-functype}{\mathit{functype}} ~|~
   \href{../syntax/types.html#syntax-externtype}{\mathsf{table}}~\href{../syntax/types.html#syntax-tabletype}{\mathit{tabletype}} ~|~
   \href{../syntax/types.html#syntax-externtype}{\mathsf{mem}}~\href{../syntax/types.html#syntax-memtype}{\mathit{memtype}} ~|~
   \href{../syntax/types.html#syntax-externtype}{\mathsf{global}}~\href{../syntax/types.html#syntax-globaltype}{\mathit{globaltype}} \\
 \end{array}\end{split}\]</div>
-<section id="id3">
-<h3>Conventions<a class="headerlink" href="#id3" title="Permalink to this heading">¶</a></h3>
+<section id="id4">
+<h3>Conventions<a class="headerlink" href="#id4" title="Permalink to this heading">¶</a></h3>
 <p>The following auxiliary notation is defined for sequences of external types.
 It filters out entries of a specific kind in an order-preserving fashion:</p>
 <ul class="simple">

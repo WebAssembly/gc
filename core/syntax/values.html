@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
-    <title>Values &#8212; WebAssembly 2.0 + tail calls + function references + gc (Draft 2023-05-09)</title>
+    <title>Values &#8212; WebAssembly 2.0 + tail calls + function references + gc (Draft 2023-05-17)</title>
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
     <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
@@ -145,7 +145,7 @@ Since the significands are binary values, normals are represented in the form <s
 NaN values have a <em>payload</em> that describes the mantissa bits in the underlying <a class="reference internal" href="../exec/numerics.html#aux-fbits"><span class="std std-ref">binary representation</span></a>.
 No distinction is made between signalling and quiet NaNs.</p>
 <div class="math notranslate nohighlight">
-\[\begin{split}\begin{array}{llcll}
+\[\begin{split}\begin{array}{llrll}
 \def\mathdef2757#1{{}}\mathdef2757{floating-point value} &amp; \href{../syntax/values.html#syntax-float}{\mathit{f}N} &amp;::=&amp;
   {+} \href{../syntax/values.html#syntax-float}{\mathit{f}\mathit{Nmag}} ~|~ {-} \href{../syntax/values.html#syntax-float}{\mathit{f}\mathit{Nmag}} \\
 \def\mathdef2757#1{{}}\mathdef2757{floating-point magnitude} &amp; \href{../syntax/values.html#syntax-float}{\mathit{f}\mathit{Nmag}} &amp;::=&amp;
@@ -187,7 +187,7 @@ They are represented in the abstract syntax using <span class="math notranslate 
 <span id="syntax-name"></span><span id="syntax-char"></span><span id="index-5"></span><h2>Names<a class="headerlink" href="#names" title="Permalink to this heading">¶</a></h2>
 <p><em>Names</em> are sequences of <em>characters</em>, which are <em>scalar values</em> as defined by <a class="reference external" href="https://www.unicode.org/versions/latest/">Unicode</a> (Section 2.4).</p>
 <div class="math notranslate nohighlight">
-\[\begin{split}\begin{array}{llclll}
+\[\begin{split}\begin{array}{llrlll}
 \def\mathdef2757#1{{}}\mathdef2757{name} &amp; \href{../syntax/values.html#syntax-name}{\mathit{name}} &amp;::=&amp;
   \href{../syntax/values.html#syntax-name}{\mathit{char}}^\ast \qquad\qquad (\mathrel{\mbox{if}} |\href{../binary/values.html#binary-utf8}{\mathrm{utf8}}(\href{../syntax/values.html#syntax-name}{\mathit{char}}^\ast)| &lt; 2^{32}) \\
 \def\mathdef2757#1{{}}\mathdef2757{character} &amp; \href{../syntax/values.html#syntax-name}{\mathit{char}} &amp;::=&amp;
