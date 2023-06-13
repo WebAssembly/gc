@@ -244,12 +244,12 @@ Operators that use a signed interpretation convert the value using the following
 <p>This function is bijective, and hence invertible.</p>
 </section>
 <section id="boolean-interpretation">
-<span id="aux-bool"></span><span id="index-8"></span><h3>Boolean Interpretation<a class="headerlink" href="#boolean-interpretation" title="Permalink to this heading">¶</a></h3>
+<span id="aux-tobool"></span><span id="index-8"></span><h3>Boolean Interpretation<a class="headerlink" href="#boolean-interpretation" title="Permalink to this heading">¶</a></h3>
 <p>The integer result of predicates – i.e., <a class="reference internal" href="../syntax/instructions.html#syntax-testop"><span class="std std-ref">tests</span></a> and <a class="reference internal" href="../syntax/instructions.html#syntax-relop"><span class="std std-ref">relational</span></a> operators – is defined with the help of the following auxiliary function producing the value <span class="math notranslate nohighlight">\(1\)</span> or <span class="math notranslate nohighlight">\(0\)</span> depending on a condition.</p>
 <div class="math notranslate nohighlight">
 \[\begin{split}\begin{array}{lll&#64;{\qquad}l}
-\href{../exec/numerics.html#aux-bool}{\mathrm{bool}}(C) &amp;=&amp; 1 &amp; (\mathrel{\mbox{if}} C) \\
-\href{../exec/numerics.html#aux-bool}{\mathrm{bool}}(C) &amp;=&amp; 0 &amp; (\mathrel{\mbox{otherwise}}) \\
+\href{../exec/numerics.html#aux-tobool}{\mathrm{bool}}(C) &amp;=&amp; 1 &amp; (\mathrel{\mbox{if}} C) \\
+\href{../exec/numerics.html#aux-tobool}{\mathrm{bool}}(C) &amp;=&amp; 0 &amp; (\mathrel{\mbox{otherwise}}) \\
 \end{array}\end{split}\]</div>
 </section>
 <section id="xref-exec-numerics-op-iadd-mathrm-iadd-n-i-1-i-2">
@@ -505,7 +505,7 @@ it holds that <span class="math notranslate nohighlight">\(i_1 = i_2\cdot\href{.
 </ul>
 <div class="math notranslate nohighlight">
 \[\begin{array}{&#64;{}lcll}
-\href{../exec/numerics.html#op-ieqz}{\mathrm{ieqz}}_N(i) &amp;=&amp; \href{../exec/numerics.html#aux-bool}{\mathrm{bool}}(i = 0)
+\href{../exec/numerics.html#op-ieqz}{\mathrm{ieqz}}_N(i) &amp;=&amp; \href{../exec/numerics.html#aux-tobool}{\mathrm{bool}}(i = 0)
 \end{array}\]</div>
 </section>
 <section id="xref-exec-numerics-op-ieq-mathrm-ieq-n-i-1-i-2">
@@ -515,7 +515,7 @@ it holds that <span class="math notranslate nohighlight">\(i_1 = i_2\cdot\href{.
 </ul>
 <div class="math notranslate nohighlight">
 \[\begin{array}{&#64;{}lcll}
-\href{../exec/numerics.html#op-ieq}{\mathrm{ieq}}_N(i_1, i_2) &amp;=&amp; \href{../exec/numerics.html#aux-bool}{\mathrm{bool}}(i_1 = i_2)
+\href{../exec/numerics.html#op-ieq}{\mathrm{ieq}}_N(i_1, i_2) &amp;=&amp; \href{../exec/numerics.html#aux-tobool}{\mathrm{bool}}(i_1 = i_2)
 \end{array}\]</div>
 </section>
 <section id="xref-exec-numerics-op-ine-mathrm-ine-n-i-1-i-2">
@@ -525,7 +525,7 @@ it holds that <span class="math notranslate nohighlight">\(i_1 = i_2\cdot\href{.
 </ul>
 <div class="math notranslate nohighlight">
 \[\begin{array}{&#64;{}lcll}
-\href{../exec/numerics.html#op-ine}{\mathrm{ine}}_N(i_1, i_2) &amp;=&amp; \href{../exec/numerics.html#aux-bool}{\mathrm{bool}}(i_1 \neq i_2)
+\href{../exec/numerics.html#op-ine}{\mathrm{ine}}_N(i_1, i_2) &amp;=&amp; \href{../exec/numerics.html#aux-tobool}{\mathrm{bool}}(i_1 \neq i_2)
 \end{array}\]</div>
 </section>
 <section id="xref-exec-numerics-op-ilt-u-mathrm-ilt-u-n-i-1-i-2">
@@ -535,7 +535,7 @@ it holds that <span class="math notranslate nohighlight">\(i_1 = i_2\cdot\href{.
 </ul>
 <div class="math notranslate nohighlight">
 \[\begin{array}{&#64;{}lcll}
-\href{../exec/numerics.html#op-ilt-u}{\mathrm{ilt\_u}}_N(i_1, i_2) &amp;=&amp; \href{../exec/numerics.html#aux-bool}{\mathrm{bool}}(i_1 &lt; i_2)
+\href{../exec/numerics.html#op-ilt-u}{\mathrm{ilt\_u}}_N(i_1, i_2) &amp;=&amp; \href{../exec/numerics.html#aux-tobool}{\mathrm{bool}}(i_1 &lt; i_2)
 \end{array}\]</div>
 </section>
 <section id="xref-exec-numerics-op-ilt-s-mathrm-ilt-s-n-i-1-i-2">
@@ -547,7 +547,7 @@ it holds that <span class="math notranslate nohighlight">\(i_1 = i_2\cdot\href{.
 </ul>
 <div class="math notranslate nohighlight">
 \[\begin{array}{&#64;{}lcll}
-\href{../exec/numerics.html#op-ilt-s}{\mathrm{ilt\_s}}_N(i_1, i_2) &amp;=&amp; \href{../exec/numerics.html#aux-bool}{\mathrm{bool}}(\href{../exec/numerics.html#aux-signed}{\mathrm{signed}}_N(i_1) &lt; \href{../exec/numerics.html#aux-signed}{\mathrm{signed}}_N(i_2))
+\href{../exec/numerics.html#op-ilt-s}{\mathrm{ilt\_s}}_N(i_1, i_2) &amp;=&amp; \href{../exec/numerics.html#aux-tobool}{\mathrm{bool}}(\href{../exec/numerics.html#aux-signed}{\mathrm{signed}}_N(i_1) &lt; \href{../exec/numerics.html#aux-signed}{\mathrm{signed}}_N(i_2))
 \end{array}\]</div>
 </section>
 <section id="xref-exec-numerics-op-igt-u-mathrm-igt-u-n-i-1-i-2">
@@ -557,7 +557,7 @@ it holds that <span class="math notranslate nohighlight">\(i_1 = i_2\cdot\href{.
 </ul>
 <div class="math notranslate nohighlight">
 \[\begin{array}{&#64;{}lcll}
-\href{../exec/numerics.html#op-igt-u}{\mathrm{igt\_u}}_N(i_1, i_2) &amp;=&amp; \href{../exec/numerics.html#aux-bool}{\mathrm{bool}}(i_1 &gt; i_2)
+\href{../exec/numerics.html#op-igt-u}{\mathrm{igt\_u}}_N(i_1, i_2) &amp;=&amp; \href{../exec/numerics.html#aux-tobool}{\mathrm{bool}}(i_1 &gt; i_2)
 \end{array}\]</div>
 </section>
 <section id="xref-exec-numerics-op-igt-s-mathrm-igt-s-n-i-1-i-2">
@@ -569,7 +569,7 @@ it holds that <span class="math notranslate nohighlight">\(i_1 = i_2\cdot\href{.
 </ul>
 <div class="math notranslate nohighlight">
 \[\begin{array}{&#64;{}lcll}
-\href{../exec/numerics.html#op-igt-s}{\mathrm{igt\_s}}_N(i_1, i_2) &amp;=&amp; \href{../exec/numerics.html#aux-bool}{\mathrm{bool}}(\href{../exec/numerics.html#aux-signed}{\mathrm{signed}}_N(i_1) &gt; \href{../exec/numerics.html#aux-signed}{\mathrm{signed}}_N(i_2))
+\href{../exec/numerics.html#op-igt-s}{\mathrm{igt\_s}}_N(i_1, i_2) &amp;=&amp; \href{../exec/numerics.html#aux-tobool}{\mathrm{bool}}(\href{../exec/numerics.html#aux-signed}{\mathrm{signed}}_N(i_1) &gt; \href{../exec/numerics.html#aux-signed}{\mathrm{signed}}_N(i_2))
 \end{array}\]</div>
 </section>
 <section id="xref-exec-numerics-op-ile-u-mathrm-ile-u-n-i-1-i-2">
@@ -579,7 +579,7 @@ it holds that <span class="math notranslate nohighlight">\(i_1 = i_2\cdot\href{.
 </ul>
 <div class="math notranslate nohighlight">
 \[\begin{array}{&#64;{}lcll}
-\href{../exec/numerics.html#op-ile-u}{\mathrm{ile\_u}}_N(i_1, i_2) &amp;=&amp; \href{../exec/numerics.html#aux-bool}{\mathrm{bool}}(i_1 \leq i_2)
+\href{../exec/numerics.html#op-ile-u}{\mathrm{ile\_u}}_N(i_1, i_2) &amp;=&amp; \href{../exec/numerics.html#aux-tobool}{\mathrm{bool}}(i_1 \leq i_2)
 \end{array}\]</div>
 </section>
 <section id="xref-exec-numerics-op-ile-s-mathrm-ile-s-n-i-1-i-2">
@@ -591,7 +591,7 @@ it holds that <span class="math notranslate nohighlight">\(i_1 = i_2\cdot\href{.
 </ul>
 <div class="math notranslate nohighlight">
 \[\begin{array}{&#64;{}lcll}
-\href{../exec/numerics.html#op-ile-s}{\mathrm{ile\_s}}_N(i_1, i_2) &amp;=&amp; \href{../exec/numerics.html#aux-bool}{\mathrm{bool}}(\href{../exec/numerics.html#aux-signed}{\mathrm{signed}}_N(i_1) \leq \href{../exec/numerics.html#aux-signed}{\mathrm{signed}}_N(i_2))
+\href{../exec/numerics.html#op-ile-s}{\mathrm{ile\_s}}_N(i_1, i_2) &amp;=&amp; \href{../exec/numerics.html#aux-tobool}{\mathrm{bool}}(\href{../exec/numerics.html#aux-signed}{\mathrm{signed}}_N(i_1) \leq \href{../exec/numerics.html#aux-signed}{\mathrm{signed}}_N(i_2))
 \end{array}\]</div>
 </section>
 <section id="xref-exec-numerics-op-ige-u-mathrm-ige-u-n-i-1-i-2">
@@ -601,7 +601,7 @@ it holds that <span class="math notranslate nohighlight">\(i_1 = i_2\cdot\href{.
 </ul>
 <div class="math notranslate nohighlight">
 \[\begin{array}{&#64;{}lcll}
-\href{../exec/numerics.html#op-ige-u}{\mathrm{ige\_u}}_N(i_1, i_2) &amp;=&amp; \href{../exec/numerics.html#aux-bool}{\mathrm{bool}}(i_1 \geq i_2)
+\href{../exec/numerics.html#op-ige-u}{\mathrm{ige\_u}}_N(i_1, i_2) &amp;=&amp; \href{../exec/numerics.html#aux-tobool}{\mathrm{bool}}(i_1 \geq i_2)
 \end{array}\]</div>
 </section>
 <section id="xref-exec-numerics-op-ige-s-mathrm-ige-s-n-i-1-i-2">
@@ -613,7 +613,7 @@ it holds that <span class="math notranslate nohighlight">\(i_1 = i_2\cdot\href{.
 </ul>
 <div class="math notranslate nohighlight">
 \[\begin{array}{&#64;{}lcll}
-\href{../exec/numerics.html#op-ige-s}{\mathrm{ige\_s}}_N(i_1, i_2) &amp;=&amp; \href{../exec/numerics.html#aux-bool}{\mathrm{bool}}(\href{../exec/numerics.html#aux-signed}{\mathrm{signed}}_N(i_1) \geq \href{../exec/numerics.html#aux-signed}{\mathrm{signed}}_N(i_2))
+\href{../exec/numerics.html#op-ige-s}{\mathrm{ige\_s}}_N(i_1, i_2) &amp;=&amp; \href{../exec/numerics.html#aux-tobool}{\mathrm{bool}}(\href{../exec/numerics.html#aux-signed}{\mathrm{signed}}_N(i_1) \geq \href{../exec/numerics.html#aux-signed}{\mathrm{signed}}_N(i_2))
 \end{array}\]</div>
 </section>
 <section id="xref-exec-numerics-op-iextendn-s-mathrm-iextend-m-mathrm-s-n-i">
@@ -1201,7 +1201,7 @@ then its sign is non-deterministic and the <a class="reference internal" href=".
 \href{../exec/numerics.html#op-feq}{\mathrm{feq}}_N(\pm \href{../syntax/values.html#syntax-float}{\mathsf{nan}}(n), z_2) &amp;=&amp; 0 \\
 \href{../exec/numerics.html#op-feq}{\mathrm{feq}}_N(z_1, \pm \href{../syntax/values.html#syntax-float}{\mathsf{nan}}(n)) &amp;=&amp; 0 \\
 \href{../exec/numerics.html#op-feq}{\mathrm{feq}}_N(\pm 0, \mp 0) &amp;=&amp; 1 \\
-\href{../exec/numerics.html#op-feq}{\mathrm{feq}}_N(z_1, z_2) &amp;=&amp; \href{../exec/numerics.html#aux-bool}{\mathrm{bool}}(z_1 = z_2) \\
+\href{../exec/numerics.html#op-feq}{\mathrm{feq}}_N(z_1, z_2) &amp;=&amp; \href{../exec/numerics.html#aux-tobool}{\mathrm{bool}}(z_1 = z_2) \\
 \end{array}\end{split}\]</div>
 </section>
 <section id="xref-exec-numerics-op-fne-mathrm-fne-n-z-1-z-2">
@@ -1217,7 +1217,7 @@ then its sign is non-deterministic and the <a class="reference internal" href=".
 \href{../exec/numerics.html#op-fne}{\mathrm{fne}}_N(\pm \href{../syntax/values.html#syntax-float}{\mathsf{nan}}(n), z_2) &amp;=&amp; 1 \\
 \href{../exec/numerics.html#op-fne}{\mathrm{fne}}_N(z_1, \pm \href{../syntax/values.html#syntax-float}{\mathsf{nan}}(n)) &amp;=&amp; 1 \\
 \href{../exec/numerics.html#op-fne}{\mathrm{fne}}_N(\pm 0, \mp 0) &amp;=&amp; 0 \\
-\href{../exec/numerics.html#op-fne}{\mathrm{fne}}_N(z_1, z_2) &amp;=&amp; \href{../exec/numerics.html#aux-bool}{\mathrm{bool}}(z_1 \neq z_2) \\
+\href{../exec/numerics.html#op-fne}{\mathrm{fne}}_N(z_1, z_2) &amp;=&amp; \href{../exec/numerics.html#aux-tobool}{\mathrm{bool}}(z_1 \neq z_2) \\
 \end{array}\end{split}\]</div>
 </section>
 <section id="xref-exec-numerics-op-flt-mathrm-flt-n-z-1-z-2">
@@ -1243,7 +1243,7 @@ then its sign is non-deterministic and the <a class="reference internal" href=".
 \href{../exec/numerics.html#op-flt}{\mathrm{flt}}_N(z_1, + \infty) &amp;=&amp; 1 \\
 \href{../exec/numerics.html#op-flt}{\mathrm{flt}}_N(z_1, - \infty) &amp;=&amp; 0 \\
 \href{../exec/numerics.html#op-flt}{\mathrm{flt}}_N(\pm 0, \mp 0) &amp;=&amp; 0 \\
-\href{../exec/numerics.html#op-flt}{\mathrm{flt}}_N(z_1, z_2) &amp;=&amp; \href{../exec/numerics.html#aux-bool}{\mathrm{bool}}(z_1 &lt; z_2) \\
+\href{../exec/numerics.html#op-flt}{\mathrm{flt}}_N(z_1, z_2) &amp;=&amp; \href{../exec/numerics.html#aux-tobool}{\mathrm{bool}}(z_1 &lt; z_2) \\
 \end{array}\end{split}\]</div>
 </section>
 <section id="xref-exec-numerics-op-fgt-mathrm-fgt-n-z-1-z-2">
@@ -1269,7 +1269,7 @@ then its sign is non-deterministic and the <a class="reference internal" href=".
 \href{../exec/numerics.html#op-fgt}{\mathrm{fgt}}_N(z_1, + \infty) &amp;=&amp; 0 \\
 \href{../exec/numerics.html#op-fgt}{\mathrm{fgt}}_N(z_1, - \infty) &amp;=&amp; 1 \\
 \href{../exec/numerics.html#op-fgt}{\mathrm{fgt}}_N(\pm 0, \mp 0) &amp;=&amp; 0 \\
-\href{../exec/numerics.html#op-fgt}{\mathrm{fgt}}_N(z_1, z_2) &amp;=&amp; \href{../exec/numerics.html#aux-bool}{\mathrm{bool}}(z_1 &gt; z_2) \\
+\href{../exec/numerics.html#op-fgt}{\mathrm{fgt}}_N(z_1, z_2) &amp;=&amp; \href{../exec/numerics.html#aux-tobool}{\mathrm{bool}}(z_1 &gt; z_2) \\
 \end{array}\end{split}\]</div>
 </section>
 <section id="xref-exec-numerics-op-fle-mathrm-fle-n-z-1-z-2">
@@ -1295,7 +1295,7 @@ then its sign is non-deterministic and the <a class="reference internal" href=".
 \href{../exec/numerics.html#op-fle}{\mathrm{fle}}_N(z_1, + \infty) &amp;=&amp; 1 \\
 \href{../exec/numerics.html#op-fle}{\mathrm{fle}}_N(z_1, - \infty) &amp;=&amp; 0 \\
 \href{../exec/numerics.html#op-fle}{\mathrm{fle}}_N(\pm 0, \mp 0) &amp;=&amp; 1 \\
-\href{../exec/numerics.html#op-fle}{\mathrm{fle}}_N(z_1, z_2) &amp;=&amp; \href{../exec/numerics.html#aux-bool}{\mathrm{bool}}(z_1 \leq z_2) \\
+\href{../exec/numerics.html#op-fle}{\mathrm{fle}}_N(z_1, z_2) &amp;=&amp; \href{../exec/numerics.html#aux-tobool}{\mathrm{bool}}(z_1 \leq z_2) \\
 \end{array}\end{split}\]</div>
 </section>
 <section id="xref-exec-numerics-op-fge-mathrm-fge-n-z-1-z-2">
@@ -1321,7 +1321,7 @@ then its sign is non-deterministic and the <a class="reference internal" href=".
 \href{../exec/numerics.html#op-fge}{\mathrm{fge}}_N(z_1, + \infty) &amp;=&amp; 0 \\
 \href{../exec/numerics.html#op-fge}{\mathrm{fge}}_N(z_1, - \infty) &amp;=&amp; 1 \\
 \href{../exec/numerics.html#op-fge}{\mathrm{fge}}_N(\pm 0, \mp 0) &amp;=&amp; 1 \\
-\href{../exec/numerics.html#op-fge}{\mathrm{fge}}_N(z_1, z_2) &amp;=&amp; \href{../exec/numerics.html#aux-bool}{\mathrm{bool}}(z_1 \geq z_2) \\
+\href{../exec/numerics.html#op-fge}{\mathrm{fge}}_N(z_1, z_2) &amp;=&amp; \href{../exec/numerics.html#aux-tobool}{\mathrm{bool}}(z_1 \geq z_2) \\
 \end{array}\end{split}\]</div>
 </section>
 <section id="xref-exec-numerics-op-fpmin-mathrm-fpmin-n-z-1-z-2">

@@ -104,6 +104,14 @@ For example, an implementation may not support <a class="reference internal" hre
 Hence, these syntactic classes can also be interpreted as types.</p>
 <p>For numeric parameters, notation like <span class="math notranslate nohighlight">\(n:\href{../syntax/values.html#syntax-int}{\mathit{u32}}\)</span> is used to specify a symbolic name in addition to the respective value range.</p>
 </section>
+<section id="booleans">
+<span id="embed-bool"></span><h2>Booleans<a class="headerlink" href="#booleans" title="Permalink to this heading">¶</a></h2>
+<p>Interface operation that are predicates return Boolean values:</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{array}{llll}
+\def\mathdef120#1{{}}\mathdef120{Boolean} &amp; \href{../appendix/embedding.html#embed-bool}{\mathit{bool}} &amp;::=&amp; \href{../appendix/embedding.html#embed-bool}{\mathit{false}} ~|~ \href{../appendix/embedding.html#embed-bool}{\mathit{true}} \\
+\end{array}\end{split}\]</div>
+</section>
 <section id="errors">
 <span id="embed-error"></span><h2>Errors<a class="headerlink" href="#errors" title="Permalink to this heading">¶</a></h2>
 <p>Failure of an interface operation is indicated by an auxiliary syntactic class:</p>
@@ -551,6 +559,56 @@ If it does, the post conditions are guaranteed by the semantics.</p>
 \begin{array}{lclll}
 \mathrm{global\_write}(S, a, v) &amp;=&amp; S' &amp;&amp; (\mathrel{\mbox{if}} S.\href{../exec/runtime.html#syntax-store}{\mathsf{globals}}[a].\href{../exec/runtime.html#syntax-globalinst}{\mathsf{type}} = \href{../syntax/types.html#syntax-mut}{\mathsf{var}}~t \wedge S' = S \href{../syntax/conventions.html#notation-replace}{\mathrel{\mbox{with}}} \href{../exec/runtime.html#syntax-store}{\mathsf{globals}}[a].\href{../exec/runtime.html#syntax-globalinst}{\mathsf{value}} = v) \\
 \mathrm{global\_write}(S, a, v) &amp;=&amp; \href{../appendix/embedding.html#embed-error}{\mathsf{error}} &amp;&amp; (\mathrel{\mbox{otherwise}}) \\
+\end{array}\end{split}\]</div>
+</section>
+</section>
+<section id="references">
+<span id="embed-ref"></span><span id="index-16"></span><h2>References<a class="headerlink" href="#references" title="Permalink to this heading">¶</a></h2>
+<section id="mathrm-ref-type-xref-exec-runtime-syntax-store-mathit-store-xref-exec-runtime-syntax-ref-mathit-ref-xref-syntax-types-syntax-reftype-mathit-reftype">
+<h3><span class="math notranslate nohighlight">\(\mathrm{ref\_type}(\href{../exec/runtime.html#syntax-store}{\mathit{store}}, \href{../exec/runtime.html#syntax-ref}{\mathit{ref}}) : \href{../syntax/types.html#syntax-reftype}{\mathit{reftype}}\)</span><a class="headerlink" href="#mathrm-ref-type-xref-exec-runtime-syntax-store-mathit-store-xref-exec-runtime-syntax-ref-mathit-ref-xref-syntax-types-syntax-reftype-mathit-reftype" title="Permalink to this heading">¶</a></h3>
+<ol class="arabic simple">
+<li><p>Pre-condition: the <a class="reference internal" href="../exec/runtime.html#syntax-ref"><span class="std std-ref">reference</span></a> <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-ref}{\mathit{ref}}\)</span> is <a class="reference internal" href="../exec/values.html#valid-val"><span class="std std-ref">valid</span></a> under store <span class="math notranslate nohighlight">\(S\)</span>.</p></li>
+<li><p>Return the <a class="reference internal" href="../syntax/types.html#syntax-reftype"><span class="std std-ref">reference type</span></a> <span class="math notranslate nohighlight">\(t\)</span> with which <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-ref}{\mathit{ref}}\)</span> is valid.</p></li>
+<li><p>Post-condition: the returned <a class="reference internal" href="../syntax/types.html#syntax-reftype"><span class="std std-ref">reference type</span></a> is <a class="reference internal" href="../valid/types.html#valid-reftype"><span class="std std-ref">valid</span></a> under the empty <a class="reference internal" href="../valid/conventions.html#context"><span class="std std-ref">context</span></a>.</p></li>
+</ol>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{array}{lclll}
+\mathrm{ref\_type}(S, r) &amp;=&amp; t &amp;&amp; (\mathrel{\mbox{if}} S \href{../appendix/properties.html#valid-val}{\vdash} r : t) \\
+\end{array}\end{split}\]</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>In future versions of WebAssembly,
+not all references may carry precise type information at run time.
+In such cases, this function may return a less precise supertype.</p>
+</div>
+</section>
+</section>
+<section id="subtyping">
+<span id="embed-sub"></span><span id="index-17"></span><h2>Subtyping<a class="headerlink" href="#subtyping" title="Permalink to this heading">¶</a></h2>
+<section id="mathrm-sub-valtype-xref-syntax-types-syntax-valtype-mathit-valtype-1-xref-syntax-types-syntax-valtype-mathit-valtype-2-xref-appendix-embedding-embed-bool-mathit-bool">
+<h3><span class="math notranslate nohighlight">\(\mathrm{sub\_valtype}(\href{../syntax/types.html#syntax-valtype}{\mathit{valtype}}_1, \href{../syntax/types.html#syntax-valtype}{\mathit{valtype}}_2) : \href{../appendix/embedding.html#embed-bool}{\mathit{bool}}\)</span><a class="headerlink" href="#mathrm-sub-valtype-xref-syntax-types-syntax-valtype-mathit-valtype-1-xref-syntax-types-syntax-valtype-mathit-valtype-2-xref-appendix-embedding-embed-bool-mathit-bool" title="Permalink to this heading">¶</a></h3>
+<ol class="arabic simple">
+<li><p>Pre-condition: the <a class="reference internal" href="../syntax/types.html#syntax-valtype"><span class="std std-ref">value types</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-valtype}{\mathit{valtype}}_1\)</span> and <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-valtype}{\mathit{valtype}}_2\)</span> are <a class="reference internal" href="../valid/types.html#valid-valtype"><span class="std std-ref">valid</span></a> under the empty <a class="reference internal" href="../valid/conventions.html#context"><span class="std std-ref">context</span></a>.</p></li>
+<li><p>If <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-valtype}{\mathit{valtype}}_1\)</span> <a class="reference internal" href="../valid/matching.html#match-valtype"><span class="std std-ref">matches</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-valtype}{\mathit{valtype}}_2\)</span>, then return <span class="math notranslate nohighlight">\(\href{../appendix/embedding.html#embed-bool}{\mathit{true}}\)</span>.</p></li>
+<li><p>Else, return <span class="math notranslate nohighlight">\(\href{../appendix/embedding.html#embed-bool}{\mathit{false}}\)</span>.</p></li>
+</ol>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{array}{lclll}
+\mathrm{sub\_reftype}(t_1, t_2) &amp;=&amp; \href{../appendix/embedding.html#embed-bool}{\mathit{true}} &amp;&amp; (\mathrel{\mbox{if}} \href{../valid/matching.html#match-valtype}{\vdash} t_1 \href{../valid/matching.html#match-valtype}{\leq} t_2) \\
+\mathrm{sub\_reftype}(t_1, t_2) &amp;=&amp; \href{../appendix/embedding.html#embed-bool}{\mathit{false}} &amp;&amp; (\mathrel{\mbox{otherwise}}) \\
+\end{array}\end{split}\]</div>
+</section>
+<section id="mathrm-sub-externtype-xref-syntax-types-syntax-externtype-mathit-externtype-1-xref-syntax-types-syntax-externtype-mathit-externtype-2-xref-appendix-embedding-embed-bool-mathit-bool">
+<h3><span class="math notranslate nohighlight">\(\mathrm{sub\_externtype}(\href{../syntax/types.html#syntax-externtype}{\mathit{externtype}}_1, \href{../syntax/types.html#syntax-externtype}{\mathit{externtype}}_2) : \href{../appendix/embedding.html#embed-bool}{\mathit{bool}}\)</span><a class="headerlink" href="#mathrm-sub-externtype-xref-syntax-types-syntax-externtype-mathit-externtype-1-xref-syntax-types-syntax-externtype-mathit-externtype-2-xref-appendix-embedding-embed-bool-mathit-bool" title="Permalink to this heading">¶</a></h3>
+<ol class="arabic simple">
+<li><p>Pre-condition: the <a class="reference internal" href="../syntax/types.html#syntax-externtype"><span class="std std-ref">extern types</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-externtype}{\mathit{externtype}}_1\)</span> and <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-externtype}{\mathit{externtype}}_2\)</span> are <a class="reference internal" href="../valid/types.html#valid-externtype"><span class="std std-ref">valid</span></a> under the empty <a class="reference internal" href="../valid/conventions.html#context"><span class="std std-ref">context</span></a>.</p></li>
+<li><p>If <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-externtype}{\mathit{externtype}}_1\)</span> <a class="reference internal" href="../valid/matching.html#match-externtype"><span class="std std-ref">matches</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-externtype}{\mathit{externtype}}_2\)</span>, then return <span class="math notranslate nohighlight">\(\href{../appendix/embedding.html#embed-bool}{\mathit{true}}\)</span>.</p></li>
+<li><p>Else, return <span class="math notranslate nohighlight">\(\href{../appendix/embedding.html#embed-bool}{\mathit{false}}\)</span>.</p></li>
+</ol>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{array}{lclll}
+\mathrm{sub\_externtype}(\mathit{et}_1, \mathit{et}_2) &amp;=&amp; \href{../appendix/embedding.html#embed-bool}{\mathit{true}} &amp;&amp; (\mathrel{\mbox{if}} \href{../valid/matching.html#match-externtype}{\vdash} \mathit{et}_1 \href{../valid/matching.html#match-externtype}{\leq} \mathit{et}_2) \\
+\mathrm{sub\_externtype}(\mathit{et}_1, \mathit{et}_2) &amp;=&amp; \href{../appendix/embedding.html#embed-bool}{\mathit{false}} &amp;&amp; (\mathrel{\mbox{otherwise}}) \\
 \end{array}\end{split}\]</div>
 </section>
 </section>
