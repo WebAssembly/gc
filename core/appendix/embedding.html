@@ -563,7 +563,7 @@ If it does, the post conditions are guaranteed by the semantics.</p>
 </section>
 </section>
 <section id="references">
-<span id="embed-ref"></span><span id="index-16"></span><h2>References<a class="headerlink" href="#references" title="Permalink to this heading">¶</a></h2>
+<span id="embed-ref-type"></span><span id="index-16"></span><h2>References<a class="headerlink" href="#references" title="Permalink to this heading">¶</a></h2>
 <section id="mathrm-ref-type-xref-exec-runtime-syntax-store-mathit-store-xref-exec-runtime-syntax-ref-mathit-ref-xref-syntax-types-syntax-reftype-mathit-reftype">
 <h3><span class="math notranslate nohighlight">\(\mathrm{ref\_type}(\href{../exec/runtime.html#syntax-store}{\mathit{store}}, \href{../exec/runtime.html#syntax-ref}{\mathit{ref}}) : \href{../syntax/types.html#syntax-reftype}{\mathit{reftype}}\)</span><a class="headerlink" href="#mathrm-ref-type-xref-exec-runtime-syntax-store-mathit-store-xref-exec-runtime-syntax-ref-mathit-ref-xref-syntax-types-syntax-reftype-mathit-reftype" title="Permalink to this heading">¶</a></h3>
 <ol class="arabic simple">
@@ -583,10 +583,10 @@ In such cases, this function may return a less precise supertype.</p>
 </div>
 </section>
 </section>
-<section id="subtyping">
-<span id="embed-sub"></span><span id="index-17"></span><h2>Subtyping<a class="headerlink" href="#subtyping" title="Permalink to this heading">¶</a></h2>
-<section id="mathrm-sub-valtype-xref-syntax-types-syntax-valtype-mathit-valtype-1-xref-syntax-types-syntax-valtype-mathit-valtype-2-xref-appendix-embedding-embed-bool-mathit-bool">
-<h3><span class="math notranslate nohighlight">\(\mathrm{sub\_valtype}(\href{../syntax/types.html#syntax-valtype}{\mathit{valtype}}_1, \href{../syntax/types.html#syntax-valtype}{\mathit{valtype}}_2) : \href{../appendix/embedding.html#embed-bool}{\mathit{bool}}\)</span><a class="headerlink" href="#mathrm-sub-valtype-xref-syntax-types-syntax-valtype-mathit-valtype-1-xref-syntax-types-syntax-valtype-mathit-valtype-2-xref-appendix-embedding-embed-bool-mathit-bool" title="Permalink to this heading">¶</a></h3>
+<section id="matching">
+<span id="embed-match-externtype"></span><span id="embed-match-valtype"></span><span id="index-17"></span><h2>Matching<a class="headerlink" href="#matching" title="Permalink to this heading">¶</a></h2>
+<section id="mathrm-match-valtype-xref-syntax-types-syntax-valtype-mathit-valtype-1-xref-syntax-types-syntax-valtype-mathit-valtype-2-xref-appendix-embedding-embed-bool-mathit-bool">
+<h3><span class="math notranslate nohighlight">\(\mathrm{match\_valtype}(\href{../syntax/types.html#syntax-valtype}{\mathit{valtype}}_1, \href{../syntax/types.html#syntax-valtype}{\mathit{valtype}}_2) : \href{../appendix/embedding.html#embed-bool}{\mathit{bool}}\)</span><a class="headerlink" href="#mathrm-match-valtype-xref-syntax-types-syntax-valtype-mathit-valtype-1-xref-syntax-types-syntax-valtype-mathit-valtype-2-xref-appendix-embedding-embed-bool-mathit-bool" title="Permalink to this heading">¶</a></h3>
 <ol class="arabic simple">
 <li><p>Pre-condition: the <a class="reference internal" href="../syntax/types.html#syntax-valtype"><span class="std std-ref">value types</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-valtype}{\mathit{valtype}}_1\)</span> and <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-valtype}{\mathit{valtype}}_2\)</span> are <a class="reference internal" href="../valid/types.html#valid-valtype"><span class="std std-ref">valid</span></a> under the empty <a class="reference internal" href="../valid/conventions.html#context"><span class="std std-ref">context</span></a>.</p></li>
 <li><p>If <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-valtype}{\mathit{valtype}}_1\)</span> <a class="reference internal" href="../valid/matching.html#match-valtype"><span class="std std-ref">matches</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-valtype}{\mathit{valtype}}_2\)</span>, then return <span class="math notranslate nohighlight">\(\href{../appendix/embedding.html#embed-bool}{\mathit{true}}\)</span>.</p></li>
@@ -594,12 +594,12 @@ In such cases, this function may return a less precise supertype.</p>
 </ol>
 <div class="math notranslate nohighlight">
 \[\begin{split}\begin{array}{lclll}
-\mathrm{sub\_reftype}(t_1, t_2) &amp;=&amp; \href{../appendix/embedding.html#embed-bool}{\mathit{true}} &amp;&amp; (\mathrel{\mbox{if}} \href{../valid/matching.html#match-valtype}{\vdash} t_1 \href{../valid/matching.html#match-valtype}{\leq} t_2) \\
-\mathrm{sub\_reftype}(t_1, t_2) &amp;=&amp; \href{../appendix/embedding.html#embed-bool}{\mathit{false}} &amp;&amp; (\mathrel{\mbox{otherwise}}) \\
+\mathrm{match\_reftype}(t_1, t_2) &amp;=&amp; \href{../appendix/embedding.html#embed-bool}{\mathit{true}} &amp;&amp; (\mathrel{\mbox{if}} \href{../valid/matching.html#match-valtype}{\vdash} t_1 \href{../valid/matching.html#match-valtype}{\leq} t_2) \\
+\mathrm{match\_reftype}(t_1, t_2) &amp;=&amp; \href{../appendix/embedding.html#embed-bool}{\mathit{false}} &amp;&amp; (\mathrel{\mbox{otherwise}}) \\
 \end{array}\end{split}\]</div>
 </section>
-<section id="mathrm-sub-externtype-xref-syntax-types-syntax-externtype-mathit-externtype-1-xref-syntax-types-syntax-externtype-mathit-externtype-2-xref-appendix-embedding-embed-bool-mathit-bool">
-<h3><span class="math notranslate nohighlight">\(\mathrm{sub\_externtype}(\href{../syntax/types.html#syntax-externtype}{\mathit{externtype}}_1, \href{../syntax/types.html#syntax-externtype}{\mathit{externtype}}_2) : \href{../appendix/embedding.html#embed-bool}{\mathit{bool}}\)</span><a class="headerlink" href="#mathrm-sub-externtype-xref-syntax-types-syntax-externtype-mathit-externtype-1-xref-syntax-types-syntax-externtype-mathit-externtype-2-xref-appendix-embedding-embed-bool-mathit-bool" title="Permalink to this heading">¶</a></h3>
+<section id="mathrm-match-externtype-xref-syntax-types-syntax-externtype-mathit-externtype-1-xref-syntax-types-syntax-externtype-mathit-externtype-2-xref-appendix-embedding-embed-bool-mathit-bool">
+<h3><span class="math notranslate nohighlight">\(\mathrm{match\_externtype}(\href{../syntax/types.html#syntax-externtype}{\mathit{externtype}}_1, \href{../syntax/types.html#syntax-externtype}{\mathit{externtype}}_2) : \href{../appendix/embedding.html#embed-bool}{\mathit{bool}}\)</span><a class="headerlink" href="#mathrm-match-externtype-xref-syntax-types-syntax-externtype-mathit-externtype-1-xref-syntax-types-syntax-externtype-mathit-externtype-2-xref-appendix-embedding-embed-bool-mathit-bool" title="Permalink to this heading">¶</a></h3>
 <ol class="arabic simple">
 <li><p>Pre-condition: the <a class="reference internal" href="../syntax/types.html#syntax-externtype"><span class="std std-ref">extern types</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-externtype}{\mathit{externtype}}_1\)</span> and <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-externtype}{\mathit{externtype}}_2\)</span> are <a class="reference internal" href="../valid/types.html#valid-externtype"><span class="std std-ref">valid</span></a> under the empty <a class="reference internal" href="../valid/conventions.html#context"><span class="std std-ref">context</span></a>.</p></li>
 <li><p>If <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-externtype}{\mathit{externtype}}_1\)</span> <a class="reference internal" href="../valid/matching.html#match-externtype"><span class="std std-ref">matches</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-externtype}{\mathit{externtype}}_2\)</span>, then return <span class="math notranslate nohighlight">\(\href{../appendix/embedding.html#embed-bool}{\mathit{true}}\)</span>.</p></li>
@@ -607,8 +607,8 @@ In such cases, this function may return a less precise supertype.</p>
 </ol>
 <div class="math notranslate nohighlight">
 \[\begin{split}\begin{array}{lclll}
-\mathrm{sub\_externtype}(\mathit{et}_1, \mathit{et}_2) &amp;=&amp; \href{../appendix/embedding.html#embed-bool}{\mathit{true}} &amp;&amp; (\mathrel{\mbox{if}} \href{../valid/matching.html#match-externtype}{\vdash} \mathit{et}_1 \href{../valid/matching.html#match-externtype}{\leq} \mathit{et}_2) \\
-\mathrm{sub\_externtype}(\mathit{et}_1, \mathit{et}_2) &amp;=&amp; \href{../appendix/embedding.html#embed-bool}{\mathit{false}} &amp;&amp; (\mathrel{\mbox{otherwise}}) \\
+\mathrm{match\_externtype}(\mathit{et}_1, \mathit{et}_2) &amp;=&amp; \href{../appendix/embedding.html#embed-bool}{\mathit{true}} &amp;&amp; (\mathrel{\mbox{if}} \href{../valid/matching.html#match-externtype}{\vdash} \mathit{et}_1 \href{../valid/matching.html#match-externtype}{\leq} \mathit{et}_2) \\
+\mathrm{match\_externtype}(\mathit{et}_1, \mathit{et}_2) &amp;=&amp; \href{../appendix/embedding.html#embed-bool}{\mathit{false}} &amp;&amp; (\mathrel{\mbox{otherwise}}) \\
 \end{array}\end{split}\]</div>
 </section>
 </section>
