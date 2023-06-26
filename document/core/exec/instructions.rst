@@ -697,7 +697,7 @@ Reference Instructions
    ~\\[-1ex]
    \begin{array}{l}
    S; (\REFARRAYADDR~a)~(\I32.\CONST~d)~\val~(\I32.\CONST~n)~(\ARRAYFILL~x)
-     \quad\stepto\quad S; \TRAP
+     \quad\stepto\quad \TRAP
      \\ \qquad
      (\iff d + n > |S.\SARRAYS[a].\AIFIELDS|)
    \\[1ex]
@@ -732,36 +732,36 @@ Reference Instructions
 .. math::
    ~\\[-1ex]
    \begin{array}{l}
-   S; (\REFARRAYADDR~a)~(\I32.\CONST~d)~(\REFARRAYADDR~b)~(\I32.\CONST~s)~(\I32.\CONST~n)~(\ARRAYCOPY~x~y)
-     \quad\stepto\quad S; \TRAP
+   S; (\REFARRAYADDR~a_1)~(\I32.\CONST~d)~(\REFARRAYADDR~a_2)~(\I32.\CONST~s)~(\I32.\CONST~n)~(\ARRAYCOPY~x~y)
+     \quad\stepto\quad \TRAP
      \\ \qquad
-     (\iff d + n > |S.\SARRAYS[a].\AIFIELDS| \vee s + n > |S.\SARRAYS[b].\AIFIELDS|)
+     (\iff d + n > |S.\SARRAYS[a_1].\AIFIELDS| \vee s + n > |S.\SARRAYS[a_2].\AIFIELDS|)
    \\[1ex]
-   S; (\REFARRAYADDR~a)~(\I32.\CONST~d)~(\REFARRAYADDR~b)~(\I32.\CONST~s)~(\I32.\CONST~0)~(\ARRAYCOPY~x~y)
+   S; (\REFARRAYADDR~a_1)~(\I32.\CONST~d)~(\REFARRAYADDR~a_2)~(\I32.\CONST~s)~(\I32.\CONST~0)~(\ARRAYCOPY~x~y)
      \quad\stepto\quad S; \epsilon
      \\ \qquad
      (\otherwise)
    \\[1ex]
-   S; (\REFARRAYADDR~a)~(\I32.\CONST~d)~(\REFARRAYADDR~b)~(\I32.\CONST~s)~(\I32.\CONST~n+1)~(\ARRAYCOPY~x~y)
+   S; (\REFARRAYADDR~a_1)~(\I32.\CONST~d)~(\REFARRAYADDR~a_2)~(\I32.\CONST~s)~(\I32.\CONST~n+1)~(\ARRAYCOPY~x~y)
      \quad\stepto
      \\ \quad S;
        \begin{array}[t]{@{}l@{}}
-       (\REFARRAYADDR~a)~(\I32.\CONST~d) \\
-       (\REFARRAYADDR~b)~(\I32.\CONST~s)~(\ARRAYGET~y) \\
+       (\REFARRAYADDR~a_1)~(\I32.\CONST~d) \\
+       (\REFARRAYADDR~a_2)~(\I32.\CONST~s)~(\ARRAYGET~y) \\
        (\ARRAYSET~x) \\
-       (\REFARRAYADDR~a)~(\I32.\CONST~d+1)~(\REFARRAYADDR~b)~(\I32.\CONST~s+1)~(\I32.\CONST~n)~(\ARRAYCOPY~x~y) \\
+       (\REFARRAYADDR~a_1)~(\I32.\CONST~d+1)~(\REFARRAYADDR~a_2)~(\I32.\CONST~s+1)~(\I32.\CONST~n)~(\ARRAYCOPY~x~y) \\
        \end{array}
      \\ \qquad
      (\otherwise, \iff d \leq s)
    \\[1ex]
-   S; (\REFARRAYADDR~a)~(\I32.\CONST~d)~(\REFARRAYADDR~b)~(\I32.\CONST~s)~(\I32.\CONST~n+1)~(\ARRAYCOPY~x~y)
+   S; (\REFARRAYADDR~a_1)~(\I32.\CONST~d)~(\REFARRAYADDR~a_2)~(\I32.\CONST~s)~(\I32.\CONST~n+1)~(\ARRAYCOPY~x~y)
      \quad\stepto
      \\ \quad S;
        \begin{array}[t]{@{}l@{}}
-       (\REFARRAYADDR~a)~(\I32.\CONST~d+n) \\
-       (\REFARRAYADDR~b)~(\I32.\CONST~s+n)~(\ARRAYGET~y) \\
+       (\REFARRAYADDR~a_1)~(\I32.\CONST~d+n) \\
+       (\REFARRAYADDR~a_2)~(\I32.\CONST~s+n)~(\ARRAYGET~y) \\
        (\ARRAYSET~x) \\
-       (\REFARRAYADDR~a)~(\I32.\CONST~d)~(\REFARRAYADDR~b)~(\I32.\CONST~s)~(\I32.\CONST~n)~(\ARRAYCOPY~x~y) \\
+       (\REFARRAYADDR~a_1)~(\I32.\CONST~d)~(\REFARRAYADDR~a_2)~(\I32.\CONST~s)~(\I32.\CONST~n)~(\ARRAYCOPY~x~y) \\
        \end{array}
      \\ \qquad
      (\otherwise, \iff d > s)
