@@ -628,6 +628,163 @@ S; (\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}array}}~a)~\href{../syn
 S; (\href{../syntax/instructions.html#syntax-instr-ref}{\mathsf{ref.null}}~t)~\href{../syntax/instructions.html#syntax-instr-array}{\mathsf{array.len}} &amp;\href{../exec/conventions.html#formal-notation}{\hookrightarrow}&amp; \href{../exec/runtime.html#syntax-trap}{\mathsf{trap}}
 \end{array}\end{split}\]</div>
 </section>
+<section id="xref-syntax-instructions-syntax-instr-aray-mathsf-array-fill-xref-syntax-modules-syntax-typeidx-mathit-typeidx">
+<span id="exec-array-fill"></span><h3><span class="math notranslate nohighlight">\(\href{../syntax/instructions.html#syntax-instr-aray}{\mathsf{array.fill}}~\href{../syntax/modules.html#syntax-typeidx}{\mathit{typeidx}}\)</span><a class="headerlink" href="#xref-syntax-instructions-syntax-instr-aray-mathsf-array-fill-xref-syntax-modules-syntax-typeidx-mathit-typeidx" title="Permalink to this heading">¶</a></h3>
+<div class="admonition-todo admonition" id="id15">
+<p class="admonition-title">Todo</p>
+<p>Prose</p>
+</div>
+<div class="math notranslate nohighlight">
+\[\begin{split}~\\[-1ex]
+\begin{array}{l}
+S; (\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}array}}~a)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~d)~\href{../exec/runtime.html#syntax-val}{\mathit{val}}~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~n)~(\href{../syntax/instructions.html#syntax-instr-aray}{\mathsf{array.fill}}~x)
+  \quad\href{../exec/conventions.html#formal-notation}{\hookrightarrow}\quad \href{../exec/runtime.html#syntax-trap}{\mathsf{trap}}
+  \\ \qquad
+  (\mathrel{\mbox{if}} d + n &gt; |S.\href{../exec/runtime.html#syntax-store}{\mathsf{arrays}}[a].\href{../exec/runtime.html#syntax-arrayinst}{\mathsf{fields}}|)
+\\[1ex]
+S; (\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}array}}~a)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~d)~\href{../exec/runtime.html#syntax-val}{\mathit{val}}~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~0)~(\href{../syntax/instructions.html#syntax-instr-aray}{\mathsf{array.fill}}~x)
+  \quad\href{../exec/conventions.html#formal-notation}{\hookrightarrow}\quad S; \epsilon
+  \\ \qquad
+  (\mathrel{\mbox{otherwise}})
+\\[1ex]
+S; (\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}array}}~a)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~d)~\href{../exec/runtime.html#syntax-val}{\mathit{val}}~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~n+1)~(\href{../syntax/instructions.html#syntax-instr-aray}{\mathsf{array.fill}}~x)
+  \quad\href{../exec/conventions.html#formal-notation}{\hookrightarrow}
+  \\ \quad S;
+    \begin{array}[t]{&#64;{}l&#64;{}}
+    (\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}array}}~a)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~d)~\href{../exec/runtime.html#syntax-val}{\mathit{val}}~(\href{../syntax/instructions.html#syntax-instr-array}{\mathsf{array.set}}~x) \\
+    (\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}array}}~a)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~d+1)~\href{../exec/runtime.html#syntax-val}{\mathit{val}}~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~n)~(\href{../syntax/instructions.html#syntax-instr-aray}{\mathsf{array.fill}}~x) \\
+    \end{array}
+  \\ \qquad
+  (\mathrel{\mbox{otherwise}})
+\\[1ex]
+S; (\href{../syntax/instructions.html#syntax-instr-ref}{\mathsf{ref.null}}~t)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~d)~\href{../exec/runtime.html#syntax-val}{\mathit{val}}~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~n)~(\href{../syntax/instructions.html#syntax-instr-aray}{\mathsf{array.fill}}~x) \quad\href{../exec/conventions.html#formal-notation}{\hookrightarrow}\quad \href{../exec/runtime.html#syntax-trap}{\mathsf{trap}}
+\end{array}\end{split}\]</div>
+</section>
+<section id="xref-syntax-instructions-syntax-instr-aray-mathsf-array-copy-xref-syntax-modules-syntax-typeidx-mathit-typeidx-xref-syntax-modules-syntax-typeidx-mathit-typeidx">
+<span id="exec-array-copy"></span><h3><span class="math notranslate nohighlight">\(\href{../syntax/instructions.html#syntax-instr-aray}{\mathsf{array.copy}}~\href{../syntax/modules.html#syntax-typeidx}{\mathit{typeidx}}~\href{../syntax/modules.html#syntax-typeidx}{\mathit{typeidx}}\)</span><a class="headerlink" href="#xref-syntax-instructions-syntax-instr-aray-mathsf-array-copy-xref-syntax-modules-syntax-typeidx-mathit-typeidx-xref-syntax-modules-syntax-typeidx-mathit-typeidx" title="Permalink to this heading">¶</a></h3>
+<div class="admonition-todo admonition" id="id16">
+<p class="admonition-title">Todo</p>
+<p>Prose</p>
+</div>
+<div class="admonition-todo admonition" id="id17">
+<p class="admonition-title">Todo</p>
+<p>Handle packed fields correctly via array.get_u instead of array.get</p>
+</div>
+<div class="math notranslate nohighlight">
+\[\begin{split}~\\[-1ex]
+\begin{array}{l}
+S; (\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}array}}~a_1)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~d)~(\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}array}}~a_2)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~s)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~n)~(\href{../syntax/instructions.html#syntax-instr-aray}{\mathsf{array.copy}}~x~y)
+  \quad\href{../exec/conventions.html#formal-notation}{\hookrightarrow}\quad \href{../exec/runtime.html#syntax-trap}{\mathsf{trap}}
+  \\ \qquad
+  (\mathrel{\mbox{if}} d + n &gt; |S.\href{../exec/runtime.html#syntax-store}{\mathsf{arrays}}[a_1].\href{../exec/runtime.html#syntax-arrayinst}{\mathsf{fields}}| \vee s + n &gt; |S.\href{../exec/runtime.html#syntax-store}{\mathsf{arrays}}[a_2].\href{../exec/runtime.html#syntax-arrayinst}{\mathsf{fields}}|)
+\\[1ex]
+S; (\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}array}}~a_1)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~d)~(\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}array}}~a_2)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~s)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~0)~(\href{../syntax/instructions.html#syntax-instr-aray}{\mathsf{array.copy}}~x~y)
+  \quad\href{../exec/conventions.html#formal-notation}{\hookrightarrow}\quad S; \epsilon
+  \\ \qquad
+  (\mathrel{\mbox{otherwise}})
+\\[1ex]
+S; (\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}array}}~a_1)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~d)~(\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}array}}~a_2)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~s)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~n+1)~(\href{../syntax/instructions.html#syntax-instr-aray}{\mathsf{array.copy}}~x~y)
+  \quad\href{../exec/conventions.html#formal-notation}{\hookrightarrow}
+  \\ \quad S;
+    \begin{array}[t]{&#64;{}l&#64;{}}
+    (\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}array}}~a_1)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~d) \\
+    (\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}array}}~a_2)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~s)~(\href{../syntax/instructions.html#syntax-instr-array}{\mathsf{array.get}}~y) \\
+    (\href{../syntax/instructions.html#syntax-instr-array}{\mathsf{array.set}}~x) \\
+    (\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}array}}~a_1)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~d+1)~(\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}array}}~a_2)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~s+1)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~n)~(\href{../syntax/instructions.html#syntax-instr-aray}{\mathsf{array.copy}}~x~y) \\
+    \end{array}
+  \\ \qquad
+  (\mathrel{\mbox{otherwise}}, \mathrel{\mbox{if}} d \leq s)
+\\[1ex]
+S; (\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}array}}~a_1)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~d)~(\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}array}}~a_2)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~s)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~n+1)~(\href{../syntax/instructions.html#syntax-instr-aray}{\mathsf{array.copy}}~x~y)
+  \quad\href{../exec/conventions.html#formal-notation}{\hookrightarrow}
+  \\ \quad S;
+    \begin{array}[t]{&#64;{}l&#64;{}}
+    (\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}array}}~a_1)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~d+n) \\
+    (\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}array}}~a_2)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~s+n)~(\href{../syntax/instructions.html#syntax-instr-array}{\mathsf{array.get}}~y) \\
+    (\href{../syntax/instructions.html#syntax-instr-array}{\mathsf{array.set}}~x) \\
+    (\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}array}}~a_1)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~d)~(\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}array}}~a_2)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~s)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~n)~(\href{../syntax/instructions.html#syntax-instr-aray}{\mathsf{array.copy}}~x~y) \\
+    \end{array}
+  \\ \qquad
+  (\mathrel{\mbox{otherwise}}, \mathrel{\mbox{if}} d &gt; s)
+\\[1ex]
+S; (\href{../syntax/instructions.html#syntax-instr-ref}{\mathsf{ref.null}}~t)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~d)~\href{../exec/runtime.html#syntax-val}{\mathit{val}}~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~s)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~n)~(\href{../syntax/instructions.html#syntax-instr-aray}{\mathsf{array.copy}}~x~y) \quad\href{../exec/conventions.html#formal-notation}{\hookrightarrow}\quad \href{../exec/runtime.html#syntax-trap}{\mathsf{trap}}
+\\[1ex]
+S; \href{../exec/runtime.html#syntax-val}{\mathit{val}}~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~d)~(\href{../syntax/instructions.html#syntax-instr-ref}{\mathsf{ref.null}}~t)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~s)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~n)~(\href{../syntax/instructions.html#syntax-instr-aray}{\mathsf{array.copy}}~x~y) \quad\href{../exec/conventions.html#formal-notation}{\hookrightarrow}\quad \href{../exec/runtime.html#syntax-trap}{\mathsf{trap}}
+\end{array}\end{split}\]</div>
+</section>
+<section id="xref-syntax-instructions-syntax-instr-aray-mathsf-array-init-data-xref-syntax-modules-syntax-typeidx-mathit-typeidx-xref-syntax-modules-syntax-dataidx-mathit-dataidx">
+<span id="exec-array-init-data"></span><h3><span class="math notranslate nohighlight">\(\href{../syntax/instructions.html#syntax-instr-aray}{\mathsf{array.init\_data}}~\href{../syntax/modules.html#syntax-typeidx}{\mathit{typeidx}}~\href{../syntax/modules.html#syntax-dataidx}{\mathit{dataidx}}\)</span><a class="headerlink" href="#xref-syntax-instructions-syntax-instr-aray-mathsf-array-init-data-xref-syntax-modules-syntax-typeidx-mathit-typeidx-xref-syntax-modules-syntax-dataidx-mathit-dataidx" title="Permalink to this heading">¶</a></h3>
+<div class="admonition-todo admonition" id="id18">
+<p class="admonition-title">Todo</p>
+<p>Prose</p>
+</div>
+<div class="math notranslate nohighlight">
+\[\begin{split}~\\[-1ex]
+\begin{array}{l}
+S; F; (\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}array}}~a)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~d)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~s)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~n)~(\href{../syntax/instructions.html#syntax-instr-aray}{\mathsf{array.init\_data}}~x~y) \quad\href{../exec/conventions.html#formal-notation}{\hookrightarrow}\quad \href{../exec/runtime.html#syntax-trap}{\mathsf{trap}}
+  \\ \qquad
+  \begin{array}[t]{&#64;{}r&#64;{~}l&#64;{}}
+  (\mathrel{\mbox{if}} &amp; d + n &gt; |S.\href{../exec/runtime.html#syntax-store}{\mathsf{arrays}}[a].\href{../exec/runtime.html#syntax-arrayinst}{\mathsf{fields}}| \\
+   \vee &amp; (F.\href{../exec/runtime.html#syntax-frame}{\mathsf{module}}.\href{../exec/runtime.html#syntax-moduleinst}{\mathsf{types}}[x] = \href{../syntax/types.html#syntax-strtype}{\mathsf{array}}~\mathit{ft} \land
+           s + n\cdot|\mathit{ft}| &gt; |S.\href{../exec/runtime.html#syntax-store}{\mathsf{datas}}[F.\href{../exec/runtime.html#syntax-frame}{\mathsf{module}}.\href{../exec/runtime.html#syntax-moduleinst}{\mathsf{dataaddrs}}[y]].\href{../exec/runtime.html#syntax-datainst}{\mathsf{data}}|))
+  \end{array}
+\\[1ex]
+S; F; (\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}array}}~a)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~d)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~s)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~0)~(\href{../syntax/instructions.html#syntax-instr-aray}{\mathsf{array.init\_data}}~x~y)
+  \quad\href{../exec/conventions.html#formal-notation}{\hookrightarrow}\quad S; F; \epsilon
+  \\ \qquad
+  (\mathrel{\mbox{otherwise}})
+\\[1ex]
+S; F; (\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}array}}~a)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~d)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~s)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~n+1)~(\href{../syntax/instructions.html#syntax-instr-aray}{\mathsf{array.init\_data}}~x~y)
+  \quad\href{../exec/conventions.html#formal-notation}{\hookrightarrow}
+  \\ \quad S; F;
+  \begin{array}[t]{&#64;{}l&#64;{}}
+  (\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}array}}~a)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~d)~(t.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}} i)~(\href{../syntax/instructions.html#syntax-instr-array}{\mathsf{array.set}}~x) \\
+  (\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}array}}~a)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~d+1)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~s+|\mathit{ft}|)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~n)~(\href{../syntax/instructions.html#syntax-instr-aray}{\mathsf{array.init\_data}}~x~y) \\
+  \end{array}
+  \\ \qquad
+  \begin{array}[t]{&#64;{}r&#64;{~}l&#64;{}}
+  (\mathrel{\mbox{otherwise}}, \mathrel{\mbox{if}} &amp; F.\href{../exec/runtime.html#syntax-frame}{\mathsf{module}}.\href{../exec/runtime.html#syntax-moduleinst}{\mathsf{types}}[x] = \href{../syntax/types.html#syntax-strtype}{\mathsf{array}}~\mathit{ft} \\
+   \land &amp; t = \href{../syntax/types.html#aux-unpacktype}{\mathrm{unpack}}(\mathit{ft}) \\
+   \land &amp; \href{../exec/numerics.html#aux-bytes}{\mathrm{bytes}}_{\mathit{ft}}(i) = S.\href{../exec/runtime.html#syntax-store}{\mathsf{datas}}[F.\href{../exec/runtime.html#syntax-frame}{\mathsf{module}}.\href{../exec/runtime.html#syntax-moduleinst}{\mathsf{dataaddrs}}[y]].\href{../exec/runtime.html#syntax-datainst}{\mathsf{data}}[s \href{../syntax/conventions.html#notation-slice}{\mathrel{\mathbf{:}}} |\mathit{ft}|]
+  \end{array}
+\\[1ex]
+S; F; (\href{../syntax/instructions.html#syntax-instr-ref}{\mathsf{ref.null}}~t)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~d)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~s)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~n)~(\href{../syntax/instructions.html#syntax-instr-aray}{\mathsf{array.init\_data}}~x~y) \quad\href{../exec/conventions.html#formal-notation}{\hookrightarrow}\quad \href{../exec/runtime.html#syntax-trap}{\mathsf{trap}}
+\end{array}\end{split}\]</div>
+</section>
+<section id="xref-syntax-instructions-syntax-instr-aray-mathsf-array-init-elem-xref-syntax-modules-syntax-typeidx-mathit-typeidx-xref-syntax-modules-syntax-elemidx-mathit-elemidx">
+<span id="exec-array-init-elem"></span><h3><span class="math notranslate nohighlight">\(\href{../syntax/instructions.html#syntax-instr-aray}{\mathsf{array.init\_elem}}~\href{../syntax/modules.html#syntax-typeidx}{\mathit{typeidx}}~\href{../syntax/modules.html#syntax-elemidx}{\mathit{elemidx}}\)</span><a class="headerlink" href="#xref-syntax-instructions-syntax-instr-aray-mathsf-array-init-elem-xref-syntax-modules-syntax-typeidx-mathit-typeidx-xref-syntax-modules-syntax-elemidx-mathit-elemidx" title="Permalink to this heading">¶</a></h3>
+<div class="admonition-todo admonition" id="id19">
+<p class="admonition-title">Todo</p>
+<p>Prose</p>
+</div>
+<div class="math notranslate nohighlight">
+\[\begin{split}~\\[-1ex]
+\begin{array}{l}
+S; F; (\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}array}}~a)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~d)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~s)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~n)~(\href{../syntax/instructions.html#syntax-instr-aray}{\mathsf{array.init\_elem}}~x~y) \quad\href{../exec/conventions.html#formal-notation}{\hookrightarrow}\quad \href{../exec/runtime.html#syntax-trap}{\mathsf{trap}}
+  \\ \qquad
+  \begin{array}[t]{&#64;{}r&#64;{~}l&#64;{}}
+  (\mathrel{\mbox{if}} &amp; d + n &gt; |S.\href{../exec/runtime.html#syntax-store}{\mathsf{arrays}}[a].\href{../exec/runtime.html#syntax-arrayinst}{\mathsf{fields}}| \\
+   \vee &amp; s + n &gt; |S.\href{../exec/runtime.html#syntax-store}{\mathsf{elems}}[F.\href{../exec/runtime.html#syntax-frame}{\mathsf{module}}.\href{../exec/runtime.html#syntax-moduleinst}{\mathsf{elemaddrs}}[y]].\href{../exec/runtime.html#syntax-eleminst}{\mathsf{elem}}|)
+  \end{array}
+\\[1ex]
+S; F; (\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}array}}~a)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~d)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~s)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~0)~(\href{../syntax/instructions.html#syntax-instr-aray}{\mathsf{array.init\_elem}}~x~y)
+  \quad\href{../exec/conventions.html#formal-notation}{\hookrightarrow}\quad S; F; \epsilon
+  \\ \qquad
+  (\mathrel{\mbox{otherwise}})
+\\[1ex]
+S; F; (\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}array}}~a)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~d)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~s)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~n+1)~(\href{../syntax/instructions.html#syntax-instr-aray}{\mathsf{array.init\_elem}}~x~y)
+  \quad\href{../exec/conventions.html#formal-notation}{\hookrightarrow}
+  \\ \quad S; F;
+  \begin{array}[t]{&#64;{}l&#64;{}}
+  (\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}array}}~a)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~d)~\href{../syntax/types.html#syntax-reftype}{\mathsf{ref}}~(\href{../syntax/instructions.html#syntax-instr-array}{\mathsf{array.set}}~x) \\
+  (\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}array}}~a)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~d+1)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~s+1)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~n)~(\href{../syntax/instructions.html#syntax-instr-aray}{\mathsf{array.init\_elem}}~x~y) \\
+  \end{array}
+  \\ \qquad
+  (\mathrel{\mbox{otherwise}}, \mathrel{\mbox{if}} \href{../syntax/types.html#syntax-reftype}{\mathsf{ref}} = S.\href{../exec/runtime.html#syntax-store}{\mathsf{elems}}[F.\href{../exec/runtime.html#syntax-frame}{\mathsf{module}}.\href{../exec/runtime.html#syntax-moduleinst}{\mathsf{elemaddrs}}[y]].\href{../exec/runtime.html#syntax-eleminst}{\mathsf{elem}}[s])
+\\[1ex]
+S; F; (\href{../syntax/instructions.html#syntax-instr-ref}{\mathsf{ref.null}}~t)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~d)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~s)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~n)~(\href{../syntax/instructions.html#syntax-instr-aray}{\mathsf{array.init\_elem}}~x~y) \quad\href{../exec/conventions.html#formal-notation}{\hookrightarrow}\quad \href{../exec/runtime.html#syntax-trap}{\mathsf{trap}}
+\end{array}\end{split}\]</div>
+</section>
 <section id="xref-syntax-instructions-syntax-instr-extern-mathsf-extern-externalize">
 <span id="exec-extern-externalize"></span><h3><span class="math notranslate nohighlight">\(\href{../syntax/instructions.html#syntax-instr-extern}{\mathsf{extern.externalize}}\)</span><a class="headerlink" href="#xref-syntax-instructions-syntax-instr-extern-mathsf-extern-externalize" title="Permalink to this heading">¶</a></h3>
 <ol class="arabic simple">
