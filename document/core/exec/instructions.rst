@@ -806,8 +806,7 @@ Reference Instructions
      \begin{array}[t]{@{}r@{~}l@{}}
      (\otherwise, \iff & F.\AMODULE.\MITYPES[x] = \TARRAY~\X{ft} \\
       \land & t = \unpacktype(\X{ft}) \\
-      \land & b^\ast = S.\SDATAS[F.\AMODULE.\MIDATAS[y]].\DIDATA[s \slice |\X{ft}|] \\
-      \land & \bytes_{\X{ft}}(i) = \unpackval_{\X{ft}}(b^\ast))
+      \land & \bytes_{\X{ft}}(i) = S.\SDATAS[F.\AMODULE.\MIDATAS[y]].\DIDATA[s \slice |\X{ft}|]
      \end{array}
    \\[1ex]
    S; F; (\REFNULL~t)~(\I32.\CONST~d)~(\I32.\CONST~s)~(\I32.\CONST~n)~(\ARRAYINITDATA~x~y) \quad\stepto\quad \TRAP
