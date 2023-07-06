@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
-    <title>Instructions &#8212; WebAssembly 2.0 + tail calls + function references + gc (Draft 2023-06-27)</title>
+    <title>Instructions &#8212; WebAssembly 2.0 + tail calls + function references + gc (Draft 2023-07-06)</title>
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
     <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
@@ -424,29 +424,59 @@ S; \href{../exec/runtime.html#syntax-ref}{\mathit{ref}}~(\href{../syntax/instruc
 <span id="exec-struct-new"></span><h3><span class="math notranslate nohighlight">\(\href{../syntax/instructions.html#syntax-instr-struct}{\mathsf{struct.new}}~\href{../syntax/modules.html#syntax-typeidx}{\mathit{typeidx}}\)</span><a class="headerlink" href="#xref-syntax-instructions-syntax-instr-struct-mathsf-struct-new-xref-syntax-modules-syntax-typeidx-mathit-typeidx" title="Permalink to this heading">¶</a></h3>
 <div class="admonition-todo admonition" id="id1">
 <p class="admonition-title">Todo</p>
-<p>Abstract allocation of structs and arrays into alloc functions</p>
+<p>unroll type</p>
 </div>
-<div class="admonition-todo admonition" id="id2">
-<p class="admonition-title">Todo</p>
-<p>Prose</p>
-</div>
+<ol class="arabic simple">
+<li><p>Assert: due to <span class="xref std std-ref">validation</span>, the <a class="reference internal" href="../syntax/types.html#syntax-deftype"><span class="std std-ref">defined type</span></a> <span class="math notranslate nohighlight">\(F.\href{../exec/runtime.html#syntax-frame}{\mathsf{module}}.\href{../exec/runtime.html#syntax-moduleinst}{\mathsf{types}}[\href{../syntax/modules.html#syntax-typeidx}{\mathit{typeidx}}]\)</span> exists.</p></li>
+<li><p>Let <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-deftype}{\mathit{deftype}}\)</span> be the <a class="reference internal" href="../syntax/types.html#syntax-deftype"><span class="std std-ref">defined type</span></a> <span class="math notranslate nohighlight">\(F.\href{../exec/runtime.html#syntax-frame}{\mathsf{module}}.\href{../exec/runtime.html#syntax-moduleinst}{\mathsf{types}}[\href{../syntax/modules.html#syntax-typeidx}{\mathit{typeidx}}]\)</span>.</p></li>
+<li><p>Assert: due to <span class="xref std std-ref">validation</span>, <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-deftype}{\mathit{deftype}}\)</span> is a <span class="xref std std-ref">structure type</span>.</p></li>
+<li><p>Let <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-strtype}{\mathsf{struct}}~\mathit{ft}^\ast\)</span> be the <span class="xref std std-ref">structure type</span> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-deftype}{\mathit{deftype}}\)</span>. (todo: unroll)</p></li>
+<li><p>Let <span class="math notranslate nohighlight">\(n\)</span> be the length of the <span class="xref std std-ref">field type</span> sequence <span class="math notranslate nohighlight">\(\mathit{ft}^\ast\)</span>.</p></li>
+<li><p>Assert: due to <span class="xref std std-ref">validation</span>, <span class="math notranslate nohighlight">\(n\)</span> <a class="reference internal" href="runtime.html#syntax-val"><span class="std std-ref">values</span></a> are on the top of the stack.</p></li>
+<li><p>Pop the <span class="math notranslate nohighlight">\(n\)</span> values <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-val}{\mathit{val}}^\ast\)</span> from the stack.</p></li>
+<li><p>For every value <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-val}{\mathit{val}}_i\)</span> in <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-val}{\mathit{val}}^\ast\)</span> and corresponding <span class="xref std std-ref">field type</span> <span class="math notranslate nohighlight">\(\mathit{ft}_i\)</span> in <span class="math notranslate nohighlight">\(\mathit{ft}^\ast\)</span>:</p>
+<ol class="loweralpha simple">
+<li><p>Let <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-fieldval}{\mathit{fieldval}}_i\)</span> be the result of computing <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#aux-packval}{\mathrm{pack}}_{\mathit{ft}_i}(\href{../exec/runtime.html#syntax-val}{\mathit{val}}_i))\)</span>.</p></li>
+</ol>
+</li>
+<li><p>Let <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-fieldval}{\mathit{fieldval}}^\ast\)</span> the concatenation of all field values <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-fieldval}{\mathit{fieldval}}_i\)</span>.</p></li>
+<li><p>Let <span class="math notranslate nohighlight">\(\mathit{si}\)</span> be the <a class="reference internal" href="runtime.html#syntax-structinst"><span class="std std-ref">structure instance</span></a> <span class="math notranslate nohighlight">\(\{\href{../exec/runtime.html#syntax-structinst}{\mathsf{type}}~\href{../syntax/types.html#syntax-deftype}{\mathit{deftype}}, \href{../exec/runtime.html#syntax-structinst}{\mathsf{fields}}~\href{../exec/runtime.html#syntax-fieldval}{\mathit{fieldval}}^\ast\}\)</span>.</p></li>
+<li><p>Let <span class="math notranslate nohighlight">\(a\)</span> be the length of <span class="math notranslate nohighlight">\(S.\href{../exec/runtime.html#syntax-store}{\mathsf{structs}}\)</span>.</p></li>
+<li><p>Append <span class="math notranslate nohighlight">\(\mathit{si}\)</span> to <span class="math notranslate nohighlight">\(S.\href{../exec/runtime.html#syntax-store}{\mathsf{structs}}\)</span>.</p></li>
+<li><p>Return the <a class="reference internal" href="runtime.html#syntax-ref-struct"><span class="std std-ref">structure reference</span></a> <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}struct}}~a\)</span>.</p></li>
+</ol>
 <div class="math notranslate nohighlight">
 \[\begin{split}\begin{array}{lcl&#64;{\qquad}l}
 S; F; \href{../exec/runtime.html#syntax-val}{\mathit{val}}^n~(\href{../syntax/instructions.html#syntax-instr-struct}{\mathsf{struct.new}}~x) &amp;\href{../exec/conventions.html#formal-notation}{\hookrightarrow}&amp; S'; F; (\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}struct}}~|S.\href{../exec/runtime.html#syntax-store}{\mathsf{structs}}|)
   \\&amp;&amp;
   \begin{array}[t]{&#64;{}r&#64;{~}l&#64;{}}
    (\mathrel{\mbox{if}} &amp; F.\href{../exec/runtime.html#syntax-frame}{\mathsf{module}}.\href{../exec/runtime.html#syntax-moduleinst}{\mathsf{types}}[x] = \href{../syntax/types.html#syntax-strtype}{\mathsf{struct}}~\mathit{ft}^n \\
-   \land &amp; \mathit{si} = \{\href{../exec/runtime.html#syntax-structinst}{\mathsf{type}}~F.\href{../exec/runtime.html#syntax-frame}{\mathsf{module}}[x], \href{../exec/runtime.html#syntax-structinst}{\mathsf{fields}}~(\href{../exec/runtime.html#aux-packval}{\mathrm{pack}}_{\mathit{ft}}(\href{../exec/runtime.html#syntax-val}{\mathit{val}}))^n\} \\
+   \land &amp; \mathit{si} = \{\href{../exec/runtime.html#syntax-structinst}{\mathsf{type}}~F.\href{../exec/runtime.html#syntax-frame}{\mathsf{module}}.\href{../exec/runtime.html#syntax-moduleinst}{\mathsf{types}}[x], \href{../exec/runtime.html#syntax-structinst}{\mathsf{fields}}~(\href{../exec/runtime.html#aux-packval}{\mathrm{pack}}_{\mathit{ft}}(\href{../exec/runtime.html#syntax-val}{\mathit{val}}))^n\} \\
    \land &amp; S' = S \href{../syntax/conventions.html#notation-replace}{\mathrel{\mbox{with}}} \href{../exec/runtime.html#syntax-store}{\mathsf{structs}} = S.\href{../exec/runtime.html#syntax-store}{\mathsf{structs}}~\mathit{si})
   \end{array} \\
 \end{array}\end{split}\]</div>
 </section>
 <section id="xref-syntax-instructions-syntax-instr-struct-mathsf-struct-new-default-xref-syntax-modules-syntax-typeidx-mathit-typeidx">
 <span id="exec-struct-new-default"></span><h3><span class="math notranslate nohighlight">\(\href{../syntax/instructions.html#syntax-instr-struct}{\mathsf{struct.new\_default}}~\href{../syntax/modules.html#syntax-typeidx}{\mathit{typeidx}}\)</span><a class="headerlink" href="#xref-syntax-instructions-syntax-instr-struct-mathsf-struct-new-default-xref-syntax-modules-syntax-typeidx-mathit-typeidx" title="Permalink to this heading">¶</a></h3>
-<div class="admonition-todo admonition" id="id3">
+<div class="admonition-todo admonition" id="id2">
 <p class="admonition-title">Todo</p>
-<p>Prose</p>
+<p>unroll type</p>
 </div>
+<ol class="arabic simple">
+<li><p>Assert: due to <span class="xref std std-ref">validation</span>, the <a class="reference internal" href="../syntax/types.html#syntax-deftype"><span class="std std-ref">defined type</span></a> <span class="math notranslate nohighlight">\(F.\href{../exec/runtime.html#syntax-frame}{\mathsf{module}}.\href{../exec/runtime.html#syntax-moduleinst}{\mathsf{types}}[\href{../syntax/modules.html#syntax-typeidx}{\mathit{typeidx}}]\)</span> exists.</p></li>
+<li><p>Let <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-deftype}{\mathit{deftype}}\)</span> be the <a class="reference internal" href="../syntax/types.html#syntax-deftype"><span class="std std-ref">defined type</span></a> <span class="math notranslate nohighlight">\(F.\href{../exec/runtime.html#syntax-frame}{\mathsf{module}}.\href{../exec/runtime.html#syntax-moduleinst}{\mathsf{types}}[\href{../syntax/modules.html#syntax-typeidx}{\mathit{typeidx}}]\)</span>.</p></li>
+<li><p>Assert: due to <span class="xref std std-ref">validation</span>, <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-deftype}{\mathit{deftype}}\)</span> is a <span class="xref std std-ref">structure type</span>.</p></li>
+<li><p>Let <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-strtype}{\mathsf{struct}}~\mathit{ft}^\ast\)</span> be the <span class="xref std std-ref">structure type</span> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-deftype}{\mathit{deftype}}\)</span>. (todo: unroll)</p></li>
+<li><p>Let <span class="math notranslate nohighlight">\(n\)</span> be the length of the <span class="xref std std-ref">field type</span> sequence <span class="math notranslate nohighlight">\(\mathit{ft}^\ast\)</span>.</p></li>
+<li><p>For every <span class="xref std std-ref">field type</span> <span class="math notranslate nohighlight">\(\mathit{ft}_i\)</span> in <span class="math notranslate nohighlight">\(\mathit{ft}^\ast\)</span>:</p>
+<ol class="loweralpha simple">
+<li><p>Let <span class="math notranslate nohighlight">\(t_i\)</span> be the <a class="reference internal" href="../syntax/types.html#syntax-valtype"><span class="std std-ref">value type</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#aux-unpacktype}{\mathrm{unpack}}(\mathit{ft}_i)\)</span>.</p></li>
+<li><p>Assert: due to <span class="xref std std-ref">validation</span>, <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#default-val}{\mathrm{default}}_{t_i}\)</span> is defined.</p></li>
+<li><p>Push the <a class="reference internal" href="runtime.html#syntax-val"><span class="std std-ref">value</span></a> <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#default-val}{\mathrm{default}}_{t_i}\)</span> to the stack.</p></li>
+</ol>
+</li>
+<li><p>Execute the instruction <span class="math notranslate nohighlight">\((\href{../syntax/instructions.html#syntax-instr-struct}{\mathsf{struct.new}}~\href{../syntax/modules.html#syntax-typeidx}{\mathit{typeidx}})\)</span>.</p></li>
+</ol>
 <div class="math notranslate nohighlight">
 \[\begin{split}\begin{array}{lcl&#64;{\qquad}l}
 F; (\href{../syntax/instructions.html#syntax-instr-struct}{\mathsf{struct.new\_default}}~x) &amp;\href{../exec/conventions.html#formal-notation}{\hookrightarrow}&amp; (\href{../exec/runtime.html#default-val}{\mathrm{default}}_{\href{../syntax/types.html#aux-unpacktype}{\mathrm{unpack}}(\mathit{ft})}))^n~(\href{../syntax/instructions.html#syntax-instr-struct}{\mathsf{struct.new}}~x)
@@ -458,44 +488,100 @@ F; (\href{../syntax/instructions.html#syntax-instr-struct}{\mathsf{struct.new\_d
 </section>
 <section id="xref-syntax-instructions-syntax-instr-struct-mathsf-struct-get-mathsf-xref-syntax-instructions-syntax-sx-mathit-sx-xref-syntax-modules-syntax-typeidx-mathit-typeidx-i">
 <span id="exec-struct-get-sx"></span><span id="exec-struct-get"></span><h3><span class="math notranslate nohighlight">\(\href{../syntax/instructions.html#syntax-instr-struct}{\mathsf{struct.get}}\mathsf{\_}\href{../syntax/instructions.html#syntax-sx}{\mathit{sx}}^?~\href{../syntax/modules.html#syntax-typeidx}{\mathit{typeidx}}~i\)</span><a class="headerlink" href="#xref-syntax-instructions-syntax-instr-struct-mathsf-struct-get-mathsf-xref-syntax-instructions-syntax-sx-mathit-sx-xref-syntax-modules-syntax-typeidx-mathit-typeidx-i" title="Permalink to this heading">¶</a></h3>
-<div class="admonition-todo admonition" id="id4">
+<div class="admonition-todo admonition" id="id3">
 <p class="admonition-title">Todo</p>
-<p>Prose</p>
+<p>unroll type</p>
 </div>
+<ol class="arabic simple">
+<li><p>Assert: due to <span class="xref std std-ref">validation</span>, the <a class="reference internal" href="../syntax/types.html#syntax-deftype"><span class="std std-ref">defined type</span></a> <span class="math notranslate nohighlight">\(F.\href{../exec/runtime.html#syntax-frame}{\mathsf{module}}.\href{../exec/runtime.html#syntax-moduleinst}{\mathsf{types}}[\href{../syntax/modules.html#syntax-typeidx}{\mathit{typeidx}}]\)</span> exists.</p></li>
+<li><p>Let <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-deftype}{\mathit{deftype}}\)</span> be the <a class="reference internal" href="../syntax/types.html#syntax-deftype"><span class="std std-ref">defined type</span></a> <span class="math notranslate nohighlight">\(F.\href{../exec/runtime.html#syntax-frame}{\mathsf{module}}.\href{../exec/runtime.html#syntax-moduleinst}{\mathsf{types}}[\href{../syntax/modules.html#syntax-typeidx}{\mathit{typeidx}}]\)</span>.</p></li>
+<li><p>Assert: due to <span class="xref std std-ref">validation</span>, <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-deftype}{\mathit{deftype}}\)</span> is a <span class="xref std std-ref">structure type</span> with at least <span class="math notranslate nohighlight">\(i + 1\)</span> fields.</p></li>
+<li><p>Let <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-strtype}{\mathsf{struct}}~\mathit{ft}^\ast\)</span> be the <span class="xref std std-ref">structure type</span> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-deftype}{\mathit{deftype}}\)</span>. (todo: unroll)</p></li>
+<li><p>Let <span class="math notranslate nohighlight">\(\mathit{ft}_i\)</span> be the <span class="math notranslate nohighlight">\(i\)</span>-th <span class="xref std std-ref">field type</span> of <span class="math notranslate nohighlight">\(\mathit{ft}^\ast\)</span>.</p></li>
+<li><p>Assert: due to <span class="xref std std-ref">validation</span>, a <a class="reference internal" href="runtime.html#syntax-val"><span class="std std-ref">value</span></a> of <a class="reference internal" href="../syntax/types.html#syntax-valtype"><span class="std std-ref">type</span></a> <span class="math notranslate nohighlight">\((\href{../syntax/types.html#syntax-reftype}{\mathsf{ref}}~\href{../syntax/types.html#syntax-reftype}{\mathsf{null}}~x)\)</span> is on the top of the stack.</p></li>
+<li><p>Pop the value <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-ref}{\mathit{ref}}\)</span> from the stack.</p></li>
+<li><p>If <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-ref}{\mathit{ref}}\)</span> is <span class="math notranslate nohighlight">\(\href{../syntax/instructions.html#syntax-instr-ref}{\mathsf{ref.null}}~t\)</span>, then:</p>
+<ol class="loweralpha simple">
+<li><p>Trap.</p></li>
+</ol>
+</li>
+<li><p>Assert: due to validation, a <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-ref}{\mathit{ref}}\)</span> is a <a class="reference internal" href="runtime.html#syntax-ref-struct"><span class="std std-ref">structure reference</span></a>.</p></li>
+<li><p>Let <span class="math notranslate nohighlight">\((\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}struct}}~a)\)</span> be the reference value <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-ref}{\mathit{ref}}\)</span>.</p></li>
+<li><p>Assert: due to <span class="xref std std-ref">validation</span>, the <a class="reference internal" href="runtime.html#syntax-structinst"><span class="std std-ref">structure instance</span></a> <span class="math notranslate nohighlight">\(S.\href{../exec/runtime.html#syntax-store}{\mathsf{structs}}[a]\)</span> exists and has at least <span class="math notranslate nohighlight">\(i + 1\)</span> fields.</p></li>
+<li><p>Let <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-fieldval}{\mathit{fieldval}}\)</span> be the <a class="reference internal" href="runtime.html#syntax-fieldval"><span class="std std-ref">field value</span></a> <span class="math notranslate nohighlight">\(S.\href{../exec/runtime.html#syntax-store}{\mathsf{structs}}[a].\href{../exec/runtime.html#syntax-structinst}{\mathsf{fields}}[i]\)</span>.</p></li>
+<li><p>Let <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-val}{\mathit{val}}\)</span> be the result of computing <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#aux-unpackval}{\mathrm{unpack}}^{\href{../syntax/instructions.html#syntax-sx}{\mathit{sx}}^?}_{\mathit{ft}_i}(\href{../exec/runtime.html#syntax-fieldval}{\mathit{fieldval}}))\)</span>.</p></li>
+<li><p>Push the value <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-val}{\mathit{val}}\)</span> to the stack.</p></li>
+</ol>
 <div class="math notranslate nohighlight">
 \[\begin{split}\begin{array}{lcl&#64;{\qquad}l}
 S; F; (\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}struct}}~a)~(\href{../syntax/instructions.html#syntax-instr-struct}{\mathsf{struct.get}}\mathsf{\_}\href{../syntax/instructions.html#syntax-sx}{\mathit{sx}}^?~x~i) &amp;\href{../exec/conventions.html#formal-notation}{\hookrightarrow}&amp; \href{../exec/runtime.html#syntax-val}{\mathit{val}}
   &amp;
   \begin{array}[t]{&#64;{}r&#64;{~}l&#64;{}}
-   (\mathrel{\mbox{if}} &amp; F.\href{../exec/runtime.html#syntax-frame}{\mathsf{module}}.\href{../exec/runtime.html#syntax-moduleinst}{\mathsf{types}}[x] = \href{../syntax/types.html#syntax-strtype}{\mathsf{struct}}~\mathit{ft}^n \\
-   \land &amp; \href{../exec/runtime.html#syntax-val}{\mathit{val}} = \href{../exec/runtime.html#aux-unpackval}{\mathrm{unpack}}^{\href{../syntax/instructions.html#syntax-sx}{\mathit{sx}}^?}_{\mathit{ft}[i]}(S.\href{../exec/runtime.html#syntax-store}{\mathsf{structs}}[a].\href{../exec/runtime.html#syntax-structinst}{\mathsf{fields}}[i]))
+   (\mathrel{\mbox{if}} &amp; F.\href{../exec/runtime.html#syntax-frame}{\mathsf{module}}.\href{../exec/runtime.html#syntax-moduleinst}{\mathsf{types}}[x] = \href{../syntax/types.html#syntax-strtype}{\mathsf{struct}}~\mathit{ft}^\ast \\
+   \land &amp; \href{../exec/runtime.html#syntax-val}{\mathit{val}} = \href{../exec/runtime.html#aux-unpackval}{\mathrm{unpack}}^{\href{../syntax/instructions.html#syntax-sx}{\mathit{sx}}^?}_{\mathit{ft}^\ast[i]}(S.\href{../exec/runtime.html#syntax-store}{\mathsf{structs}}[a].\href{../exec/runtime.html#syntax-structinst}{\mathsf{fields}}[i]))
   \end{array} \\
 S; F; (\href{../syntax/instructions.html#syntax-instr-ref}{\mathsf{ref.null}}~t)~(\href{../syntax/instructions.html#syntax-instr-struct}{\mathsf{struct.get}}\mathsf{\_}\href{../syntax/instructions.html#syntax-sx}{\mathit{sx}}^?~x~i) &amp;\href{../exec/conventions.html#formal-notation}{\hookrightarrow}&amp; \href{../exec/runtime.html#syntax-trap}{\mathsf{trap}}
 \end{array}\end{split}\]</div>
 </section>
 <section id="xref-syntax-instructions-syntax-instr-struct-mathsf-struct-set-xref-syntax-modules-syntax-typeidx-mathit-typeidx-i">
 <span id="exec-struct-set"></span><h3><span class="math notranslate nohighlight">\(\href{../syntax/instructions.html#syntax-instr-struct}{\mathsf{struct.set}}~\href{../syntax/modules.html#syntax-typeidx}{\mathit{typeidx}}~i\)</span><a class="headerlink" href="#xref-syntax-instructions-syntax-instr-struct-mathsf-struct-set-xref-syntax-modules-syntax-typeidx-mathit-typeidx-i" title="Permalink to this heading">¶</a></h3>
-<div class="admonition-todo admonition" id="id5">
+<div class="admonition-todo admonition" id="id4">
 <p class="admonition-title">Todo</p>
-<p>Prose</p>
+<p>unroll type</p>
 </div>
+<ol class="arabic simple">
+<li><p>Assert: due to <span class="xref std std-ref">validation</span>, the <a class="reference internal" href="../syntax/types.html#syntax-deftype"><span class="std std-ref">defined type</span></a> <span class="math notranslate nohighlight">\(F.\href{../exec/runtime.html#syntax-frame}{\mathsf{module}}.\href{../exec/runtime.html#syntax-moduleinst}{\mathsf{types}}[\href{../syntax/modules.html#syntax-typeidx}{\mathit{typeidx}}]\)</span> exists.</p></li>
+<li><p>Let <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-deftype}{\mathit{deftype}}\)</span> be the <a class="reference internal" href="../syntax/types.html#syntax-deftype"><span class="std std-ref">defined type</span></a> <span class="math notranslate nohighlight">\(F.\href{../exec/runtime.html#syntax-frame}{\mathsf{module}}.\href{../exec/runtime.html#syntax-moduleinst}{\mathsf{types}}[\href{../syntax/modules.html#syntax-typeidx}{\mathit{typeidx}}]\)</span>.</p></li>
+<li><p>Assert: due to <span class="xref std std-ref">validation</span>, <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-deftype}{\mathit{deftype}}\)</span> is a <span class="xref std std-ref">structure type</span> with at least <span class="math notranslate nohighlight">\(i + 1\)</span> fields.</p></li>
+<li><p>Let <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-strtype}{\mathsf{struct}}~\mathit{ft}^\ast\)</span> be the <span class="xref std std-ref">structure type</span> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-deftype}{\mathit{deftype}}\)</span>. (todo: unroll)</p></li>
+<li><p>Let <span class="math notranslate nohighlight">\(\mathit{ft}_i\)</span> be the <span class="math notranslate nohighlight">\(i\)</span>-th <span class="xref std std-ref">field type</span> of <span class="math notranslate nohighlight">\(\mathit{ft}^\ast\)</span>.</p></li>
+<li><p>Assert: due to <span class="xref std std-ref">validation</span>, a <a class="reference internal" href="runtime.html#syntax-val"><span class="std std-ref">value</span></a> is on the top of the stack.</p></li>
+<li><p>Pop the value <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-val}{\mathit{val}}\)</span> from the stack.</p></li>
+<li><p>Assert: due to <span class="xref std std-ref">validation</span>, a <a class="reference internal" href="runtime.html#syntax-val"><span class="std std-ref">value</span></a> of <a class="reference internal" href="../syntax/types.html#syntax-valtype"><span class="std std-ref">type</span></a> <span class="math notranslate nohighlight">\((\href{../syntax/types.html#syntax-reftype}{\mathsf{ref}}~\href{../syntax/types.html#syntax-reftype}{\mathsf{null}}~x)\)</span> is on the top of the stack.</p></li>
+<li><p>Pop the value <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-ref}{\mathit{ref}}\)</span> from the stack.</p></li>
+<li><p>If <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-ref}{\mathit{ref}}\)</span> is <span class="math notranslate nohighlight">\(\href{../syntax/instructions.html#syntax-instr-ref}{\mathsf{ref.null}}~t\)</span>, then:</p></li>
+</ol>
+<blockquote>
+<div><ol class="loweralpha simple">
+<li><p>Trap.</p></li>
+</ol>
+</div></blockquote>
+<ol class="arabic simple" start="11">
+<li><p>Assert: due to validation, a <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-ref}{\mathit{ref}}\)</span> is a <a class="reference internal" href="runtime.html#syntax-ref-struct"><span class="std std-ref">structure reference</span></a>.</p></li>
+<li><p>Let <span class="math notranslate nohighlight">\((\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}struct}}~a)\)</span> be the reference value <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-ref}{\mathit{ref}}\)</span>.</p></li>
+<li><p>Assert: due to <span class="xref std std-ref">validation</span>, the <a class="reference internal" href="runtime.html#syntax-structinst"><span class="std std-ref">structure instance</span></a> <span class="math notranslate nohighlight">\(S.\href{../exec/runtime.html#syntax-store}{\mathsf{structs}}[a]\)</span> exists and has at least <span class="math notranslate nohighlight">\(i + 1\)</span> fields.</p></li>
+<li><p>Let <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-fieldval}{\mathit{fieldval}}\)</span> be the result of computing <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#aux-packval}{\mathrm{pack}}_{\mathit{ft}_i}(\href{../exec/runtime.html#syntax-val}{\mathit{val}}))\)</span>.</p></li>
+<li><p>Replace the <a class="reference internal" href="runtime.html#syntax-fieldval"><span class="std std-ref">field value</span></a> <span class="math notranslate nohighlight">\(S.\href{../exec/runtime.html#syntax-store}{\mathsf{structs}}[a].\href{../exec/runtime.html#syntax-structinst}{\mathsf{fields}}[i]\)</span> with <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-fieldval}{\mathit{fieldval}}\)</span>.</p></li>
+</ol>
 <div class="math notranslate nohighlight">
 \[\begin{split}\begin{array}{lcl&#64;{\qquad}l}
 S; F; (\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}struct}}~a)~\href{../exec/runtime.html#syntax-val}{\mathit{val}}~(\href{../syntax/instructions.html#syntax-instr-struct}{\mathsf{struct.set}}~x~i) &amp;\href{../exec/conventions.html#formal-notation}{\hookrightarrow}&amp; S'; \epsilon
   &amp;
   \begin{array}[t]{&#64;{}r&#64;{~}l&#64;{}}
-  (\mathrel{\mbox{if}} &amp; F.\href{../exec/runtime.html#syntax-frame}{\mathsf{module}}.\href{../exec/runtime.html#syntax-moduleinst}{\mathsf{types}}[x] = \href{../syntax/types.html#syntax-strtype}{\mathsf{struct}}~\mathit{ft}^n \\
-   \land &amp; S' = S \href{../syntax/conventions.html#notation-replace}{\mathrel{\mbox{with}}} \href{../exec/runtime.html#syntax-store}{\mathsf{structs}}[a].\href{../exec/runtime.html#syntax-structinst}{\mathsf{fields}}[i] = \href{../exec/runtime.html#aux-packval}{\mathrm{pack}}_{\mathit{ft}[i]}(\href{../exec/runtime.html#syntax-val}{\mathit{val}}))
+  (\mathrel{\mbox{if}} &amp; F.\href{../exec/runtime.html#syntax-frame}{\mathsf{module}}.\href{../exec/runtime.html#syntax-moduleinst}{\mathsf{types}}[x] = \href{../syntax/types.html#syntax-strtype}{\mathsf{struct}}~\mathit{ft}^\ast \\
+   \land &amp; S' = S \href{../syntax/conventions.html#notation-replace}{\mathrel{\mbox{with}}} \href{../exec/runtime.html#syntax-store}{\mathsf{structs}}[a].\href{../exec/runtime.html#syntax-structinst}{\mathsf{fields}}[i] = \href{../exec/runtime.html#aux-packval}{\mathrm{pack}}_{\mathit{ft}^\ast[i]}(\href{../exec/runtime.html#syntax-val}{\mathit{val}}))
   \end{array} \\
 S; F; (\href{../syntax/instructions.html#syntax-instr-ref}{\mathsf{ref.null}}~t)~\href{../exec/runtime.html#syntax-val}{\mathit{val}}~(\href{../syntax/instructions.html#syntax-instr-struct}{\mathsf{struct.set}}~x~i) &amp;\href{../exec/conventions.html#formal-notation}{\hookrightarrow}&amp; \href{../exec/runtime.html#syntax-trap}{\mathsf{trap}}
 \end{array}\end{split}\]</div>
 </section>
 <section id="xref-syntax-instructions-syntax-instr-array-mathsf-array-new-xref-syntax-modules-syntax-typeidx-mathit-typeidx">
 <span id="exec-array-new"></span><h3><span class="math notranslate nohighlight">\(\href{../syntax/instructions.html#syntax-instr-array}{\mathsf{array.new}}~\href{../syntax/modules.html#syntax-typeidx}{\mathit{typeidx}}\)</span><a class="headerlink" href="#xref-syntax-instructions-syntax-instr-array-mathsf-array-new-xref-syntax-modules-syntax-typeidx-mathit-typeidx" title="Permalink to this heading">¶</a></h3>
-<div class="admonition-todo admonition" id="id6">
+<div class="admonition-todo admonition" id="id5">
 <p class="admonition-title">Todo</p>
-<p>Prose</p>
+<p>unroll type</p>
 </div>
+<ol class="arabic simple">
+<li><p>Assert: due to <span class="xref std std-ref">validation</span>, the <a class="reference internal" href="../syntax/types.html#syntax-deftype"><span class="std std-ref">defined type</span></a> <span class="math notranslate nohighlight">\(F.\href{../exec/runtime.html#syntax-frame}{\mathsf{module}}.\href{../exec/runtime.html#syntax-moduleinst}{\mathsf{types}}[\href{../syntax/modules.html#syntax-typeidx}{\mathit{typeidx}}]\)</span> exists.</p></li>
+<li><p>Let <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-deftype}{\mathit{deftype}}\)</span> be the <a class="reference internal" href="../syntax/types.html#syntax-deftype"><span class="std std-ref">defined type</span></a> <span class="math notranslate nohighlight">\(F.\href{../exec/runtime.html#syntax-frame}{\mathsf{module}}.\href{../exec/runtime.html#syntax-moduleinst}{\mathsf{types}}[\href{../syntax/modules.html#syntax-typeidx}{\mathit{typeidx}}]\)</span>.</p></li>
+<li><p>Assert: due to <span class="xref std std-ref">validation</span>, <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-deftype}{\mathit{deftype}}\)</span> is an <span class="xref std std-ref">array type</span>.</p></li>
+<li><p>Let <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-strtype}{\mathsf{array}}~\mathit{ft}\)</span> be the <span class="xref std std-ref">array type</span> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-deftype}{\mathit{deftype}}\)</span>. (todo: unroll)</p></li>
+<li><p>Assert: due to <span class="xref std std-ref">validation</span>, a <a class="reference internal" href="runtime.html#syntax-val"><span class="std std-ref">value</span></a> of type <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}\)</span> is on the top of the stack.</p></li>
+<li><p>Pop the value <span class="math notranslate nohighlight">\((\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~n)\)</span> from the stack.</p></li>
+<li><p>Assert: due to <span class="xref std std-ref">validation</span>, a <a class="reference internal" href="runtime.html#syntax-val"><span class="std std-ref">value</span></a> is on the top of the stack.</p></li>
+<li><p>Pop the value <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-val}{\mathit{val}}\)</span> from the stack.</p></li>
+<li><p>Push the value <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-val}{\mathit{val}}\)</span> to the stack <span class="math notranslate nohighlight">\(n\)</span> times.</p></li>
+<li><p>Execute the instruction <span class="math notranslate nohighlight">\((\href{../syntax/instructions.html#syntax-instr-array}{\mathsf{array.new\_fixed}}~\href{../syntax/modules.html#syntax-typeidx}{\mathit{typeidx}}~n)\)</span>.</p></li>
+</ol>
 <div class="math notranslate nohighlight">
 \[\begin{array}{lcl&#64;{\qquad}l}
 \href{../exec/runtime.html#syntax-val}{\mathit{val}}~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~n)~(\href{../syntax/instructions.html#syntax-instr-array}{\mathsf{array.new}}~x) &amp;\href{../exec/conventions.html#formal-notation}{\hookrightarrow}&amp; \href{../exec/runtime.html#syntax-val}{\mathit{val}}^n~(\href{../syntax/instructions.html#syntax-instr-array}{\mathsf{array.new\_fixed}}~x~n)
@@ -503,46 +589,105 @@ S; F; (\href{../syntax/instructions.html#syntax-instr-ref}{\mathsf{ref.null}}~t)
 </section>
 <section id="xref-syntax-instructions-syntax-instr-array-mathsf-array-new-default-xref-syntax-modules-syntax-typeidx-mathit-typeidx">
 <span id="exec-array-new-default"></span><h3><span class="math notranslate nohighlight">\(\href{../syntax/instructions.html#syntax-instr-array}{\mathsf{array.new\_default}}~\href{../syntax/modules.html#syntax-typeidx}{\mathit{typeidx}}\)</span><a class="headerlink" href="#xref-syntax-instructions-syntax-instr-array-mathsf-array-new-default-xref-syntax-modules-syntax-typeidx-mathit-typeidx" title="Permalink to this heading">¶</a></h3>
-<div class="admonition-todo admonition" id="id7">
+<div class="admonition-todo admonition" id="id6">
 <p class="admonition-title">Todo</p>
-<p>Prose</p>
+<p>unroll type</p>
 </div>
+<ol class="arabic simple">
+<li><p>Assert: due to <span class="xref std std-ref">validation</span>, the <a class="reference internal" href="../syntax/types.html#syntax-deftype"><span class="std std-ref">defined type</span></a> <span class="math notranslate nohighlight">\(F.\href{../exec/runtime.html#syntax-frame}{\mathsf{module}}.\href{../exec/runtime.html#syntax-moduleinst}{\mathsf{types}}[\href{../syntax/modules.html#syntax-typeidx}{\mathit{typeidx}}]\)</span> exists.</p></li>
+<li><p>Let <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-deftype}{\mathit{deftype}}\)</span> be the <a class="reference internal" href="../syntax/types.html#syntax-deftype"><span class="std std-ref">defined type</span></a> <span class="math notranslate nohighlight">\(F.\href{../exec/runtime.html#syntax-frame}{\mathsf{module}}.\href{../exec/runtime.html#syntax-moduleinst}{\mathsf{types}}[\href{../syntax/modules.html#syntax-typeidx}{\mathit{typeidx}}]\)</span>.</p></li>
+<li><p>Assert: due to <span class="xref std std-ref">validation</span>, <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-deftype}{\mathit{deftype}}\)</span> is an <span class="xref std std-ref">array type</span>.</p></li>
+<li><p>Let <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-strtype}{\mathsf{array}}~\mathit{ft}\)</span> be the <span class="xref std std-ref">array type</span> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-deftype}{\mathit{deftype}}\)</span>. (todo: unroll)</p></li>
+<li><p>Assert: due to <span class="xref std std-ref">validation</span>, a <a class="reference internal" href="runtime.html#syntax-val"><span class="std std-ref">value</span></a> of type <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}\)</span> is on the top of the stack.</p></li>
+<li><p>Pop the value <span class="math notranslate nohighlight">\((\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~n)\)</span> from the stack.</p></li>
+<li><p>Let <span class="math notranslate nohighlight">\(t\)</span> be the <a class="reference internal" href="../syntax/types.html#syntax-valtype"><span class="std std-ref">value type</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#aux-unpacktype}{\mathrm{unpack}}(\mathit{ft})\)</span>.</p></li>
+<li><p>Assert: due to <span class="xref std std-ref">validation</span>, <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#default-val}{\mathrm{default}}_t\)</span> is defined.</p></li>
+<li><p>Push the <a class="reference internal" href="runtime.html#syntax-val"><span class="std std-ref">value</span></a> <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#default-val}{\mathrm{default}}_t\)</span> to the stack <span class="math notranslate nohighlight">\(n\)</span> times.</p></li>
+<li><p>Execute the instruction <span class="math notranslate nohighlight">\((\href{../syntax/instructions.html#syntax-instr-array}{\mathsf{array.new\_fixed}}~\href{../syntax/modules.html#syntax-typeidx}{\mathit{typeidx}}~n)\)</span>.</p></li>
+</ol>
 <div class="math notranslate nohighlight">
 \[\begin{split}\begin{array}{lcl&#64;{\qquad}l}
 F; (\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~n)~(\href{../syntax/instructions.html#syntax-instr-array}{\mathsf{array.new\_default}}~x) &amp;\href{../exec/conventions.html#formal-notation}{\hookrightarrow}&amp; (\href{../exec/runtime.html#default-val}{\mathrm{default}}_{\href{../syntax/types.html#aux-unpacktype}{\mathrm{unpack}}(\mathit{ft}}))^n~(\href{../syntax/instructions.html#syntax-instr-array}{\mathsf{array.new\_fixed}}~x~n)
   \\&amp;&amp;
   \begin{array}[t]{&#64;{}r&#64;{~}l&#64;{}}
-   (\mathrel{\mbox{if}} &amp; F.\href{../exec/runtime.html#syntax-frame}{\mathsf{module}}.\href{../exec/runtime.html#syntax-moduleinst}{\mathsf{types}}[x] = \href{../syntax/types.html#syntax-strtype}{\mathsf{array}}~\mathit{ft})
+   (\mathrel{\mbox{if}} &amp; F.\href{../exec/runtime.html#syntax-frame}{\mathsf{module}}.\href{../exec/runtime.html#syntax-moduleinst}{\mathsf{types}}.\href{../exec/runtime.html#syntax-moduleinst}{\mathsf{types}}[x] = \href{../syntax/types.html#syntax-strtype}{\mathsf{array}}~\mathit{ft})
   \end{array} \\
 \end{array}\end{split}\]</div>
 </section>
-<section id="xref-syntax-instructions-syntax-instr-array-mathsf-array-new-fixed-xref-syntax-modules-syntax-typeidx-mathit-typeidx">
-<span id="exec-array-new-fixed"></span><h3><span class="math notranslate nohighlight">\(\href{../syntax/instructions.html#syntax-instr-array}{\mathsf{array.new\_fixed}}~\href{../syntax/modules.html#syntax-typeidx}{\mathit{typeidx}}\)</span><a class="headerlink" href="#xref-syntax-instructions-syntax-instr-array-mathsf-array-new-fixed-xref-syntax-modules-syntax-typeidx-mathit-typeidx" title="Permalink to this heading">¶</a></h3>
-<div class="admonition-todo admonition" id="id8">
+<section id="xref-syntax-instructions-syntax-instr-array-mathsf-array-new-fixed-xref-syntax-modules-syntax-typeidx-mathit-typeidx-n">
+<span id="exec-array-new-fixed"></span><h3><span class="math notranslate nohighlight">\(\href{../syntax/instructions.html#syntax-instr-array}{\mathsf{array.new\_fixed}}~\href{../syntax/modules.html#syntax-typeidx}{\mathit{typeidx}}~n\)</span><a class="headerlink" href="#xref-syntax-instructions-syntax-instr-array-mathsf-array-new-fixed-xref-syntax-modules-syntax-typeidx-mathit-typeidx-n" title="Permalink to this heading">¶</a></h3>
+<div class="admonition-todo admonition" id="id7">
 <p class="admonition-title">Todo</p>
-<p>Prose</p>
+<p>unroll type</p>
 </div>
+<ol class="arabic simple">
+<li><p>Assert: due to <span class="xref std std-ref">validation</span>, the <a class="reference internal" href="../syntax/types.html#syntax-deftype"><span class="std std-ref">defined type</span></a> <span class="math notranslate nohighlight">\(F.\href{../exec/runtime.html#syntax-frame}{\mathsf{module}}.\href{../exec/runtime.html#syntax-moduleinst}{\mathsf{types}}[\href{../syntax/modules.html#syntax-typeidx}{\mathit{typeidx}}]\)</span> exists.</p></li>
+<li><p>Let <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-deftype}{\mathit{deftype}}\)</span> be the <a class="reference internal" href="../syntax/types.html#syntax-deftype"><span class="std std-ref">defined type</span></a> <span class="math notranslate nohighlight">\(F.\href{../exec/runtime.html#syntax-frame}{\mathsf{module}}.\href{../exec/runtime.html#syntax-moduleinst}{\mathsf{types}}[\href{../syntax/modules.html#syntax-typeidx}{\mathit{typeidx}}]\)</span>.</p></li>
+<li><p>Assert: due to <span class="xref std std-ref">validation</span>, <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-deftype}{\mathit{deftype}}\)</span> is a <span class="xref std std-ref">array type</span>.</p></li>
+<li><p>Let <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-strtype}{\mathsf{array}}~\mathit{ft}\)</span> be the <span class="xref std std-ref">array type</span> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-deftype}{\mathit{deftype}}\)</span>. (todo: unroll)</p></li>
+<li><p>Assert: due to <span class="xref std std-ref">validation</span>, <span class="math notranslate nohighlight">\(n\)</span> <a class="reference internal" href="runtime.html#syntax-val"><span class="std std-ref">values</span></a> are on the top of the stack.</p></li>
+<li><p>Pop the <span class="math notranslate nohighlight">\(n\)</span> values <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-val}{\mathit{val}}^\ast\)</span> from the stack.</p></li>
+<li><p>For every value <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-val}{\mathit{val}}_i\)</span> in <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-val}{\mathit{val}}^\ast\)</span>:</p>
+<ol class="loweralpha simple">
+<li><p>Let <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-fieldval}{\mathit{fieldval}}_i\)</span> be the result of computing <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#aux-packval}{\mathrm{pack}}_{\mathit{ft}}(\href{../exec/runtime.html#syntax-val}{\mathit{val}}_i))\)</span>.</p></li>
+</ol>
+</li>
+<li><p>Let <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-fieldval}{\mathit{fieldval}}^\ast\)</span> be the concatenation of all field values <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-fieldval}{\mathit{fieldval}}_i\)</span>.</p></li>
+<li><p>Let <span class="math notranslate nohighlight">\(\mathit{ai}\)</span> be the <a class="reference internal" href="runtime.html#syntax-arrayinst"><span class="std std-ref">array instance</span></a> <span class="math notranslate nohighlight">\(\{\href{../exec/runtime.html#syntax-arrayinst}{\mathsf{type}}~\href{../syntax/types.html#syntax-deftype}{\mathit{deftype}}, \href{../exec/runtime.html#syntax-arrayinst}{\mathsf{fields}}~\href{../exec/runtime.html#syntax-fieldval}{\mathit{fieldval}}^\ast\}\)</span>.</p></li>
+<li><p>Let <span class="math notranslate nohighlight">\(a\)</span> be the length of <span class="math notranslate nohighlight">\(S.\href{../exec/runtime.html#syntax-store}{\mathsf{arrays}}\)</span>.</p></li>
+<li><p>Append <span class="math notranslate nohighlight">\(\mathit{ai}\)</span> to <span class="math notranslate nohighlight">\(S.\href{../exec/runtime.html#syntax-store}{\mathsf{arrays}}\)</span>.</p></li>
+<li><p>Return the <a class="reference internal" href="runtime.html#syntax-ref-array"><span class="std std-ref">array reference</span></a> <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}array}}~a\)</span>.</p></li>
+</ol>
 <div class="math notranslate nohighlight">
 \[\begin{split}\begin{array}{lcl&#64;{\qquad}l}
-S; F; \href{../exec/runtime.html#syntax-val}{\mathit{val}}^n~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~n)~(\href{../syntax/instructions.html#syntax-instr-array}{\mathsf{array.new\_fixed}}~x) &amp;\href{../exec/conventions.html#formal-notation}{\hookrightarrow}&amp; S'; F; (\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}array}}~|S.\href{../exec/runtime.html#syntax-store}{\mathsf{arrays}}|)
+S; F; \href{../exec/runtime.html#syntax-val}{\mathit{val}}^n~(\href{../syntax/instructions.html#syntax-instr-array}{\mathsf{array.new\_fixed}}~x~n) &amp;\href{../exec/conventions.html#formal-notation}{\hookrightarrow}&amp; S'; F; (\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}array}}~|S.\href{../exec/runtime.html#syntax-store}{\mathsf{arrays}}|)
   \\&amp;&amp;
   \begin{array}[t]{&#64;{}r&#64;{~}l&#64;{}}
-   (\mathrel{\mbox{if}} &amp; F.\href{../exec/runtime.html#syntax-frame}{\mathsf{module}}.\href{../exec/runtime.html#syntax-moduleinst}{\mathsf{types}}[x] = \href{../syntax/types.html#syntax-strtype}{\mathsf{array}}~\mathit{ft}^n \\
-   \land &amp; \mathit{ai} = \{\href{../exec/runtime.html#syntax-arrayinst}{\mathsf{type}}~F.\href{../exec/runtime.html#syntax-frame}{\mathsf{module}}[x], \href{../exec/runtime.html#syntax-arrayinst}{\mathsf{fields}}~(\href{../exec/runtime.html#aux-packval}{\mathrm{pack}}_{\mathit{ft}}(\href{../exec/runtime.html#syntax-val}{\mathit{val}}))^n\} \\
+   (\mathrel{\mbox{if}} &amp; F.\href{../exec/runtime.html#syntax-frame}{\mathsf{module}}.\href{../exec/runtime.html#syntax-moduleinst}{\mathsf{types}}[x] = \href{../syntax/types.html#syntax-strtype}{\mathsf{array}}~\mathit{ft} \\
+   \land &amp; \mathit{ai} = \{\href{../exec/runtime.html#syntax-arrayinst}{\mathsf{type}}~F.\href{../exec/runtime.html#syntax-frame}{\mathsf{module}}.\href{../exec/runtime.html#syntax-moduleinst}{\mathsf{types}}[x], \href{../exec/runtime.html#syntax-arrayinst}{\mathsf{fields}}~(\href{../exec/runtime.html#aux-packval}{\mathrm{pack}}_{\mathit{ft}}(\href{../exec/runtime.html#syntax-val}{\mathit{val}}))^n\} \\
    \land &amp; S' = S \href{../syntax/conventions.html#notation-replace}{\mathrel{\mbox{with}}} \href{../exec/runtime.html#syntax-store}{\mathsf{arrays}} = S.\href{../exec/runtime.html#syntax-store}{\mathsf{arrays}}~\mathit{ai})
   \end{array} \\
 \end{array}\end{split}\]</div>
 </section>
 <section id="xref-syntax-instructions-syntax-instr-array-mathsf-array-new-data-xref-syntax-modules-syntax-typeidx-mathit-typeidx-xref-syntax-modules-syntax-dataidx-mathit-dataidx">
 <span id="exec-array-new-data"></span><h3><span class="math notranslate nohighlight">\(\href{../syntax/instructions.html#syntax-instr-array}{\mathsf{array.new\_data}}~\href{../syntax/modules.html#syntax-typeidx}{\mathit{typeidx}}~\href{../syntax/modules.html#syntax-dataidx}{\mathit{dataidx}}\)</span><a class="headerlink" href="#xref-syntax-instructions-syntax-instr-array-mathsf-array-new-data-xref-syntax-modules-syntax-typeidx-mathit-typeidx-xref-syntax-modules-syntax-dataidx-mathit-dataidx" title="Permalink to this heading">¶</a></h3>
-<div class="admonition-todo admonition" id="id9">
-<p class="admonition-title">Todo</p>
-<p>Prose</p>
-</div>
-<div class="admonition-todo admonition" id="id10">
+<div class="admonition-todo admonition" id="id8">
 <p class="admonition-title">Todo</p>
 <p>extend type size convention to field types</p>
 </div>
+<div class="admonition-todo admonition" id="id9">
+<p class="admonition-title">Todo</p>
+<p>unroll type</p>
+</div>
+<ol class="arabic simple">
+<li><p>Assert: due to <span class="xref std std-ref">validation</span>, the <a class="reference internal" href="../syntax/types.html#syntax-deftype"><span class="std std-ref">defined type</span></a> <span class="math notranslate nohighlight">\(F.\href{../exec/runtime.html#syntax-frame}{\mathsf{module}}.\href{../exec/runtime.html#syntax-moduleinst}{\mathsf{types}}[\href{../syntax/modules.html#syntax-typeidx}{\mathit{typeidx}}]\)</span> exists.</p></li>
+<li><p>Let <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-deftype}{\mathit{deftype}}\)</span> be the <a class="reference internal" href="../syntax/types.html#syntax-deftype"><span class="std std-ref">defined type</span></a> <span class="math notranslate nohighlight">\(F.\href{../exec/runtime.html#syntax-frame}{\mathsf{module}}.\href{../exec/runtime.html#syntax-moduleinst}{\mathsf{types}}[\href{../syntax/modules.html#syntax-typeidx}{\mathit{typeidx}}]\)</span>.</p></li>
+<li><p>Assert: due to <span class="xref std std-ref">validation</span>, <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-deftype}{\mathit{deftype}}\)</span> is an <span class="xref std std-ref">array type</span>.</p></li>
+<li><p>Let <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-strtype}{\mathsf{array}}~\mathit{ft}\)</span> be the <span class="xref std std-ref">array type</span> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-deftype}{\mathit{deftype}}\)</span>. (todo: unroll)</p></li>
+<li><p>Assert: due to <span class="xref std std-ref">validation</span>, the <a class="reference internal" href="runtime.html#syntax-dataaddr"><span class="std std-ref">data address</span></a> <span class="math notranslate nohighlight">\(F.\href{../exec/runtime.html#syntax-frame}{\mathsf{module}}.\href{../exec/runtime.html#syntax-moduleinst}{\mathsf{dataaddrs}}[\href{../syntax/modules.html#syntax-dataidx}{\mathit{dataidx}}]\)</span> exists.</p></li>
+<li><p>Let <span class="math notranslate nohighlight">\(\mathit{da}\)</span> be the <a class="reference internal" href="runtime.html#syntax-dataaddr"><span class="std std-ref">data address</span></a> <span class="math notranslate nohighlight">\(F.\href{../exec/runtime.html#syntax-frame}{\mathsf{module}}.\href{../exec/runtime.html#syntax-moduleinst}{\mathsf{dataaddrs}}[\href{../syntax/modules.html#syntax-dataidx}{\mathit{dataidx}}]\)</span>.</p></li>
+<li><p>Assert: due to <span class="xref std std-ref">validation</span>, the <a class="reference internal" href="runtime.html#syntax-datainst"><span class="std std-ref">data instance</span></a> <span class="math notranslate nohighlight">\(S.\href{../exec/runtime.html#syntax-store}{\mathsf{datas}}[\mathit{da}]\)</span> exists.</p></li>
+<li><p>Let <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-datainst}{\mathit{datainst}}\)</span> be the <a class="reference internal" href="runtime.html#syntax-datainst"><span class="std std-ref">data instance</span></a> <span class="math notranslate nohighlight">\(S.\href{../exec/runtime.html#syntax-store}{\mathsf{datas}}[\mathit{da}]\)</span>.</p></li>
+<li><p>Assert: due to <span class="xref std std-ref">validation</span>, two <a class="reference internal" href="runtime.html#syntax-val"><span class="std std-ref">values</span></a> of type <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}\)</span> are on the top of the stack.</p></li>
+<li><p>Pop the value <span class="math notranslate nohighlight">\((\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~n)\)</span> from the stack.</p></li>
+<li><p>Pop the value <span class="math notranslate nohighlight">\((\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~s)\)</span> from the stack.</p></li>
+<li><p>Assert: due to <span class="xref std std-ref">validation</span>, the <span class="xref std std-ref">field type</span> <span class="math notranslate nohighlight">\(\mathit{ft}\)</span> has a defined <span class="xref std std-ref">size</span>.</p></li>
+<li><p>Let <span class="math notranslate nohighlight">\(z\)</span> be the <span class="xref std std-ref">size</span> of <span class="xref std std-ref">field type</span> <span class="math notranslate nohighlight">\(\mathit{ft}\)</span>.</p></li>
+<li><p>If the sum of <span class="math notranslate nohighlight">\(s\)</span> and <span class="math notranslate nohighlight">\(n\)</span> times <span class="math notranslate nohighlight">\(z\)</span> is larger than the length of <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-datainst}{\mathit{datainst}}.\href{../exec/runtime.html#syntax-datainst}{\mathsf{data}}\)</span>, then:</p>
+<ol class="loweralpha simple">
+<li><p>Trap.</p></li>
+</ol>
+</li>
+<li><p>Let <span class="math notranslate nohighlight">\(b^\ast\)</span> be the <a class="reference internal" href="../syntax/values.html#syntax-byte"><span class="std std-ref">byte</span></a> sequence <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-datainst}{\mathit{datainst}}.\href{../exec/runtime.html#syntax-datainst}{\mathsf{data}}[s \href{../syntax/conventions.html#notation-slice}{\mathrel{\mathbf{:}}} n \cdot z]\)</span>.</p></li>
+<li><p>Let <span class="math notranslate nohighlight">\(t\)</span> be the <a class="reference internal" href="../syntax/types.html#syntax-valtype"><span class="std std-ref">value type</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#aux-unpacktype}{\mathrm{unpack}}(\mathit{ft})\)</span>.</p></li>
+<li><p>For each consecutive subsequence <span class="math notranslate nohighlight">\({b'}^n\)</span> of <span class="math notranslate nohighlight">\(b^\ast\)</span>:</p>
+<ol class="loweralpha simple">
+<li><p>Let <span class="math notranslate nohighlight">\(c_i\)</span> be the constant for which <span class="math notranslate nohighlight">\(\href{../exec/numerics.html#aux-bytes}{\mathrm{bytes}}_{\mathit{ft}}(k_i)\)</span> is <span class="math notranslate nohighlight">\({b'}^n\)</span>.</p></li>
+<li><p>Push the value <span class="math notranslate nohighlight">\((t.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~c_i)\)</span> to the stack.</p></li>
+</ol>
+</li>
+<li><p>Execute the instruction <span class="math notranslate nohighlight">\((\href{../syntax/instructions.html#syntax-instr-array}{\mathsf{array.new\_fixed}}~\href{../syntax/modules.html#syntax-typeidx}{\mathit{typeidx}}~n)\)</span>.</p></li>
+</ol>
 <div class="math notranslate nohighlight">
 \[\begin{split}~\\[-1ex]
 \begin{array}{lcl&#64;{\qquad}l}
@@ -553,21 +698,42 @@ S; F; (\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/
    \land &amp; s + n\cdot|\mathit{ft}| &gt; |S.\href{../exec/runtime.html#syntax-store}{\mathsf{datas}}[F.\href{../exec/runtime.html#syntax-frame}{\mathsf{module}}.\href{../exec/runtime.html#syntax-moduleinst}{\mathsf{dataaddrs}}[y]].\href{../exec/runtime.html#syntax-datainst}{\mathsf{data}}|)
   \end{array} \\
 \\[1ex]
-S; F; (\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~s)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~n)~(\href{../syntax/instructions.html#syntax-instr-array}{\mathsf{array.new\_data}}~x~y) &amp;\href{../exec/conventions.html#formal-notation}{\hookrightarrow}&amp; (t.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~i)^n~(\href{../syntax/instructions.html#syntax-instr-array}{\mathsf{array.new\_fixed}}~x)
+S; F; (\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~s)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~n)~(\href{../syntax/instructions.html#syntax-instr-array}{\mathsf{array.new\_data}}~x~y) &amp;\href{../exec/conventions.html#formal-notation}{\hookrightarrow}&amp; (t.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~c)^n~(\href{../syntax/instructions.html#syntax-instr-array}{\mathsf{array.new\_fixed}}~x~n)
   \\&amp;&amp;
   \begin{array}[t]{&#64;{}r&#64;{~}l&#64;{}}
    (\mathrel{\mbox{if}} &amp; F.\href{../exec/runtime.html#syntax-frame}{\mathsf{module}}.\href{../exec/runtime.html#syntax-moduleinst}{\mathsf{types}}[x] = \href{../syntax/types.html#syntax-strtype}{\mathsf{array}}~\mathit{ft}^n \\
    \land &amp; t = \href{../syntax/types.html#aux-unpacktype}{\mathrm{unpack}}(\mathit{ft}) \\
-   \land &amp; (\href{../exec/numerics.html#aux-bytes}{\mathrm{bytes}}_{\mathit{ft}}(i))^n = S.\href{../exec/runtime.html#syntax-store}{\mathsf{datas}}[F.\href{../exec/runtime.html#syntax-frame}{\mathsf{module}}.\href{../exec/runtime.html#syntax-moduleinst}{\mathsf{dataaddrs}}[y]].\href{../exec/runtime.html#syntax-datainst}{\mathsf{data}}[s \href{../syntax/conventions.html#notation-slice}{\mathrel{\mathbf{:}}} n\cdot|\mathit{ft}|] \\
+   \land &amp; (\href{../exec/numerics.html#aux-bytes}{\mathrm{bytes}}_{\mathit{ft}}(c))^n = S.\href{../exec/runtime.html#syntax-store}{\mathsf{datas}}[F.\href{../exec/runtime.html#syntax-frame}{\mathsf{module}}.\href{../exec/runtime.html#syntax-moduleinst}{\mathsf{dataaddrs}}[y]].\href{../exec/runtime.html#syntax-datainst}{\mathsf{data}}[s \href{../syntax/conventions.html#notation-slice}{\mathrel{\mathbf{:}}} n\cdot|\mathit{ft}|] \\
   \end{array} \\
 \end{array}\end{split}\]</div>
 </section>
 <section id="xref-syntax-instructions-syntax-instr-array-mathsf-array-new-elem-xref-syntax-modules-syntax-typeidx-mathit-typeidx-xref-syntax-modules-syntax-elemidx-mathit-elemidx">
 <span id="exec-array-new-elem"></span><h3><span class="math notranslate nohighlight">\(\href{../syntax/instructions.html#syntax-instr-array}{\mathsf{array.new\_elem}}~\href{../syntax/modules.html#syntax-typeidx}{\mathit{typeidx}}~\href{../syntax/modules.html#syntax-elemidx}{\mathit{elemidx}}\)</span><a class="headerlink" href="#xref-syntax-instructions-syntax-instr-array-mathsf-array-new-elem-xref-syntax-modules-syntax-typeidx-mathit-typeidx-xref-syntax-modules-syntax-elemidx-mathit-elemidx" title="Permalink to this heading">¶</a></h3>
-<div class="admonition-todo admonition" id="id11">
+<div class="admonition-todo admonition" id="id10">
 <p class="admonition-title">Todo</p>
-<p>Prose</p>
+<p>unroll type</p>
 </div>
+<ol class="arabic simple">
+<li><p>Assert: due to <span class="xref std std-ref">validation</span>, the <a class="reference internal" href="../syntax/types.html#syntax-deftype"><span class="std std-ref">defined type</span></a> <span class="math notranslate nohighlight">\(F.\href{../exec/runtime.html#syntax-frame}{\mathsf{module}}.\href{../exec/runtime.html#syntax-moduleinst}{\mathsf{types}}[\href{../syntax/modules.html#syntax-typeidx}{\mathit{typeidx}}]\)</span> exists.</p></li>
+<li><p>Let <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-deftype}{\mathit{deftype}}\)</span> be the <a class="reference internal" href="../syntax/types.html#syntax-deftype"><span class="std std-ref">defined type</span></a> <span class="math notranslate nohighlight">\(F.\href{../exec/runtime.html#syntax-frame}{\mathsf{module}}.\href{../exec/runtime.html#syntax-moduleinst}{\mathsf{types}}[\href{../syntax/modules.html#syntax-typeidx}{\mathit{typeidx}}]\)</span>.</p></li>
+<li><p>Assert: due to <span class="xref std std-ref">validation</span>, <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-deftype}{\mathit{deftype}}\)</span> is an <span class="xref std std-ref">array type</span>.</p></li>
+<li><p>Let <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-strtype}{\mathsf{array}}~\mathit{ft}\)</span> be the <span class="xref std std-ref">array type</span> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-deftype}{\mathit{deftype}}\)</span>. (todo: unroll)</p></li>
+<li><p>Assert: due to <span class="xref std std-ref">validation</span>, the <a class="reference internal" href="runtime.html#syntax-elemaddr"><span class="std std-ref">element address</span></a> <span class="math notranslate nohighlight">\(F.\href{../exec/runtime.html#syntax-frame}{\mathsf{module}}.\href{../exec/runtime.html#syntax-moduleinst}{\mathsf{elemaddrs}}[\href{../syntax/modules.html#syntax-elemidx}{\mathit{elemidx}}]\)</span> exists.</p></li>
+<li><p>Let <span class="math notranslate nohighlight">\(\mathit{ea}\)</span> be the <a class="reference internal" href="runtime.html#syntax-elemaddr"><span class="std std-ref">element address</span></a> <span class="math notranslate nohighlight">\(F.\href{../exec/runtime.html#syntax-frame}{\mathsf{module}}.\href{../exec/runtime.html#syntax-moduleinst}{\mathsf{elemaddrs}}[\href{../syntax/modules.html#syntax-elemidx}{\mathit{elemidx}}]\)</span>.</p></li>
+<li><p>Assert: due to <span class="xref std std-ref">validation</span>, the <a class="reference internal" href="runtime.html#syntax-eleminst"><span class="std std-ref">element instance</span></a> <span class="math notranslate nohighlight">\(S.\href{../exec/runtime.html#syntax-store}{\mathsf{elems}}[\mathit{ea}]\)</span> exists.</p></li>
+<li><p>Let <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-eleminst}{\mathit{eleminst}}\)</span> be the <a class="reference internal" href="runtime.html#syntax-eleminst"><span class="std std-ref">element instance</span></a> <span class="math notranslate nohighlight">\(S.\href{../exec/runtime.html#syntax-store}{\mathsf{elems}}[\mathit{ea}]\)</span>.</p></li>
+<li><p>Assert: due to <span class="xref std std-ref">validation</span>, two <a class="reference internal" href="runtime.html#syntax-val"><span class="std std-ref">values</span></a> of type <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}\)</span> are on the top of the stack.</p></li>
+<li><p>Pop the value <span class="math notranslate nohighlight">\((\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~n)\)</span> from the stack.</p></li>
+<li><p>Pop the value <span class="math notranslate nohighlight">\((\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~s)\)</span> from the stack.</p></li>
+<li><p>If the sum of <span class="math notranslate nohighlight">\(s\)</span> and <span class="math notranslate nohighlight">\(n\)</span> is larger than the length of <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-eleminst}{\mathit{eleminst}}.\href{../exec/runtime.html#syntax-eleminst}{\mathsf{elem}}\)</span>, then:</p>
+<ol class="loweralpha simple">
+<li><p>Trap.</p></li>
+</ol>
+</li>
+<li><p>Let <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-ref}{\mathit{ref}}^\ast\)</span> be the <a class="reference internal" href="runtime.html#syntax-ref"><span class="std std-ref">reference</span></a> sequence <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-eleminst}{\mathit{eleminst}}.\href{../exec/runtime.html#syntax-eleminst}{\mathsf{elem}}[s \href{../syntax/conventions.html#notation-slice}{\mathrel{\mathbf{:}}} n]\)</span>.</p></li>
+<li><p>Push the references <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-ref}{\mathit{ref}}^\ast\)</span> to the stack.</p></li>
+<li><p>Execute the instruction <span class="math notranslate nohighlight">\((\href{../syntax/instructions.html#syntax-instr-array}{\mathsf{array.new\_fixed}}~\href{../syntax/modules.html#syntax-typeidx}{\mathit{typeidx}}~n)\)</span>.</p></li>
+</ol>
 <div class="math notranslate nohighlight">
 \[\begin{split}~\\[-1ex]
 \begin{array}{lcl&#64;{\qquad}l}
@@ -575,7 +741,7 @@ S; F; (\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/
   \\&amp;&amp;
   (\mathrel{\mbox{if}} s + n &gt; |S.\href{../exec/runtime.html#syntax-store}{\mathsf{elems}}[F.\href{../exec/runtime.html#syntax-frame}{\mathsf{module}}.\href{../exec/runtime.html#syntax-moduleinst}{\mathsf{elemaddrs}}[y]].\href{../exec/runtime.html#syntax-eleminst}{\mathsf{elem}}|)
 \\[1ex]
-S; F; (\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~s)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~n)~(\href{../syntax/instructions.html#syntax-instr-array}{\mathsf{array.new\_elem}}~x~y) &amp;\href{../exec/conventions.html#formal-notation}{\hookrightarrow}&amp; \href{../exec/runtime.html#syntax-ref}{\mathit{ref}}^n~(\href{../syntax/instructions.html#syntax-instr-array}{\mathsf{array.new\_fixed}}~x)
+S; F; (\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~s)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~n)~(\href{../syntax/instructions.html#syntax-instr-array}{\mathsf{array.new\_elem}}~x~y) &amp;\href{../exec/conventions.html#formal-notation}{\hookrightarrow}&amp; \href{../exec/runtime.html#syntax-ref}{\mathit{ref}}^n~(\href{../syntax/instructions.html#syntax-instr-array}{\mathsf{array.new\_fixed}}~x~n)
   \\&amp;&amp;
   \begin{array}[t]{&#64;{}r&#64;{~}l&#64;{}}
    (\mathrel{\mbox{if}} &amp; \href{../exec/runtime.html#syntax-ref}{\mathit{ref}}^n = S.\href{../exec/runtime.html#syntax-store}{\mathsf{elems}}[F.\href{../exec/runtime.html#syntax-frame}{\mathsf{module}}.\href{../exec/runtime.html#syntax-moduleinst}{\mathsf{elemaddrs}}[y]].\href{../exec/runtime.html#syntax-eleminst}{\mathsf{elem}}[s \href{../syntax/conventions.html#notation-slice}{\mathrel{\mathbf{:}}} n])
@@ -584,10 +750,36 @@ S; F; (\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/
 </section>
 <section id="xref-syntax-instructions-syntax-instr-array-mathsf-array-get-mathsf-xref-syntax-instructions-syntax-sx-mathit-sx-xref-syntax-modules-syntax-typeidx-mathit-typeidx">
 <span id="exec-array-get-sx"></span><span id="exec-array-get"></span><h3><span class="math notranslate nohighlight">\(\href{../syntax/instructions.html#syntax-instr-array}{\mathsf{array.get}}\mathsf{\_}\href{../syntax/instructions.html#syntax-sx}{\mathit{sx}}^?~\href{../syntax/modules.html#syntax-typeidx}{\mathit{typeidx}}\)</span><a class="headerlink" href="#xref-syntax-instructions-syntax-instr-array-mathsf-array-get-mathsf-xref-syntax-instructions-syntax-sx-mathit-sx-xref-syntax-modules-syntax-typeidx-mathit-typeidx" title="Permalink to this heading">¶</a></h3>
-<div class="admonition-todo admonition" id="id12">
+<div class="admonition-todo admonition" id="id11">
 <p class="admonition-title">Todo</p>
-<p>Prose</p>
+<p>unroll type</p>
 </div>
+<ol class="arabic simple">
+<li><p>Assert: due to <span class="xref std std-ref">validation</span>, the <a class="reference internal" href="../syntax/types.html#syntax-deftype"><span class="std std-ref">defined type</span></a> <span class="math notranslate nohighlight">\(F.\href{../exec/runtime.html#syntax-frame}{\mathsf{module}}.\href{../exec/runtime.html#syntax-moduleinst}{\mathsf{types}}[\href{../syntax/modules.html#syntax-typeidx}{\mathit{typeidx}}]\)</span> exists.</p></li>
+<li><p>Let <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-deftype}{\mathit{deftype}}\)</span> be the <a class="reference internal" href="../syntax/types.html#syntax-deftype"><span class="std std-ref">defined type</span></a> <span class="math notranslate nohighlight">\(F.\href{../exec/runtime.html#syntax-frame}{\mathsf{module}}.\href{../exec/runtime.html#syntax-moduleinst}{\mathsf{types}}[\href{../syntax/modules.html#syntax-typeidx}{\mathit{typeidx}}]\)</span>.</p></li>
+<li><p>Assert: due to <span class="xref std std-ref">validation</span>, <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-deftype}{\mathit{deftype}}\)</span> is an <span class="xref std std-ref">array type</span>.</p></li>
+<li><p>Let <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-strtype}{\mathsf{array}}~\mathit{ft}\)</span> be the <span class="xref std std-ref">array type</span> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-deftype}{\mathit{deftype}}\)</span>. (todo: unroll)</p></li>
+<li><p>Assert: due to <span class="xref std std-ref">validation</span>, a <a class="reference internal" href="runtime.html#syntax-val"><span class="std std-ref">value</span></a> of <a class="reference internal" href="../syntax/types.html#syntax-valtype"><span class="std std-ref">type</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}\)</span> is on the top of the stack.</p></li>
+<li><p>Pop the value <span class="math notranslate nohighlight">\((\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~i)\)</span> from the stack.</p></li>
+<li><p>Assert: due to <span class="xref std std-ref">validation</span>, a <a class="reference internal" href="runtime.html#syntax-val"><span class="std std-ref">value</span></a> of <a class="reference internal" href="../syntax/types.html#syntax-valtype"><span class="std std-ref">type</span></a> <span class="math notranslate nohighlight">\((\href{../syntax/types.html#syntax-reftype}{\mathsf{ref}}~\href{../syntax/types.html#syntax-reftype}{\mathsf{null}}~x)\)</span> is on the top of the stack.</p></li>
+<li><p>Pop the value <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-ref}{\mathit{ref}}\)</span> from the stack.</p></li>
+<li><p>If <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-ref}{\mathit{ref}}\)</span> is <span class="math notranslate nohighlight">\(\href{../syntax/instructions.html#syntax-instr-ref}{\mathsf{ref.null}}~t\)</span>, then:</p>
+<ol class="loweralpha simple">
+<li><p>Trap.</p></li>
+</ol>
+</li>
+<li><p>Assert: due to validation, a <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-ref}{\mathit{ref}}\)</span> is an <a class="reference internal" href="runtime.html#syntax-ref-array"><span class="std std-ref">array reference</span></a>.</p></li>
+<li><p>Let <span class="math notranslate nohighlight">\((\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}array}}~a)\)</span> be the reference value <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-ref}{\mathit{ref}}\)</span>.</p></li>
+<li><p>Assert: due to <span class="xref std std-ref">validation</span>, the <a class="reference internal" href="runtime.html#syntax-arrayinst"><span class="std std-ref">array instance</span></a> <span class="math notranslate nohighlight">\(S.\href{../exec/runtime.html#syntax-store}{\mathsf{arrays}}[a]\)</span> exists.</p></li>
+<li><p>If <span class="math notranslate nohighlight">\(n\)</span> is larger than or equal to the length of <span class="math notranslate nohighlight">\(S.\href{../exec/runtime.html#syntax-store}{\mathsf{arrays}}[a].\href{../exec/runtime.html#syntax-arrayinst}{\mathsf{fields}}\)</span>, then:</p>
+<ol class="loweralpha simple">
+<li><p>Trap.</p></li>
+</ol>
+</li>
+<li><p>Let <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-fieldval}{\mathit{fieldval}}\)</span> be the <a class="reference internal" href="runtime.html#syntax-fieldval"><span class="std std-ref">field value</span></a> <span class="math notranslate nohighlight">\(S.\href{../exec/runtime.html#syntax-store}{\mathsf{arrays}}[a].\href{../exec/runtime.html#syntax-arrayinst}{\mathsf{fields}}[i]\)</span>.</p></li>
+<li><p>Let <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-val}{\mathit{val}}\)</span> be the result of computing <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#aux-unpackval}{\mathrm{unpack}}^{\href{../syntax/instructions.html#syntax-sx}{\mathit{sx}}^?}_{\mathit{ft}}(\href{../exec/runtime.html#syntax-fieldval}{\mathit{fieldval}}))\)</span>.</p></li>
+<li><p>Push the value <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-val}{\mathit{val}}\)</span> to the stack.</p></li>
+</ol>
 <div class="math notranslate nohighlight">
 \[\begin{split}\begin{array}{lcl&#64;{\qquad}l}
 S; F; (\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}array}}~a)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~i)~(\href{../syntax/instructions.html#syntax-instr-array}{\mathsf{array.get}}\mathsf{\_}\href{../syntax/instructions.html#syntax-sx}{\mathit{sx}}^?~x) &amp;\href{../exec/conventions.html#formal-notation}{\hookrightarrow}&amp; \href{../exec/runtime.html#syntax-val}{\mathit{val}}
@@ -596,15 +788,47 @@ S; F; (\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}array}}~a)~(\href{..
    (\mathrel{\mbox{if}} &amp; F.\href{../exec/runtime.html#syntax-frame}{\mathsf{module}}.\href{../exec/runtime.html#syntax-moduleinst}{\mathsf{types}}[x] = \href{../syntax/types.html#syntax-strtype}{\mathsf{array}}~\mathit{ft} \\
    \land &amp; \href{../exec/runtime.html#syntax-val}{\mathit{val}} = \href{../exec/runtime.html#aux-unpackval}{\mathrm{unpack}}^{\href{../syntax/instructions.html#syntax-sx}{\mathit{sx}}^?}_{\mathit{ft}}(S.\href{../exec/runtime.html#syntax-store}{\mathsf{arrays}}[a].\href{../exec/runtime.html#syntax-arrayinst}{\mathsf{fields}}[i]))
   \end{array} \\
+S; F; (\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}array}}~a)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~i)~(\href{../syntax/instructions.html#syntax-instr-array}{\mathsf{array.get}}\mathsf{\_}\href{../syntax/instructions.html#syntax-sx}{\mathit{sx}}^?~x) &amp;\href{../exec/conventions.html#formal-notation}{\hookrightarrow}&amp; \href{../exec/runtime.html#syntax-val}{\mathit{val}}
+  &amp; (\mathrel{\mbox{otherwise}}) \\
 S; F; (\href{../syntax/instructions.html#syntax-instr-ref}{\mathsf{ref.null}}~t)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~i)~(\href{../syntax/instructions.html#syntax-instr-array}{\mathsf{array.get}}\mathsf{\_}\href{../syntax/instructions.html#syntax-sx}{\mathit{sx}}^?~x) &amp;\href{../exec/conventions.html#formal-notation}{\hookrightarrow}&amp; \href{../exec/runtime.html#syntax-trap}{\mathsf{trap}}
 \end{array}\end{split}\]</div>
 </section>
 <section id="xref-syntax-instructions-syntax-instr-array-mathsf-array-set-xref-syntax-modules-syntax-typeidx-mathit-typeidx">
 <span id="exec-array-set"></span><h3><span class="math notranslate nohighlight">\(\href{../syntax/instructions.html#syntax-instr-array}{\mathsf{array.set}}~\href{../syntax/modules.html#syntax-typeidx}{\mathit{typeidx}}\)</span><a class="headerlink" href="#xref-syntax-instructions-syntax-instr-array-mathsf-array-set-xref-syntax-modules-syntax-typeidx-mathit-typeidx" title="Permalink to this heading">¶</a></h3>
-<div class="admonition-todo admonition" id="id13">
+<div class="admonition-todo admonition" id="id12">
 <p class="admonition-title">Todo</p>
-<p>Prose</p>
+<p>unroll type</p>
 </div>
+<ol class="arabic simple">
+<li><p>Assert: due to <span class="xref std std-ref">validation</span>, the <a class="reference internal" href="../syntax/types.html#syntax-deftype"><span class="std std-ref">defined type</span></a> <span class="math notranslate nohighlight">\(F.\href{../exec/runtime.html#syntax-frame}{\mathsf{module}}.\href{../exec/runtime.html#syntax-moduleinst}{\mathsf{types}}[\href{../syntax/modules.html#syntax-typeidx}{\mathit{typeidx}}]\)</span> exists.</p></li>
+<li><p>Let <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-deftype}{\mathit{deftype}}\)</span> be the <a class="reference internal" href="../syntax/types.html#syntax-deftype"><span class="std std-ref">defined type</span></a> <span class="math notranslate nohighlight">\(F.\href{../exec/runtime.html#syntax-frame}{\mathsf{module}}.\href{../exec/runtime.html#syntax-moduleinst}{\mathsf{types}}[\href{../syntax/modules.html#syntax-typeidx}{\mathit{typeidx}}]\)</span>.</p></li>
+<li><p>Assert: due to <span class="xref std std-ref">validation</span>, <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-deftype}{\mathit{deftype}}\)</span> is an <span class="xref std std-ref">array type</span>.</p></li>
+<li><p>Let <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-strtype}{\mathsf{array}}~\mathit{ft}\)</span> be the <span class="xref std std-ref">array type</span> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-deftype}{\mathit{deftype}}\)</span>. (todo: unroll)</p></li>
+<li><p>Assert: due to <span class="xref std std-ref">validation</span>, a <a class="reference internal" href="runtime.html#syntax-val"><span class="std std-ref">value</span></a> is on the top of the stack.</p></li>
+<li><p>Pop the value <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-val}{\mathit{val}}\)</span> from the stack.</p></li>
+<li><p>Assert: due to <span class="xref std std-ref">validation</span>, a <a class="reference internal" href="runtime.html#syntax-val"><span class="std std-ref">value</span></a> of <a class="reference internal" href="../syntax/types.html#syntax-valtype"><span class="std std-ref">type</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}\)</span> is on the top of the stack.</p></li>
+<li><p>Pop the value <span class="math notranslate nohighlight">\((\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~i)\)</span> from the stack.</p></li>
+<li><p>Assert: due to <span class="xref std std-ref">validation</span>, a <a class="reference internal" href="runtime.html#syntax-val"><span class="std std-ref">value</span></a> of <a class="reference internal" href="../syntax/types.html#syntax-valtype"><span class="std std-ref">type</span></a> <span class="math notranslate nohighlight">\((\href{../syntax/types.html#syntax-reftype}{\mathsf{ref}}~\href{../syntax/types.html#syntax-reftype}{\mathsf{null}}~x)\)</span> is on the top of the stack.</p></li>
+<li><p>Pop the value <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-ref}{\mathit{ref}}\)</span> from the stack.</p></li>
+<li><p>If <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-ref}{\mathit{ref}}\)</span> is <span class="math notranslate nohighlight">\(\href{../syntax/instructions.html#syntax-instr-ref}{\mathsf{ref.null}}~t\)</span>, then:</p></li>
+</ol>
+<blockquote>
+<div><ol class="loweralpha simple">
+<li><p>Trap.</p></li>
+</ol>
+</div></blockquote>
+<ol class="arabic simple" start="12">
+<li><p>Assert: due to validation, a <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-ref}{\mathit{ref}}\)</span> is an <a class="reference internal" href="runtime.html#syntax-ref-array"><span class="std std-ref">array reference</span></a>.</p></li>
+<li><p>Let <span class="math notranslate nohighlight">\((\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}array}}~a)\)</span> be the reference value <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-ref}{\mathit{ref}}\)</span>.</p></li>
+<li><p>Assert: due to <span class="xref std std-ref">validation</span>, the <a class="reference internal" href="runtime.html#syntax-arrayinst"><span class="std std-ref">array instance</span></a> <span class="math notranslate nohighlight">\(S.\href{../exec/runtime.html#syntax-store}{\mathsf{arrays}}[a]\)</span> exists.</p></li>
+<li><p>If <span class="math notranslate nohighlight">\(n\)</span> is larger than or equal to the length of <span class="math notranslate nohighlight">\(S.\href{../exec/runtime.html#syntax-store}{\mathsf{arrays}}[a].\href{../exec/runtime.html#syntax-arrayinst}{\mathsf{fields}}\)</span>, then:</p>
+<ol class="loweralpha simple">
+<li><p>Trap.</p></li>
+</ol>
+</li>
+<li><p>Let <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-fieldval}{\mathit{fieldval}}\)</span> be the result of computing <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#aux-packval}{\mathrm{pack}}_{\mathit{ft}}(\href{../exec/runtime.html#syntax-val}{\mathit{val}}))\)</span>.</p></li>
+<li><p>Replace the <a class="reference internal" href="runtime.html#syntax-fieldval"><span class="std std-ref">field value</span></a> <span class="math notranslate nohighlight">\(S.\href{../exec/runtime.html#syntax-store}{\mathsf{arrays}}[a].\href{../exec/runtime.html#syntax-arrayinst}{\mathsf{fields}}[i]\)</span> with <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-fieldval}{\mathit{fieldval}}\)</span>.</p></li>
+</ol>
 <div class="math notranslate nohighlight">
 \[\begin{split}\begin{array}{lcl&#64;{\qquad}l}
 S; F; (\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}array}}~a)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~i)~\href{../exec/runtime.html#syntax-val}{\mathit{val}}~(\href{../syntax/instructions.html#syntax-instr-array}{\mathsf{array.set}}~x) &amp;\href{../exec/conventions.html#formal-notation}{\hookrightarrow}&amp; S'; \epsilon
@@ -618,10 +842,20 @@ S; F; (\href{../syntax/instructions.html#syntax-instr-ref}{\mathsf{ref.null}}~t)
 </section>
 <section id="xref-syntax-instructions-syntax-instr-array-mathsf-array-len">
 <span id="exec-array-len"></span><h3><span class="math notranslate nohighlight">\(\href{../syntax/instructions.html#syntax-instr-array}{\mathsf{array.len}}\)</span><a class="headerlink" href="#xref-syntax-instructions-syntax-instr-array-mathsf-array-len" title="Permalink to this heading">¶</a></h3>
-<div class="admonition-todo admonition" id="id14">
-<p class="admonition-title">Todo</p>
-<p>Prose</p>
-</div>
+<ol class="arabic simple">
+<li><p>Assert: due to <span class="xref std std-ref">validation</span>, a <a class="reference internal" href="runtime.html#syntax-val"><span class="std std-ref">value</span></a> of <a class="reference internal" href="../syntax/types.html#syntax-valtype"><span class="std std-ref">type</span></a> <span class="math notranslate nohighlight">\((\href{../syntax/types.html#syntax-reftype}{\mathsf{ref}}~\href{../syntax/types.html#syntax-reftype}{\mathsf{null}}~\href{../syntax/types.html#syntax-heaptype}{\mathsf{array}})\)</span> is on the top of the stack.</p></li>
+<li><p>Pop the value <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-ref}{\mathit{ref}}\)</span> from the stack.</p></li>
+<li><p>If <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-ref}{\mathit{ref}}\)</span> is <span class="math notranslate nohighlight">\(\href{../syntax/instructions.html#syntax-instr-ref}{\mathsf{ref.null}}~t\)</span>, then:</p>
+<ol class="loweralpha simple">
+<li><p>Trap.</p></li>
+</ol>
+</li>
+<li><p>Assert: due to validation, a <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-ref}{\mathit{ref}}\)</span> is an <a class="reference internal" href="runtime.html#syntax-ref-array"><span class="std std-ref">array reference</span></a>.</p></li>
+<li><p>Let <span class="math notranslate nohighlight">\((\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}array}}~a)\)</span> be the reference value <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-ref}{\mathit{ref}}\)</span>.</p></li>
+<li><p>Assert: due to <span class="xref std std-ref">validation</span>, the <a class="reference internal" href="runtime.html#syntax-arrayinst"><span class="std std-ref">array instance</span></a> <span class="math notranslate nohighlight">\(S.\href{../exec/runtime.html#syntax-store}{\mathsf{arrays}}[a]\)</span> exists.</p></li>
+<li><p>Let <span class="math notranslate nohighlight">\(n\)</span> be the length of <span class="math notranslate nohighlight">\(S.\href{../exec/runtime.html#syntax-store}{\mathsf{arrays}}[a].\href{../exec/runtime.html#syntax-arrayinst}{\mathsf{fields}}\)</span>.</p></li>
+<li><p>Push the <a class="reference internal" href="runtime.html#syntax-val"><span class="std std-ref">value</span></a> <span class="math notranslate nohighlight">\((\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~n)\)</span> to the stack.</p></li>
+</ol>
 <div class="math notranslate nohighlight">
 \[\begin{split}\begin{array}{lcl&#64;{\qquad}l}
 S; (\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}array}}~a)~\href{../syntax/instructions.html#syntax-instr-array}{\mathsf{array.len}} &amp;\href{../exec/conventions.html#formal-notation}{\hookrightarrow}&amp; (\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~|S.\href{../exec/runtime.html#syntax-store}{\mathsf{arrays}}[a].\href{../exec/runtime.html#syntax-arrayinst}{\mathsf{fields}}|) \\
@@ -630,7 +864,7 @@ S; (\href{../syntax/instructions.html#syntax-instr-ref}{\mathsf{ref.null}}~t)~\h
 </section>
 <section id="xref-syntax-instructions-syntax-instr-aray-mathsf-array-fill-xref-syntax-modules-syntax-typeidx-mathit-typeidx">
 <span id="exec-array-fill"></span><h3><span class="math notranslate nohighlight">\(\href{../syntax/instructions.html#syntax-instr-aray}{\mathsf{array.fill}}~\href{../syntax/modules.html#syntax-typeidx}{\mathit{typeidx}}\)</span><a class="headerlink" href="#xref-syntax-instructions-syntax-instr-aray-mathsf-array-fill-xref-syntax-modules-syntax-typeidx-mathit-typeidx" title="Permalink to this heading">¶</a></h3>
-<div class="admonition-todo admonition" id="id15">
+<div class="admonition-todo admonition" id="id13">
 <p class="admonition-title">Todo</p>
 <p>Prose</p>
 </div>
@@ -662,11 +896,11 @@ S; (\href{../syntax/instructions.html#syntax-instr-ref}{\mathsf{ref.null}}~t)~(\
 </section>
 <section id="xref-syntax-instructions-syntax-instr-aray-mathsf-array-copy-xref-syntax-modules-syntax-typeidx-mathit-typeidx-xref-syntax-modules-syntax-typeidx-mathit-typeidx">
 <span id="exec-array-copy"></span><h3><span class="math notranslate nohighlight">\(\href{../syntax/instructions.html#syntax-instr-aray}{\mathsf{array.copy}}~\href{../syntax/modules.html#syntax-typeidx}{\mathit{typeidx}}~\href{../syntax/modules.html#syntax-typeidx}{\mathit{typeidx}}\)</span><a class="headerlink" href="#xref-syntax-instructions-syntax-instr-aray-mathsf-array-copy-xref-syntax-modules-syntax-typeidx-mathit-typeidx-xref-syntax-modules-syntax-typeidx-mathit-typeidx" title="Permalink to this heading">¶</a></h3>
-<div class="admonition-todo admonition" id="id16">
+<div class="admonition-todo admonition" id="id14">
 <p class="admonition-title">Todo</p>
 <p>Prose</p>
 </div>
-<div class="admonition-todo admonition" id="id17">
+<div class="admonition-todo admonition" id="id15">
 <p class="admonition-title">Todo</p>
 <p>Handle packed fields correctly via array.get_u instead of array.get</p>
 </div>
@@ -714,7 +948,7 @@ S; \href{../exec/runtime.html#syntax-val}{\mathit{val}}~(\href{../syntax/types.h
 </section>
 <section id="xref-syntax-instructions-syntax-instr-aray-mathsf-array-init-data-xref-syntax-modules-syntax-typeidx-mathit-typeidx-xref-syntax-modules-syntax-dataidx-mathit-dataidx">
 <span id="exec-array-init-data"></span><h3><span class="math notranslate nohighlight">\(\href{../syntax/instructions.html#syntax-instr-aray}{\mathsf{array.init\_data}}~\href{../syntax/modules.html#syntax-typeidx}{\mathit{typeidx}}~\href{../syntax/modules.html#syntax-dataidx}{\mathit{dataidx}}\)</span><a class="headerlink" href="#xref-syntax-instructions-syntax-instr-aray-mathsf-array-init-data-xref-syntax-modules-syntax-typeidx-mathit-typeidx-xref-syntax-modules-syntax-dataidx-mathit-dataidx" title="Permalink to this heading">¶</a></h3>
-<div class="admonition-todo admonition" id="id18">
+<div class="admonition-todo admonition" id="id16">
 <p class="admonition-title">Todo</p>
 <p>Prose</p>
 </div>
@@ -738,14 +972,14 @@ S; F; (\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}array}}~a)~(\href{..
   \quad\href{../exec/conventions.html#formal-notation}{\hookrightarrow}
   \\ \quad S; F;
   \begin{array}[t]{&#64;{}l&#64;{}}
-  (\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}array}}~a)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~d)~(t.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}} i)~(\href{../syntax/instructions.html#syntax-instr-array}{\mathsf{array.set}}~x) \\
+  (\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}array}}~a)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~d)~(t.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}} c)~(\href{../syntax/instructions.html#syntax-instr-array}{\mathsf{array.set}}~x) \\
   (\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}array}}~a)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~d+1)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~s+|\mathit{ft}|)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~n)~(\href{../syntax/instructions.html#syntax-instr-aray}{\mathsf{array.init\_data}}~x~y) \\
   \end{array}
   \\ \qquad
   \begin{array}[t]{&#64;{}r&#64;{~}l&#64;{}}
   (\mathrel{\mbox{otherwise}}, \mathrel{\mbox{if}} &amp; F.\href{../exec/runtime.html#syntax-frame}{\mathsf{module}}.\href{../exec/runtime.html#syntax-moduleinst}{\mathsf{types}}[x] = \href{../syntax/types.html#syntax-strtype}{\mathsf{array}}~\mathit{ft} \\
    \land &amp; t = \href{../syntax/types.html#aux-unpacktype}{\mathrm{unpack}}(\mathit{ft}) \\
-   \land &amp; \href{../exec/numerics.html#aux-bytes}{\mathrm{bytes}}_{\mathit{ft}}(i) = S.\href{../exec/runtime.html#syntax-store}{\mathsf{datas}}[F.\href{../exec/runtime.html#syntax-frame}{\mathsf{module}}.\href{../exec/runtime.html#syntax-moduleinst}{\mathsf{dataaddrs}}[y]].\href{../exec/runtime.html#syntax-datainst}{\mathsf{data}}[s \href{../syntax/conventions.html#notation-slice}{\mathrel{\mathbf{:}}} |\mathit{ft}|]
+   \land &amp; \href{../exec/numerics.html#aux-bytes}{\mathrm{bytes}}_{\mathit{ft}}(c) = S.\href{../exec/runtime.html#syntax-store}{\mathsf{datas}}[F.\href{../exec/runtime.html#syntax-frame}{\mathsf{module}}.\href{../exec/runtime.html#syntax-moduleinst}{\mathsf{dataaddrs}}[y]].\href{../exec/runtime.html#syntax-datainst}{\mathsf{data}}[s \href{../syntax/conventions.html#notation-slice}{\mathrel{\mathbf{:}}} |\mathit{ft}|]
   \end{array}
 \\[1ex]
 S; F; (\href{../syntax/instructions.html#syntax-instr-ref}{\mathsf{ref.null}}~t)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~d)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~s)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~n)~(\href{../syntax/instructions.html#syntax-instr-aray}{\mathsf{array.init\_data}}~x~y) \quad\href{../exec/conventions.html#formal-notation}{\hookrightarrow}\quad \href{../exec/runtime.html#syntax-trap}{\mathsf{trap}}
@@ -753,7 +987,7 @@ S; F; (\href{../syntax/instructions.html#syntax-instr-ref}{\mathsf{ref.null}}~t)
 </section>
 <section id="xref-syntax-instructions-syntax-instr-aray-mathsf-array-init-elem-xref-syntax-modules-syntax-typeidx-mathit-typeidx-xref-syntax-modules-syntax-elemidx-mathit-elemidx">
 <span id="exec-array-init-elem"></span><h3><span class="math notranslate nohighlight">\(\href{../syntax/instructions.html#syntax-instr-aray}{\mathsf{array.init\_elem}}~\href{../syntax/modules.html#syntax-typeidx}{\mathit{typeidx}}~\href{../syntax/modules.html#syntax-elemidx}{\mathit{elemidx}}\)</span><a class="headerlink" href="#xref-syntax-instructions-syntax-instr-aray-mathsf-array-init-elem-xref-syntax-modules-syntax-typeidx-mathit-typeidx-xref-syntax-modules-syntax-elemidx-mathit-elemidx" title="Permalink to this heading">¶</a></h3>
-<div class="admonition-todo admonition" id="id19">
+<div class="admonition-todo admonition" id="id17">
 <p class="admonition-title">Todo</p>
 <p>Prose</p>
 </div>
