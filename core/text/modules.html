@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
-    <title>Modules &#8212; WebAssembly 2.0 + tail calls + function references + gc (Draft 2023-07-06)</title>
+    <title>Modules &#8212; WebAssembly 2.0 + tail calls + function references + gc (Draft 2023-07-12)</title>
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
     <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
@@ -137,14 +137,14 @@ If inline declarations are given, then their types must match the referenced <a 
   \def\mathdef3619#1{\mbox{‘}\mathtt{#1}\mbox{’}}\mathdef3619{(}~\def\mathdef3620#1{\mbox{‘}\mathtt{#1}\mbox{’}}\mathdef3620{type}~~x{:}\href{../text/modules.html#text-typeidx}{\mathtt{typeidx}}_I~\def\mathdef3621#1{\mbox{‘}\mathtt{#1}\mbox{’}}\mathdef3621{)}
     \quad\Rightarrow\quad x, I' \\ &amp;&amp;&amp; \qquad
     (\mathrel{\mbox{if}} \begin{array}[t]{&#64;{}l&#64;{}}
-     I.\href{../text/conventions.html#text-context}{\mathsf{typedefs}}[x] = \href{../syntax/types.html#syntax-subtype}{\mathsf{sub}}~\href{../syntax/types.html#syntax-subtype}{\mathsf{filan}}~(\href{../syntax/types.html#syntax-strtype}{\mathsf{func}}~[t_1^n] \href{../syntax/types.html#syntax-functype}{\rightarrow} [t_2^\ast]) \wedge
+     I.\href{../text/conventions.html#text-context}{\mathsf{typedefs}}[x] = \href{../syntax/types.html#syntax-subtype}{\mathsf{sub}}~\href{../syntax/types.html#syntax-subtype}{\mathsf{final}}~(\href{../syntax/types.html#syntax-strtype}{\mathsf{func}}~[t_1^n] \href{../syntax/types.html#syntax-functype}{\rightarrow} [t_2^\ast]) \wedge
      I' = \{\href{../text/conventions.html#text-context}{\mathsf{locals}}~(\epsilon)^n\}) \\
      \end{array} \\[1ex] &amp;&amp;|&amp;
   \def\mathdef3622#1{\mbox{‘}\mathtt{#1}\mbox{’}}\mathdef3622{(}~\def\mathdef3623#1{\mbox{‘}\mathtt{#1}\mbox{’}}\mathdef3623{type}~~x{:}\href{../text/modules.html#text-typeidx}{\mathtt{typeidx}}_I~\def\mathdef3624#1{\mbox{‘}\mathtt{#1}\mbox{’}}\mathdef3624{)}
   ~~(t_1{:}\href{../text/types.html#text-functype}{\mathtt{param}})^\ast~~(t_2{:}\href{../text/types.html#text-functype}{\mathtt{result}})^\ast
     \quad\Rightarrow\quad x, I' \\ &amp;&amp;&amp; \qquad
     (\mathrel{\mbox{if}} \begin{array}[t]{&#64;{}l&#64;{}}
-     I.\href{../text/conventions.html#text-context}{\mathsf{typedefs}}[x] = \href{../syntax/types.html#syntax-subtype}{\mathsf{sub}}~\href{../syntax/types.html#syntax-subtype}{\mathsf{filan}}~(\href{../syntax/types.html#syntax-strtype}{\mathsf{func}}~[t_1^\ast] \href{../syntax/types.html#syntax-functype}{\rightarrow} [t_2^\ast]) \wedge
+     I.\href{../text/conventions.html#text-context}{\mathsf{typedefs}}[x] = \href{../syntax/types.html#syntax-subtype}{\mathsf{sub}}~\href{../syntax/types.html#syntax-subtype}{\mathsf{final}}~(\href{../syntax/types.html#syntax-strtype}{\mathsf{func}}~[t_1^\ast] \href{../syntax/types.html#syntax-functype}{\rightarrow} [t_2^\ast]) \wedge
      I' = \{\href{../text/conventions.html#text-context}{\mathsf{locals}}~\mathrm{id}(\href{../text/types.html#text-functype}{\mathtt{param}})^\ast\} ~\href{../text/conventions.html#text-context-wf}{\mbox{well-formed}}) \\
      \end{array} \\
 \end{array}\end{split}\]</div>
@@ -176,7 +176,7 @@ In that case, a <a class="reference internal" href="../syntax/modules.html#synta
   (t_1{:}\href{../text/types.html#text-functype}{\mathtt{param}})^\ast~~(t_2{:}\href{../text/types.html#text-functype}{\mathtt{result}})^\ast &amp;\equiv&amp;
   \def\mathdef3628#1{\mbox{‘}\mathtt{#1}\mbox{’}}\mathdef3628{(}~\def\mathdef3629#1{\mbox{‘}\mathtt{#1}\mbox{’}}\mathdef3629{type}~~x~\def\mathdef3630#1{\mbox{‘}\mathtt{#1}\mbox{’}}\mathdef3630{)}~~\href{../text/types.html#text-functype}{\mathtt{param}}^\ast~~\href{../text/types.html#text-functype}{\mathtt{result}}^\ast \\
 \end{array}\end{split}\]</div>
-<p>where <span class="math notranslate nohighlight">\(x\)</span> is the smallest existing <a class="reference internal" href="../syntax/modules.html#syntax-typeidx"><span class="std std-ref">type index</span></a> whose <span class="xref std std-ref">recursive type</span> definition in the current module is of the form</p>
+<p>where <span class="math notranslate nohighlight">\(x\)</span> is the smallest existing <a class="reference internal" href="../syntax/modules.html#syntax-typeidx"><span class="std std-ref">type index</span></a> whose <a class="reference internal" href="../syntax/types.html#syntax-rectype"><span class="std std-ref">recursive type</span></a> definition in the current module is of the form</p>
 <div class="math notranslate nohighlight">
 \[\def\mathdef3631#1{\mbox{‘}\mathtt{#1}\mbox{’}}\mathdef3631{(}~\def\mathdef3632#1{\mbox{‘}\mathtt{#1}\mbox{’}}\mathdef3632{rec}~\def\mathdef3633#1{\mbox{‘}\mathtt{#1}\mbox{’}}\mathdef3633{(}~\def\mathdef3634#1{\mbox{‘}\mathtt{#1}\mbox{’}}\mathdef3634{type}~\def\mathdef3635#1{\mbox{‘}\mathtt{#1}\mbox{’}}\mathdef3635{(}~\def\mathdef3636#1{\mbox{‘}\mathtt{#1}\mbox{’}}\mathdef3636{sub}~\def\mathdef3637#1{\mbox{‘}\mathtt{#1}\mbox{’}}\mathdef3637{final}~~\def\mathdef3638#1{\mbox{‘}\mathtt{#1}\mbox{’}}\mathdef3638{(}~\def\mathdef3639#1{\mbox{‘}\mathtt{#1}\mbox{’}}\mathdef3639{func}~~\href{../text/types.html#text-functype}{\mathtt{param}}^\ast~~\href{../text/types.html#text-functype}{\mathtt{result}}^\ast~\def\mathdef3640#1{\mbox{‘}\mathtt{#1}\mbox{’}}\mathdef3640{)}~\def\mathdef3641#1{\mbox{‘}\mathtt{#1}\mbox{’}}\mathdef3641{)}~\def\mathdef3642#1{\mbox{‘}\mathtt{#1}\mbox{’}}\mathdef3642{)}~\def\mathdef3643#1{\mbox{‘}\mathtt{#1}\mbox{’}}\mathdef3643{)}\]</div>
 <p>If no such index exists, then a new <a class="reference internal" href="types.html#text-rectype"><span class="std std-ref">recursive type</span></a> of the same form is inserted at the end of the module.</p>

@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
-    <title>Types &#8212; WebAssembly 2.0 + tail calls + function references + gc (Draft 2023-07-06)</title>
+    <title>Types &#8212; WebAssembly 2.0 + tail calls + function references + gc (Draft 2023-07-12)</title>
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
     <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
@@ -201,7 +201,7 @@ However, restrictions apply to most other types, such as <a class="reference int
 </ul>
 <div class="math notranslate nohighlight">
 \[\frac{
-  C.\href{../valid/conventions.html#context}{\mathsf{types}}[\href{../syntax/modules.html#syntax-typeidx}{\mathit{typeidx}}] = [t_1^\ast] \href{../syntax/types.html#syntax-functype}{\rightarrow} [t_2^\ast]
+  \href{../syntax/types.html#aux-expand}{\mathrm{expand}}(C.\href{../valid/conventions.html#context}{\mathsf{types}}[\href{../syntax/modules.html#syntax-typeidx}{\mathit{typeidx}}]) = \href{../syntax/types.html#syntax-strtype}{\mathsf{func}}~[t_1^\ast] \href{../syntax/types.html#syntax-functype}{\rightarrow} [t_2^\ast]
 }{
   C \href{../valid/types.html#valid-blocktype}{\vdash} \href{../syntax/modules.html#syntax-typeidx}{\mathit{typeidx}} : [t_1^\ast] \href{../syntax/types.html#syntax-instrtype}{\rightarrow} [t_2^\ast]
 }\]</div>
@@ -357,17 +357,20 @@ However, restrictions apply to most other types, such as <a class="reference int
 </section>
 <section id="external-types">
 <span id="valid-externtype"></span><span id="index-13"></span><h2>External Types<a class="headerlink" href="#external-types" title="Permalink to this heading">¶</a></h2>
-<section id="xref-syntax-types-syntax-externtype-mathsf-func-xref-syntax-modules-syntax-typeidx-mathit-typeidx">
-<h3><span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-externtype}{\mathsf{func}}~\href{../syntax/modules.html#syntax-typeidx}{\mathit{typeidx}}\)</span><a class="headerlink" href="#xref-syntax-types-syntax-externtype-mathsf-func-xref-syntax-modules-syntax-typeidx-mathit-typeidx" title="Permalink to this heading">¶</a></h3>
+<section id="xref-syntax-types-syntax-externtype-mathsf-func-xref-syntax-types-syntax-deftype-mathit-deftype">
+<h3><span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-externtype}{\mathsf{func}}~\href{../syntax/types.html#syntax-deftype}{\mathit{deftype}}\)</span><a class="headerlink" href="#xref-syntax-types-syntax-externtype-mathsf-func-xref-syntax-types-syntax-deftype-mathit-deftype" title="Permalink to this heading">¶</a></h3>
 <ul class="simple">
-<li><p>The <a class="reference internal" href="../syntax/types.html#syntax-functype"><span class="std std-ref">function type</span></a> <span class="math notranslate nohighlight">\(C.\href{../valid/conventions.html#context}{\mathsf{types}}[x]\)</span> must be defined in the context.</p></li>
+<li><p>The <a class="reference internal" href="../syntax/types.html#syntax-deftype"><span class="std std-ref">defined type</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-deftype}{\mathit{deftype}}\)</span> must be <a class="reference internal" href="#valid-deftype"><span class="std std-ref">valid</span></a>.</p></li>
+<li><p>The <a class="reference internal" href="../syntax/types.html#syntax-deftype"><span class="std std-ref">defined type</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-deftype}{\mathit{deftype}}\)</span> must be a <a class="reference internal" href="../syntax/types.html#syntax-functype"><span class="std std-ref">function type</span></a>.</p></li>
 <li><p>Then the external type is valid.</p></li>
 </ul>
 <div class="math notranslate nohighlight">
 \[\frac{
-  C.\href{../valid/conventions.html#context}{\mathsf{types}}[x] = \href{../syntax/types.html#syntax-functype}{\mathit{functype}}
+  C \href{../valid/types.html#valid-deftype}{\vdash} \href{../syntax/types.html#syntax-deftype}{\mathit{deftype}} \mathrel{\mbox{ok}}
+  \qquad
+  \href{../syntax/types.html#aux-expand}{\mathrm{expand}}(\href{../syntax/types.html#syntax-deftype}{\mathit{deftype}}) = \href{../syntax/types.html#syntax-strtype}{\mathsf{func}}~\href{../syntax/types.html#syntax-functype}{\mathit{functype}}
 }{
-  C \href{../valid/types.html#valid-externtype}{\vdash} \href{../syntax/types.html#syntax-externtype}{\mathsf{func}}~x
+  C \href{../valid/types.html#valid-externtype}{\vdash} \href{../syntax/types.html#syntax-externtype}{\mathsf{func}}~\href{../syntax/types.html#syntax-deftype}{\mathit{deftype}}
 }\]</div>
 </section>
 <section id="xref-syntax-types-syntax-externtype-mathsf-table-xref-syntax-types-syntax-tabletype-mathit-tabletype">

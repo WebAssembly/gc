@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
-    <title>Types &#8212; WebAssembly 2.0 + tail calls + function references + gc (Draft 2023-07-06)</title>
+    <title>Types &#8212; WebAssembly 2.0 + tail calls + function references + gc (Draft 2023-07-12)</title>
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
     <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
@@ -263,7 +263,7 @@ They cannot be referenced from anywhere.</p>
     &amp;\Rightarrow&amp; \mathit{st} \\
 \def\mathdef4018#1{{}}\mathdef4018{sub type} &amp; \href{../text/types.html#text-subtype}{\mathtt{subtype}}_I &amp;::=&amp;
   \def\mathdef4186#1{\mbox{‘}\mathtt{#1}\mbox{’}}\mathdef4186{(}~\def\mathdef4187#1{\mbox{‘}\mathtt{#1}\mbox{’}}\mathdef4187{sub}~~\def\mathdef4188#1{\mbox{‘}\mathtt{#1}\mbox{’}}\mathdef4188{final}^?~~x^\ast{:\,}\href{../text/conventions.html#text-vec}{\mathtt{vec}}(\href{../text/modules.html#text-typeidx}{\mathtt{typeidx}}_I)~~\mathit{ct}{:}\href{../text/types.html#text-comptype}{\mathtt{comptype}}_I~\def\mathdef4189#1{\mbox{‘}\mathtt{#1}\mbox{’}}\mathdef4189{)}
-    &amp;\Rightarrow&amp; \href{../syntax/types.html#syntax-subtype}{\mathsf{sub}}~\href{../syntax/types.html#syntax-subtype}{\mathsf{filan}}^?~x^\ast~\mathit{ct} \\
+    &amp;\Rightarrow&amp; \href{../syntax/types.html#syntax-subtype}{\mathsf{sub}}~\href{../syntax/types.html#syntax-subtype}{\mathsf{final}}^?~x^\ast~\mathit{ct} \\
 \end{array}\end{split}\]</div>
 <section id="id3">
 <h3>Abbreviations<a class="headerlink" href="#id3" title="Permalink to this heading">¶</a></h3>
