@@ -775,10 +775,10 @@ The opcode for heap types is encoded as an `s33`.
 | 0xfb0d | `array.get_u $t` | `$t : typeidx` |
 | 0xfb0e | `array.set $t` | `$t : typeidx` |
 | 0xfb0f | `array.len` | |
-| 0xfb10 | `array.fill` | |
-| 0xfb11 | `array.copy` | |
-| 0xfb12 | `array.init_data` | |
-| 0xfb13 | `array.init_elem` | |
+| 0xfb10 | `array.fill $t` | |
+| 0xfb11 | `array.copy $t1 $t2` | |
+| 0xfb12 | `array.init_data $t $d` | |
+| 0xfb13 | `array.init_elem $t $e` | |
 | 0xfb14 | `i31.new` | i31 conversions (0x30+) |
 | 0xfb15 | `i31.get_s` |  |
 | 0xfb16 | `i31.get_u` |  |
