@@ -775,17 +775,21 @@ The opcode for heap types is encoded as an `s33`.
 | 0xfb0d | `array.get_u $t` | `$t : typeidx` |
 | 0xfb0e | `array.set $t` | `$t : typeidx` |
 | 0xfb0f | `array.len` | |
-| 0xfb10 | `i31.new` | i31 conversions (0x30+) |
-| 0xfb11 | `i31.get_s` |  |
-| 0xfb12 | `i31.get_u` |  |
-| 0xfb13 | `extern.internalize` | | extern conversions (0x38+) |
-| 0xfb14 | `extern.externalize` | |
-| 0xfb15 | `ref.test (ref ht)` | `ht : heaptype` | cast instructions (0x40+) |
-| 0xfb16 | `ref.test (ref null ht)` | `ht : heaptype` |
-| 0xfb17 | `ref.cast (ref ht)` | `ht : heaptype` |
-| 0xfb18 | `ref.cast (ref null ht)` | `ht : heaptype` |
-| 0xfb19 | `br_on_cast $l (ref null1? ht1) (ref null2? ht2)` | `flags : u8`, $l : labelidx`, `ht1 : heaptype`, `ht2 : heaptype` |
-| 0xfb1a | `br_on_cast_fail $l (ref null1? ht1) (ref null2? ht2)` | `flags : u8`, $l : labelidx`, `ht1 : heaptype`, `ht2 : heaptype` |
+| 0xfb10 | `array.fill` | |
+| 0xfb11 | `array.copy` | |
+| 0xfb12 | `array.init_data` | |
+| 0xfb13 | `array.init_elem` | |
+| 0xfb14 | `i31.new` | i31 conversions (0x30+) |
+| 0xfb15 | `i31.get_s` |  |
+| 0xfb16 | `i31.get_u` |  |
+| 0xfb17 | `extern.internalize` | | extern conversions (0x38+) |
+| 0xfb18 | `extern.externalize` | |
+| 0xfb19 | `ref.test (ref ht)` | `ht : heaptype` | cast instructions (0x40+) |
+| 0xfb1a | `ref.test (ref null ht)` | `ht : heaptype` |
+| 0xfb1b | `ref.cast (ref ht)` | `ht : heaptype` |
+| 0xfb1c | `ref.cast (ref null ht)` | `ht : heaptype` |
+| 0xfb1d | `br_on_cast $l (ref null1? ht1) (ref null2? ht2)` | `flags : u8`, $l : labelidx`, `ht1 : heaptype`, `ht2 : heaptype` |
+| 0xfb1e | `br_on_cast_fail $l (ref null1? ht1) (ref null2? ht2)` | `flags : u8`, $l : labelidx`, `ht1 : heaptype`, `ht2 : heaptype` |
 
 Flag byte encoding for `br_on_cast(_fail)?`:
 
