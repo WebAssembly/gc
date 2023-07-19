@@ -177,16 +177,16 @@ let heap_type s =
     (fun s -> VarHT (var_type s33 s));
     (fun s ->
       match s7 s with
+      | -0x0d -> NoFuncHT
+      | -0x0e -> NoExternHT
+      | -0x0f -> NoneHT
       | -0x10 -> FuncHT
       | -0x11 -> ExternHT
       | -0x12 -> AnyHT
       | -0x13 -> EqHT
-      | -0x16 -> I31HT
-      | -0x17 -> NoFuncHT
-      | -0x18 -> NoExternHT
-      | -0x19 -> StructHT
-      | -0x1a -> ArrayHT
-      | -0x1b -> NoneHT
+      | -0x14 -> I31HT
+      | -0x15 -> StructHT
+      | -0x16 -> ArrayHT
       | _ -> error s pos "malformed heap type"
     )
   ] s
@@ -194,18 +194,18 @@ let heap_type s =
 let ref_type s =
   let pos = pos s in
   match s7 s with
+  | -0x0d -> (Null, NoFuncHT)
+  | -0x0e -> (Null, NoExternHT)
+  | -0x0f -> (Null, NoneHT)
   | -0x10 -> (Null, FuncHT)
   | -0x11 -> (Null, ExternHT)
   | -0x12 -> (Null, AnyHT)
   | -0x13 -> (Null, EqHT)
-  | -0x14 -> (Null, heap_type s)
-  | -0x15 -> (NoNull, heap_type s)
-  | -0x16 -> (Null, I31HT)
-  | -0x17 -> (Null, NoFuncHT)
-  | -0x18 -> (Null, NoExternHT)
-  | -0x19 -> (Null, StructHT)
-  | -0x1a -> (Null, ArrayHT)
-  | -0x1b -> (Null, NoneHT)
+  | -0x14 -> (Null, I31HT)
+  | -0x15 -> (Null, StructHT)
+  | -0x16 -> (Null, ArrayHT)
+  | -0x1c -> (NoNull, heap_type s)
+  | -0x1d -> (Null, heap_type s)
   | _ -> error s pos "malformed reference type"
 
 let val_type s =
@@ -588,48 +588,46 @@ let rec instr s =
 
   | 0xfb as b ->
     (match u32 s with
-    | 0x01l -> struct_new (at var s)
-    | 0x02l -> struct_new_default (at var s)
-    | 0x03l -> let x = at var s in let y = at var s in struct_get x y
-    | 0x04l -> let x = at var s in let y = at var s in struct_get_s x y
-    | 0x05l -> let x = at var s in let y = at var s in struct_get_u x y
-    | 0x06l -> let x = at var s in let y = at var s in struct_set x y
+    | 0x00l -> struct_new (at var s)
+    | 0x01l -> struct_new_default (at var s)
+    | 0x02l -> let x = at var s in let y = at var s in struct_get x y
+    | 0x03l -> let x = at var s in let y = at var s in struct_get_s x y
+    | 0x04l -> let x = at var s in let y = at var s in struct_get_u x y
+    | 0x05l -> let x = at var s in let y = at var s in struct_set x y
 
-    | 0x11l -> array_new (at var s)
-    | 0x12l -> array_new_default (at var s)
-    | 0x13l -> array_get (at var s)
-    | 0x14l -> array_get_s (at var s)
-    | 0x15l -> array_get_u (at var s)
-    | 0x16l -> array_set (at var s)
-    | 0x17l -> array_len
+    | 0x06l -> array_new (at var s)
+    | 0x07l -> array_new_default (at var s)
+    | 0x08l -> let x = at var s in let n = u32 s in array_new_fixed x n
+    | 0x09l -> let x = at var s in let y = at var s in array_new_data x y
+    | 0x0al -> let x = at var s in let y = at var s in array_new_elem x y
+    | 0x0bl -> array_get (at var s)
+    | 0x0cl -> array_get_s (at var s)
+    | 0x0dl -> array_get_u (at var s)
+    | 0x0el -> array_set (at var s)
+    | 0x0fl -> array_len
+    | 0x10l -> array_fill (at var s)
+    | 0x11l -> let x = at var s in let y = at var s in array_copy x y
+    | 0x12l -> let x = at var s in let y = at var s in array_init_data x y
+    | 0x13l -> let x = at var s in let y = at var s in array_init_elem x y
 
-    | 0x18l -> let x = at var s in let y = at var s in array_copy x y
-    | 0x0fl -> array_fill (at var s)
-    | 0x54l -> let x = at var s in let y = at var s in array_init_data x y
-    | 0x55l -> let x = at var s in let y = at var s in array_init_elem x y
+    | 0x14l -> i31_new
+    | 0x15l -> i31_get_s
+    | 0x16l -> i31_get_u
 
-    | 0x19l -> let x = at var s in let n = u32 s in array_new_fixed x n
-    | 0x1bl -> let x = at var s in let y = at var s in array_new_data x y
-    | 0x1cl -> let x = at var s in let y = at var s in array_new_elem x y
+    | 0x17l -> extern_internalize
+    | 0x18l -> extern_externalize
 
-    | 0x20l -> i31_new
-    | 0x21l -> i31_get_s
-    | 0x22l -> i31_get_u
-
-    | 0x40l -> ref_test (NoNull, heap_type s)
-    | 0x41l -> ref_cast (NoNull, heap_type s)
-    | 0x48l -> ref_test (Null, heap_type s)
-    | 0x49l -> ref_cast (Null, heap_type s)
-    | 0x4el | 0x4fl as opcode ->
+    | 0x19l -> ref_test (NoNull, heap_type s)
+    | 0x1al -> ref_test (Null, heap_type s)
+    | 0x1bl -> ref_cast (NoNull, heap_type s)
+    | 0x1cl -> ref_cast (Null, heap_type s)
+    | 0x1dl | 0x1el as opcode ->
       let flags = byte s in
       require (flags land 0xfc = 0) s (pos + 2) "malformed br_on_cast flags";
       let x = at var s in
       let rt1 = ((if bit 0 flags then Null else NoNull), heap_type s) in
       let rt2 = ((if bit 1 flags then Null else NoNull), heap_type s) in
-      (if opcode = 0x4el then br_on_cast else br_on_cast_fail) x rt1 rt2
-
-    | 0x70l -> extern_internalize
-    | 0x71l -> extern_externalize
+      (if opcode = 0x1dl then br_on_cast else br_on_cast_fail) x rt1 rt2
 
     | n -> illegal2 s pos b n
     )

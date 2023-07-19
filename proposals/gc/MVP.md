@@ -835,8 +835,8 @@ The opcode for heap types is encoded as an `s33`.
 | 0xfb1a | `ref.test (ref null ht)` | `ht : heaptype` |
 | 0xfb1b | `ref.cast (ref ht)` | `ht : heaptype` |
 | 0xfb1c | `ref.cast (ref null ht)` | `ht : heaptype` |
-| 0xfb1d | `br_on_cast $l (ref null1? ht1) (ref null2? ht2)` | `flags : u8`, `$l : labelidx`, `ht1 : heaptype`, `ht2 : heaptype` |
-| 0xfb1e | `br_on_cast_fail $l (ref null1? ht1) (ref null2? ht2)` | `flags : u8`, `$l : labelidx`, `ht1 : heaptype`, `ht2 : heaptype` |
+| 0xfb1d | `br_on_cast $l (ref null1? ht1) (ref null2? ht2)` | `flags : u8`, $l : labelidx`, `ht1 : heaptype`, `ht2 : heaptype` |
+| 0xfb1e | `br_on_cast_fail $l (ref null1? ht1) (ref null2? ht2)` | `flags : u8`, $l : labelidx`, `ht1 : heaptype`, `ht2 : heaptype` |
 
 Flag byte encoding for `br_on_cast(_fail)?`:
 
