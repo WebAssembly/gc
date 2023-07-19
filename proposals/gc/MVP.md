@@ -786,7 +786,7 @@ The opcode for heap types is encoded as an `s33`.
 | -0x22  | `array ft`      | `ft : fieldtype`       | shorthand |
 | -0x30  | `sub $t* st`    | `$t* : vec(typeidx)`, `st : strtype` | shorthand |
 | -0x31  | `sub final $t* st` | `$t* : vec(typeidx)`, `st : strtype` | shorthand |
-| -0x34  | `rec dt*`       | `dt* : vec(subtype)` | |
+| -0x32  | `rec dt*`       | `dt* : vec(subtype)` | |
 
 #### Field Types
 

@@ -259,7 +259,7 @@ let sub_type s =
     skip 1 s;
     let xs = vec (var_type u32) s in
     SubT (NoFinal, List.map (fun x -> VarHT x) xs, str_type s)
-  | Some i when i = -0x32 land 0x7f ->
+  | Some i when i = -0x31 land 0x7f ->
     skip 1 s;
     let xs = vec (var_type u32) s in
     SubT (Final, List.map (fun x -> VarHT x) xs, str_type s)
@@ -267,7 +267,7 @@ let sub_type s =
 
 let rec_type s =
   match peek s with
-  | Some i when i = -0x31 land 0x7f -> skip 1 s; RecT (vec sub_type s)
+  | Some i when i = -0x32 land 0x7f -> skip 1 s; RecT (vec sub_type s)
   | _ -> RecT [sub_type s]
 
 
