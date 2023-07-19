@@ -103,7 +103,7 @@ struct
 
   let var_type var = function
     | StatX x -> var x
-    | DynX _ | RecX _ -> assert false
+    | RecX _ -> assert false
 
   let num_type = function
     | I32T -> s7 (-0x01)
@@ -125,8 +125,12 @@ struct
     | NoFuncHT -> s7 (-0x17)
     | ExternHT -> s7 (-0x11)
     | NoExternHT -> s7 (-0x18)
-    | DefHT x -> var_type s33 x
-    | BotHT -> assert false
+    | VarHT x -> var_type s33 x
+    | DefHT _ | BotHT -> assert false
+
+  let var_heap_type = function
+    | VarHT x -> var_type u32 x
+    | _ -> assert false
 
   let ref_type = function
     | (Null, AnyHT) -> s7 (-0x12)
@@ -176,10 +180,10 @@ struct
 
   let sub_type = function
     | SubT (Final, [], st) -> str_type st
-    | SubT (Final, xs, st) -> s7 (-0x32); vec (var_type u32) xs; str_type st
-    | SubT (NoFinal, xs, st) -> s7 (-0x30); vec (var_type u32) xs; str_type st
+    | SubT (Final, hts, st) -> s7 (-0x32); vec var_heap_type hts; str_type st
+    | SubT (NoFinal, hts, st) -> s7 (-0x30); vec var_heap_type hts; str_type st
 
-  let def_type = function
+  let rec_type = function
     | RecT [st] -> sub_type st
     | RecT sts -> s7 (-0x31); vec sub_type sts
 
@@ -402,6 +406,11 @@ struct
     | ArrayGet (x, Some ZX) -> op 0xfb; op 0x15; var x
     | ArraySet x -> op 0xfb; op 0x16; var x
     | ArrayLen -> op 0xfb; op 0x17
+
+    | ArrayCopy (x, y) -> op 0xfb; op 0x18; var x; var y
+    | ArrayFill x -> op 0xfb; op 0x0f; var x
+    | ArrayInitData (x, y) -> op 0xfb; op 0x54; var x; var y
+    | ArrayInitElem (x, y) -> op 0xfb; op 0x55; var x; var y
 
     | ExternConvert Internalize -> op 0xfb; op 0x70
     | ExternConvert Externalize -> op 0xfb; op 0x71
@@ -852,7 +861,7 @@ struct
 
   (* Type section *)
 
-  let type_ t = def_type t.it
+  let type_ t = rec_type t.it
 
   let type_section ts =
     section 1 (vec type_) ts (ts <> [])

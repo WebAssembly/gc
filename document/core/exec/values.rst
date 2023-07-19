@@ -4,14 +4,14 @@
 Values
 ------
 
-.. index:: value, value type, validation
+.. index:: value, value type, validation, structure, structure type, structure instance, array, array type, array instance, function, function type, function instance, null reference, scalar reference, store
 .. _valid-val:
 
 Value Typing
 ~~~~~~~~~~~~
 
 For the purpose of checking argument :ref:`values <syntax-externval>` against the parameter types of exported :ref:`functions <syntax-func>`,
-values are classified by :ref:`dynamic <syntax-type-dyn>` :ref:`value types <syntax-valtype>`.
+values are classified by :ref:`value types <syntax-valtype>`.
 The following auxiliary typing rules specify this typing relation relative to a :ref:`store <syntax-store>` :math:`S` in which possibly referenced addresses live.
 
 .. _valid-num:
@@ -40,49 +40,151 @@ The following auxiliary typing rules specify this typing relation relative to a 
      S \vdashval t.\CONST~c : t
    }
 
+
 .. _valid-ref:
 
 :ref:`Null References <syntax-ref>` :math:`\REFNULL~t`
 ......................................................
 
-* The :ref:`dynamic <syntax-type-dyn>` :ref:`heap type <syntax-heaptype>` must be :ref:`valid <valid-heaptype>`.
+* The :ref:`heap type <syntax-heaptype>` must be :ref:`valid <valid-heaptype>` under the empty :ref:`context <context>`.
 
-* Then value is valid with :ref:`reference type <syntax-reftype>` :math:`(\REF~\NULL~t)`.
+* Then value is valid with :ref:`reference type <syntax-reftype>` :math:`(\REF~\NULL~t')`, where the :ref:`heap type <syntax-heaptype>` :math:`t'` that is the least type that :ref:`matches <match-heaptype>` :math:`t`.
 
 .. math::
    \frac{
-     S \vdashheaptype t \ok
+     \vdashheaptype t \ok
+     \qquad
+     t' \in \{\NONE, \NOFUNC, \NOEXTERN\}
+     \qquad
+     \vdashheaptypematch t' \matchesheaptype t
    }{
-     S \vdashval \REFNULL~t : (\REF~\NULL~t)
+     S \vdashval \REFNULL~t : (\REF~\NULL~t')
+   }
+
+.. note::
+   A null reference is typed with the least type in its respective hierarchy.
+   That ensures that it is compatible with any nullable type in that hierarchy.
+
+
+.. _valid-ref.i31:
+
+:ref:`Scalar References <syntax-ref>` :math:`\REFI31~i`
+.......................................................
+
+* The value is valid with :ref:`reference type <syntax-reftype>` :math:`(\REF~\I31)`.
+
+.. math::
+   \frac{
+   }{
+     S \vdashval \REFI31~i : \REF~\I31
+   }
+
+
+.. _valid-ref.struct:
+
+:ref:`Structure References <syntax-ref>` :math:`\REFSTRUCTADDR~a`
+.................................................................
+
+* The :ref:`structure address <syntax-structaddr>` :math:`a` must exist in the store.
+
+* Let :math:`\structinst` be the :ref:`structure instance <syntax-structinst>` :math:`S.\SSTRUCTS[a]`.
+
+* Let :math:`\deftype` be the :ref:`defined type <syntax-deftype>` :math:`\structinst.\SITYPE`.
+
+* The :ref:`expansion <aux-expand>` of :math:`\deftype` must be a :ref:`struct type <syntax-structtype>`.
+
+* Then the value is valid with :ref:`reference type <syntax-reftype>` :math:`(\REF~\deftype)`.
+
+.. math::
+   \frac{
+     \deftype = S.\SSTRUCTS[a].\SITYPE
+     \qquad
+     \expand(\deftype) = \TSTRUCT~\structtype
+   }{
+     S \vdashval \REFSTRUCTADDR~a : \REF~\deftype
+   }
+
+
+.. _valid-ref.array:
+
+:ref:`Array References <syntax-ref>` :math:`\REFARRAYADDR~a`
+............................................................
+
+* The :ref:`array address <syntax-arrayaddr>` :math:`a` must exist in the store.
+
+* Let :math:`\arrayinst` be the :ref:`array instance <syntax-arrayinst>` :math:`S.\SARRAYS[a]`.
+
+* Let :math:`\deftype` be the :ref:`defined type <syntax-deftype>` :math:`\arrayinst.\AITYPE`.
+
+* The :ref:`expansion <aux-expand>` of :math:`\deftype` must be an :ref:`array type <syntax-arraytype>`.
+
+* Then the value is valid with :ref:`reference type <syntax-reftype>` :math:`(\REF~\arraytype)`.
+
+.. math::
+   \frac{
+     \deftype = S.\SARRAYS[a].\AITYPE
+     \qquad
+     \expand(\deftype) = \TARRAY~\arraytype
+   }{
+     S \vdashval \REFARRAYADDR~a : \REF~\deftype
    }
 
 
 :ref:`Function References <syntax-ref>` :math:`\REFFUNCADDR~a`
 ..............................................................
 
-* The :ref:`external value <syntax-externval>` :math:`\EVFUNC~a` must be :ref:`valid <valid-externval>` with :ref:`dynamic <syntax-type-dyn>` :ref:`external type <syntax-externtype>` :math:`\ETFUNC~a'`.
+* The :ref:`function address <syntax-funcaddr>` :math:`a` must exist in the store.
 
-* Then the value is valid with :ref:`dynamic <syntax-type-dyn>` :ref:`reference type <syntax-reftype>` :math:`(\REF~a')`.
+* Let :math:`\funcinst` be the :ref:`function instance <syntax-funcinst>` :math:`S.\SFUNCS[a]`.
+
+* Let :math:`\deftype` be the :ref:`defined type <syntax-deftype>` :math:`\funcinst.\FITYPE`.
+
+* The :ref:`expansion <aux-expand>` of :math:`\deftype` must be a :ref:`function type <syntax-functype>`.
+
+* Then the value is valid with :ref:`reference type <syntax-reftype>` :math:`(\REF~\functype)`.
 
 .. math::
    \frac{
-     S \vdashexternval \EVFUNC~a : \ETFUNC~a'
+     \deftype = S.\SFUNCS[a].\FITYPE
+     \qquad
+     \expand(\deftype) = \TFUNC~\functype
    }{
-     S \vdashval \REFFUNCADDR~a : \REF~a'
+     S \vdashval \REFFUNCADDR~a : \REF~\deftype
    }
 
 
-:ref:`External References <syntax-ref.extern>` :math:`\REFEXTERNADDR~a`
+:ref:`Host References <syntax-ref.host>` :math:`\REFHOSTADDR~a`
+...............................................................
+
+* The value is valid with :ref:`reference type <syntax-reftype>` :math:`(\REF~\ANY)`.
+
+.. math::
+   \frac{
+   }{
+     S \vdashval \REFHOSTADDR~a : \REF~\ANY
+   }
+
+.. note::
+   A host reference is considered internalized by this rule.
+
+
+:ref:`External References <syntax-ref.extern>` :math:`\REFEXTERN~\reff`
 .......................................................................
 
-* The value is valid with :ref:`reference type <syntax-reftype>` :math:`(\REF~\EXTERN)`.
+* The reference value :math:`\reff` must be valid with some :ref:`reference type <syntax-reftype>` :math:`(\REF~\NULL^?~t)`.
+
+* The :ref:`heap type <syntax-heaptype>` :math:`t` must :ref:`match <match-heaptype>` the heap type |ANY|.
+
+* Then the value is valid with :ref:`reference type <syntax-reftype>` :math:`(\REF~\NULL^?~\EXTERN)`.
 
 .. math::
    \frac{
+     S \vdashval \reff : \REF~\NULL^?~t
+     \qquad
+     \vdashheaptypematch t \matchesheaptype \ANY
    }{
-     S \vdashval \REFEXTERNADDR~a : (\REF~\EXTERN)
+     S \vdashval \REFEXTERN : \REF~\NULL^?~\EXTERN
    }
-
 
 
 .. index:: external value, external type, validation, import, store
@@ -92,7 +194,7 @@ External Typing
 ~~~~~~~~~~~~~~~
 
 For the purpose of checking :ref:`external values <syntax-externval>` against :ref:`imports <syntax-import>`,
-such values are classified by :ref:`dynamic <syntax-type-dyn>` :ref:`external types <syntax-externtype>`.
+such values are classified by :ref:`external types <syntax-externtype>`.
 The following auxiliary typing rules specify this typing relation relative to a :ref:`store <syntax-store>` :math:`S` in which the referenced instances live.
 
 

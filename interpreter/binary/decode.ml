@@ -174,7 +174,7 @@ let vec_type s =
 let heap_type s =
   let pos = pos s in
   either [
-    (fun s -> DefHT (var_type s33 s));
+    (fun s -> VarHT (var_type s33 s));
     (fun s ->
       match s7 s with
       | -0x10 -> FuncHT
@@ -258,14 +258,14 @@ let sub_type s =
   | Some i when i = -0x30 land 0x7f ->
     skip 1 s;
     let xs = vec (var_type u32) s in
-    SubT (NoFinal, xs, str_type s)
+    SubT (NoFinal, List.map (fun x -> VarHT x) xs, str_type s)
   | Some i when i = -0x32 land 0x7f ->
     skip 1 s;
     let xs = vec (var_type u32) s in
-    SubT (Final, xs, str_type s)
+    SubT (Final, List.map (fun x -> VarHT x) xs, str_type s)
   | _ -> SubT (Final, [], str_type s)
 
-let def_type s =
+let rec_type s =
   match peek s with
   | Some i when i = -0x31 land 0x7f -> skip 1 s; RecT (vec sub_type s)
   | _ -> RecT [sub_type s]
@@ -385,9 +385,7 @@ let rec instr s =
   | 0x14 -> call_ref (at var s)
   | 0x15 -> return_call_ref (at var s)
 
-  | 0x16 as b -> illegal s pos b
-
-  | 0x17 | 0x18 | 0x19 as b -> illegal s pos b
+  | 0x16 | 0x17 | 0x18 | 0x19 as b -> illegal s pos b
 
   | 0x1a -> drop
   | 0x1b -> select None
@@ -604,6 +602,11 @@ let rec instr s =
     | 0x15l -> array_get_u (at var s)
     | 0x16l -> array_set (at var s)
     | 0x17l -> array_len
+
+    | 0x18l -> let x = at var s in let y = at var s in array_copy x y
+    | 0x0fl -> array_fill (at var s)
+    | 0x54l -> let x = at var s in let y = at var s in array_init_data x y
+    | 0x55l -> let x = at var s in let y = at var s in array_init_elem x y
 
     | 0x19l -> let x = at var s in let n = u32 s in array_new_fixed x n
     | 0x1bl -> let x = at var s in let y = at var s in array_new_data x y
@@ -980,7 +983,7 @@ let section tag f default s =
 
 (* Type section *)
 
-let type_ s = at def_type s
+let type_ s = at rec_type s
 
 let type_section s =
   section `TypeSection (vec type_) [] s

@@ -64,7 +64,7 @@ let list free xs = List.fold_left union empty (List.map free xs)
 
 let var_type = function
   | StatX x -> types (idx' x)
-  | DynX _ | RecX _ -> empty
+  | RecX _ -> empty
 
 let num_type = function
   | I32T | I64T | F32T | F64T -> empty
@@ -77,7 +77,8 @@ let heap_type = function
   | I31HT | StructHT | ArrayHT -> empty
   | FuncHT | NoFuncHT -> empty
   | ExternHT | NoExternHT -> empty
-  | DefHT x -> var_type x
+  | VarHT x -> var_type x
+  | DefHT _ct -> empty  (* assume closed *)
   | BotHT -> empty
 
 let ref_type = function
@@ -107,14 +108,23 @@ let str_type = function
   | DefFuncT ft -> func_type ft
 
 let sub_type = function
-  | SubT (_fin, xs, st) -> list var_type xs ++ str_type st
+  | SubT (_fin, hts, st) -> list heap_type hts ++ str_type st
+
+let rec_type = function
+  | RecT sts -> list sub_type sts
 
 let def_type = function
-  | RecT sts -> list sub_type sts
+  | DefT (rt, _i) -> rec_type rt
 
 let global_type (GlobalT (_mut, t)) = val_type t
 let table_type (TableT (_lim, t)) = ref_type t
 let memory_type (MemoryT (_lim)) = empty
+
+let extern_type = function
+  | ExternFuncT dt -> def_type dt
+  | ExternTableT tt -> table_type tt
+  | ExternMemoryT mt -> memory_type mt
+  | ExternGlobalT gt -> global_type gt
 
 let block_type = function
   | VarBlockType x -> types (idx x)
@@ -136,6 +146,10 @@ let rec instr (e : instr) =
   | StructGet (x, _, _) | StructSet (x, _) -> types (idx x)
   | ArrayGet (x, _) | ArraySet x -> types (idx x)
   | ArrayLen -> empty
+  | ArrayCopy (x, y) -> types (idx x) ++ types (idx y)
+  | ArrayFill x -> types (idx x)
+  | ArrayInitData (x, y) -> types (idx x) ++ datas (idx y)
+  | ArrayInitElem (x, y) -> types (idx x) ++ elems (idx y)
   | ExternConvert _ -> empty
   | Const _ | Test _ | Compare _ | Unary _ | Binary _ | Convert _ -> empty
   | Block (bt, es) | Loop (bt, es) -> block_type bt ++ block es
@@ -190,7 +204,7 @@ let elem (s : elem_segment) =
 let data (s : data_segment) =
   segment_mode memories s.it.dmode
 
-let type_ (t : type_) = def_type t.it
+let type_ (t : type_) = rec_type t.it
 
 let export_desc (d : export_desc) =
   match d.it with
