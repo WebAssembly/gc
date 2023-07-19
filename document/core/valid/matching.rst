@@ -230,6 +230,23 @@ A :ref:`value type <syntax-valtype>` :math:`\valtype_1` matches a :ref:`value ty
      C \vdashvaltypematch \BOT \matchesvaltype \valtype
    }
 
+.. index:: storage type
+.. _match-storagetype:
+
+Storage Types
+~~~~~~~~~~~~~
+a :ref:`storage type <syntax-storagetype>` :math:`\storagetype_1` matches a :ref:`storage type <syntax-storagetype>` :math:`\storagetype_2` if and only if:
+
+* Either both :math:`\storagetype_1` and :math:`\storagetype_2` are :ref:`packed types <syntax-packedtype>` and :math:`\storagetype_1` and :math:`\storagetype_2` are the same.
+
+* Or both :math:`\storagetype_1` and :math:`\storagetype_2` are :ref:`value types <syntax-valtype>` and :math:`\storagetype_1` :ref:`matches <match-valtype>` :math:`\storagetype_2`.
+
+.. math::
+   ~\\[-1ex]
+   \frac{
+   }{
+     C \vdashstoragetypematch \storagetype \matchesstoragetype \storagetype
+   }
 
 .. index:: result type, value type
 .. _match-resulttype:
