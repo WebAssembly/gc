@@ -231,6 +231,9 @@ A :ref:`value type <syntax-valtype>` :math:`\valtype_1` matches a :ref:`value ty
    }
 
 
+.. index:: result type, value type
+.. _match-resulttype:
+
 Result Types
 ~~~~~~~~~~~~
 

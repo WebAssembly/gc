@@ -693,8 +693,8 @@ Aggregate Reference Instructions
 
 .. _valid-array.init_elem:
 
-:math:`\ARRAYINITELEM~x~y
-.........................
+:math:`\ARRAYINITELEM~x~y`
+..........................
 
 * The :ref:`defined type <syntax-deftype>` :math:`C.\CTYPES[x]` must exist.
 
