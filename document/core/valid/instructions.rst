@@ -601,7 +601,7 @@ Aggregate Reference Instructions
 .. _valid-array.fill:
 
 :math:`\ARRAYFILL~x`
-...........................
+....................
 
 * The :ref:`defined type <syntax-deftype>` :math:`C.\CTYPES[x]` must exist.
 
@@ -648,7 +648,11 @@ Aggregate Reference Instructions
 
 .. math::
    \frac{
-     \expand(C.\CTYPES[x]) = \TARRAY~(\MVAR~\X{st_1}) \qquad \expand(C.\CTYPES[y]) = \TARRAY~(\mut~\X{st_2}) \qquad C \vdashstoragetypematch \X{st_2} \matchesstoragetype \X{st_1}
+     \expand(C.\CTYPES[x]) = \TARRAY~(\MVAR~\X{st_1})
+     \qquad
+     \expand(C.\CTYPES[y]) = \TARRAY~(\mut~\X{st_2})
+     \qquad
+     C \vdashstoragetypematch \X{st_2} \matchesstoragetype \X{st_1}
    }{
      C \vdashinstr \ARRAYCOPY~x~y : [(\REF~\NULL~x)~\I32~(\REF~\NULL~y)~\I32~\I32] \to []
    }
@@ -689,8 +693,8 @@ Aggregate Reference Instructions
 
 .. _valid-array.init_elem:
 
-:math:`\ARRAYINITELEM~\typeidx~\elemidx`
-........................................
+:math:`\ARRAYINITELEM~x~y
+.........................
 
 * The :ref:`defined type <syntax-deftype>` :math:`C.\CTYPES[x]` must exist.
 
