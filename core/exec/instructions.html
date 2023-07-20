@@ -518,7 +518,7 @@ S; F; (\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}struct}}~a)~(\href{.
   &amp;
   \begin{array}[t]{&#64;{}r&#64;{~}l&#64;{}}
    (\mathrel{\mbox{if}} &amp; \href{../valid/conventions.html#aux-expand-deftype}{\mathrm{expand}}(F.\href{../exec/runtime.html#syntax-frame}{\mathsf{module}}.\href{../exec/runtime.html#syntax-moduleinst}{\mathsf{types}}[x]) = \href{../syntax/types.html#syntax-comptype}{\mathsf{struct}}~\mathit{ft}^n \\
-   \land &amp; \href{../exec/runtime.html#syntax-val}{\mathit{val}} = \href{../exec/runtime.html#aux-unpackval}{\mathrm{unpack}}^{\href{../syntax/instructions.html#syntax-sx}{\mathit{sx}}^?}_{\mathit{ft}^\ast[i]}(S.\href{../exec/runtime.html#syntax-store}{\mathsf{structs}}[a].\href{../exec/runtime.html#syntax-structinst}{\mathsf{fields}}[i]))
+   \land &amp; \href{../exec/runtime.html#syntax-val}{\mathit{val}} = \href{../exec/runtime.html#aux-unpackval}{\mathrm{unpack}}^{\href{../syntax/instructions.html#syntax-sx}{\mathit{sx}}^?}_{\mathit{ft}^n[i]}(S.\href{../exec/runtime.html#syntax-store}{\mathsf{structs}}[a].\href{../exec/runtime.html#syntax-structinst}{\mathsf{fields}}[i]))
   \end{array} \\
 S; F; (\href{../syntax/instructions.html#syntax-instr-ref}{\mathsf{ref.null}}~t)~(\href{../syntax/instructions.html#syntax-instr-struct}{\mathsf{struct.get}}\mathsf{\_}\href{../syntax/instructions.html#syntax-sx}{\mathit{sx}}^?~x~i) &amp;\href{../exec/conventions.html#formal-notation}{\hookrightarrow}&amp; \href{../exec/runtime.html#syntax-trap}{\mathsf{trap}}
 \end{array}\end{split}\]</div>
@@ -559,7 +559,7 @@ S; F; (\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}struct}}~a)~\href{..
   &amp;
   \begin{array}[t]{&#64;{}r&#64;{~}l&#64;{}}
   (\mathrel{\mbox{if}} &amp; \href{../valid/conventions.html#aux-expand-deftype}{\mathrm{expand}}(F.\href{../exec/runtime.html#syntax-frame}{\mathsf{module}}.\href{../exec/runtime.html#syntax-moduleinst}{\mathsf{types}}[x]) = \href{../syntax/types.html#syntax-comptype}{\mathsf{struct}}~\mathit{ft}^n \\
-   \land &amp; S' = S \href{../syntax/conventions.html#notation-replace}{\mathrel{\mbox{with}}} \href{../exec/runtime.html#syntax-store}{\mathsf{structs}}[a].\href{../exec/runtime.html#syntax-structinst}{\mathsf{fields}}[i] = \href{../exec/runtime.html#aux-packval}{\mathrm{pack}}_{\mathit{ft}^\ast[i]}(\href{../exec/runtime.html#syntax-val}{\mathit{val}}))
+   \land &amp; S' = S \href{../syntax/conventions.html#notation-replace}{\mathrel{\mbox{with}}} \href{../exec/runtime.html#syntax-store}{\mathsf{structs}}[a].\href{../exec/runtime.html#syntax-structinst}{\mathsf{fields}}[i] = \href{../exec/runtime.html#aux-packval}{\mathrm{pack}}_{\mathit{ft}^n[i]}(\href{../exec/runtime.html#syntax-val}{\mathit{val}}))
   \end{array} \\
 S; F; (\href{../syntax/instructions.html#syntax-instr-ref}{\mathsf{ref.null}}~t)~\href{../exec/runtime.html#syntax-val}{\mathit{val}}~(\href{../syntax/instructions.html#syntax-instr-struct}{\mathsf{struct.set}}~x~i) &amp;\href{../exec/conventions.html#formal-notation}{\hookrightarrow}&amp; \href{../exec/runtime.html#syntax-trap}{\mathsf{trap}}
 \end{array}\end{split}\]</div>
