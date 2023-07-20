@@ -617,7 +617,7 @@ Aggregate Reference Instructions
 
 .. math::
    \frac{
-     \expand(C.\CTYPES[x]) = \TARRAY~(\MVAR~\X{st})
+     \expanddt(C.\CTYPES[x]) = \TARRAY~(\MVAR~\X{st})
    }{
      C \vdashinstr \ARRAYFILL~x : [(\REF~\NULL~x)~\I32~\unpacktype(\X{st})~\I32] \to []
    }
@@ -648,9 +648,9 @@ Aggregate Reference Instructions
 
 .. math::
    \frac{
-     \expand(C.\CTYPES[x]) = \TARRAY~(\MVAR~\X{st_1})
+     \expanddt(C.\CTYPES[x]) = \TARRAY~(\MVAR~\X{st_1})
      \qquad
-     \expand(C.\CTYPES[y]) = \TARRAY~(\mut~\X{st_2})
+     \expanddt(C.\CTYPES[y]) = \TARRAY~(\mut~\X{st_2})
      \qquad
      C \vdashstoragetypematch \X{st_2} \matchesstoragetype \X{st_1}
    }{
@@ -681,7 +681,7 @@ Aggregate Reference Instructions
 
 .. math::
    \frac{
-     \expand(C.\CTYPES[x]) = \TARRAY~(\MVAR~\X{st})
+     \expanddt(C.\CTYPES[x]) = \TARRAY~(\MVAR~\X{st})
      \qquad
      \unpacktype(\X{st}) = \numtype \lor \unpacktype(\X{st}) = \vectype
      \qquad
@@ -716,7 +716,7 @@ Aggregate Reference Instructions
 
 .. math::
    \frac{
-     \expand(C.\CTYPES[x]) = \TARRAY~(\MVAR~\X{rt})
+     \expanddt(C.\CTYPES[x]) = \TARRAY~(\MVAR~\X{rt})
      \qquad
      C \vdashreftypematch C.\CELEMS[y] \matchesreftype \X{rt}
    }{
