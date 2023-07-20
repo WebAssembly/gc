@@ -86,7 +86,7 @@
             
   <section id="matching">
 <span id="match"></span><span id="subtyping"></span><span id="index-0"></span><h1>Matching<a class="headerlink" href="#matching" title="Permalink to this heading">¶</a></h1>
-<p>On most types, a simple notion of <em>subtyping</em> is defined that is applicable in validation rules or during <a class="reference internal" href="../exec/modules.html#exec-instantiation"><span class="std std-ref">module instantiation</span></a> when checking the types of imports.</p>
+<p>On most types, a notion of <em>subtyping</em> is defined that is applicable in <a class="reference internal" href="index.html#valid"><span class="std std-ref">validation</span></a> rules, during <a class="reference internal" href="../exec/modules.html#exec-instantiation"><span class="std std-ref">module instantiation</span></a> when checking the types of imports, or during <a class="reference internal" href="../exec/index.html#exec"><span class="std std-ref">execution</span></a>, when performing casts.</p>
 <section id="number-types">
 <span id="match-numtype"></span><span id="index-1"></span><h2>Number Types<a class="headerlink" href="#number-types" title="Permalink to this heading">¶</a></h2>
 <p>A <a class="reference internal" href="../syntax/types.html#syntax-numtype"><span class="std std-ref">number type</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-numtype}{\mathit{numtype}}_1\)</span> matches a <a class="reference internal" href="../syntax/types.html#syntax-numtype"><span class="std std-ref">number type</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-numtype}{\mathit{numtype}}_2\)</span> if and only if:</p>
@@ -118,10 +118,19 @@
 <p>A <a class="reference internal" href="../syntax/types.html#syntax-heaptype"><span class="std std-ref">heap type</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathit{heaptype}}_1\)</span> matches a <a class="reference internal" href="../syntax/types.html#syntax-heaptype"><span class="std std-ref">heap type</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathit{heaptype}}_2\)</span> if and only if:</p>
 <ul class="simple">
 <li><p>Either both <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathit{heaptype}}_1\)</span> and <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathit{heaptype}}_2\)</span> are the same.</p></li>
-<li><p>Or <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathit{heaptype}}_1\)</span> is a <a class="reference internal" href="../syntax/types.html#syntax-functype"><span class="std std-ref">function type</span></a> and <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathit{heaptype}}_2\)</span> is <span class="math notranslate nohighlight">\(FUNC\)</span>.</p></li>
-<li><p>Or <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathit{heaptype}}_1\)</span> is a <a class="reference internal" href="../syntax/types.html#syntax-functype"><span class="std std-ref">function type</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-functype}{\mathit{functype}}_1\)</span> and <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathit{heaptype}}_2\)</span> is a <a class="reference internal" href="../syntax/types.html#syntax-functype"><span class="std std-ref">function type</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-functype}{\mathit{functype}}_2\)</span>, and <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-functype}{\mathit{functype}}_1\)</span> <a class="reference internal" href="#match-functype"><span class="std std-ref">matches</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-functype}{\mathit{functype}}_2\)</span>.</p></li>
-<li><p>Or <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathit{heaptype}}_1\)</span> is a <a class="reference internal" href="../syntax/modules.html#syntax-typeidx"><span class="std std-ref">type index</span></a> <span class="math notranslate nohighlight">\(x_1\)</span>, and <span class="math notranslate nohighlight">\(C.\href{../valid/conventions.html#context}{\mathsf{types}}[x_1]\)</span> <a class="reference internal" href="#match-heaptype"><span class="std std-ref">matches</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathit{heaptype}}_2\)</span>.</p></li>
-<li><p>Or <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathit{heaptype}}_2\)</span> is a <a class="reference internal" href="../syntax/modules.html#syntax-typeidx"><span class="std std-ref">type index</span></a> <span class="math notranslate nohighlight">\(x_2\)</span>, and <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathit{heaptype}}_1\)</span> <a class="reference internal" href="#match-heaptype"><span class="std std-ref">matches</span></a> <span class="math notranslate nohighlight">\(C.\href{../valid/conventions.html#context}{\mathsf{types}}[x_2]\)</span>.</p></li>
+<li><p>Or there exists a <a class="reference internal" href="types.html#valid-heaptype"><span class="std std-ref">valid</span></a> <a class="reference internal" href="../syntax/types.html#syntax-heaptype"><span class="std std-ref">heap type</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathit{heaptype}}'\)</span>, such that <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathit{heaptype}}_1\)</span> <a class="reference internal" href="#match-heaptype"><span class="std std-ref">matches</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathit{heaptype}}'\)</span> and <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathit{heaptype}}'\)</span> <a class="reference internal" href="#match-heaptype"><span class="std std-ref">matches</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathit{heaptype}}_2\)</span>.</p></li>
+<li><p>Or <span class="math notranslate nohighlight">\(heaptype_1\)</span> is <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathsf{eq}}\)</span> and <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathit{heaptype}}_2\)</span> is <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathsf{any}}\)</span>.</p></li>
+<li><p>Or <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathit{heaptype}}_1\)</span> is one of <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathsf{i31}}\)</span>, <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathsf{struct}}\)</span>, or <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathsf{array}}\)</span> and <span class="math notranslate nohighlight">\(heaptype_2\)</span> is <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathsf{eq}}\)</span>.</p></li>
+<li><p>Or <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathit{heaptype}}_1\)</span> is a <a class="reference internal" href="conventions.html#syntax-deftype"><span class="std std-ref">defined type</span></a> which <a class="reference internal" href="conventions.html#aux-expand-deftype"><span class="std std-ref">expands</span></a> to a <a class="reference internal" href="../syntax/types.html#syntax-structtype"><span class="std std-ref">structure type</span></a> and <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathit{heaptype}}_2\)</span> is <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathsf{struct}}\)</span>.</p></li>
+<li><p>Or <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathit{heaptype}}_1\)</span> is a <a class="reference internal" href="conventions.html#syntax-deftype"><span class="std std-ref">defined type</span></a> which <a class="reference internal" href="conventions.html#aux-expand-deftype"><span class="std std-ref">expands</span></a> to an <a class="reference internal" href="../syntax/types.html#syntax-arraytype"><span class="std std-ref">array type</span></a> and <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathit{heaptype}}_2\)</span> is <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathsf{array}}\)</span>.</p></li>
+<li><p>Or <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathit{heaptype}}_1\)</span> is a <a class="reference internal" href="conventions.html#syntax-deftype"><span class="std std-ref">defined type</span></a> which <a class="reference internal" href="conventions.html#aux-expand-deftype"><span class="std std-ref">expands</span></a> to a <a class="reference internal" href="../syntax/types.html#syntax-functype"><span class="std std-ref">function type</span></a> and <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathit{heaptype}}_2\)</span> is <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathsf{func}}\)</span>.</p></li>
+<li><p>Or <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathit{heaptype}}_1\)</span> is a <a class="reference internal" href="conventions.html#syntax-deftype"><span class="std std-ref">defined type</span></a> <span class="math notranslate nohighlight">\(\href{../valid/conventions.html#syntax-deftype}{\mathit{deftype}}_1\)</span> and <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathit{heaptype}}_2\)</span> is a <a class="reference internal" href="conventions.html#syntax-deftype"><span class="std std-ref">defined type</span></a> <span class="math notranslate nohighlight">\(\href{../valid/conventions.html#syntax-deftype}{\mathit{deftype}}_2\)</span>, and <span class="math notranslate nohighlight">\(\href{../valid/conventions.html#syntax-deftype}{\mathit{deftype}}_1\)</span> <a class="reference internal" href="#match-deftype"><span class="std std-ref">matches</span></a> <span class="math notranslate nohighlight">\(\href{../valid/conventions.html#syntax-deftype}{\mathit{deftype}}_2\)</span>.</p></li>
+<li><p>Or <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathit{heaptype}}_1\)</span> is a <a class="reference internal" href="../syntax/modules.html#syntax-typeidx"><span class="std std-ref">type index</span></a> <span class="math notranslate nohighlight">\(x_1\)</span>, and the <a class="reference internal" href="conventions.html#syntax-deftype"><span class="std std-ref">defined type</span></a> <span class="math notranslate nohighlight">\(C.\href{../valid/conventions.html#context}{\mathsf{types}}[x_1]\)</span> <a class="reference internal" href="#match-heaptype"><span class="std std-ref">matches</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathit{heaptype}}_2\)</span>.</p></li>
+<li><p>Or <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathit{heaptype}}_2\)</span> is a <a class="reference internal" href="../syntax/modules.html#syntax-typeidx"><span class="std std-ref">type index</span></a> <span class="math notranslate nohighlight">\(x_2\)</span>, and <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathit{heaptype}}_1\)</span> <a class="reference internal" href="#match-heaptype"><span class="std std-ref">matches</span></a> the <a class="reference internal" href="conventions.html#syntax-deftype"><span class="std std-ref">defined type</span></a> <span class="math notranslate nohighlight">\(C.\href{../valid/conventions.html#context}{\mathsf{types}}[x_2]\)</span>.</p></li>
+<li><p>Or <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathit{heaptype}}_1\)</span> is <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathsf{none}}\)</span> and <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathit{heaptype}}_2\)</span> <a class="reference internal" href="#match-heaptype"><span class="std std-ref">matches</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathsf{any}}\)</span>.</p></li>
+<li><p>Or <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathit{heaptype}}_1\)</span> is <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathsf{nofunc}}\)</span> and <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathit{heaptype}}_2\)</span> <a class="reference internal" href="#match-heaptype"><span class="std std-ref">matches</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathsf{func}}\)</span>.</p></li>
+<li><p>Or <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathit{heaptype}}_1\)</span> is <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathsf{noextern}}\)</span> and <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathit{heaptype}}_2\)</span> <a class="reference internal" href="#match-heaptype"><span class="std std-ref">matches</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathsf{extern}}\)</span>.</p></li>
+<li><p>Or <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathit{heaptype}}_1\)</span> is <span class="math notranslate nohighlight">\(\href{../valid/conventions.html#syntax-heaptype-ext}{\mathsf{bot}}\)</span>.</p></li>
 </ul>
 <div class="math notranslate nohighlight">
 \[\begin{split}~\\[-1ex]
@@ -131,15 +140,53 @@
 }
 \qquad
 \frac{
+  C \href{../valid/types.html#valid-heaptype}{\vdash} \href{../syntax/types.html#syntax-heaptype}{\mathit{heaptype}}' \mathrel{\mbox{ok}}
+  \qquad
+  C \href{../valid/matching.html#match-heaptype}{\vdash} \href{../syntax/types.html#syntax-heaptype}{\mathit{heaptype}}_1 \href{../valid/matching.html#match-heaptype}{\leq} \href{../syntax/types.html#syntax-heaptype}{\mathit{heaptype}}'
+  \qquad
+  C \href{../valid/matching.html#match-heaptype}{\vdash} \href{../syntax/types.html#syntax-heaptype}{\mathit{heaptype}}' \href{../valid/matching.html#match-heaptype}{\leq} \href{../syntax/types.html#syntax-heaptype}{\mathit{heaptype}}_2
 }{
-  C \href{../valid/matching.html#match-heaptype}{\vdash} \href{../syntax/types.html#syntax-functype}{\mathit{functype}} \href{../valid/matching.html#match-heaptype}{\leq} \href{../syntax/types.html#syntax-heaptype}{\mathsf{func}}
+  C \href{../valid/matching.html#match-heaptype}{\vdash} \href{../syntax/types.html#syntax-heaptype}{\mathit{heaptype}}_1 \href{../valid/matching.html#match-heaptype}{\leq} \href{../syntax/types.html#syntax-heaptype}{\mathit{heaptype}}_2
 }\end{split}\]</div>
 <div class="math notranslate nohighlight">
 \[\begin{split}~\\[-1ex]
 \frac{
-  C \href{../valid/matching.html#match-functype}{\vdash} \href{../syntax/types.html#syntax-functype}{\mathit{functype}}_1 \href{../valid/matching.html#match-functype}{\leq} \href{../syntax/types.html#syntax-functype}{\mathit{functype}}_2
 }{
-  C \href{../valid/matching.html#match-heaptype}{\vdash} \href{../syntax/types.html#syntax-functype}{\mathit{functype}}_1 \href{../valid/matching.html#match-heaptype}{\leq} \href{../syntax/types.html#syntax-functype}{\mathit{functype}}_2
+  C \href{../valid/matching.html#match-heaptype}{\vdash} \href{../syntax/types.html#syntax-heaptype}{\mathsf{eq}} \href{../valid/matching.html#match-heaptype}{\leq} \href{../syntax/types.html#syntax-heaptype}{\mathsf{any}}
+}
+\qquad
+\frac{
+}{
+  C \href{../valid/matching.html#match-heaptype}{\vdash} \href{../syntax/types.html#syntax-heaptype}{\mathsf{i31}} \href{../valid/matching.html#match-heaptype}{\leq} \href{../syntax/types.html#syntax-heaptype}{\mathsf{eq}}
+}
+\qquad
+\frac{
+}{
+  C \href{../valid/matching.html#match-heaptype}{\vdash} \href{../syntax/types.html#syntax-heaptype}{\mathsf{struct}} \href{../valid/matching.html#match-heaptype}{\leq} \href{../syntax/types.html#syntax-heaptype}{\mathsf{eq}}
+}
+\qquad
+\frac{
+}{
+  C \href{../valid/matching.html#match-heaptype}{\vdash} \href{../syntax/types.html#syntax-heaptype}{\mathsf{array}} \href{../valid/matching.html#match-heaptype}{\leq} \href{../syntax/types.html#syntax-heaptype}{\mathsf{eq}}
+}\end{split}\]</div>
+<div class="math notranslate nohighlight">
+\[\begin{split}~\\[-1ex]
+\frac{
+  \href{../valid/conventions.html#aux-expand-deftype}{\mathrm{expand}}(\href{../valid/conventions.html#syntax-deftype}{\mathit{deftype}}) = \href{../syntax/types.html#syntax-comptype}{\mathsf{struct}}~\mathit{st}
+}{
+  C \href{../valid/matching.html#match-heaptype}{\vdash} \href{../valid/conventions.html#syntax-deftype}{\mathit{deftype}} \href{../valid/matching.html#match-heaptype}{\leq} \href{../syntax/types.html#syntax-heaptype}{\mathsf{func}}
+}
+\qquad
+\frac{
+  \href{../valid/conventions.html#aux-expand-deftype}{\mathrm{expand}}(\href{../valid/conventions.html#syntax-deftype}{\mathit{deftype}}) = \href{../syntax/types.html#syntax-comptype}{\mathsf{array}}~\mathit{at}
+}{
+  C \href{../valid/matching.html#match-heaptype}{\vdash} \href{../valid/conventions.html#syntax-deftype}{\mathit{deftype}} \href{../valid/matching.html#match-heaptype}{\leq} \href{../syntax/types.html#syntax-heaptype}{\mathsf{array}}
+}
+\qquad
+\frac{
+  \href{../valid/conventions.html#aux-expand-deftype}{\mathrm{expand}}(\href{../valid/conventions.html#syntax-deftype}{\mathit{deftype}}) = \href{../syntax/types.html#syntax-comptype}{\mathsf{func}}~\mathit{ft}
+}{
+  C \href{../valid/matching.html#match-heaptype}{\vdash} \href{../valid/conventions.html#syntax-deftype}{\mathit{deftype}} \href{../valid/matching.html#match-heaptype}{\leq} \href{../syntax/types.html#syntax-heaptype}{\mathsf{func}}
 }\end{split}\]</div>
 <div class="math notranslate nohighlight">
 \[\begin{split}~\\[-1ex]
@@ -153,6 +200,31 @@
   C \href{../valid/matching.html#match-heaptype}{\vdash} \href{../syntax/types.html#syntax-heaptype}{\mathit{heaptype}}_1 \href{../valid/matching.html#match-heaptype}{\leq} C.\href{../valid/conventions.html#context}{\mathsf{types}}[\href{../syntax/modules.html#syntax-typeidx}{\mathit{typeidx}}_2]
 }{
   C \href{../valid/matching.html#match-heaptype}{\vdash} \href{../syntax/types.html#syntax-heaptype}{\mathit{heaptype}}_1 \href{../valid/matching.html#match-heaptype}{\leq} \href{../syntax/modules.html#syntax-typeidx}{\mathit{typeidx}}_2
+}\end{split}\]</div>
+<div class="math notranslate nohighlight">
+\[\begin{split}~\\[-1ex]
+\frac{
+  C \href{../valid/matching.html#match-heaptype}{\vdash} \mathit{ht} \href{../valid/matching.html#match-heaptype}{\leq} \href{../syntax/types.html#syntax-heaptype}{\mathsf{any}}
+}{
+  C \href{../valid/matching.html#match-heaptype}{\vdash} \href{../syntax/types.html#syntax-heaptype}{\mathsf{none}} \href{../valid/matching.html#match-heaptype}{\leq} \mathit{ht}
+}
+\qquad
+\frac{
+  C \href{../valid/matching.html#match-heaptype}{\vdash} \mathit{ht} \href{../valid/matching.html#match-heaptype}{\leq} \href{../syntax/types.html#syntax-heaptype}{\mathsf{func}}
+}{
+  C \href{../valid/matching.html#match-heaptype}{\vdash} \href{../syntax/types.html#syntax-heaptype}{\mathsf{nofunc}} \href{../valid/matching.html#match-heaptype}{\leq} \mathit{ht}
+}
+\qquad
+\frac{
+  C \href{../valid/matching.html#match-heaptype}{\vdash} \mathit{ht} \href{../valid/matching.html#match-heaptype}{\leq} \href{../syntax/types.html#syntax-heaptype}{\mathsf{extern}}
+}{
+  C \href{../valid/matching.html#match-heaptype}{\vdash} \href{../syntax/types.html#syntax-heaptype}{\mathsf{noextern}} \href{../valid/matching.html#match-heaptype}{\leq} \mathit{ht}
+}\end{split}\]</div>
+<div class="math notranslate nohighlight">
+\[\begin{split}~\\[-1ex]
+\frac{
+}{
+  C \href{../valid/matching.html#match-heaptype}{\vdash} \href{../valid/conventions.html#syntax-heaptype-ext}{\mathsf{bot}} \href{../valid/matching.html#match-heaptype}{\leq} \href{../syntax/types.html#syntax-heaptype}{\mathit{heaptype}}
 }\end{split}\]</div>
 </section>
 <section id="reference-types">
@@ -182,13 +254,13 @@
 <ul class="simple">
 <li><p>Either both <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-valtype}{\mathit{valtype}}_1\)</span> and <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-valtype}{\mathit{valtype}}_2\)</span> are <a class="reference internal" href="../syntax/types.html#syntax-numtype"><span class="std std-ref">number types</span></a> and <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-valtype}{\mathit{valtype}}_1\)</span> <a class="reference internal" href="#match-numtype"><span class="std std-ref">matches</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-valtype}{\mathit{valtype}}_2\)</span>.</p></li>
 <li><p>Or both <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-valtype}{\mathit{valtype}}_1\)</span> and <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-valtype}{\mathit{valtype}}_2\)</span> are <a class="reference internal" href="../syntax/types.html#syntax-reftype"><span class="std std-ref">reference types</span></a> and <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-valtype}{\mathit{valtype}}_1\)</span> <a class="reference internal" href="#match-reftype"><span class="std std-ref">matches</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-valtype}{\mathit{valtype}}_2\)</span>.</p></li>
-<li><p>Or <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-valtype}{\mathit{valtype}}_1\)</span> is <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-valtype}{\mathsf{bot}}\)</span>.</p></li>
+<li><p>Or <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-valtype}{\mathit{valtype}}_1\)</span> is <span class="math notranslate nohighlight">\(\href{../valid/conventions.html#syntax-valtype-ext}{\mathsf{bot}}\)</span>.</p></li>
 </ul>
 <div class="math notranslate nohighlight">
 \[\begin{split}~\\[-1ex]
 \frac{
 }{
-  C \href{../valid/matching.html#match-valtype}{\vdash} \href{../syntax/types.html#syntax-valtype}{\mathsf{bot}} \href{../valid/matching.html#match-valtype}{\leq} \href{../syntax/types.html#syntax-valtype}{\mathit{valtype}}
+  C \href{../valid/matching.html#match-valtype}{\vdash} \href{../valid/conventions.html#syntax-valtype-ext}{\mathsf{bot}} \href{../valid/matching.html#match-valtype}{\leq} \href{../syntax/types.html#syntax-valtype}{\mathit{valtype}}
 }\end{split}\]</div>
 </section>
 <section id="result-types">
@@ -208,13 +280,13 @@ That is, a <a class="reference internal" href="../syntax/types.html#syntax-resul
 </section>
 <section id="instruction-types">
 <span id="match-instrtype"></span><span id="index-7"></span><h2>Instruction Types<a class="headerlink" href="#instruction-types" title="Permalink to this heading">¶</a></h2>
-<p>Subtyping is further lifted to <a class="reference internal" href="../syntax/types.html#syntax-instrtype"><span class="std std-ref">instruction types</span></a>.
-An <a class="reference internal" href="../syntax/types.html#syntax-instrtype"><span class="std std-ref">instruction type</span></a> <span class="math notranslate nohighlight">\([t_{11}^\ast] \def\mathdef4504#1{\href{../syntax/types.html#syntax-instrtype}{\rightarrow_{#1}}}\mathdef4504{x_1^\ast} [t_{12}^\ast]\)</span> matches a type <span class="math notranslate nohighlight">\([t_{21}^ast] \def\mathdef4505#1{\href{../syntax/types.html#syntax-instrtype}{\rightarrow_{#1}}}\mathdef4505{x_2^\ast} [t_{22}^\ast]\)</span> if and only if:</p>
+<p>Subtyping is further lifted to <a class="reference internal" href="conventions.html#syntax-instrtype"><span class="std std-ref">instruction types</span></a>.
+An <a class="reference internal" href="conventions.html#syntax-instrtype"><span class="std std-ref">instruction type</span></a> <span class="math notranslate nohighlight">\([t_{11}^\ast] \def\mathdef4508#1{\href{../syntax/types.html#syntax-instrtype}{\rightarrow_{#1}}}\mathdef4508{x_1^\ast} [t_{12}^\ast]\)</span> matches a type <span class="math notranslate nohighlight">\([t_{21}^ast] \def\mathdef4509#1{\href{../syntax/types.html#syntax-instrtype}{\rightarrow_{#1}}}\mathdef4509{x_2^\ast} [t_{22}^\ast]\)</span> if and only if:</p>
 <ul class="simple">
 <li><p>There is a common sequence of <a class="reference internal" href="../syntax/types.html#syntax-valtype"><span class="std std-ref">value types</span></a> <span class="math notranslate nohighlight">\(t^\ast\)</span> such that <span class="math notranslate nohighlight">\(t_{21}^\ast\)</span> equals <span class="math notranslate nohighlight">\(t^\ast~{t'_{21}}^\ast\)</span> and <span class="math notranslate nohighlight">\(t_{22}^\ast\)</span> equals <span class="math notranslate nohighlight">\(t^\ast~{t'_{22}}^\ast\)</span>.</p></li>
 <li><p>The <a class="reference internal" href="../syntax/types.html#syntax-resulttype"><span class="std std-ref">result type</span></a> <span class="math notranslate nohighlight">\([{t'_{21}}^\ast]\)</span> <a class="reference internal" href="#match-resulttype"><span class="std std-ref">matches</span></a> <span class="math notranslate nohighlight">\([t_{11}^\ast]\)</span>.</p></li>
 <li><p>The <a class="reference internal" href="../syntax/types.html#syntax-resulttype"><span class="std std-ref">result type</span></a> <span class="math notranslate nohighlight">\([t_{12}^\ast]\)</span> <a class="reference internal" href="#match-resulttype"><span class="std std-ref">matches</span></a> <span class="math notranslate nohighlight">\([{t'_{22}}^\ast]\)</span>.</p></li>
-<li><p>For every <a class="reference internal" href="../syntax/modules.html#syntax-localidx"><span class="std std-ref">local index</span></a> <span class="math notranslate nohighlight">\(x\)</span> that is in <span class="math notranslate nohighlight">\(x_2^\ast\)</span> but not in <span class="math notranslate nohighlight">\(x_1^\ast\)</span>, the <a class="reference internal" href="../syntax/types.html#syntax-localtype"><span class="std std-ref">local type</span></a> <span class="math notranslate nohighlight">\(C.\href{../valid/conventions.html#context}{\mathsf{locals}}[x]\)</span> is <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-init}{\mathrel{\mbox{set}}}~t_x\)</span> for some <a class="reference internal" href="../syntax/types.html#syntax-valtype"><span class="std std-ref">value type</span></a> <span class="math notranslate nohighlight">\(t_x\)</span>.</p></li>
+<li><p>For every <a class="reference internal" href="../syntax/modules.html#syntax-localidx"><span class="std std-ref">local index</span></a> <span class="math notranslate nohighlight">\(x\)</span> that is in <span class="math notranslate nohighlight">\(x_2^\ast\)</span> but not in <span class="math notranslate nohighlight">\(x_1^\ast\)</span>, the <a class="reference internal" href="conventions.html#syntax-localtype"><span class="std std-ref">local type</span></a> <span class="math notranslate nohighlight">\(C.\href{../valid/conventions.html#context}{\mathsf{locals}}[x]\)</span> is <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-init}{\mathrel{\mbox{set}}}~t_x\)</span> for some <a class="reference internal" href="../syntax/types.html#syntax-valtype"><span class="std std-ref">value type</span></a> <span class="math notranslate nohighlight">\(t_x\)</span>.</p></li>
 </ul>
 <div class="math notranslate nohighlight">
 \[\begin{split}~\\[-1ex]
@@ -229,7 +301,7 @@ An <a class="reference internal" href="../syntax/types.html#syntax-instrtype"><s
   (C.\href{../valid/conventions.html#context}{\mathsf{locals}}[x] = \href{../syntax/types.html#syntax-init}{\mathrel{\mbox{set}}}~t_x)^\ast
   \end{array}
 }{
-  C \href{../valid/matching.html#match-instrtype}{\vdash} [t_{11}^\ast] \def\mathdef4506#1{\href{../syntax/types.html#syntax-instrtype}{\rightarrow_{#1}}}\mathdef4506{x_1^\ast} [t_{12}^\ast] \href{../valid/matching.html#match-instrtype}{\leq} [t^\ast~t_{21}^\ast] \def\mathdef4507#1{\href{../syntax/types.html#syntax-instrtype}{\rightarrow_{#1}}}\mathdef4507{x_2^\ast} [t^\ast~t_{22}^\ast]
+  C \href{../valid/matching.html#match-instrtype}{\vdash} [t_{11}^\ast] \def\mathdef4510#1{\href{../syntax/types.html#syntax-instrtype}{\rightarrow_{#1}}}\mathdef4510{x_1^\ast} [t_{12}^\ast] \href{../valid/matching.html#match-instrtype}{\leq} [t^\ast~t_{21}^\ast] \def\mathdef4511#1{\href{../syntax/types.html#syntax-instrtype}{\rightarrow_{#1}}}\mathdef4511{x_2^\ast} [t^\ast~t_{22}^\ast]
 }\end{split}\]</div>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
@@ -241,35 +313,140 @@ It may also <em>add</em> variables to the init set, provided these are already s
 </section>
 <section id="function-types">
 <span id="match-functype"></span><span id="index-8"></span><h2>Function Types<a class="headerlink" href="#function-types" title="Permalink to this heading">¶</a></h2>
-<p>Subtyping is also defined for <a class="reference internal" href="../syntax/types.html#syntax-functype"><span class="std std-ref">function types</span></a>.
-However, it is required that they match in both directions, effectively demanding type equivalence.
-That is, a <a class="reference internal" href="../syntax/types.html#syntax-functype"><span class="std std-ref">function type</span></a> <span class="math notranslate nohighlight">\([t_{11}^\ast] \href{../syntax/types.html#syntax-functype}{\rightarrow} [t_{12}^\ast]\)</span> matches a type <span class="math notranslate nohighlight">\([t_{21}^ast] \href{../syntax/types.html#syntax-functype}{\rightarrow} [t_{22}^\ast]\)</span> if and only if:</p>
+<p>A <a class="reference internal" href="../syntax/types.html#syntax-functype"><span class="std std-ref">function type</span></a> <span class="math notranslate nohighlight">\([t_{11}^\ast] \href{../syntax/types.html#syntax-functype}{\rightarrow} [t_{12}^\ast]\)</span> matches a type <span class="math notranslate nohighlight">\([t_{21}^ast] \href{../syntax/types.html#syntax-functype}{\rightarrow} [t_{22}^\ast]\)</span> if and only if:</p>
 <ul class="simple">
-<li><p>The <a class="reference internal" href="../syntax/types.html#syntax-resulttype"><span class="std std-ref">result type</span></a> <span class="math notranslate nohighlight">\([t_{11}^\ast]\)</span> <a class="reference internal" href="#match-resulttype"><span class="std std-ref">matches</span></a> <span class="math notranslate nohighlight">\([t_{21}^\ast]\)</span>, and vice versa.</p></li>
-<li><p>The <a class="reference internal" href="../syntax/types.html#syntax-resulttype"><span class="std std-ref">result type</span></a> <span class="math notranslate nohighlight">\([t_{12}^\ast]\)</span> <a class="reference internal" href="#match-resulttype"><span class="std std-ref">matches</span></a> <span class="math notranslate nohighlight">\([t_{22}^\ast]\)</span>, and vice versa.</p></li>
+<li><p>The <a class="reference internal" href="../syntax/types.html#syntax-resulttype"><span class="std std-ref">result type</span></a> <span class="math notranslate nohighlight">\([t_{21}^\ast]\)</span> <a class="reference internal" href="#match-resulttype"><span class="std std-ref">matches</span></a> <span class="math notranslate nohighlight">\([t_{11}^\ast]\)</span>.</p></li>
+<li><p>The <a class="reference internal" href="../syntax/types.html#syntax-resulttype"><span class="std std-ref">result type</span></a> <span class="math notranslate nohighlight">\([t_{12}^\ast]\)</span> <a class="reference internal" href="#match-resulttype"><span class="std std-ref">matches</span></a> <span class="math notranslate nohighlight">\([t_{22}^\ast]\)</span>.</p></li>
 </ul>
 <div class="math notranslate nohighlight">
 \[\begin{split}~\\[-1ex]
 \frac{
-  \begin{array}{&#64;{}c&#64;{}}
-  C \href{../valid/matching.html#match-resulttype}{\vdash} [t_{11}^\ast] \href{../valid/matching.html#match-resulttype}{\leq} [t_{21}^\ast]
-  \qquad
-  C \href{../valid/matching.html#match-resulttype}{\vdash} [t_{12}^\ast] \href{../valid/matching.html#match-resulttype}{\leq} [t_{22}^\ast]
-  \\
   C \href{../valid/matching.html#match-resulttype}{\vdash} [t_{21}^\ast] \href{../valid/matching.html#match-resulttype}{\leq} [t_{11}^\ast]
   \qquad
-  C \href{../valid/matching.html#match-resulttype}{\vdash} [t_{22}^\ast] \href{../valid/matching.html#match-resulttype}{\leq} [t_{12}^\ast]
-  \end{array}
+  C \href{../valid/matching.html#match-resulttype}{\vdash} [t_{12}^\ast] \href{../valid/matching.html#match-resulttype}{\leq} [t_{22}^\ast]
 }{
   C \href{../valid/matching.html#match-functype}{\vdash} [t_{11}^\ast] \href{../syntax/types.html#syntax-functype}{\rightarrow} [t_{12}^\ast] \href{../valid/matching.html#match-functype}{\leq} [t_{21}^\ast] \href{../syntax/types.html#syntax-functype}{\rightarrow} [t_{22}^\ast]
 }\end{split}\]</div>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>In future versions of WebAssembly, subtyping on function types may be relaxed to support co- and contra-variance.</p>
-</div>
+</section>
+<section id="compound-types">
+<span id="match-arraytype"></span><span id="match-structtype"></span><span id="match-comptype"></span><span id="index-9"></span><h2>Compound Types<a class="headerlink" href="#compound-types" title="Permalink to this heading">¶</a></h2>
+<p>A <a class="reference internal" href="../syntax/types.html#syntax-comptype"><span class="std std-ref">compound type</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-comptype}{\mathit{comptype}}_1\)</span> matches a type <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-comptype}{\mathit{comptype}}_2\)</span> if and only if:</p>
+<ul class="simple">
+<li><p>Either the compound type <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-comptype}{\mathit{comptype}}_1\)</span> is <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-comptype}{\mathsf{func}}~\href{../syntax/types.html#syntax-functype}{\mathit{functype}}_1\)</span> and <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-comptype}{\mathit{comptype}}_2\)</span> is <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-comptype}{\mathsf{func}}~\href{../syntax/types.html#syntax-functype}{\mathit{functype}}_2\)</span> and:</p>
+<ul>
+<li><p>The <a class="reference internal" href="../syntax/types.html#syntax-functype"><span class="std std-ref">function type</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-functype}{\mathit{functype}}_1\)</span> <a class="reference internal" href="#match-functype"><span class="std std-ref">matches</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-functype}{\mathit{functype}}_2\)</span>.</p></li>
+</ul>
+</li>
+<li><p>Or the compound type <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-comptype}{\mathit{comptype}}_1\)</span> is <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-comptype}{\mathsf{struct}}~\href{../syntax/types.html#syntax-fieldtype}{\mathit{fieldtype}}_1^{n_1}\)</span> and <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-comptype}{\mathit{comptype}}_2\)</span> is <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-comptype}{\mathsf{struct}}~\href{../syntax/types.html#syntax-fieldtype}{\mathit{fieldtype}}_2\)</span> and:</p>
+<ul>
+<li><p>The arity <span class="math notranslate nohighlight">\(n_1\)</span> is greater than or equal to <span class="math notranslate nohighlight">\(n_2\)</span>.</p></li>
+<li><p>For every <a class="reference internal" href="../syntax/types.html#syntax-fieldtype"><span class="std std-ref">field type</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-fieldtype}{\mathit{fieldtype}}_{2i}\)</span> in <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-fieldtype}{\mathit{fieldtype}}_2^{n_2}\)</span> and corresponding <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-fieldtype}{\mathit{fieldtype}}_{1i}\)</span> in <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-fieldtype}{\mathit{fieldtype}}_1^{n_1}\)</span></p>
+<ul>
+<li><p>The <a class="reference internal" href="../syntax/types.html#syntax-fieldtype"><span class="std std-ref">field type</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-fieldtype}{\mathit{fieldtype}}_{1i}\)</span> <a class="reference internal" href="#match-fieldtype"><span class="std std-ref">matches</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-fieldtype}{\mathit{fieldtype}}_{2i}\)</span>.</p></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p>Or the compound type <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-comptype}{\mathit{comptype}}_1\)</span> is <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-comptype}{\mathsf{array}}~\href{../syntax/types.html#syntax-fieldtype}{\mathit{fieldtype}}_1\)</span> and <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-comptype}{\mathit{comptype}}_2\)</span> is <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-comptype}{\mathsf{array}}~\href{../syntax/types.html#syntax-fieldtype}{\mathit{fieldtype}}_2\)</span> and:</p>
+<ul>
+<li><p>The <a class="reference internal" href="../syntax/types.html#syntax-fieldtype"><span class="std std-ref">field type</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-fieldtype}{\mathit{fieldtype}}_1\)</span> <a class="reference internal" href="#match-fieldtype"><span class="std std-ref">matches</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-fieldtype}{\mathit{fieldtype}}_2\)</span>.</p></li>
+</ul>
+</li>
+</ul>
+<div class="math notranslate nohighlight">
+\[\begin{split}~\\[-1ex]
+\frac{
+  C \href{../valid/matching.html#match-functype}{\vdash} \href{../syntax/types.html#syntax-functype}{\mathit{functype}}_1 \href{../valid/matching.html#match-functype}{\leq} \href{../syntax/types.html#syntax-functype}{\mathit{functype}}_2
+}{
+  C \href{../valid/matching.html#match-comptype}{\vdash} \href{../syntax/types.html#syntax-comptype}{\mathsf{func}}~\href{../syntax/types.html#syntax-functype}{\mathit{functype}}_1 \href{../valid/matching.html#match-comptype}{\leq} \href{../syntax/types.html#syntax-comptype}{\mathsf{func}}~\href{../syntax/types.html#syntax-functype}{\mathit{functype}}_2
+}\end{split}\]</div>
+<div class="math notranslate nohighlight">
+\[\begin{split}~\\[-1ex]
+\frac{
+  (C \href{../valid/matching.html#match-fieldtype}{\vdash} \href{../syntax/types.html#syntax-fieldtype}{\mathit{fieldtype}}_1 \href{../valid/matching.html#match-fieldtype}{\leq} \href{../syntax/types.html#syntax-fieldtype}{\mathit{fieldtype}}_2)^\ast
+}{
+  C \href{../valid/matching.html#match-comptype}{\vdash} \href{../syntax/types.html#syntax-comptype}{\mathsf{struct}}~\href{../syntax/types.html#syntax-fieldtype}{\mathit{fieldtype}}_1^\ast~{\href{../syntax/types.html#syntax-fieldtype}{\mathit{fieldtype}}'}_1^\ast \href{../valid/matching.html#match-comptype}{\leq} \href{../syntax/types.html#syntax-comptype}{\mathsf{struct}}~\href{../syntax/types.html#syntax-fieldtype}{\mathit{fieldtype}}_2^\ast
+}\end{split}\]</div>
+<div class="math notranslate nohighlight">
+\[\begin{split}~\\[-1ex]
+\frac{
+  C \href{../valid/matching.html#match-fieldtype}{\vdash} \href{../syntax/types.html#syntax-fieldtype}{\mathit{fieldtype}}_1 \href{../valid/matching.html#match-fieldtype}{\leq} \href{../syntax/types.html#syntax-fieldtype}{\mathit{fieldtype}}_2
+}{
+  C \href{../valid/matching.html#match-comptype}{\vdash} \href{../syntax/types.html#syntax-comptype}{\mathsf{array}}~\href{../syntax/types.html#syntax-fieldtype}{\mathit{fieldtype}}_1 \href{../valid/matching.html#match-comptype}{\leq} \href{../syntax/types.html#syntax-comptype}{\mathsf{array}}~\href{../syntax/types.html#syntax-fieldtype}{\mathit{fieldtype}}_2
+}\end{split}\]</div>
+</section>
+<section id="field-types">
+<span id="match-packedtype"></span><span id="match-storagetype"></span><span id="match-fieldtype"></span><span id="index-10"></span><h2>Field Types<a class="headerlink" href="#field-types" title="Permalink to this heading">¶</a></h2>
+<p>A <a class="reference internal" href="../syntax/types.html#syntax-fieldtype"><span class="std std-ref">field type</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-mut}{\mathit{mut}}_1~\href{../syntax/types.html#syntax-storagetype}{\mathit{storagetype}}_1\)</span> matches a type <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-mut}{\mathit{mut}}_2~\href{../syntax/types.html#syntax-storagetype}{\mathit{storagetype}}_2\)</span> if and only if:</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="../syntax/types.html#syntax-storagetype"><span class="std std-ref">Storage type</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-storagetype}{\mathit{storagetype}}_1\)</span> <a class="reference internal" href="#match-storagetype"><span class="std std-ref">matches</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-storagetype}{\mathit{storagetype}}_2\)</span>.</p></li>
+<li><p>Either both <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-mut}{\mathit{mut}}_1\)</span> and <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-mut}{\mathit{mut}}_2\)</span> are <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-mut}{\mathsf{const}}\)</span>.</p></li>
+<li><p>Or both <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-mut}{\mathit{mut}}_1\)</span> and <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-mut}{\mathit{mut}}_2\)</span> are <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-mut}{\mathsf{var}}\)</span> and <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-storagetype}{\mathit{storagetype}}_2\)</span> <a class="reference internal" href="#match-storagetype"><span class="std std-ref">matches</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-storagetype}{\mathit{storagetype}}_1\)</span> as well.</p></li>
+</ul>
+<div class="math notranslate nohighlight">
+\[\begin{split}~\\[-1ex]
+\frac{
+  C \href{../valid/matching.html#match-storagetype}{\vdash} \href{../syntax/types.html#syntax-storagetype}{\mathit{storagetype}}_1 \href{../valid/matching.html#match-storagetype}{\leq} \href{../syntax/types.html#syntax-storagetype}{\mathit{storagetype}}_2
+}{
+  C \href{../valid/matching.html#match-fieldtype}{\vdash} \href{../syntax/types.html#syntax-mut}{\mathsf{const}}~\href{../syntax/types.html#syntax-storagetype}{\mathit{storagetype}}_1 \href{../valid/matching.html#match-comptype}{\leq} \href{../syntax/types.html#syntax-mut}{\mathsf{const}}~\href{../syntax/types.html#syntax-storagetype}{\mathit{storagetype}}_2
+}
+\qquad
+\frac{
+  \begin{array}[b]{&#64;{}c&#64;{}}
+  C \href{../valid/matching.html#match-storagetype}{\vdash} \href{../syntax/types.html#syntax-storagetype}{\mathit{storagetype}}_1 \href{../valid/matching.html#match-storagetype}{\leq} \href{../syntax/types.html#syntax-storagetype}{\mathit{storagetype}}_2
+  \\
+  C \href{../valid/matching.html#match-storagetype}{\vdash} \href{../syntax/types.html#syntax-storagetype}{\mathit{storagetype}}_2 \href{../valid/matching.html#match-storagetype}{\leq} \href{../syntax/types.html#syntax-storagetype}{\mathit{storagetype}}_1
+  \end{array}
+}{
+  C \href{../valid/matching.html#match-fieldtype}{\vdash} \href{../syntax/types.html#syntax-mut}{\mathsf{var}}~\href{../syntax/types.html#syntax-storagetype}{\mathit{storagetype}}_1 \href{../valid/matching.html#match-comptype}{\leq} \href{../syntax/types.html#syntax-mut}{\mathsf{var}}~\href{../syntax/types.html#syntax-storagetype}{\mathit{storagetype}}_2
+}\end{split}\]</div>
+<p>A <a class="reference internal" href="../syntax/types.html#syntax-storagetype"><span class="std std-ref">storage type</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-storagetype}{\mathit{storagetype}}_1\)</span> matches a type <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-storagetype}{\mathit{storagetype}}_2\)</span> if and only if:</p>
+<ul class="simple">
+<li><p>Either <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-storagetype}{\mathit{storagetype}}_1\)</span> is a <a class="reference internal" href="../syntax/types.html#syntax-valtype"><span class="std std-ref">value type</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-valtype}{\mathit{valtype}}_1\)</span> and <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-storagetype}{\mathit{storagetype}}_2\)</span> is a <a class="reference internal" href="../syntax/types.html#syntax-valtype"><span class="std std-ref">value type</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-valtype}{\mathit{valtype}}_2\)</span> and <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-valtype}{\mathit{valtype}}_1\)</span> <a class="reference internal" href="#match-valtype"><span class="std std-ref">matches</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-valtype}{\mathit{valtype}}_2\)</span>.</p></li>
+<li><p>Or <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-storagetype}{\mathit{storagetype}}_1\)</span> is a <a class="reference internal" href="../syntax/types.html#syntax-packedtype"><span class="std std-ref">packed type</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-packedtype}{\mathit{packedtype}}_1\)</span> and <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-storagetype}{\mathit{storagetype}}_2\)</span> is a <a class="reference internal" href="../syntax/types.html#syntax-packedtype"><span class="std std-ref">packed type</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-packedtype}{\mathit{packedtype}}_2\)</span> and <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-packedtype}{\mathit{packedtype}}_1\)</span> <a class="reference internal" href="#match-packedtype"><span class="std std-ref">matches</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-packedtype}{\mathit{packedtype}}_2\)</span>.</p></li>
+</ul>
+<p>A <a class="reference internal" href="../syntax/types.html#syntax-packedtype"><span class="std std-ref">packed type</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-packedtype}{\mathit{packedtype}}_1\)</span> matches a type <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-packedtype}{\mathit{packedtype}}_2\)</span> if and only if:</p>
+<ul class="simple">
+<li><p>The <a class="reference internal" href="../syntax/types.html#syntax-packedtype"><span class="std std-ref">packed type</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-packedtype}{\mathit{packedtype}}_1\)</span> is the same as <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-packedtype}{\mathit{packedtype}}_2\)</span>.</p></li>
+</ul>
+<div class="math notranslate nohighlight">
+\[\begin{split}~\\[-1ex]
+\frac{
+}{
+  C \href{../valid/matching.html#match-packedtype}{\vdash} \href{../syntax/types.html#syntax-packedtype}{\mathit{packedtype}} \href{../valid/matching.html#match-packedtype}{\leq} \href{../syntax/types.html#syntax-packedtype}{\mathit{packedtype}}
+}\end{split}\]</div>
+</section>
+<section id="defined-types">
+<span id="match-deftype"></span><span id="index-11"></span><h2>Defined Types<a class="headerlink" href="#defined-types" title="Permalink to this heading">¶</a></h2>
+<p>A <a class="reference internal" href="conventions.html#syntax-deftype"><span class="std std-ref">defined type</span></a> <span class="math notranslate nohighlight">\(\href{../valid/conventions.html#syntax-deftype}{\mathit{deftype}}_1\)</span> matches a type <span class="math notranslate nohighlight">\(\href{../valid/conventions.html#syntax-deftype}{\mathit{deftype}}_2\)</span> if and only if:</p>
+<ul class="simple">
+<li><p>Either <span class="math notranslate nohighlight">\(\href{../valid/conventions.html#syntax-deftype}{\mathit{deftype}}_1\)</span> and <span class="math notranslate nohighlight">\(\href{../valid/conventions.html#syntax-deftype}{\mathit{deftype}}_2\)</span> are equal when <a class="reference internal" href="conventions.html#type-closure"><span class="std std-ref">closed</span></a> under context <span class="math notranslate nohighlight">\(C\)</span>.</p></li>
+<li><p>Or:</p>
+<ul>
+<li><p>Let the <a class="reference internal" href="../syntax/types.html#syntax-subtype"><span class="std std-ref">sub type</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-subtype}{\mathsf{sub}}~\href{../syntax/types.html#syntax-subtype}{\mathsf{final}}^?~\href{../syntax/types.html#syntax-heaptype}{\mathit{heaptype}}^\ast~\href{../syntax/types.html#syntax-comptype}{\mathit{comptype}}\)</span> be the result of <a class="reference internal" href="conventions.html#aux-unroll-deftype"><span class="std std-ref">unrolling</span></a> <span class="math notranslate nohighlight">\(\href{../valid/conventions.html#syntax-deftype}{\mathit{deftype}}_1\)</span>.</p></li>
+<li><p>Then there must exist a <a class="reference internal" href="../syntax/types.html#syntax-heaptype"><span class="std std-ref">heap type</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathit{heaptype}}_i\)</span> in <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathit{heaptype}}^\ast\)</span> that <a class="reference internal" href="#match-heaptype"><span class="std std-ref">matches</span></a> <span class="math notranslate nohighlight">\(\href{../valid/conventions.html#syntax-deftype}{\mathit{deftype}}_2\)</span>.</p></li>
+</ul>
+</li>
+</ul>
+<div class="math notranslate nohighlight">
+\[\begin{split}~\\[-1ex]
+\frac{
+  \href{../valid/conventions.html#closure}{\mathsf{clos}}_C(\href{../valid/conventions.html#syntax-deftype}{\mathit{deftype}}_1) = \href{../valid/conventions.html#closure}{\mathsf{clos}}_C(\href{../valid/conventions.html#syntax-deftype}{\mathit{deftype}}_2)
+}{
+  C \href{../valid/matching.html#match-deftype}{\vdash} \href{../valid/conventions.html#syntax-deftype}{\mathit{deftype}}_1 \href{../valid/matching.html#match-deftype}{\leq} \href{../valid/conventions.html#syntax-deftype}{\mathit{deftype}}_2
+}\end{split}\]</div>
+<div class="math notranslate nohighlight">
+\[\begin{split}~\\[-1ex]
+\frac{
+  \href{../valid/conventions.html#aux-unroll-deftype}{\mathrm{unroll}}(\href{../valid/conventions.html#syntax-deftype}{\mathit{deftype}}_1) = \href{../syntax/types.html#syntax-subtype}{\mathsf{sub}}~\href{../syntax/types.html#syntax-subtype}{\mathsf{final}}^?~\href{../syntax/types.html#syntax-heaptype}{\mathit{heaptype}}^\ast~\href{../syntax/types.html#syntax-comptype}{\mathit{comptype}}
+  \qquad
+  C \href{../valid/matching.html#match-heaptype}{\vdash} \href{../syntax/types.html#syntax-heaptype}{\mathit{heaptype}}^\ast[i] \href{../valid/matching.html#match-heaptype}{\leq} \href{../valid/conventions.html#syntax-deftype}{\mathit{deftype}}_2
+}{
+  C \href{../valid/matching.html#match-deftype}{\vdash} \href{../valid/conventions.html#syntax-deftype}{\mathit{deftype}}_1 \href{../valid/matching.html#match-deftype}{\leq} \href{../valid/conventions.html#syntax-deftype}{\mathit{deftype}}_2
+}\end{split}\]</div>
 </section>
 <section id="limits">
-<span id="match-limits"></span><span id="index-9"></span><h2>Limits<a class="headerlink" href="#limits" title="Permalink to this heading">¶</a></h2>
+<span id="match-limits"></span><span id="index-12"></span><h2>Limits<a class="headerlink" href="#limits" title="Permalink to this heading">¶</a></h2>
 <p><a class="reference internal" href="../syntax/types.html#syntax-limits"><span class="std std-ref">Limits</span></a> <span class="math notranslate nohighlight">\(\{ \href{../syntax/types.html#syntax-limits}{\mathsf{min}}~n_1, \href{../syntax/types.html#syntax-limits}{\mathsf{max}}~m_1^? \}\)</span> match limits <span class="math notranslate nohighlight">\(\{ \href{../syntax/types.html#syntax-limits}{\mathsf{min}}~n_2, \href{../syntax/types.html#syntax-limits}{\mathsf{max}}~m_2^? \}\)</span> if and only if:</p>
 <ul class="simple">
 <li><p><span class="math notranslate nohighlight">\(n_1\)</span> is larger than or equal to <span class="math notranslate nohighlight">\(n_2\)</span>.</p></li>
@@ -302,7 +479,7 @@ That is, a <a class="reference internal" href="../syntax/types.html#syntax-funct
 }\end{split}\]</div>
 </section>
 <section id="table-types">
-<span id="match-tabletype"></span><span id="index-10"></span><h2>Table Types<a class="headerlink" href="#table-types" title="Permalink to this heading">¶</a></h2>
+<span id="match-tabletype"></span><span id="index-13"></span><h2>Table Types<a class="headerlink" href="#table-types" title="Permalink to this heading">¶</a></h2>
 <p>A <a class="reference internal" href="../syntax/types.html#syntax-tabletype"><span class="std std-ref">table type</span></a> <span class="math notranslate nohighlight">\((\href{../syntax/types.html#syntax-limits}{\mathit{limits}}_1~\href{../syntax/types.html#syntax-reftype}{\mathit{reftype}}_1)\)</span> matches <span class="math notranslate nohighlight">\((\href{../syntax/types.html#syntax-limits}{\mathit{limits}}_2~\href{../syntax/types.html#syntax-reftype}{\mathit{reftype}}_2)\)</span> if and only if:</p>
 <ul class="simple">
 <li><p>Limits <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-limits}{\mathit{limits}}_1\)</span> <a class="reference internal" href="#match-limits"><span class="std std-ref">match</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-limits}{\mathit{limits}}_2\)</span>.</p></li>
@@ -321,7 +498,7 @@ That is, a <a class="reference internal" href="../syntax/types.html#syntax-funct
 }\end{split}\]</div>
 </section>
 <section id="memory-types">
-<span id="match-memtype"></span><span id="index-11"></span><h2>Memory Types<a class="headerlink" href="#memory-types" title="Permalink to this heading">¶</a></h2>
+<span id="match-memtype"></span><span id="index-14"></span><h2>Memory Types<a class="headerlink" href="#memory-types" title="Permalink to this heading">¶</a></h2>
 <p>A <a class="reference internal" href="../syntax/types.html#syntax-memtype"><span class="std std-ref">memory type</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-limits}{\mathit{limits}}_1\)</span> matches <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-limits}{\mathit{limits}}_2\)</span> if and only if:</p>
 <ul class="simple">
 <li><p>Limits <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-limits}{\mathit{limits}}_1\)</span> <a class="reference internal" href="#match-limits"><span class="std std-ref">match</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-limits}{\mathit{limits}}_2\)</span>.</p></li>
@@ -335,7 +512,7 @@ That is, a <a class="reference internal" href="../syntax/types.html#syntax-funct
 }\end{split}\]</div>
 </section>
 <section id="global-types">
-<span id="match-globaltype"></span><span id="index-12"></span><h2>Global Types<a class="headerlink" href="#global-types" title="Permalink to this heading">¶</a></h2>
+<span id="match-globaltype"></span><span id="index-15"></span><h2>Global Types<a class="headerlink" href="#global-types" title="Permalink to this heading">¶</a></h2>
 <p>A <a class="reference internal" href="../syntax/types.html#syntax-globaltype"><span class="std std-ref">global type</span></a> <span class="math notranslate nohighlight">\((\href{../syntax/types.html#syntax-mut}{\mathit{mut}}_1~t_1)\)</span> matches <span class="math notranslate nohighlight">\((\href{../syntax/types.html#syntax-mut}{\mathit{mut}}_2~t_2)\)</span> if and only if:</p>
 <ul class="simple">
 <li><p>Either both <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-mut}{\mathit{mut}}_1\)</span> and <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-mut}{\mathit{mut}}_2\)</span> are <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-mut}{\mathsf{var}}\)</span> and <span class="math notranslate nohighlight">\(t_1\)</span> <a class="reference internal" href="#match-valtype"><span class="std std-ref">matches</span></a> <span class="math notranslate nohighlight">\(t_2\)</span> and vice versa.</p></li>
@@ -358,7 +535,7 @@ That is, a <a class="reference internal" href="../syntax/types.html#syntax-funct
 }\end{split}\]</div>
 </section>
 <section id="external-types">
-<span id="match-externtype"></span><span id="index-13"></span><h2>External Types<a class="headerlink" href="#external-types" title="Permalink to this heading">¶</a></h2>
+<span id="match-externtype"></span><span id="index-16"></span><h2>External Types<a class="headerlink" href="#external-types" title="Permalink to this heading">¶</a></h2>
 <section id="functions">
 <h3>Functions<a class="headerlink" href="#functions" title="Permalink to this heading">¶</a></h3>
 <p>An <a class="reference internal" href="../syntax/types.html#syntax-externtype"><span class="std std-ref">external type</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-externtype}{\mathsf{func}}~\href{../syntax/types.html#syntax-functype}{\mathit{functype}}_1\)</span> matches <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-externtype}{\mathsf{func}}~\href{../syntax/types.html#syntax-functype}{\mathit{functype}}_2\)</span> if and only if:</p>

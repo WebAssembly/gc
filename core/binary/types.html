@@ -156,7 +156,7 @@ Thus, the binary format for type constructors corresponds to the encodings of sm
 \end{array}\end{split}\]</div>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>The type <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-valtype}{\mathsf{bot}}\)</span> cannot occur in a module.</p>
+<p>The type <span class="math notranslate nohighlight">\(\href{../valid/conventions.html#syntax-valtype-ext}{\mathsf{bot}}\)</span> cannot occur in a module.</p>
 <p>Value types can occur in contexts where <a class="reference internal" href="../syntax/modules.html#syntax-typeidx"><span class="std std-ref">type indices</span></a> are also allowed, such as in the case of <a class="reference internal" href="instructions.html#binary-blocktype"><span class="std std-ref">block types</span></a>.
 Thus, the binary format for types corresponds to the <a class="reference external" href="https://en.wikipedia.org/wiki/LEB128#Signed_LEB128">signed LEB128</a> <a class="reference internal" href="values.html#binary-sint"><span class="std std-ref">encoding</span></a> of small negative <span class="math notranslate nohighlight">\(\href{../syntax/values.html#syntax-int}{\mathit{s}N}\)</span> values, so that they can coexist with (positive) type indices in the future.</p>
 </div>
@@ -208,16 +208,16 @@ Thus, the binary format for types corresponds to the <a class="reference externa
 </section>
 <section id="compound-types">
 <span id="binary-comptype"></span><span id="index-9"></span><h2>Compound Types<a class="headerlink" href="#compound-types" title="Permalink to this heading">¶</a></h2>
-<p><span class="xref std std-ref">Compound types</span> are encoded by a distinct byte followed by a type encoding of the respective form.</p>
+<p><a class="reference internal" href="../syntax/types.html#syntax-comptype"><span class="std std-ref">Compound types</span></a> are encoded by a distinct byte followed by a type encoding of the respective form.</p>
 <div class="math notranslate nohighlight">
 \[\begin{split}\begin{array}{llclll&#64;{\qquad\qquad}l}
 \def\mathdef1981#1{{}}\mathdef1981{compound type} &amp; \href{../binary/types.html#binary-comptype}{\mathtt{comptype}} &amp;::=&amp;
   \def\mathdef2039#1{\mathtt{0x#1}}\mathdef2039{5E}~~\mathit{at}{:}\href{../binary/types.html#binary-arraytype}{\mathtt{arraytype}}
-    &amp;\Rightarrow&amp; \href{../syntax/types.html#syntax-strtype}{\mathsf{array}}~\mathit{at} \\ &amp;&amp;|&amp;
+    &amp;\Rightarrow&amp; \href{../syntax/types.html#syntax-comptype}{\mathsf{array}}~\mathit{at} \\ &amp;&amp;|&amp;
   \def\mathdef2040#1{\mathtt{0x#1}}\mathdef2040{5F}~~\mathit{st}{:}\href{../binary/types.html#binary-structtype}{\mathtt{structtype}}
-    &amp;\Rightarrow&amp; \href{../syntax/types.html#syntax-strtype}{\mathsf{struct}}~\mathit{st} \\ &amp;&amp;|&amp;
+    &amp;\Rightarrow&amp; \href{../syntax/types.html#syntax-comptype}{\mathsf{struct}}~\mathit{st} \\ &amp;&amp;|&amp;
   \def\mathdef2041#1{\mathtt{0x#1}}\mathdef2041{60}~~\mathit{ft}{:}\href{../binary/types.html#binary-functype}{\mathtt{functype}}
-    &amp;\Rightarrow&amp; \href{../syntax/types.html#syntax-strtype}{\mathsf{func}}~\mathit{ft} \\
+    &amp;\Rightarrow&amp; \href{../syntax/types.html#syntax-comptype}{\mathsf{func}}~\mathit{ft} \\
 \end{array}\end{split}\]</div>
 </section>
 <section id="recursive-types">

@@ -153,17 +153,17 @@ That ensures that it is compatible with any nullable type in that hierarchy.</p>
 <ul class="simple">
 <li><p>The <a class="reference internal" href="runtime.html#syntax-structaddr"><span class="std std-ref">structure address</span></a> <span class="math notranslate nohighlight">\(a\)</span> must exist in the store.</p></li>
 <li><p>Let <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-structinst}{\mathit{structinst}}\)</span> be the <a class="reference internal" href="runtime.html#syntax-structinst"><span class="std std-ref">structure instance</span></a> <span class="math notranslate nohighlight">\(S.\href{../exec/runtime.html#syntax-store}{\mathsf{structs}}[a]\)</span>.</p></li>
-<li><p>Let <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-deftype}{\mathit{deftype}}\)</span> be the <a class="reference internal" href="../syntax/types.html#syntax-deftype"><span class="std std-ref">defined type</span></a> <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-structinst}{\mathit{structinst}}.\href{../exec/runtime.html#syntax-structinst}{\mathsf{type}}\)</span>.</p></li>
-<li><p>The <a class="reference internal" href="../syntax/types.html#aux-expand"><span class="std std-ref">expansion</span></a> of <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-deftype}{\mathit{deftype}}\)</span> must be a <a class="reference internal" href="../syntax/types.html#syntax-structtype"><span class="std std-ref">struct type</span></a>.</p></li>
-<li><p>Then the value is valid with <a class="reference internal" href="../syntax/types.html#syntax-reftype"><span class="std std-ref">reference type</span></a> <span class="math notranslate nohighlight">\((\href{../syntax/types.html#syntax-reftype}{\mathsf{ref}}~\href{../syntax/types.html#syntax-deftype}{\mathit{deftype}})\)</span>.</p></li>
+<li><p>Let <span class="math notranslate nohighlight">\(\href{../valid/conventions.html#syntax-deftype}{\mathit{deftype}}\)</span> be the <a class="reference internal" href="../valid/conventions.html#syntax-deftype"><span class="std std-ref">defined type</span></a> <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-structinst}{\mathit{structinst}}.\href{../exec/runtime.html#syntax-structinst}{\mathsf{type}}\)</span>.</p></li>
+<li><p>The <a class="reference internal" href="../valid/conventions.html#aux-expand-deftype"><span class="std std-ref">expansion</span></a> of <span class="math notranslate nohighlight">\(\href{../valid/conventions.html#syntax-deftype}{\mathit{deftype}}\)</span> must be a <a class="reference internal" href="../syntax/types.html#syntax-structtype"><span class="std std-ref">struct type</span></a>.</p></li>
+<li><p>Then the value is valid with <a class="reference internal" href="../syntax/types.html#syntax-reftype"><span class="std std-ref">reference type</span></a> <span class="math notranslate nohighlight">\((\href{../syntax/types.html#syntax-reftype}{\mathsf{ref}}~\href{../valid/conventions.html#syntax-deftype}{\mathit{deftype}})\)</span>.</p></li>
 </ul>
 <div class="math notranslate nohighlight">
 \[\frac{
-  \href{../syntax/types.html#syntax-deftype}{\mathit{deftype}} = S.\href{../exec/runtime.html#syntax-store}{\mathsf{structs}}[a].\href{../exec/runtime.html#syntax-structinst}{\mathsf{type}}
+  \href{../valid/conventions.html#syntax-deftype}{\mathit{deftype}} = S.\href{../exec/runtime.html#syntax-store}{\mathsf{structs}}[a].\href{../exec/runtime.html#syntax-structinst}{\mathsf{type}}
   \qquad
-  \href{../syntax/types.html#aux-expand}{\mathrm{expand}}(\href{../syntax/types.html#syntax-deftype}{\mathit{deftype}}) = \href{../syntax/types.html#syntax-strtype}{\mathsf{struct}}~\href{../syntax/types.html#syntax-structtype}{\mathit{structtype}}
+  \href{../valid/conventions.html#aux-expand-deftype}{\mathrm{expand}}(\href{../valid/conventions.html#syntax-deftype}{\mathit{deftype}}) = \href{../syntax/types.html#syntax-comptype}{\mathsf{struct}}~\href{../syntax/types.html#syntax-structtype}{\mathit{structtype}}
 }{
-  S \href{../appendix/properties.html#valid-val}{\vdash} \href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}struct}}~a : \href{../syntax/types.html#syntax-reftype}{\mathsf{ref}}~\href{../syntax/types.html#syntax-deftype}{\mathit{deftype}}
+  S \href{../appendix/properties.html#valid-val}{\vdash} \href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}struct}}~a : \href{../syntax/types.html#syntax-reftype}{\mathsf{ref}}~\href{../valid/conventions.html#syntax-deftype}{\mathit{deftype}}
 }\]</div>
 </section>
 <section id="array-references-xref-exec-runtime-syntax-ref-mathsf-ref-array-a">
@@ -171,17 +171,17 @@ That ensures that it is compatible with any nullable type in that hierarchy.</p>
 <ul class="simple">
 <li><p>The <a class="reference internal" href="runtime.html#syntax-arrayaddr"><span class="std std-ref">array address</span></a> <span class="math notranslate nohighlight">\(a\)</span> must exist in the store.</p></li>
 <li><p>Let <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-arrayinst}{\mathit{arrayinst}}\)</span> be the <a class="reference internal" href="runtime.html#syntax-arrayinst"><span class="std std-ref">array instance</span></a> <span class="math notranslate nohighlight">\(S.\href{../exec/runtime.html#syntax-store}{\mathsf{arrays}}[a]\)</span>.</p></li>
-<li><p>Let <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-deftype}{\mathit{deftype}}\)</span> be the <a class="reference internal" href="../syntax/types.html#syntax-deftype"><span class="std std-ref">defined type</span></a> <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-arrayinst}{\mathit{arrayinst}}.\href{../exec/runtime.html#syntax-arrayinst}{\mathsf{type}}\)</span>.</p></li>
-<li><p>The <a class="reference internal" href="../syntax/types.html#aux-expand"><span class="std std-ref">expansion</span></a> of <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-deftype}{\mathit{deftype}}\)</span> must be an <a class="reference internal" href="../syntax/types.html#syntax-arraytype"><span class="std std-ref">array type</span></a>.</p></li>
+<li><p>Let <span class="math notranslate nohighlight">\(\href{../valid/conventions.html#syntax-deftype}{\mathit{deftype}}\)</span> be the <a class="reference internal" href="../valid/conventions.html#syntax-deftype"><span class="std std-ref">defined type</span></a> <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-arrayinst}{\mathit{arrayinst}}.\href{../exec/runtime.html#syntax-arrayinst}{\mathsf{type}}\)</span>.</p></li>
+<li><p>The <a class="reference internal" href="../valid/conventions.html#aux-expand-deftype"><span class="std std-ref">expansion</span></a> of <span class="math notranslate nohighlight">\(\href{../valid/conventions.html#syntax-deftype}{\mathit{deftype}}\)</span> must be an <a class="reference internal" href="../syntax/types.html#syntax-arraytype"><span class="std std-ref">array type</span></a>.</p></li>
 <li><p>Then the value is valid with <a class="reference internal" href="../syntax/types.html#syntax-reftype"><span class="std std-ref">reference type</span></a> <span class="math notranslate nohighlight">\((\href{../syntax/types.html#syntax-reftype}{\mathsf{ref}}~\href{../syntax/types.html#syntax-arraytype}{\mathit{arraytype}})\)</span>.</p></li>
 </ul>
 <div class="math notranslate nohighlight">
 \[\frac{
-  \href{../syntax/types.html#syntax-deftype}{\mathit{deftype}} = S.\href{../exec/runtime.html#syntax-store}{\mathsf{arrays}}[a].\href{../exec/runtime.html#syntax-arrayinst}{\mathsf{type}}
+  \href{../valid/conventions.html#syntax-deftype}{\mathit{deftype}} = S.\href{../exec/runtime.html#syntax-store}{\mathsf{arrays}}[a].\href{../exec/runtime.html#syntax-arrayinst}{\mathsf{type}}
   \qquad
-  \href{../syntax/types.html#aux-expand}{\mathrm{expand}}(\href{../syntax/types.html#syntax-deftype}{\mathit{deftype}}) = \href{../syntax/types.html#syntax-strtype}{\mathsf{array}}~\href{../syntax/types.html#syntax-arraytype}{\mathit{arraytype}}
+  \href{../valid/conventions.html#aux-expand-deftype}{\mathrm{expand}}(\href{../valid/conventions.html#syntax-deftype}{\mathit{deftype}}) = \href{../syntax/types.html#syntax-comptype}{\mathsf{array}}~\href{../syntax/types.html#syntax-arraytype}{\mathit{arraytype}}
 }{
-  S \href{../appendix/properties.html#valid-val}{\vdash} \href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}array}}~a : \href{../syntax/types.html#syntax-reftype}{\mathsf{ref}}~\href{../syntax/types.html#syntax-deftype}{\mathit{deftype}}
+  S \href{../appendix/properties.html#valid-val}{\vdash} \href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}array}}~a : \href{../syntax/types.html#syntax-reftype}{\mathsf{ref}}~\href{../valid/conventions.html#syntax-deftype}{\mathit{deftype}}
 }\]</div>
 </section>
 <section id="function-references-xref-exec-runtime-syntax-ref-mathsf-ref-func-a">
@@ -189,17 +189,17 @@ That ensures that it is compatible with any nullable type in that hierarchy.</p>
 <ul class="simple">
 <li><p>The <a class="reference internal" href="runtime.html#syntax-funcaddr"><span class="std std-ref">function address</span></a> <span class="math notranslate nohighlight">\(a\)</span> must exist in the store.</p></li>
 <li><p>Let <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-funcinst}{\mathit{funcinst}}\)</span> be the <a class="reference internal" href="runtime.html#syntax-funcinst"><span class="std std-ref">function instance</span></a> <span class="math notranslate nohighlight">\(S.\href{../exec/runtime.html#syntax-store}{\mathsf{funcs}}[a]\)</span>.</p></li>
-<li><p>Let <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-deftype}{\mathit{deftype}}\)</span> be the <a class="reference internal" href="../syntax/types.html#syntax-deftype"><span class="std std-ref">defined type</span></a> <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-funcinst}{\mathit{funcinst}}.\href{../exec/runtime.html#syntax-funcinst}{\mathsf{type}}\)</span>.</p></li>
-<li><p>The <a class="reference internal" href="../syntax/types.html#aux-expand"><span class="std std-ref">expansion</span></a> of <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-deftype}{\mathit{deftype}}\)</span> must be a <a class="reference internal" href="../syntax/types.html#syntax-functype"><span class="std std-ref">function type</span></a>.</p></li>
+<li><p>Let <span class="math notranslate nohighlight">\(\href{../valid/conventions.html#syntax-deftype}{\mathit{deftype}}\)</span> be the <a class="reference internal" href="../valid/conventions.html#syntax-deftype"><span class="std std-ref">defined type</span></a> <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-funcinst}{\mathit{funcinst}}.\href{../exec/runtime.html#syntax-funcinst}{\mathsf{type}}\)</span>.</p></li>
+<li><p>The <a class="reference internal" href="../valid/conventions.html#aux-expand-deftype"><span class="std std-ref">expansion</span></a> of <span class="math notranslate nohighlight">\(\href{../valid/conventions.html#syntax-deftype}{\mathit{deftype}}\)</span> must be a <a class="reference internal" href="../syntax/types.html#syntax-functype"><span class="std std-ref">function type</span></a>.</p></li>
 <li><p>Then the value is valid with <a class="reference internal" href="../syntax/types.html#syntax-reftype"><span class="std std-ref">reference type</span></a> <span class="math notranslate nohighlight">\((\href{../syntax/types.html#syntax-reftype}{\mathsf{ref}}~\href{../syntax/types.html#syntax-functype}{\mathit{functype}})\)</span>.</p></li>
 </ul>
 <div class="math notranslate nohighlight">
 \[\frac{
-  \href{../syntax/types.html#syntax-deftype}{\mathit{deftype}} = S.\href{../exec/runtime.html#syntax-store}{\mathsf{funcs}}[a].\href{../exec/runtime.html#syntax-funcinst}{\mathsf{type}}
+  \href{../valid/conventions.html#syntax-deftype}{\mathit{deftype}} = S.\href{../exec/runtime.html#syntax-store}{\mathsf{funcs}}[a].\href{../exec/runtime.html#syntax-funcinst}{\mathsf{type}}
   \qquad
-  \href{../syntax/types.html#aux-expand}{\mathrm{expand}}(\href{../syntax/types.html#syntax-deftype}{\mathit{deftype}}) = \href{../syntax/types.html#syntax-strtype}{\mathsf{func}}~\href{../syntax/types.html#syntax-functype}{\mathit{functype}}
+  \href{../valid/conventions.html#aux-expand-deftype}{\mathrm{expand}}(\href{../valid/conventions.html#syntax-deftype}{\mathit{deftype}}) = \href{../syntax/types.html#syntax-comptype}{\mathsf{func}}~\href{../syntax/types.html#syntax-functype}{\mathit{functype}}
 }{
-  S \href{../appendix/properties.html#valid-val}{\vdash} \href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}func}}~a : \href{../syntax/types.html#syntax-reftype}{\mathsf{ref}}~\href{../syntax/types.html#syntax-deftype}{\mathit{deftype}}
+  S \href{../appendix/properties.html#valid-val}{\vdash} \href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}func}}~a : \href{../syntax/types.html#syntax-reftype}{\mathsf{ref}}~\href{../valid/conventions.html#syntax-deftype}{\mathit{deftype}}
 }\]</div>
 </section>
 <section id="host-references-xref-exec-runtime-syntax-ref-host-mathsf-ref-host-a">

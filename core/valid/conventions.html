@@ -104,8 +104,156 @@ The formalism offers a more concise description in notation that is used widely 
 <p>In both cases, the rules are formulated in a <em>declarative</em> manner.
 That is, they only formulate the constraints, they do not define an algorithm.
 The skeleton of a sound and complete algorithm for type-checking instruction sequences according to this specification is provided in the <a class="reference internal" href="../appendix/algorithm.html#algo-valid"><span class="std std-ref">appendix</span></a>.</p>
+<section id="types">
+<span id="type-closed"></span><span id="syntax-subtype-ext"></span><span id="syntax-heaptype-ext"></span><span id="syntax-valtype-ext"></span><span id="syntax-rectypeidx"></span><span id="index-1"></span><h2>Types<a class="headerlink" href="#types" title="Permalink to this heading">¶</a></h2>
+<p>To define the semantics, the definition of some sorts of types is extended to include additional forms.
+By virtue of not being representable in either the <a class="reference internal" href="../binary/types.html#binary-valtype"><span class="std std-ref">binary format</span></a> or the <a class="reference internal" href="../text/types.html#text-valtype"><span class="std std-ref">text format</span></a>,
+these forms cannot be used in a program;
+they only occur during <a class="reference internal" href="index.html#valid"><span class="std std-ref">validation</span></a> or <a class="reference internal" href="../exec/index.html#exec"><span class="std std-ref">execution</span></a>.</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{array}{llrl}
+\def\mathdef4333#1{{}}\mathdef4333{value type} &amp; \href{../syntax/types.html#syntax-valtype}{\mathit{valtype}} &amp;::=&amp;
+  \dots ~|~ \href{../valid/conventions.html#syntax-valtype-ext}{\mathsf{bot}} \\
+\def\mathdef4333#1{{}}\mathdef4333{abstract heap type} &amp; \href{../syntax/types.html#syntax-absheaptype}{\mathit{absheaptype}} &amp;::=&amp;
+  \dots ~|~ \href{../valid/conventions.html#syntax-heaptype-ext}{\mathsf{bot}} \\
+\def\mathdef4333#1{{}}\mathdef4333{heap type} &amp; \href{../syntax/types.html#syntax-heaptype}{\mathit{heaptype}} &amp;::=&amp;
+  \dots ~|~ \href{../valid/conventions.html#syntax-deftype}{\mathit{deftype}} ~|~ \href{../syntax/types.html#syntax-heaptype}{\mathsf{rec}}~i \\
+\def\mathdef4333#1{{}}\mathdef4333{sub types} &amp; \href{../syntax/types.html#syntax-subtype}{\mathit{subtype}} &amp;::=&amp;
+  \href{../syntax/types.html#syntax-subtype}{\mathsf{sub}}~\href{../syntax/types.html#syntax-subtype}{\mathsf{final}}^?~\href{../syntax/types.html#syntax-heaptype}{\mathit{heaptype}}^\ast~\href{../syntax/types.html#syntax-comptype}{\mathit{comptype}} \\
+\end{array}\end{split}\]</div>
+<p>The unique <a class="reference internal" href="../syntax/types.html#syntax-valtype"><span class="std std-ref">value type</span></a> <span class="math notranslate nohighlight">\(\href{../valid/conventions.html#syntax-valtype-ext}{\mathsf{bot}}\)</span> is a <em>bottom type</em> that <a class="reference internal" href="matching.html#match-heaptype"><span class="std std-ref">matches</span></a> all value types.
+Similarly, <span class="math notranslate nohighlight">\(\href{../valid/conventions.html#syntax-heaptype-ext}{\mathsf{bot}}\)</span> is also used as a bottom type of all <a class="reference internal" href="../syntax/types.html#syntax-heaptype"><span class="std std-ref">heap types</span></a>.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>No validation rule uses bottom types explicitly,
+but various rules can pick any value or heap type, including bottom.
+This ensures the existence of <a class="reference internal" href="../appendix/properties.html#principality"><span class="std std-ref">principal types</span></a>,
+and thus a <a class="reference internal" href="../appendix/algorithm.html#algo-valid"><span class="std std-ref">validation algorithm</span></a> without back tracking.</p>
+</div>
+<p>A <a class="reference internal" href="../syntax/types.html#syntax-heaptype"><span class="std std-ref">concrete heap type</span></a> can consist of a <a class="reference internal" href="#syntax-deftype"><span class="std std-ref">defined type</span></a> directly.
+this occurs as the result of <a class="reference internal" href="#notation-subst"><span class="std std-ref">substituting</span></a> a <a class="reference internal" href="../syntax/modules.html#syntax-typeidx"><span class="std std-ref">type index</span></a> with its definition.</p>
+<p>A concrete heap type may also be a <em>recursive type index</em>.
+Such an index refers to the <span class="math notranslate nohighlight">\(i\)</span>-th component of a surrounding <a class="reference internal" href="../syntax/types.html#syntax-rectype"><span class="std std-ref">recursive type</span></a>.
+It occurs as the result of <a class="reference internal" href="#aux-roll-rectype"><span class="std std-ref">rolling up</span></a> the definition of a <a class="reference internal" href="../syntax/types.html#syntax-rectype"><span class="std std-ref">recursive type</span></a>.</p>
+<p>Finally, the representation of supertypes in a <a class="reference internal" href="../syntax/types.html#syntax-subtype"><span class="std std-ref">sub type</span></a> is generalized from mere <a class="reference internal" href="../syntax/modules.html#syntax-typeidx"><span class="std std-ref">type indices</span></a> to <a class="reference internal" href="../syntax/types.html#syntax-heaptype"><span class="std std-ref">heap types</span></a>.
+They occur as <a class="reference internal" href="#syntax-deftype"><span class="std std-ref">defined types</span></a> or <a class="reference internal" href="#syntax-rectypeidx"><span class="std std-ref">recursive type indices</span></a> after <a class="reference internal" href="#notation-subst"><span class="std std-ref">substituting</span></a> type indices or <a class="reference internal" href="#aux-roll-rectype"><span class="std std-ref">rolling up</span></a> <a class="reference internal" href="../syntax/types.html#syntax-rectype"><span class="std std-ref">recursive types</span></a>.</p>
+<p>A type of any form is <em>closed</em> when it does not contain a heap type that is a <a class="reference internal" href="../syntax/modules.html#syntax-typeidx"><span class="std std-ref">type index</span></a> or a recursive type index without a surrounding <a class="reference internal" href="../syntax/types.html#syntax-reftype"><span class="std std-ref">recursive type</span></a>,
+i.e., all <a class="reference internal" href="../syntax/modules.html#syntax-typeidx"><span class="std std-ref">type indices</span></a> have been <a class="reference internal" href="#notation-subst"><span class="std std-ref">substituted</span></a> with their <a class="reference internal" href="#syntax-deftype"><span class="std std-ref">defined type</span></a> and all free recursive type indices have been <a class="reference internal" href="#aux-unroll-rectype"><span class="std std-ref">unrolled</span></a>.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Recursive type indices are internal to a recursive type.
+They are distinguished from regular type indices and represented such that two closed types are syntactically equal if and only if they have the same recursive structure.</p>
+</div>
+<section id="convention">
+<span id="aux-reftypediff"></span><h3>Convention<a class="headerlink" href="#convention" title="Permalink to this heading">¶</a></h3>
+<ul>
+<li><p>The <em>difference</em> <span class="math notranslate nohighlight">\(\mathit{rt}_1\href{../valid/conventions.html#aux-reftypediff}{\setminus}\mathit{rt}_2\)</span> between two <a class="reference internal" href="../syntax/types.html#syntax-reftype"><span class="std std-ref">reference types</span></a> is defined as follows:</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{array}{lll}
+(\href{../syntax/types.html#syntax-reftype}{\mathsf{ref}}~\href{../syntax/types.html#syntax-reftype}{\mathsf{null}}_1^?~\mathit{ht}_1) \href{../valid/conventions.html#aux-reftypediff}{\setminus} (\href{../syntax/types.html#syntax-reftype}{\mathsf{ref}}~\href{../syntax/types.html#syntax-reftype}{\mathsf{null}}~\mathit{ht}_2) &amp;=&amp; (\href{../syntax/types.html#syntax-reftype}{\mathsf{ref}}~\mathit{ht}_1) \\
+(\href{../syntax/types.html#syntax-reftype}{\mathsf{ref}}~\href{../syntax/types.html#syntax-reftype}{\mathsf{null}}_1^?~\mathit{ht}_1) \href{../valid/conventions.html#aux-reftypediff}{\setminus} (\href{../syntax/types.html#syntax-reftype}{\mathsf{ref}}~\mathit{ht}_2) &amp;=&amp; (\href{../syntax/types.html#syntax-reftype}{\mathsf{ref}}~\href{../syntax/types.html#syntax-reftype}{\mathsf{null}}_1^?~\mathit{ht}_1) \\
+\end{array}\end{split}\]</div>
+</li>
+</ul>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This definition computes an approximation of the reference type that is inhabited by all values from <span class="math notranslate nohighlight">\(\mathit{rt}_1\)</span> except those from <span class="math notranslate nohighlight">\(\mathit{rt}_2\)</span>.
+Since the type system does not have general union types,
+the defnition only affects the presence of null and cannot express the absence of other values.</p>
+</div>
+</section>
+</section>
+<section id="defined-types">
+<span id="syntax-deftype"></span><span id="index-2"></span><h2>Defined Types<a class="headerlink" href="#defined-types" title="Permalink to this heading">¶</a></h2>
+<p><em>Defined types</em> denote the individual types defined in a <a class="reference internal" href="../syntax/modules.html#syntax-module"><span class="std std-ref">module</span></a>.
+Each such type is represented as a projection from the <a class="reference internal" href="../syntax/types.html#syntax-rectype"><span class="std std-ref">recursive type</span></a> group it originates from, indexed by its position in that group.</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{array}{llrl}
+\def\mathdef4333#1{{}}\mathdef4333{defined type} &amp; \href{../valid/conventions.html#syntax-deftype}{\mathit{deftype}} &amp;::=&amp;
+  \href{../syntax/types.html#syntax-rectype}{\mathit{rectype}}.i \\
+\end{array}\end{split}\]</div>
+<p>Defined types do not occur in the <a class="reference internal" href="../binary/index.html#binary"><span class="std std-ref">binary</span></a> or <a class="reference internal" href="../text/index.html#text"><span class="std std-ref">text</span></a> format,
+but are formed by <a class="reference internal" href="#aux-roll-deftype"><span class="std std-ref">rolling up</span></a> the <a class="reference internal" href="../syntax/types.html#syntax-reftype"><span class="std std-ref">recursive types</span></a> defined in a module.</p>
+<p>It is hence an invariant of the semantics that all <a class="reference internal" href="../syntax/types.html#syntax-rectype"><span class="std std-ref">recursive types</span></a> occurring in defined types are <a class="reference internal" href="#aux-roll-rectype"><span class="std std-ref">rolled up</span></a>.</p>
+<section id="notation-subst">
+<span id="type-subst"></span><span id="index-3"></span><span id="id2"></span><h3>Conventions<a class="headerlink" href="#notation-subst" title="Permalink to this heading">¶</a></h3>
+<ul class="simple">
+<li><p><span class="math notranslate nohighlight">\(t[x^\ast \href{../syntax/conventions.html#notation-subst}{\mathrel{\mathbf{:=}}} \mathit{dt}^\ast]\)</span> denotes the parallel <em>substitution</em> of <a class="reference internal" href="../syntax/modules.html#syntax-typeidx"><span class="std std-ref">type indices</span></a> <span class="math notranslate nohighlight">\(x^\ast\)</span> with <a class="reference internal" href="#syntax-deftype"><span class="std std-ref">defined types</span></a> <span class="math notranslate nohighlight">\(\mathit{dt}^\ast\)</span> in type <span class="math notranslate nohighlight">\(t\)</span>, provided <span class="math notranslate nohighlight">\(|x^\ast| = |\mathit{dt}^\ast|\)</span>.</p></li>
+<li><p><span class="math notranslate nohighlight">\(t[(\href{../syntax/types.html#syntax-heaptype}{\mathsf{rec}}~i)^\ast \href{../syntax/conventions.html#notation-subst}{\mathrel{\mathbf{:=}}} \mathit{dt}^\ast]\)</span> denotes the parallel <em>substitution</em> of <a class="reference internal" href="#syntax-rectypeidx"><span class="std std-ref">recursive type indices</span></a> <span class="math notranslate nohighlight">\((\href{../syntax/types.html#syntax-heaptype}{\mathsf{rec}}~i)^\ast\)</span> with <a class="reference internal" href="#syntax-deftype"><span class="std std-ref">defined types</span></a> <span class="math notranslate nohighlight">\(\mathit{dt}^\ast\)</span> in type <span class="math notranslate nohighlight">\(t\)</span>, provided <span class="math notranslate nohighlight">\(|(\href{../syntax/types.html#syntax-heaptype}{\mathsf{rec}}~i)^\ast| = |\mathit{dt}^\ast|\)</span>.</p></li>
+<li><p><span class="math notranslate nohighlight">\(t[\href{../syntax/conventions.html#notation-subst}{\mathrel{\mathbf{:=}}} \mathit{dt}^\ast]\)</span> is shorthand for the substitution <span class="math notranslate nohighlight">\(t[x^\ast \href{../syntax/conventions.html#notation-subst}{\mathrel{\mathbf{:=}}} \mathit{dt}^\ast]\)</span>, where <span class="math notranslate nohighlight">\(x^\ast = 0 \cdots (|\mathit{dt}^\ast| - 1)\)</span>.</p></li>
+</ul>
+</section>
+</section>
+<section id="rolling-and-unrolling">
+<span id="aux-expand-deftype"></span><span id="aux-unroll-deftype"></span><span id="aux-roll-deftype"></span><span id="aux-unroll-rectype"></span><span id="aux-roll-rectype"></span><span id="index-4"></span><h2>Rolling and Unrolling<a class="headerlink" href="#rolling-and-unrolling" title="Permalink to this heading">¶</a></h2>
+<p>In order to allow comparing <a class="reference internal" href="../syntax/types.html#syntax-rectype"><span class="std std-ref">recursive types</span></a> for <a class="reference internal" href="matching.html#match-deftype"><span class="std std-ref">equivalence</span></a>, their representation is changed such that all <a class="reference internal" href="../syntax/modules.html#syntax-typeidx"><span class="std std-ref">type indices</span></a> internal to the same recursive type are replaced by <a class="reference internal" href="#syntax-rectypeidx"><span class="std std-ref">recursive type indices</span></a>.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This representation is independent of the type index space,
+so that it is meaningful across module boundaries.
+Moreover, this representation ensures that types with equivalent recursive structure are also syntactically equal,
+hence allowing a simple equality check on (closed) types.
+It gives rise to an <em>iso-recursive</em> interpretation of types.</p>
+</div>
+<p>The representation change is performed by two auxiliary operations on the syntax of <a class="reference internal" href="../syntax/types.html#syntax-rectype"><span class="std std-ref">recursive types</span></a>:</p>
+<ul class="simple">
+<li><p><em>Rolling up</em> a recursive type <a class="reference internal" href="#notation-subst"><span class="std std-ref">substitutes</span></a> its internal <a class="reference internal" href="../syntax/modules.html#syntax-typeidx"><span class="std std-ref">type indices</span></a> with corresponding <a class="reference internal" href="#syntax-rectypeidx"><span class="std std-ref">recursive type indices</span></a>.</p></li>
+<li><p><em>Unrolling</em> a recursive type <a class="reference internal" href="#notation-subst"><span class="std std-ref">substitutes</span></a> its <a class="reference internal" href="#syntax-rectypeidx"><span class="std std-ref">recursive type indices</span></a> with the corresponding <a class="reference internal" href="#syntax-deftype"><span class="std std-ref">defined types</span></a>.</p></li>
+</ul>
+<p>These operations are extended to <a class="reference internal" href="#syntax-deftype"><span class="std std-ref">defined types</span></a> and defined as follows:</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{array}{&#64;{}l&#64;{~}l&#64;{~}l&#64;{~}r&#64;{~}l&#64;{}}
+\def\mathdef4372#1{\href{../valid/conventions.html#aux-roll-rectype}{\mathrm{roll}_{#1}}}\mathdef4372{x}(\href{../syntax/types.html#syntax-rectype}{\mathsf{rec}}~\href{../syntax/types.html#syntax-subtype}{\mathit{subtype}}^\ast) &amp;=&amp; \href{../syntax/types.html#syntax-rectype}{\mathsf{rec}}~(\href{../syntax/types.html#syntax-subtype}{\mathit{subtype}}[(x + i)^\ast \href{../syntax/conventions.html#notation-subst}{\mathrel{\mathbf{:=}}} (\href{../syntax/types.html#syntax-heaptype}{\mathsf{rec}}~i)^\ast])^\ast
+&amp; (\mathrel{\mbox{if}} &amp; i^\ast = 0 \cdots (|\href{../syntax/types.html#syntax-subtype}{\mathit{subtype}}^\ast| - 1)) \\
+\href{../valid/conventions.html#aux-unroll-rectype}{\mathrm{unroll}}(\href{../syntax/types.html#syntax-rectype}{\mathsf{rec}}~\href{../syntax/types.html#syntax-subtype}{\mathit{subtype}}^\ast) &amp;=&amp; \href{../syntax/types.html#syntax-rectype}{\mathsf{rec}}~(\href{../syntax/types.html#syntax-subtype}{\mathit{subtype}}[(\href{../syntax/types.html#syntax-heaptype}{\mathsf{rec}}~i)^\ast \href{../syntax/conventions.html#notation-subst}{\mathrel{\mathbf{:=}}} ((\href{../syntax/types.html#syntax-rectype}{\mathsf{rec}}~\href{../syntax/types.html#syntax-subtype}{\mathit{subtype}}^\ast).i)^\ast])^\ast
+&amp; (\mathrel{\mbox{if}} &amp; i^\ast = 0 \cdots (|\href{../syntax/types.html#syntax-subtype}{\mathit{subtype}}^\ast| - 1)) \\[2ex]
+\def\mathdef4373#1{\href{../valid/conventions.html#aux-roll-deftype}{\mathrm{roll}^\ast_{#1}}}\mathdef4373{x}(\href{../syntax/types.html#syntax-rectype}{\mathit{rectype}}) &amp;=&amp; ((\href{../syntax/types.html#syntax-rectype}{\mathsf{rec}}~\href{../syntax/types.html#syntax-subtype}{\mathit{subtype}}^\ast).i)^\ast
+&amp; (\mathrel{\mbox{if}} &amp; i^\ast = 0 \cdots (|\href{../syntax/types.html#syntax-subtype}{\mathit{subtype}}^\ast| - 1) \\
+&amp;&amp;&amp; \land &amp; \def\mathdef4374#1{\href{../valid/conventions.html#aux-roll-rectype}{\mathrm{roll}_{#1}}}\mathdef4374{x}(\href{../syntax/types.html#syntax-rectype}{\mathit{rectype}}) = \href{../syntax/types.html#syntax-rectype}{\mathsf{rec}}~\href{../syntax/types.html#syntax-subtype}{\mathit{subtype}}^\ast) \\
+\href{../valid/conventions.html#aux-unroll-deftype}{\mathrm{unroll}}(\href{../syntax/types.html#syntax-rectype}{\mathit{rectype}}.i) &amp;=&amp; \href{../syntax/types.html#syntax-subtype}{\mathit{subtype}}^\ast[i]
+&amp; (\mathrel{\mbox{if}} &amp; \href{../valid/conventions.html#aux-unroll-rectype}{\mathrm{unroll}}(\href{../syntax/types.html#syntax-rectype}{\mathit{rectype}}) = \href{../syntax/types.html#syntax-rectype}{\mathsf{rec}}~\href{../syntax/types.html#syntax-subtype}{\mathit{subtype}}^\ast) \\
+\end{array}\end{split}\]</div>
+<p>In addition, the following auxiliary function denotes the <em>expansion</em> of a <a class="reference internal" href="#syntax-deftype"><span class="std std-ref">defined type</span></a>:</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{array}{&#64;{}llll&#64;{}}
+\href{../valid/conventions.html#aux-expand-deftype}{\mathrm{expand}}(\href{../valid/conventions.html#syntax-deftype}{\mathit{deftype}}) &amp;=&amp; \href{../syntax/types.html#syntax-comptype}{\mathit{comptype}} &amp; (\mathrel{\mbox{if}} \href{../valid/conventions.html#aux-unroll-deftype}{\mathrm{unroll}}(\href{../valid/conventions.html#syntax-deftype}{\mathit{deftype}}) = \href{../syntax/types.html#syntax-subtype}{\mathsf{sub}}~\href{../syntax/types.html#syntax-subtype}{\mathsf{final}}^?~\mathit{ht}^?~\href{../syntax/types.html#syntax-comptype}{\mathit{comptype}}) \\
+\end{array}\end{split}\]</div>
+</section>
+<section id="instruction-types">
+<span id="syntax-instrtype"></span><span id="index-5"></span><h2>Instruction Types<a class="headerlink" href="#instruction-types" title="Permalink to this heading">¶</a></h2>
+<p><em>Instruction types</em> classify the behaviour of <a class="reference internal" href="../syntax/instructions.html#syntax-instr"><span class="std std-ref">instructions</span></a> or instruction sequences, by describing how they manipulate the <a class="reference internal" href="../exec/runtime.html#stack"><span class="std std-ref">operand stack</span></a> and the initialization status of <a class="reference internal" href="../syntax/modules.html#syntax-local"><span class="std std-ref">locals</span></a>:</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{array}{llrl}
+\def\mathdef4333#1{{}}\mathdef4333{instruction type} &amp; \href{../valid/conventions.html#syntax-instrtype}{\mathit{instrtype}} &amp;::=&amp;
+  \href{../syntax/types.html#syntax-resulttype}{\mathit{resulttype}} \def\mathdef4375#1{\href{../syntax/types.html#syntax-instrtype}{\rightarrow_{#1}}}\mathdef4375{\href{../syntax/modules.html#syntax-localidx}{\mathit{localidx}}^\ast} \href{../syntax/types.html#syntax-resulttype}{\mathit{resulttype}} \\
+\end{array}\end{split}\]</div>
+<p>An instruction type <span class="math notranslate nohighlight">\([t_1^\ast] \def\mathdef4376#1{\href{../syntax/types.html#syntax-instrtype}{\rightarrow_{#1}}}\mathdef4376{x^\ast} [t_2^\ast]\)</span> describes the required input stack with argument values of types <span class="math notranslate nohighlight">\(t_1^\ast\)</span> that an instruction pops off
+and the provided output stack with result values of types <span class="math notranslate nohighlight">\(t_2^\ast\)</span> that it pushes back.
+Moreover, it enumerates the <a class="reference internal" href="../syntax/modules.html#syntax-localidx"><span class="std std-ref">indices</span></a> <span class="math notranslate nohighlight">\(x^\ast\)</span> of locals that have been set by the instruction or sequence.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Instruction types are only used for <a class="reference internal" href="index.html#valid"><span class="std std-ref">validation</span></a>,
+they do not occur in programs.</p>
+</div>
+</section>
+<section id="local-types">
+<span id="syntax-localtype"></span><span id="syntax-init"></span><span id="index-6"></span><h2>Local Types<a class="headerlink" href="#local-types" title="Permalink to this heading">¶</a></h2>
+<p><em>Local types</em> classify <a class="reference internal" href="../syntax/modules.html#syntax-local"><span class="std std-ref">locals</span></a>, by describing their <a class="reference internal" href="../syntax/types.html#syntax-valtype"><span class="std std-ref">value type</span></a> as well as their <em>initialization status</em>:</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{array}{llrl}
+\def\mathdef4333#1{{}}\mathdef4333{initialization status} &amp; \href{../syntax/types.html#syntax-init}{\mathit{init}} &amp;::=&amp;
+  \href{../syntax/types.html#syntax-init}{\mathrel{\mbox{set}}} ~|~ \href{../syntax/types.html#syntax-init}{\mathrel{\mbox{unset}}} \\
+\def\mathdef4333#1{{}}\mathdef4333{local type} &amp; \href{../valid/conventions.html#syntax-localtype}{\mathit{localtype}} &amp;::=&amp;
+  \href{../syntax/types.html#syntax-init}{\mathit{init}}~\href{../syntax/types.html#syntax-valtype}{\mathit{valtype}} \\
+\end{array}\end{split}\]</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Local types are only used for <a class="reference internal" href="index.html#valid"><span class="std std-ref">validation</span></a>,
+they do not occur in programs.</p>
+</div>
+</section>
 <section id="contexts">
-<span id="context"></span><span id="index-1"></span><h2>Contexts<a class="headerlink" href="#contexts" title="Permalink to this heading">¶</a></h2>
+<span id="context"></span><span id="index-7"></span><h2>Contexts<a class="headerlink" href="#contexts" title="Permalink to this heading">¶</a></h2>
 <p>Validity of an individual definition is specified relative to a <em>context</em>,
 which collects relevant information about the surrounding <a class="reference internal" href="../syntax/modules.html#syntax-module"><span class="std std-ref">module</span></a> and the definitions in scope:</p>
 <ul class="simple">
@@ -116,7 +264,7 @@ which collects relevant information about the surrounding <a class="reference in
 <li><p><em>Globals</em>: the list of <a class="reference internal" href="../syntax/modules.html#syntax-global"><span class="std std-ref">globals</span></a> declared in the current module, represented by their <a class="reference internal" href="../syntax/types.html#syntax-globaltype"><span class="std std-ref">global type</span></a>.</p></li>
 <li><p><em>Element Segments</em>: the list of <a class="reference internal" href="../syntax/modules.html#syntax-elem"><span class="std std-ref">element segments</span></a> declared in the current module, represented by the elements’ <a class="reference internal" href="../syntax/types.html#syntax-reftype"><span class="std std-ref">reference type</span></a>.</p></li>
 <li><p><em>Data Segments</em>: the list of <a class="reference internal" href="../syntax/modules.html#syntax-data"><span class="std std-ref">data segments</span></a> declared in the current module, each represented by an <span class="math notranslate nohighlight">\(\mathrel{\mbox{ok}}\)</span> entry.</p></li>
-<li><p><em>Locals</em>: the list of <a class="reference internal" href="../syntax/modules.html#syntax-local"><span class="std std-ref">locals</span></a> declared in the current <a class="reference internal" href="../syntax/modules.html#syntax-func"><span class="std std-ref">function</span></a> (including parameters), represented by their <a class="reference internal" href="../syntax/types.html#syntax-localtype"><span class="std std-ref">local type</span></a>.</p></li>
+<li><p><em>Locals</em>: the list of <a class="reference internal" href="../syntax/modules.html#syntax-local"><span class="std std-ref">locals</span></a> declared in the current <a class="reference internal" href="../syntax/modules.html#syntax-func"><span class="std std-ref">function</span></a> (including parameters), represented by their <a class="reference internal" href="#syntax-localtype"><span class="std std-ref">local type</span></a>.</p></li>
 <li><p><em>Labels</em>: the stack of <a class="reference internal" href="../exec/runtime.html#syntax-label"><span class="std std-ref">labels</span></a> accessible from the current position, represented by their <a class="reference internal" href="../syntax/types.html#syntax-resulttype"><span class="std std-ref">result type</span></a>.</p></li>
 <li><p><em>Return</em>: the return type of the current <a class="reference internal" href="../syntax/modules.html#syntax-func"><span class="std std-ref">function</span></a>, represented as an optional <a class="reference internal" href="../syntax/types.html#syntax-resulttype"><span class="std std-ref">result type</span></a> that is absent when no return is allowed, as in free-standing expressions.</p></li>
 <li><p><em>References</em>: the list of <a class="reference internal" href="../syntax/modules.html#syntax-funcidx"><span class="std std-ref">function indices</span></a> that occur in the module outside functions and can hence be used to form references inside them.</p></li>
@@ -128,16 +276,16 @@ The label stack is the only part of the context that changes as validation of an
 <p>More concretely, contexts are defined as <a class="reference internal" href="../syntax/conventions.html#notation-record"><span class="std std-ref">records</span></a> <span class="math notranslate nohighlight">\(C\)</span> with abstract syntax:</p>
 <div class="math notranslate nohighlight">
 \[\begin{split}\begin{array}{llll}
-\def\mathdef4334#1{{}}\mathdef4334{context} &amp; C &amp;::=&amp;
+\def\mathdef4333#1{{}}\mathdef4333{context} &amp; C &amp;::=&amp;
   \begin{array}[t]{l&#64;{~}ll}
-  \{ &amp; \href{../valid/conventions.html#context}{\mathsf{types}} &amp; \href{../syntax/types.html#syntax-deftype}{\mathit{deftype}}^\ast, \\
+  \{ &amp; \href{../valid/conventions.html#context}{\mathsf{types}} &amp; \href{../valid/conventions.html#syntax-deftype}{\mathit{deftype}}^\ast, \\
      &amp; \href{../valid/conventions.html#context}{\mathsf{funcs}} &amp; \href{../syntax/types.html#syntax-functype}{\mathit{functype}}^\ast, \\
      &amp; \href{../valid/conventions.html#context}{\mathsf{tables}} &amp; \href{../syntax/types.html#syntax-tabletype}{\mathit{tabletype}}^\ast, \\
      &amp; \href{../valid/conventions.html#context}{\mathsf{mems}} &amp; \href{../syntax/types.html#syntax-memtype}{\mathit{memtype}}^\ast, \\
      &amp; \href{../valid/conventions.html#context}{\mathsf{globals}} &amp; \href{../syntax/types.html#syntax-globaltype}{\mathit{globaltype}}^\ast, \\
      &amp; \href{../valid/conventions.html#context}{\mathsf{elems}} &amp; \href{../syntax/types.html#syntax-reftype}{\mathit{reftype}}^\ast, \\
      &amp; \href{../valid/conventions.html#context}{\mathsf{datas}} &amp; {\mathrel{\mbox{ok}}}^\ast, \\
-     &amp; \href{../valid/conventions.html#context}{\mathsf{locals}} &amp; \href{../syntax/types.html#syntax-localtype}{\mathit{localtype}}^\ast, \\
+     &amp; \href{../valid/conventions.html#context}{\mathsf{locals}} &amp; \href{../valid/conventions.html#syntax-localtype}{\mathit{localtype}}^\ast, \\
      &amp; \href{../valid/conventions.html#context}{\mathsf{labels}} &amp; \href{../syntax/types.html#syntax-resulttype}{\mathit{resulttype}}^\ast, \\
      &amp; \href{../valid/conventions.html#context}{\mathsf{return}} &amp; \href{../syntax/types.html#syntax-resulttype}{\mathit{resulttype}}^?, \\
      &amp; \href{../valid/conventions.html#context}{\mathsf{refs}} &amp; \href{../syntax/modules.html#syntax-funcidx}{\mathit{funcidx}}^\ast ~\} \\
@@ -154,6 +302,20 @@ The label stack is the only part of the context that changes as validation of an
 Context extension notation <span class="math notranslate nohighlight">\(C,\mathsf{field}\,A\)</span> is primarily used to locally extend <em>relative</em> index spaces, such as <a class="reference internal" href="../syntax/modules.html#syntax-labelidx"><span class="std std-ref">label indices</span></a>.
 Accordingly, the notation is defined to append at the <em>front</em> of the respective sequence, introducing a new relative index <span class="math notranslate nohighlight">\(0\)</span> and shifting the existing ones.</p>
 </div>
+<section id="type-closure">
+<span id="index-8"></span><span id="id3"></span><h3>Convention<a class="headerlink" href="#type-closure" title="Permalink to this heading">¶</a></h3>
+<div class="admonition-todo admonition" id="id4">
+<p class="admonition-title">Todo</p>
+<p>move this elsewhere?</p>
+</div>
+<p>Any form of <a class="reference internal" href="../syntax/types.html#syntax-type"><span class="std std-ref">type</span></a> can be <em>closed</em> to bring it into <a class="reference internal" href="#type-closed"><span class="std std-ref">closed</span></a> form relative to a <a class="reference internal" href="#context"><span class="std std-ref">context</span></a> it is <a class="reference internal" href="types.html#valid-type"><span class="std std-ref">valid</span></a> in by <a class="reference internal" href="#notation-subst"><span class="std std-ref">substituting</span></a> each <a class="reference internal" href="../syntax/modules.html#syntax-typeidx"><span class="std std-ref">type index</span></a> <span class="math notranslate nohighlight">\(x\)</span> occurring in it with the corresponding <a class="reference internal" href="#syntax-deftype"><span class="std std-ref">defined type</span></a> <span class="math notranslate nohighlight">\(C.\href{../valid/conventions.html#context}{\mathsf{types}}[x]\)</span>, after first closing the the types in <span class="math notranslate nohighlight">\(C.\href{../valid/conventions.html#context}{\mathsf{types}}\)</span> themselves.</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{array}{&#64;{}lcll&#64;{}}
+\href{../valid/conventions.html#closure}{\mathsf{clos}}_C(t) &amp;=&amp; t[\href{../syntax/conventions.html#notation-subst}{\mathrel{\mathbf{:=}}} clostype^\ast(C.\href{../valid/conventions.html#context}{\mathsf{types}})] \\[2ex]
+\href{../valid/conventions.html#closure}{\mathsf{clos}}^\ast(\epsilon) &amp;=&amp; \epsilon \\
+\href{../valid/conventions.html#closure}{\mathsf{clos}}^\ast(\mathit{dt}^\ast~\mathit{dt}_N) &amp;=&amp; {\mathit{dt}'}^\ast~\mathit{dt}_N[\href{../syntax/conventions.html#notation-subst}{\mathrel{\mathbf{:=}}} {\mathit{dt}'}^\ast] &amp; (\mathrel{\mbox{if}} {\mathit{dt}'}^\ast = \href{../valid/conventions.html#closure}{\mathsf{clos}}^\ast(\mathit{dt}^\ast)) \\
+\end{array}\end{split}\]</div>
+</section>
 </section>
 <section id="prose-notation">
 <span id="valid-notation-textual"></span><h2>Prose Notation<a class="headerlink" href="#prose-notation" title="Permalink to this heading">¶</a></h2>
@@ -180,11 +342,11 @@ The formulation “Under context <span class="math notranslate nohighlight">\(C'
 </ul>
 </section>
 <section id="formal-notation">
-<span id="valid-notation"></span><span id="index-2"></span><h2>Formal Notation<a class="headerlink" href="#formal-notation" title="Permalink to this heading">¶</a></h2>
+<span id="valid-notation"></span><span id="index-9"></span><h2>Formal Notation<a class="headerlink" href="#formal-notation" title="Permalink to this heading">¶</a></h2>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>This section gives a brief explanation of the notation for specifying typing rules formally.
-For the interested reader, a more thorough introduction can be found in respective text books. <a class="footnote-reference brackets" href="#cite-tapl" id="id2" role="doc-noteref"><span class="fn-bracket">[</span>2<span class="fn-bracket">]</span></a></p>
+For the interested reader, a more thorough introduction can be found in respective text books. <a class="footnote-reference brackets" href="#cite-tapl" id="id5" role="doc-noteref"><span class="fn-bracket">[</span>2<span class="fn-bracket">]</span></a></p>
 </div>
 <p>The proposition that a phrase <span class="math notranslate nohighlight">\(A\)</span> has a respective type <span class="math notranslate nohighlight">\(T\)</span> is written <span class="math notranslate nohighlight">\(A : T\)</span>.
 In general, however, typing is dependent on a context <span class="math notranslate nohighlight">\(C\)</span>.
@@ -248,7 +410,7 @@ which is expressed by extending the context <span class="math notranslate nohigh
 Andreas Haas, Andreas Rossberg, Derek Schuff, Ben Titzer, Dan Gohman, Luke Wagner, Alon Zakai, JF Bastien, Michael Holman. <a class="reference external" href="https://dl.acm.org/citation.cfm?doid=3062341.3062363">Bringing the Web up to Speed with WebAssembly</a>. Proceedings of the 38th ACM SIGPLAN Conference on Programming Language Design and Implementation (PLDI 2017). ACM 2017.</p>
 </aside>
 <aside class="footnote brackets" id="cite-tapl" role="note">
-<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id2">2</a><span class="fn-bracket">]</span></span>
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id5">2</a><span class="fn-bracket">]</span></span>
 <p>For example: Benjamin Pierce. <a class="reference external" href="https://www.cis.upenn.edu/~bcpierce/tapl/">Types and Programming Languages</a>. The MIT Press 2002</p>
 </aside>
 </aside>
