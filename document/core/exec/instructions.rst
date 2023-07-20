@@ -394,12 +394,12 @@ Reference Instructions
    \end{array}
 
 
-.. _exec-i31.get_s:
+.. _exec-i31.get_sx:
 
 :math:`\I31GET\K{\_}\sx`
 ........................
 
-1. Assert: due to :ref:`validation <valid-i31.get_s>`, a :ref:`value <syntax-val>` of :ref:`type <syntax-valtype>` :math:`(\REF~\NULL~\I31)` is on the top of the stack.
+1. Assert: due to :ref:`validation <valid-i31.get_sx>`, a :ref:`value <syntax-val>` of :ref:`type <syntax-valtype>` :math:`(\REF~\NULL~\I31)` is on the top of the stack.
 
 2. Pop the value :math:`\reff` from the stack.
 
@@ -407,7 +407,7 @@ Reference Instructions
 
    a. Trap.
 
-4. Assert: due to validation, a :math:`\reff` is a :ref:`scalar reference <syntax-ref.i31>`.
+4. Assert: due to :ref:`validation <valid-i31.get_sx>`, a :math:`\reff` is a :ref:`scalar reference <syntax-ref.i31>`.
 
 5. Let :math:`(\REFI31~i)` be the reference value :math:`\reff`.
 
@@ -439,7 +439,7 @@ Reference Instructions
 
 5. Let :math:`n` be the length of the :ref:`field type <syntax-fieldtype>` sequence :math:`\X{ft}^\ast`.
 
-6. Assert: due to :ref:`validation <valid-struct.set>`, :math:`n` :ref:`values <syntax-val>` are on the top of the stack.
+6. Assert: due to :ref:`validation <valid-struct.new>`, :math:`n` :ref:`values <syntax-val>` are on the top of the stack.
 
 7. Pop the :math:`n` values :math:`\val^\ast` from the stack.
 
@@ -544,7 +544,7 @@ Reference Instructions
 
    a. Trap.
 
-9. Assert: due to validation, a :math:`\reff` is a :ref:`structure reference <syntax-ref.struct>`.
+9. Assert: due to :ref:`validation <valid-struct.get>`, a :math:`\reff` is a :ref:`structure reference <syntax-ref.struct>`.
 
 10. Let :math:`(\REFSTRUCTADDR~a)` be the reference value :math:`\reff`.
 
@@ -597,7 +597,7 @@ Reference Instructions
 
    a. Trap.
 
-11. Assert: due to validation, a :math:`\reff` is a :ref:`structure reference <syntax-ref.struct>`.
+11. Assert: due to :ref:`validation <valid-struct.set>`, a :math:`\reff` is a :ref:`structure reference <syntax-ref.struct>`.
 
 12. Let :math:`(\REFSTRUCTADDR~a)` be the reference value :math:`\reff`.
 
@@ -910,7 +910,7 @@ Reference Instructions
 
    a. Trap.
 
-10. Assert: due to validation, a :math:`\reff` is an :ref:`array reference <syntax-ref.array>`.
+10. Assert: due to :ref:`validation <valid-array.get>`, a :math:`\reff` is an :ref:`array reference <syntax-ref.array>`.
 
 11. Let :math:`(\REFARRAYADDR~a)` be the reference value :math:`\reff`.
 
@@ -959,7 +959,7 @@ Reference Instructions
 
 6. Pop the value :math:`\val` from the stack.
 
-7. Assert: due to :ref:`validation <valid-array.get>`, a :ref:`value <syntax-val>` of :ref:`type <syntax-valtype>` :math:`\I32` is on the top of the stack.
+7. Assert: due to :ref:`validation <valid-array.set>`, a :ref:`value <syntax-val>` of :ref:`type <syntax-valtype>` :math:`\I32` is on the top of the stack.
 
 8. Pop the value :math:`(\I32.\CONST~i)` from the stack.
 
@@ -971,7 +971,7 @@ Reference Instructions
 
    a. Trap.
 
-12. Assert: due to validation, a :math:`\reff` is an :ref:`array reference <syntax-ref.array>`.
+12. Assert: due to :ref:`validation <valid-array.set>`, a :math:`\reff` is an :ref:`array reference <syntax-ref.array>`.
 
 13. Let :math:`(\REFARRAYADDR~a)` be the reference value :math:`\reff`.
 
@@ -1010,7 +1010,7 @@ Reference Instructions
 
    a. Trap.
 
-4. Assert: due to validation, a :math:`\reff` is an :ref:`array reference <syntax-ref.array>`.
+4. Assert: due to :ref:`validation <valid-array.len>`, a :math:`\reff` is an :ref:`array reference <syntax-ref.array>`.
 
 5. Let :math:`(\REFARRAYADDR~a)` be the reference value :math:`\reff`.
 
