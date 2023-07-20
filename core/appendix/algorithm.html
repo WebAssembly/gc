@@ -99,10 +99,13 @@ Consequently, it can be integrated directly into a decoder.</p>
 <span id="index-1"></span><h2>Data Structures<a class="headerlink" href="#data-structures" title="Permalink to this heading">¶</a></h2>
 <section id="types">
 <h3>Types<a class="headerlink" href="#types" title="Permalink to this heading">¶</a></h3>
-<p>Value types are representable as a set of enumerations.</p>
+<p>Value types are representable as sets of enumerations:</p>
 <div class="highlight-pseudo notranslate"><div class="highlight"><pre><span></span><span class="k">type</span> <span class="nf">num_type</span> = I32 | I64 | F32 | F64
 <span class="k">type</span> <span class="nf">vec_type</span> = V128
-<span class="k">type</span> <span class="nf">heap_type</span> = Def(<span class="nf">idx</span> : nat) | Func | Extern | Bot
+<span class="k">type</span> <span class="nf">heap_type</span> =
+  Any | Eq | I31 | Struct | Array | None |
+  Func | Nofunc | Extern | Noextern | Bot |
+  Def(<span class="nf">def</span> : def_type)
 <span class="k">type</span> <span class="nf">ref_type</span> = Ref(<span class="nf">heap</span> : heap_type, <span class="nf">null</span> : bool)
 <span class="k">type</span> <span class="nf">val_type</span> = num_type | vec_type | ref_type | Bot
 
@@ -116,35 +119,48 @@ Consequently, it can be integrated directly into a decoder.</p>
   <span class="k">return</span> not (is_num t || is_vec t) || t = Bot
 </pre></div>
 </div>
-<p>Equivalence and subtyping checks can be defined on these types.</p>
-<div class="highlight-pseudo notranslate"><div class="highlight"><pre><span></span><span class="k">func</span> <span class="nf">eq_def</span>(n1, n2) =
-  ...  // check that both <span class="k">type</span> <span class="nf">definitions</span> are equivalent (TODO)
+<p>Similarly, <a class="reference internal" href="../valid/conventions.html#syntax-deftype"><span class="std std-ref">defined types</span></a> <code class="code docutils literal notranslate"><span class="pre">def_type</span></code> can be represented:</p>
+<div class="highlight-pseudo notranslate"><div class="highlight"><pre><span></span><span class="k">type</span> <span class="nf">packed_type</span> = I8 | I16
+<span class="k">type</span> <span class="nf">field_type</span> = Field(<span class="nf">val</span> : val_type | packed_type, <span class="nf">mut</span> : bool)
 
-<span class="k">func</span> <span class="nf">matches_null</span>(<span class="nf">null1</span> : bool, <span class="nf">null2</span> : bool) : bool =
-  <span class="k">return</span> null1 = null2 || null2
+<span class="k">type</span> <span class="nf">struct_type</span> = Struct(<span class="nf">fields</span> : list(field_type))
+<span class="k">type</span> <span class="nf">array_type</span> = Array(<span class="nf">fields</span> : field_type)
+<span class="k">type</span> <span class="nf">func_type</span> = Func(<span class="nf">params</span> : list(val_type), <span class="nf">results</span> : list(val_type))
+<span class="k">type</span> <span class="nf">comp_type</span> = struct_type | array_type | func_type
 
-<span class="k">func</span> <span class="nf">matches_heap</span>(<span class="nf">t1</span> : heap_type, <span class="nf">t2</span> : heap_type) : bool =
-  <span class="k">switch</span> (t1, t2)
-    <span class="k">case</span> (Def(n1), Def(n2))
-      <span class="k">return</span> eq_def(n1, n2)
-    <span class="k">case</span> (Def(_), Func)
-      <span class="k">return</span> true
-    <span class="k">case</span> (Bot, _)
-      <span class="k">return</span> true
-    <span class="k">case</span> (_, _)
-      <span class="k">return</span> t1 = t2
+<span class="k">type</span> <span class="nf">sub_type</span> = Sub(<span class="nf">super</span> : list(def_type), <span class="nf">body</span> : comp_type, <span class="nf">final</span> : bool)
+<span class="k">type</span> <span class="nf">rec_type</span> = Rec(<span class="nf">types</span> : list(sub_type))
 
-<span class="k">func</span> <span class="nf">matches_ref</span>(<span class="nf">t1</span> : ref_type, <span class="nf">t2</span> : ref_type) : bool =
-  <span class="k">return</span> matches_heap(t1.heap, t2.heap) &amp;&amp; matches_null(t1.null, t2.null)
+<span class="k">type</span> <span class="nf">def_type</span> = Def(<span class="nf">rec</span> : rec_type, <span class="nf">proj</span> : int32)
 
-<span class="k">func</span> <span class="nf">matches</span>(<span class="nf">t1</span> : val_type, <span class="nf">t2</span> : val_type) : bool =
-  <span class="k">switch</span> (t1, t2)
-    <span class="k">case</span> (Ref(_), Ref(_))
-      <span class="k">return</span> matches_ref(t1, t2)
-    <span class="k">case</span> (Bot, _)
-      <span class="k">return</span> true
-    <span class="k">case</span> (_, _)
-      <span class="k">return</span> t1 = t2
+<span class="k">func</span> <span class="nf">unpack_field</span>(<span class="nf">t</span> : field_type) : val_type =
+  <span class="k">if</span> (it = I8 || t = I16) <span class="k">return</span> I32
+  <span class="k">return</span> t
+
+<span class="k">func</span> <span class="nf">expand_def</span>(<span class="nf">t</span> : def_type) : comp_type =
+  <span class="k">return</span> t.rec.types[t.proj].body
+</pre></div>
+</div>
+<p>These representations assume that all types have been <a class="reference internal" href="../valid/conventions.html#type-closed"><span class="std std-ref">closed</span></a> by <a class="reference internal" href="../valid/conventions.html#type-subst"><span class="std std-ref">substituting</span></a> all <a class="reference internal" href="../syntax/modules.html#syntax-typeidx"><span class="std std-ref">type indices</span></a> (in <a class="reference internal" href="../syntax/types.html#syntax-heaptype"><span class="std std-ref">concrete heap types</span></a> and in <a class="reference internal" href="../syntax/types.html#syntax-subtype"><span class="std std-ref">sub types</span></a>) with their respective <a class="reference internal" href="../valid/conventions.html#syntax-deftype"><span class="std std-ref">defined types</span></a>.
+This includes <em>recursive</em> references to enclosing <a class="reference internal" href="../valid/conventions.html#syntax-deftype"><span class="std std-ref">defined types</span></a>,
+such that type representations form graphs and may be <em>cyclic</em> for <a class="reference internal" href="../syntax/types.html#syntax-rectype"><span class="std std-ref">recursive types</span></a>.</p>
+<p>We assume that all types have been <em>canonicalized</em>, such that equality on two type representations holds if and only if their <a class="reference internal" href="../valid/conventions.html#type-closure"><span class="std std-ref">closures</span></a> are syntactically equivalent, making it a constant-time check.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>For the purpose of type canonicalization, recursive references from a <a class="reference internal" href="../syntax/types.html#syntax-heaptype"><span class="std std-ref">heap type</span></a> to an enclosing <a class="reference internal" href="../syntax/types.html#syntax-reftype"><span class="std std-ref">recursive type</span></a> (i.e., forward edges in the graph that form a cycle) need to be distinguished from references to previously defined types.
+However, this distinction does not otherwise affect validation, so is ignored here.
+In the graph representation, all recursive types are effectively infinitely <a class="reference internal" href="../valid/conventions.html#aux-unroll-rectype"><span class="std std-ref">unrolled</span></a>.</p>
+</div>
+<p>We further assume that <a class="reference internal" href="../valid/types.html#valid-valtype"><span class="std std-ref">validation</span></a> and <a class="reference internal" href="../valid/matching.html#match-valtype"><span class="std std-ref">subtyping</span></a> checks are defined on value types, as well as a few auxiliary functions on compound types:</p>
+<div class="highlight-pseudo notranslate"><div class="highlight"><pre><span></span><span class="k">func</span> <span class="nf">validate_val_type</span>(<span class="nf">t</span> : val_type)
+<span class="k">func</span> <span class="nf">validate_ref_type</span>(<span class="nf">t</span> : ref_type)
+
+<span class="k">func</span> <span class="nf">matches_val</span>(<span class="nf">t1</span> : val_type, <span class="nf">t2</span> : val_type) : bool
+<span class="k">func</span> <span class="nf">matches_ref</span>(<span class="nf">t1</span> : val_type, <span class="nf">t2</span> : val_type) : bool
+
+<span class="k">func</span> <span class="nf">is_func</span>(<span class="nf">t</span> : comp_type) : bool
+<span class="k">func</span> <span class="nf">is_struct</span>(<span class="nf">t</span> : comp_type) : bool
+<span class="k">func</span> <span class="nf">is_array</span>(<span class="nf">t</span> : comp_type) : bool
 </pre></div>
 </div>
 </section>
@@ -152,7 +168,9 @@ Consequently, it can be integrated directly into a decoder.</p>
 <h3>Context<a class="headerlink" href="#context" title="Permalink to this heading">¶</a></h3>
 <p>Validation requires a <a class="reference internal" href="../valid/conventions.html#context"><span class="std std-ref">context</span></a> for checking uses of <a class="reference internal" href="../syntax/modules.html#syntax-index"><span class="std std-ref">indices</span></a>.
 For the purpose of presenting the algorithm, it is maintained in a set of global variables:</p>
-<div class="highlight-pseudo notranslate"><div class="highlight"><pre><span></span><span class="k">var</span> <span class="nf">locals</span> : array(val_type)
+<div class="highlight-pseudo notranslate"><div class="highlight"><pre><span></span><span class="k">var</span> <span class="nf">return_type</span> : list(val_type)
+<span class="k">var</span> <span class="nf">types</span> : array(def_type)
+<span class="k">var</span> <span class="nf">locals</span> : array(val_type)
 <span class="k">var</span> <span class="nf">locals_init</span> : array(bool)
 <span class="k">var</span> <span class="nf">globals</span> : array(global_type)
 <span class="k">var</span> <span class="nf">funcs</span> : array(func_type)
@@ -201,7 +219,7 @@ The initialization stack records all <a class="reference internal" href="../synt
 
 <span class="k">func</span> <span class="nf">pop_val</span>(<span class="nf">expect</span> : val_type) : val_type =
   <span class="k">let</span> <span class="nf">actual</span> = pop_val()
-  error_if(not matches(actual, expect))
+  error_if(not matches_val(actual, expect))
   <span class="k">return</span> actual
 
 <span class="k">func</span> <span class="nf">pop_num</span>() : num_type | Bot =
@@ -395,20 +413,56 @@ Other instructions are checked in a similar manner.</p>
       push_vals(label_types(ctrls[n]))
       push_val(Ref(rt.heap, false))
 
-    <span class="k">case</span> (call_ref)
-      <span class="k">let</span> <span class="nf">rt</span> = pop_ref()
-      <span class="k">if</span> (rt.heap =/= Bot)
-        error_if(not is_def(rt.heap))
-        <span class="k">let</span> <span class="nf">ft</span> = funcs[rt.heap.idx]
-        pop_vals(ft.params)
-        push_vals(ft.results)
+    <span class="k">case</span> (br_on_cast n rt1 rt2)
+      validate_ref_type(rt1)
+      validate_ref_type(rt2)
+      pop_val(rt1)
+      push_val(rt2)
+      pop_vals(label_types(ctrls[n]))
+      push_vals(label_types(ctrls[n]))
+      pop_val(rt2)
+      push_val(diff_ref_type(rt2, rt1))
+
+    <span class="k">case</span> (return)
+      pop_vals(return_types)
+      unreachable()
+
+    <span class="k">case</span> (call_ref x)
+      <span class="k">let</span> <span class="nf">t</span> = expand_def(types[x])
+      error_if(not is_func(t))
+      pop_vals(t.params)
+      pop_val(Ref(Def(types[x])))
+      push_vals(t.results)
+
+    <span class="k">case</span> (return_call_ref x)
+      <span class="k">let</span> <span class="nf">t</span> = expand_def(types[x])
+      error_if(not is_func(t))
+      pop_vals(t.params)
+      pop_val(Ref(Def(types[x])))
+      error_if(t.results.len() =/= return_types.len())
+      push_vals(t.results)
+      pop_vals(return_types)
+      unreachable()
+
+    <span class="k">case</span> (struct.new x)
+      <span class="k">let</span> <span class="nf">t</span> = expand_def(types[x])
+      error_if(not is_struct(t))
+      for (ti <span class="k">in</span> reverse(t.fields))
+        pop_val(unpack_field(ti))
+      push_val(Ref(Def(types[x])))
+
+    <span class="k">case</span> (struct.set x n)
+      <span class="k">let</span> <span class="nf">t</span> = expand_def(types[x])
+      error_if(not is_struct(t) || n &gt;= t.fields.len())
+      pop_val(Ref(Def(types[x])))
+      pop_val(unpack_field(st.fields[n]))
 </pre></div>
 </div>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>It is an invariant under the current WebAssembly instruction set that an operand of <code class="code docutils literal notranslate"><span class="pre">Unknown</span></code> type is never duplicated on the stack.
+<p>It is an invariant under the current WebAssembly instruction set that an operand of <code class="code docutils literal notranslate"><span class="pre">Bot</span></code> type is never duplicated on the stack.
 This would change if the language were extended with stack instructions like <code class="code docutils literal notranslate"><span class="pre">dup</span></code>.
-Under such an extension, the above algorithm would need to be refined by replacing the <code class="code docutils literal notranslate"><span class="pre">Unknown</span></code> type with proper <em>type variables</em> to ensure that all uses are consistent.</p>
+Under such an extension, the above algorithm would need to be refined by replacing the <code class="code docutils literal notranslate"><span class="pre">Bot</span></code> type with proper <em>type variables</em> to ensure that all uses are consistent.</p>
 </div>
 </section>
 </section>
