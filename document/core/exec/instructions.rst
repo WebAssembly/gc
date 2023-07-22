@@ -790,7 +790,7 @@ Reference Instructions
 
 12. Assert: due to :ref:`validation <valid-array.new_data>`, the :ref:`field type <syntax-fieldtype>` :math:`\X{ft}` has a defined :ref:`bit width <bitwidth-fieldtype>`.
 
-13. Let :math:`z` be the :ref:`bit width <bitwidth-fieldtype>` of :ref:`field type <syntax-fieldtype>` :math:`\X{ft}`.
+13. Let :math:`z` be the :ref:`bit width <bitwidth-fieldtype>` of :ref:`field type <syntax-fieldtype>` :math:`\X{ft}` divided by eight.
 
 14. If the sum of :math:`s` and :math:`n` times :math:`z` is larger than the length of :math:`\datainst.\DIDATA`, then:
 
@@ -815,7 +815,7 @@ Reference Instructions
      \\&&
      \begin{array}[t]{@{}r@{~}l@{}}
       (\iff & \expanddt(F.\AMODULE.\MITYPES[x]) = \TARRAY~\X{ft}^n \\
-      \land & s + n\cdot|\X{ft}| > |S.\SDATAS[F.\AMODULE.\MIDATAS[y]].\DIDATA|)
+      \land & s + n\cdot|\X{ft}|/8 > |S.\SDATAS[F.\AMODULE.\MIDATAS[y]].\DIDATA|)
      \end{array} \\
    \\[1ex]
    S; F; (\I32.\CONST~s)~(\I32.\CONST~n)~(\ARRAYNEWDATA~x~y) &\stepto& (t.\CONST~c)^n~(\ARRAYNEWFIXED~x~n)
@@ -823,7 +823,7 @@ Reference Instructions
      \begin{array}[t]{@{}r@{~}l@{}}
       (\iff & \expanddt(F.\AMODULE.\MITYPES[x]) = \TARRAY~\X{ft}^n \\
       \land & t = \unpacktype(\X{ft}) \\
-      \land & (\bytes_{\X{ft}}(c))^n = S.\SDATAS[F.\AMODULE.\MIDATAS[y]].\DIDATA[s \slice n\cdot|\X{ft}|] \\
+      \land & (\bytes_{\X{ft}}(c))^n = S.\SDATAS[F.\AMODULE.\MIDATAS[y]].\DIDATA[s \slice n\cdot|\X{ft}|/8] \\
      \end{array} \\
    \end{array}
 
@@ -1280,9 +1280,9 @@ Reference Instructions
 
 2. Let :math:`\deftype` be the :ref:`defined type <syntax-deftype>` :math:`F.\AMODULE.\MITYPES[x]`.
 
-3. Assert: due to :ref:`validation <valid-array.init_data>`, :math:`\deftype` is an :ref:`array type <syntax-arraytype>`.
+3. Assert: due to :ref:`validation <valid-array.init_data>`, the :ref:`expansion <aux-expand-deftype>` of :math:`\deftype` is an :ref:`array type <syntax-arraytype>`.
 
-4. Let :math:`\TARRAY~\X{ft}` be the :ref:`array type <syntax-arraytype>` :math:`\deftype`. (todo: unroll)
+4. Let :math:`\TARRAY~\X{ft}` be the :ref:`expanded <aux-expand-deftype>` :ref:`array type <syntax-arraytype>` :math:`\deftype`.
 
 5. Assert: due to :ref:`validation <valid-array.init_data>`, the :ref:`data address <syntax-dataaddr>` :math:`F.\AMODULE.\MIDATAS[y]` exists.
 
@@ -1318,7 +1318,7 @@ Reference Instructions
 
     a. Trap.
 
-20. Let :math:`z` be the :ref:`bit width <bitwidth-fieldtype>` of :ref:`field type <syntax-fieldtype>` :math:`\X{ft}`.
+20. Let :math:`z` be the :ref:`bit width <bitwidth-fieldtype>` of :ref:`field type <syntax-fieldtype>` :math:`\X{ft}` divided by eight.
 
 21. If the sum of :math:`s` and :math:`n` times :math:`z` is larger than the length of :math:`\datainst.\DIDATA`, then:
 
@@ -1360,7 +1360,7 @@ Reference Instructions
      \begin{array}[t]{@{}r@{~}l@{}}
      (\iff & d + n > |S.\SARRAYS[a].\AIFIELDS| \\
       \vee & (F.\AMODULE.\MITYPES[x] = \TARRAY~\X{ft} \land
-              s + n\cdot|\X{ft}| > |S.\SDATAS[F.\AMODULE.\MIDATAS[y]].\DIDATA|))
+              s + n\cdot|\X{ft}|/8 > |S.\SDATAS[F.\AMODULE.\MIDATAS[y]].\DIDATA|))
      \end{array}
    \\[1ex]
    S; F; (\REFARRAYADDR~a)~(\I32.\CONST~d)~(\I32.\CONST~s)~(\I32.\CONST~0)~(\ARRAYINITDATA~x~y)
@@ -1373,13 +1373,13 @@ Reference Instructions
      \\ \quad S; F;
      \begin{array}[t]{@{}l@{}}
      (\REFARRAYADDR~a)~(\I32.\CONST~d)~(t.\CONST~c)~(\ARRAYSET~x) \\
-     (\REFARRAYADDR~a)~(\I32.\CONST~d+1)~(\I32.\CONST~s+|\X{ft}|)~(\I32.\CONST~n)~(\ARRAYINITDATA~x~y) \\
+     (\REFARRAYADDR~a)~(\I32.\CONST~d+1)~(\I32.\CONST~s+|\X{ft}|/8)~(\I32.\CONST~n)~(\ARRAYINITDATA~x~y) \\
      \end{array}
      \\ \qquad
      \begin{array}[t]{@{}r@{~}l@{}}
      (\otherwise, \iff & F.\AMODULE.\MITYPES[x] = \TARRAY~\X{ft} \\
       \land & t = \unpacktype(\X{ft}) \\
-      \land & \bytes_{\X{ft}}(c) = S.\SDATAS[F.\AMODULE.\MIDATAS[y]].\DIDATA[s \slice |\X{ft}|]
+      \land & \bytes_{\X{ft}}(c) = S.\SDATAS[F.\AMODULE.\MIDATAS[y]].\DIDATA[s \slice |\X{ft}|/8]
      \end{array}
    \\[1ex]
    S; F; (\REFNULL~t)~(\I32.\CONST~d)~(\I32.\CONST~s)~(\I32.\CONST~n)~(\ARRAYINITDATA~x~y) \quad\stepto\quad \TRAP
@@ -1395,9 +1395,9 @@ Reference Instructions
 
 2. Let :math:`\deftype` be the :ref:`defined type <syntax-deftype>` :math:`F.\AMODULE.\MITYPES[x]`.
 
-3. Assert: due to :ref:`validation <valid-array.init_elem>`, :math:`\deftype` is an :ref:`array type <syntax-arraytype>`.
+3. Assert: due to :ref:`validation <valid-array.init_elem>`, the :ref:`expansion <aux-expand-deftype>` of :math:`\deftype` is an :ref:`array type <syntax-arraytype>`.
 
-4. Let :math:`\TARRAY~\X{ft}` be the :ref:`array type <syntax-arraytype>` :math:`\deftype`. (todo: unroll)
+4. Let :math:`\TARRAY~\X{ft}` be the :ref:`expanded <aux-expand-deftype>` :ref:`array type <syntax-arraytype>` :math:`\deftype`.
 
 5. Assert: due to :ref:`validation <valid-array.init_elem>`, the :ref:`element address <syntax-elemaddr>` :math:`F.\AMODULE.\MIELEMS[y]` exists.
 
