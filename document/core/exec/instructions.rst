@@ -802,9 +802,11 @@ Reference Instructions
 
 17. For each consecutive subsequence :math:`{b'}^n` of :math:`b^\ast`:
 
-    a. Let :math:`c_i` be the constant for which :math:`\bytes_{\X{ft}}(k_i)` is :math:`{b'}^n`.
+    a. Assert: due to :ref:`validation <valid-array.new_data>`, :math:`\bytes_{\X{ft}}` is defined.
 
-    b. Push the value :math:`t.\CONST~c_i` to the stack.
+    b. Let :math:`c_i` be the constant for which :math:`\bytes_{\X{ft}}(c_i)` is :math:`{b'}^n`.
+
+    c. Push the value :math:`t.\CONST~c_i` to the stack.
 
 18. Execute the instruction :math:`(\ARRAYNEWFIXED~x~n)`.
 
@@ -1318,39 +1320,43 @@ Reference Instructions
 
     a. Trap.
 
-20. Let :math:`z` be the :ref:`bit width <bitwidth-fieldtype>` of :ref:`field type <syntax-fieldtype>` :math:`\X{ft}` divided by eight.
+20. Assert: due to :ref:`validation <valid-array.init_data>`, the :ref:`field type <syntax-fieldtype>` :math:`\X{ft}` has a defined :ref:`bit width <bitwidth-fieldtype>`.
 
-21. If the sum of :math:`s` and :math:`n` times :math:`z` is larger than the length of :math:`\datainst.\DIDATA`, then:
+21. Let :math:`z` be the :ref:`bit width <bitwidth-fieldtype>` of :ref:`field type <syntax-fieldtype>` :math:`\X{ft}` divided by eight.
+
+22. If the sum of :math:`s` and :math:`n` times :math:`z` is larger than the length of :math:`\datainst.\DIDATA`, then:
 
     a. Trap.
 
-22. If :math:`n = 0`, then:
+23. If :math:`n = 0`, then:
 
     a. Return.
 
-23. Let :math:`b^\ast` be the :ref:`byte <syntax-byte>` sequence :math:`\datainst.\DIDATA[s \slice z]`.
+24. Let :math:`b^\ast` be the :ref:`byte <syntax-byte>` sequence :math:`\datainst.\DIDATA[s \slice z]`.
 
-24. Let :math:`t` be the :ref:`value type <syntax-valtype>` :math:`\unpacktype(\X{ft})`.
+25. Let :math:`t` be the :ref:`value type <syntax-valtype>` :math:`\unpacktype(\X{ft})`.
 
-25. Let :math:`c` be the constant for which :math:`\bytes_{\X{ft}}(k_i)` is :math:`b^\ast`.
+26. Assert: due to :ref:`validation <valid-array.new_data>`, :math:`\bytes_{\X{ft}}` is defined.
 
-26. Push the value :math:`\REFARRAYADDR~a` to the stack.
+27. Let :math:`c` be the constant for which :math:`\bytes_{\X{ft}}(c)` is :math:`b^\ast`.
 
-27. Push the value :math:`\I32.\CONST~d` to the stack.
+28. Push the value :math:`\REFARRAYADDR~a` to the stack.
 
-28. Push the value :math:`t.\CONST~c` to the stack.
+29. Push the value :math:`\I32.\CONST~d` to the stack.
 
-29. Execute the instruction :math:`\ARRAYSET~x`.
+30. Push the value :math:`t.\CONST~c` to the stack.
 
-30. Push the value :math:`\REFARRAYADDR~a` to the stack.
+31. Execute the instruction :math:`\ARRAYSET~x`.
 
-31. Push the value :math:`\I32.\CONST~(d+1)` to the stack.
+32. Push the value :math:`\REFARRAYADDR~a` to the stack.
 
-32. Push the value :math:`\I32.\CONST~(s+z)` to the stack.
+33. Push the value :math:`\I32.\CONST~(d+1)` to the stack.
 
-33. Push the value :math:`\I32.\CONST~(n-1)` to the stack.
+34. Push the value :math:`\I32.\CONST~(s+z)` to the stack.
 
-34. Execute the instruction :math:`\ARRAYINITDATA~x~y`.
+35. Push the value :math:`\I32.\CONST~(n-1)` to the stack.
+
+36. Execute the instruction :math:`\ARRAYINITDATA~x~y`.
 
 .. math::
    ~\\[-1ex]
