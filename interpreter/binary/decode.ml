@@ -610,13 +610,6 @@ let rec instr s =
     | 0x12l -> let x = at var s in let y = at var s in array_init_data x y
     | 0x13l -> let x = at var s in let y = at var s in array_init_elem x y
 
-    | 0x1cl -> i31_new
-    | 0x1dl -> i31_get_s
-    | 0x1el -> i31_get_u
-
-    | 0x1al -> extern_internalize
-    | 0x1bl -> extern_externalize
-
     | 0x14l -> ref_test (NoNull, heap_type s)
     | 0x15l -> ref_test (Null, heap_type s)
     | 0x16l -> ref_cast (NoNull, heap_type s)
@@ -628,6 +621,13 @@ let rec instr s =
       let rt1 = ((if bit 0 flags then Null else NoNull), heap_type s) in
       let rt2 = ((if bit 1 flags then Null else NoNull), heap_type s) in
       (if opcode = 0x18l then br_on_cast else br_on_cast_fail) x rt1 rt2
+
+    | 0x1al -> extern_internalize
+    | 0x1bl -> extern_externalize
+
+    | 0x1cl -> i31_new
+    | 0x1dl -> i31_get_s
+    | 0x1el -> i31_get_u
 
     | n -> illegal2 s pos b n
     )
