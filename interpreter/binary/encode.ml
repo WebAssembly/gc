@@ -249,10 +249,10 @@ struct
     | BrOnNonNull x -> op 0xd6; var x
     | BrOnCast (x, (nul1, t1), (nul2, t2)) ->
       let flags = bit 0 (nul1 = Null) + bit 1 (nul2 = Null) in
-      op 0xfb; op 0x1d; byte flags; var x; heap_type t1; heap_type t2
+      op 0xfb; op 0x18; byte flags; var x; heap_type t1; heap_type t2
     | BrOnCastFail (x, (nul1, t1), (nul2, t2)) ->
       let flags = bit 0 (nul1 = Null) + bit 1 (nul2 = Null) in
-      op 0xfb; op 0x1e; byte flags; var x; heap_type t1; heap_type t2
+      op 0xfb; op 0x19; byte flags; var x; heap_type t1; heap_type t2
     | Return -> op 0x0f
     | Call x -> op 0x10; var x
     | CallRef x -> op 0x14; var x
@@ -378,16 +378,16 @@ struct
 
     | RefIsNull -> op 0xd1
     | RefAsNonNull -> op 0xd3
-    | RefTest (NoNull, t) -> op 0xfb; op 0x19; heap_type t
-    | RefTest (Null, t) -> op 0xfb; op 0x1a; heap_type t
-    | RefCast (NoNull, t) -> op 0xfb; op 0x1b; heap_type t
-    | RefCast (Null, t) -> op 0xfb; op 0x1c; heap_type t
+    | RefTest (NoNull, t) -> op 0xfb; op 0x14; heap_type t
+    | RefTest (Null, t) -> op 0xfb; op 0x15; heap_type t
+    | RefCast (NoNull, t) -> op 0xfb; op 0x16; heap_type t
+    | RefCast (Null, t) -> op 0xfb; op 0x17; heap_type t
 
     | RefEq -> op 0xd5
 
-    | I31New -> op 0xfb; op 0x14
-    | I31Get SX -> op 0xfb; op 0x15
-    | I31Get ZX -> op 0xfb; op 0x16
+    | I31New -> op 0xfb; op 0x1c
+    | I31Get SX -> op 0xfb; op 0x1d
+    | I31Get ZX -> op 0xfb; op 0x1e
 
     | StructNew (x, Explicit) -> op 0xfb; op 0x00; var x
     | StructNew (x, Implicit) -> op 0xfb; op 0x01; var x
@@ -411,8 +411,8 @@ struct
     | ArrayInitData (x, y) -> op 0xfb; op 0x12; var x; var y
     | ArrayInitElem (x, y) -> op 0xfb; op 0x13; var x; var y
 
-    | ExternConvert Internalize -> op 0xfb; op 0x17
-    | ExternConvert Externalize -> op 0xfb; op 0x18
+    | ExternConvert Internalize -> op 0xfb; op 0x1a
+    | ExternConvert Externalize -> op 0xfb; op 0x1b
 
     | Const {it = I32 c; _} -> op 0x41; s32 c
     | Const {it = I64 c; _} -> op 0x42; s64 c

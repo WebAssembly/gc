@@ -806,37 +806,37 @@ The opcode for heap types is encoded as an `s33`.
 | 0xd4   | `ref.as_non_null` |          | from funcref proposal |
 | 0xd5   | `br_on_null $l` | `$l : u32` | from funcref proposal |
 | 0xd6   | `br_on_non_null $l` | `$l : u32` | from funcref proposal |
-| 0xfb00 | `struct.new $t` | `$t : typeidx` | struct allocators (0x00+) |
+| 0xfb00 | `struct.new $t` | `$t : typeidx` |
 | 0xfb01 | `struct.new_default $t` | `$t : typeidx` |
-| 0xfb02 | `struct.get $t i` | `$t : typeidx`, `i : fieldidx` | struct accessors (0x08+) |
+| 0xfb02 | `struct.get $t i` | `$t : typeidx`, `i : fieldidx` |
 | 0xfb03 | `struct.get_s $t i` | `$t : typeidx`, `i : fieldidx` |
 | 0xfb04 | `struct.get_u $t i` | `$t : typeidx`, `i : fieldidx` |
 | 0xfb05 | `struct.set $t i` | `$t : typeidx`, `i : fieldidx` |
-| 0xfb06 | `array.new $t` | `$t : typeidx` | array allocators (0x10+) |
+| 0xfb06 | `array.new $t` | `$t : typeidx` |
 | 0xfb07 | `array.new_default $t` | `$t : typeidx` |
 | 0xfb08 | `array.new_fixed $t N` | `$t : typeidx`, `N : u32` |
 | 0xfb09 | `array.new_data $t $d` | `$t : typeidx`, `$d : dataidx` |
 | 0xfb0a | `array.new_elem $t $e` | `$t : typeidx`, `$e : elemidx` |
-| 0xfb0b | `array.get $t` | `$t : typeidx` | array accessors (0x20+) |
+| 0xfb0b | `array.get $t` | `$t : typeidx` |
 | 0xfb0c | `array.get_s $t` | `$t : typeidx` |
 | 0xfb0d | `array.get_u $t` | `$t : typeidx` |
 | 0xfb0e | `array.set $t` | `$t : typeidx` |
-| 0xfb0f | `array.len` | |
-| 0xfb10 | `array.fill $t` | |
-| 0xfb11 | `array.copy $t1 $t2` | |
-| 0xfb12 | `array.init_data $t $d` | |
-| 0xfb13 | `array.init_elem $t $e` | |
-| 0xfb14 | `i31.new` | i31 conversions (0x30+) |
-| 0xfb15 | `i31.get_s` |  |
-| 0xfb16 | `i31.get_u` |  |
-| 0xfb17 | `extern.internalize` | | extern conversions (0x38+) |
-| 0xfb18 | `extern.externalize` | |
-| 0xfb19 | `ref.test (ref ht)` | `ht : heaptype` | cast instructions (0x40+) |
-| 0xfb1a | `ref.test (ref null ht)` | `ht : heaptype` |
-| 0xfb1b | `ref.cast (ref ht)` | `ht : heaptype` |
-| 0xfb1c | `ref.cast (ref null ht)` | `ht : heaptype` |
-| 0xfb1d | `br_on_cast $l (ref null1? ht1) (ref null2? ht2)` | `flags : u8`, $l : labelidx`, `ht1 : heaptype`, `ht2 : heaptype` |
-| 0xfb1e | `br_on_cast_fail $l (ref null1? ht1) (ref null2? ht2)` | `flags : u8`, $l : labelidx`, `ht1 : heaptype`, `ht2 : heaptype` |
+| 0xfb0f | `array.len` |
+| 0xfb10 | `array.fill $t` |
+| 0xfb11 | `array.copy $t1 $t2` |
+| 0xfb12 | `array.init_data $t $d` |
+| 0xfb13 | `array.init_elem $t $e` |
+| 0xfb14 | `ref.test (ref ht)` | `ht : heaptype` |
+| 0xfb15 | `ref.test (ref null ht)` | `ht : heaptype` |
+| 0xfb16 | `ref.cast (ref ht)` | `ht : heaptype` |
+| 0xfb17 | `ref.cast (ref null ht)` | `ht : heaptype` |
+| 0xfb18 | `br_on_cast $l (ref null1? ht1) (ref null2? ht2)` | `flags : u8`, $l : labelidx`, `ht1 : heaptype`, `ht2 : heaptype` |
+| 0xfb19 | `br_on_cast_fail $l (ref null1? ht1) (ref null2? ht2)` | `flags : u8`, $l : labelidx`, `ht1 : heaptype`, `ht2 : heaptype` |
+| 0xfb1a | `extern.internalize` |
+| 0xfb1b | `extern.externalize` |
+| 0xfb1c | `i31.new` |
+| 0xfb1d | `i31.get_s` |
+| 0xfb1e | `i31.get_u` |
 
 Flag byte encoding for `br_on_cast(_fail)?`:
 

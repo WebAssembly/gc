@@ -610,24 +610,24 @@ let rec instr s =
     | 0x12l -> let x = at var s in let y = at var s in array_init_data x y
     | 0x13l -> let x = at var s in let y = at var s in array_init_elem x y
 
-    | 0x14l -> i31_new
-    | 0x15l -> i31_get_s
-    | 0x16l -> i31_get_u
+    | 0x1cl -> i31_new
+    | 0x1dl -> i31_get_s
+    | 0x1el -> i31_get_u
 
-    | 0x17l -> extern_internalize
-    | 0x18l -> extern_externalize
+    | 0x1al -> extern_internalize
+    | 0x1bl -> extern_externalize
 
-    | 0x19l -> ref_test (NoNull, heap_type s)
-    | 0x1al -> ref_test (Null, heap_type s)
-    | 0x1bl -> ref_cast (NoNull, heap_type s)
-    | 0x1cl -> ref_cast (Null, heap_type s)
-    | 0x1dl | 0x1el as opcode ->
+    | 0x14l -> ref_test (NoNull, heap_type s)
+    | 0x15l -> ref_test (Null, heap_type s)
+    | 0x16l -> ref_cast (NoNull, heap_type s)
+    | 0x17l -> ref_cast (Null, heap_type s)
+    | 0x18l | 0x19l as opcode ->
       let flags = byte s in
       require (flags land 0xfc = 0) s (pos + 2) "malformed br_on_cast flags";
       let x = at var s in
       let rt1 = ((if bit 0 flags then Null else NoNull), heap_type s) in
       let rt2 = ((if bit 1 flags then Null else NoNull), heap_type s) in
-      (if opcode = 0x1dl then br_on_cast else br_on_cast_fail) x rt1 rt2
+      (if opcode = 0x18l then br_on_cast else br_on_cast_fail) x rt1 rt2
 
     | n -> illegal2 s pos b n
     )
