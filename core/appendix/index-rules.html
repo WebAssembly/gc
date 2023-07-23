@@ -46,6 +46,7 @@
 <li class="toctree-l1"><a class="reference internal" href="index-types.html">Index of Types</a></li>
 <li class="toctree-l1"><a class="reference internal" href="index-instructions.html">Index of Instructions</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Index of Semantic Rules</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#well-formedness-of-types">Well-formedness of Types</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#typing-of-static-constructs">Typing of Static Constructs</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#typing-of-runtime-constructs">Typing of Runtime Constructs</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#defaultability">Defaultability</a></li>
@@ -87,8 +88,8 @@
             
   <section id="index-of-semantic-rules">
 <span id="index-rules"></span><h1>Index of Semantic Rules<a class="headerlink" href="#index-of-semantic-rules" title="Permalink to this heading">¶</a></h1>
-<section id="typing-of-static-constructs">
-<span id="index-valid"></span><span id="index-0"></span><h2>Typing of Static Constructs<a class="headerlink" href="#typing-of-static-constructs" title="Permalink to this heading">¶</a></h2>
+<section id="well-formedness-of-types">
+<span id="index-valid"></span><span id="index-0"></span><h2>Well-formedness of Types<a class="headerlink" href="#well-formedness-of-types" title="Permalink to this heading">¶</a></h2>
 <table class="docutils align-default">
 <thead>
 <tr class="row-odd"><th class="head"><p>Construct</p></th>
@@ -96,65 +97,110 @@
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p><a class="reference internal" href="../valid/types.html#valid-limits"><span class="std std-ref">Limits</span></a></p></td>
-<td><p><span class="math notranslate nohighlight">\(C \href{../valid/types.html#valid-limits}{\vdash} \href{../syntax/types.html#syntax-limits}{\mathit{limits}} : k\)</span></p></td>
-</tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="../valid/types.html#valid-numtype"><span class="std std-ref">Numeric type</span></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="../valid/types.html#valid-numtype"><span class="std std-ref">Numeric type</span></a></p></td>
 <td><p><span class="math notranslate nohighlight">\(C \href{../valid/types.html#valid-numtype}{\vdash} \href{../syntax/types.html#syntax-numtype}{\mathit{numtype}} \mathrel{\mbox{ok}}\)</span></p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="../valid/types.html#valid-vectype"><span class="std std-ref">Vector type</span></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="../valid/types.html#valid-vectype"><span class="std std-ref">Vector type</span></a></p></td>
 <td><p><span class="math notranslate nohighlight">\(C \href{../valid/types.html#valid-vectype}{\vdash} \href{../syntax/types.html#syntax-vectype}{\mathit{vectype}} \mathrel{\mbox{ok}}\)</span></p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="../valid/types.html#valid-heaptype"><span class="std std-ref">Heap type</span></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="../valid/types.html#valid-heaptype"><span class="std std-ref">Heap type</span></a></p></td>
 <td><p><span class="math notranslate nohighlight">\(C \href{../valid/types.html#valid-heaptype}{\vdash} \href{../syntax/types.html#syntax-heaptype}{\mathit{heaptype}} \mathrel{\mbox{ok}}\)</span></p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="../valid/types.html#valid-reftype"><span class="std std-ref">Reference type</span></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="../valid/types.html#valid-reftype"><span class="std std-ref">Reference type</span></a></p></td>
 <td><p><span class="math notranslate nohighlight">\(C \href{../valid/types.html#valid-reftype}{\vdash} \href{../syntax/types.html#syntax-reftype}{\mathit{reftype}} \mathrel{\mbox{ok}}\)</span></p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="../valid/types.html#valid-valtype"><span class="std std-ref">Value type</span></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="../valid/types.html#valid-valtype"><span class="std std-ref">Value type</span></a></p></td>
 <td><p><span class="math notranslate nohighlight">\(C \href{../valid/types.html#valid-valtype}{\vdash} \href{../syntax/types.html#syntax-valtype}{\mathit{valtype}} \mathrel{\mbox{ok}}\)</span></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="../valid/types.html#valid-packedtype"><span class="std std-ref">Packed type</span></a></p></td>
+<td><p><span class="math notranslate nohighlight">\(C \href{../valid/types.html#valid-packedtype}{\vdash} \href{../syntax/types.html#syntax-packedtype}{\mathit{packedtype}} \mathrel{\mbox{ok}}\)</span></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="../valid/types.html#valid-storagetype"><span class="std std-ref">Storage type</span></a></p></td>
+<td><p><span class="math notranslate nohighlight">\(C \href{../valid/types.html#valid-storagetype}{\vdash} \href{../syntax/types.html#syntax-storagetype}{\mathit{storagetype}} \mathrel{\mbox{ok}}\)</span></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="../valid/types.html#valid-fieldtype"><span class="std std-ref">Field type</span></a></p></td>
+<td><p><span class="math notranslate nohighlight">\(C \href{../valid/types.html#valid-fieldtype}{\vdash} \href{../syntax/types.html#syntax-fieldtype}{\mathit{fieldtype}} \mathrel{\mbox{ok}}\)</span></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="../valid/types.html#valid-resulttype"><span class="std std-ref">Result type</span></a></p></td>
+<td><p><span class="math notranslate nohighlight">\(C \href{../valid/types.html#valid-resulttype}{\vdash} \href{../syntax/types.html#syntax-resulttype}{\mathit{resulttype}} \mathrel{\mbox{ok}}\)</span></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="../valid/types.html#valid-instrtype"><span class="std std-ref">Instruction type</span></a></p></td>
+<td><p><span class="math notranslate nohighlight">\(C \href{../valid/types.html#valid-instrtype}{\vdash} \href{../valid/conventions.html#syntax-instrtype}{\mathit{instrtype}} \mathrel{\mbox{ok}}\)</span></p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="../valid/types.html#valid-functype"><span class="std std-ref">Function type</span></a></p></td>
 <td><p><span class="math notranslate nohighlight">\(C \href{../valid/types.html#valid-functype}{\vdash} \href{../syntax/types.html#syntax-functype}{\mathit{functype}} \mathrel{\mbox{ok}}\)</span></p></td>
 </tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="../valid/types.html#valid-structtype"><span class="std std-ref">Structure type</span></a></p></td>
+<td><p><span class="math notranslate nohighlight">\(C \href{../valid/types.html#valid-structtype}{\vdash} \href{../syntax/types.html#syntax-structtype}{\mathit{structtype}} \mathrel{\mbox{ok}}\)</span></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="../valid/types.html#valid-arraytype"><span class="std std-ref">Array type</span></a></p></td>
+<td><p><span class="math notranslate nohighlight">\(C \href{../valid/types.html#valid-arraytype}{\vdash} \href{../syntax/types.html#syntax-arraytype}{\mathit{arraytype}} \mathrel{\mbox{ok}}\)</span></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="../valid/types.html#valid-comptype"><span class="std std-ref">Compound type</span></a></p></td>
+<td><p><span class="math notranslate nohighlight">\(C \href{../valid/types.html#valid-comptype}{\vdash} \href{../syntax/types.html#syntax-comptype}{\mathit{comptype}} \mathrel{\mbox{ok}}\)</span></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="../valid/types.html#valid-subtype"><span class="std std-ref">Sub type</span></a></p></td>
+<td><p><span class="math notranslate nohighlight">\(C \href{../valid/types.html#valid-subtype}{\vdash} \href{../syntax/types.html#syntax-subtype}{\mathit{subtype}} \mathrel{\mbox{ok}}\)</span></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="../valid/types.html#valid-rectype"><span class="std std-ref">Recursive type</span></a></p></td>
+<td><p><span class="math notranslate nohighlight">\(C \href{../valid/types.html#valid-rectype}{\vdash} \href{../syntax/types.html#syntax-rectype}{\mathit{rectype}} \mathrel{\mbox{ok}}\)</span></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="../valid/types.html#valid-deftype"><span class="std std-ref">Defined type</span></a></p></td>
+<td><p><span class="math notranslate nohighlight">\(C \href{../valid/types.html#valid-deftype}{\vdash} \href{../valid/conventions.html#syntax-deftype}{\mathit{deftype}} \mathrel{\mbox{ok}}\)</span></p></td>
+</tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="../valid/types.html#valid-blocktype"><span class="std std-ref">Block type</span></a></p></td>
 <td><p><span class="math notranslate nohighlight">\(C \href{../valid/types.html#valid-blocktype}{\vdash} \href{../syntax/instructions.html#syntax-blocktype}{\mathit{blocktype}} : \href{../valid/conventions.html#syntax-instrtype}{\mathit{instrtype}}\)</span></p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="../valid/types.html#valid-instrtype"><span class="std std-ref">Instruction type</span></a></p></td>
-<td><p><span class="math notranslate nohighlight">\(C \href{../valid/types.html#valid-instrtype}{\vdash} \href{../valid/conventions.html#syntax-instrtype}{\mathit{instrtype}} \mathrel{\mbox{ok}}\)</span></p></td>
-</tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="../valid/types.html#valid-tabletype"><span class="std std-ref">Table type</span></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="../valid/types.html#valid-tabletype"><span class="std std-ref">Table type</span></a></p></td>
 <td><p><span class="math notranslate nohighlight">\(C \href{../valid/types.html#valid-tabletype}{\vdash} \href{../syntax/types.html#syntax-tabletype}{\mathit{tabletype}} \mathrel{\mbox{ok}}\)</span></p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="../valid/types.html#valid-memtype"><span class="std std-ref">Memory type</span></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="../valid/types.html#valid-memtype"><span class="std std-ref">Memory type</span></a></p></td>
 <td><p><span class="math notranslate nohighlight">\(C \href{../valid/types.html#valid-memtype}{\vdash} \href{../syntax/types.html#syntax-memtype}{\mathit{memtype}} \mathrel{\mbox{ok}}\)</span></p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="../valid/types.html#valid-globaltype"><span class="std std-ref">Global type</span></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="../valid/types.html#valid-globaltype"><span class="std std-ref">Global type</span></a></p></td>
 <td><p><span class="math notranslate nohighlight">\(C \href{../valid/types.html#valid-globaltype}{\vdash} \href{../syntax/types.html#syntax-globaltype}{\mathit{globaltype}} \mathrel{\mbox{ok}}\)</span></p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="../valid/types.html#valid-externtype"><span class="std std-ref">External type</span></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="../valid/types.html#valid-externtype"><span class="std std-ref">External type</span></a></p></td>
 <td><p><span class="math notranslate nohighlight">\(C \href{../valid/types.html#valid-externtype}{\vdash} \href{../syntax/types.html#syntax-externtype}{\mathit{externtype}} \mathrel{\mbox{ok}}\)</span></p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="../valid/instructions.html#valid-instr"><span class="std std-ref">Instruction</span></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="../valid/types.html#valid-type"><span class="std std-ref">Type definitions</span></a></p></td>
+<td><p><span class="math notranslate nohighlight">\(C \href{../valid/modules.html#valid-types}{\vdash} \href{../syntax/types.html#syntax-rectype}{\mathit{type}}^\ast \mathrel{\mbox{ok}}\)</span></p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="typing-of-static-constructs">
+<h2>Typing of Static Constructs<a class="headerlink" href="#typing-of-static-constructs" title="Permalink to this heading">¶</a></h2>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Construct</p></th>
+<th class="head"><p>Judgement</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><a class="reference internal" href="../valid/instructions.html#valid-instr"><span class="std std-ref">Instruction</span></a></p></td>
 <td><p><span class="math notranslate nohighlight">\(S;C \href{../valid/instructions.html#valid-instr}{\vdash} \href{../syntax/instructions.html#syntax-instr}{\mathit{instr}} : \href{../syntax/types.html#syntax-functype}{\mathit{functype}}\)</span></p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="../valid/instructions.html#valid-instr-seq"><span class="std std-ref">Instruction sequence</span></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="../valid/instructions.html#valid-instr-seq"><span class="std std-ref">Instruction sequence</span></a></p></td>
 <td><p><span class="math notranslate nohighlight">\(S;C \href{../valid/instructions.html#valid-instr-seq}{\vdash} \href{../syntax/instructions.html#syntax-instr}{\mathit{instr}}^\ast : \href{../syntax/types.html#syntax-functype}{\mathit{functype}}\)</span></p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="../valid/instructions.html#valid-expr"><span class="std std-ref">Expression</span></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="../valid/instructions.html#valid-expr"><span class="std std-ref">Expression</span></a></p></td>
 <td><p><span class="math notranslate nohighlight">\(C \href{../valid/instructions.html#valid-expr}{\vdash} \href{../syntax/instructions.html#syntax-expr}{\mathit{expr}} : \href{../syntax/types.html#syntax-resulttype}{\mathit{resulttype}}\)</span></p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="../valid/modules.html#valid-func"><span class="std std-ref">Function</span></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="../valid/modules.html#valid-func"><span class="std std-ref">Function</span></a></p></td>
 <td><p><span class="math notranslate nohighlight">\(C \href{../valid/modules.html#valid-func}{\vdash} \href{../syntax/modules.html#syntax-func}{\mathit{func}} : \href{../syntax/types.html#syntax-functype}{\mathit{functype}}\)</span></p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="../valid/modules.html#valid-local"><span class="std std-ref">Local</span></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="../valid/modules.html#valid-local"><span class="std std-ref">Local</span></a></p></td>
 <td><p><span class="math notranslate nohighlight">\(C \href{../valid/modules.html#valid-local}{\vdash} \href{../syntax/modules.html#syntax-local}{\mathit{local}} : \href{../valid/conventions.html#syntax-localtype}{\mathit{localtype}}\)</span></p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="../valid/modules.html#valid-table"><span class="std std-ref">Table</span></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="../valid/modules.html#valid-table"><span class="std std-ref">Table</span></a></p></td>
 <td><p><span class="math notranslate nohighlight">\(C \href{../valid/modules.html#valid-table}{\vdash} \href{../syntax/modules.html#syntax-table}{\mathit{table}} : \href{../syntax/types.html#syntax-tabletype}{\mathit{tabletype}}\)</span></p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="../valid/modules.html#valid-mem"><span class="std std-ref">Memory</span></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="../valid/modules.html#valid-mem"><span class="std std-ref">Memory</span></a></p></td>
 <td><p><span class="math notranslate nohighlight">\(C \href{../valid/modules.html#valid-mem}{\vdash} \href{../syntax/modules.html#syntax-mem}{\mathit{mem}} : \href{../syntax/types.html#syntax-memtype}{\mathit{memtype}}\)</span></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="../valid/types.html#valid-limits"><span class="std std-ref">Limits</span></a></p></td>
+<td><p><span class="math notranslate nohighlight">\(C \href{../valid/types.html#valid-limits}{\vdash} \href{../syntax/types.html#syntax-limits}{\mathit{limits}} : k\)</span></p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="../valid/modules.html#valid-global"><span class="std std-ref">Global</span></a></p></td>
 <td><p><span class="math notranslate nohighlight">\(C \href{../valid/modules.html#valid-global}{\vdash} \href{../syntax/modules.html#syntax-global}{\mathit{global}} : \href{../syntax/types.html#syntax-globaltype}{\mathit{globaltype}}\)</span></p></td>
@@ -294,14 +340,26 @@
 <tr class="row-even"><td><p><a class="reference internal" href="../valid/matching.html#match-numtype"><span class="std std-ref">Number type</span></a></p></td>
 <td><p><span class="math notranslate nohighlight">\(C \href{../valid/matching.html#match-numtype}{\vdash} \href{../syntax/types.html#syntax-numtype}{\mathit{numtype}}_1 \href{../valid/matching.html#match-numtype}{\leq} \href{../syntax/types.html#syntax-numtype}{\mathit{numtype}}_2\)</span></p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="../valid/matching.html#match-heaptype"><span class="std std-ref">Heap type</span></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="../valid/matching.html#match-vectype"><span class="std std-ref">Vector type</span></a></p></td>
+<td><p><span class="math notranslate nohighlight">\(C \href{../valid/matching.html#match-vectype}{\vdash} \href{../syntax/types.html#syntax-vectype}{\mathit{vectype}}_1 \href{../valid/matching.html#match-vectype}{\leq} \href{../syntax/types.html#syntax-vectype}{\mathit{vectype}}_2\)</span></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="../valid/matching.html#match-heaptype"><span class="std std-ref">Heap type</span></a></p></td>
 <td><p><span class="math notranslate nohighlight">\(C \href{../valid/matching.html#match-heaptype}{\vdash} \href{../syntax/types.html#syntax-heaptype}{\mathit{heaptype}}_1 \href{../valid/matching.html#match-heaptype}{\leq} \href{../syntax/types.html#syntax-heaptype}{\mathit{heaptype}}_2\)</span></p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="../valid/matching.html#match-reftype"><span class="std std-ref">Reference type</span></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="../valid/matching.html#match-reftype"><span class="std std-ref">Reference type</span></a></p></td>
 <td><p><span class="math notranslate nohighlight">\(C \href{../valid/matching.html#match-reftype}{\vdash} \href{../syntax/types.html#syntax-reftype}{\mathit{reftype}}_1 \href{../valid/matching.html#match-reftype}{\leq} \href{../syntax/types.html#syntax-reftype}{\mathit{reftype}}_2\)</span></p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="../valid/matching.html#match-valtype"><span class="std std-ref">Value type</span></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="../valid/matching.html#match-valtype"><span class="std std-ref">Value type</span></a></p></td>
 <td><p><span class="math notranslate nohighlight">\(C \href{../valid/matching.html#match-valtype}{\vdash} \href{../syntax/types.html#syntax-valtype}{\mathit{valtype}}_1 \href{../valid/matching.html#match-valtype}{\leq} \href{../syntax/types.html#syntax-valtype}{\mathit{valtype}}_2\)</span></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="../valid/matching.html#match-packedtype"><span class="std std-ref">Packed type</span></a></p></td>
+<td><p><span class="math notranslate nohighlight">\(C \href{../valid/matching.html#match-packedtype}{\vdash} \href{../syntax/types.html#syntax-packedtype}{\mathit{packedtype}}_1 \href{../valid/matching.html#match-packedtype}{\leq} \href{../syntax/types.html#syntax-packedtype}{\mathit{packedtype}}_2\)</span></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="../valid/matching.html#match-storagetype"><span class="std std-ref">Storage type</span></a></p></td>
+<td><p><span class="math notranslate nohighlight">\(C \href{../valid/matching.html#match-storagetype}{\vdash} \href{../syntax/types.html#syntax-storagetype}{\mathit{storagetype}}_1 \href{../valid/matching.html#match-storagetype}{\leq} \href{../syntax/types.html#syntax-storagetype}{\mathit{storagetype}}_2\)</span></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="../valid/matching.html#match-fieldtype"><span class="std std-ref">Field type</span></a></p></td>
+<td><p><span class="math notranslate nohighlight">\(C \href{../valid/matching.html#match-fieldtype}{\vdash} \href{../syntax/types.html#syntax-fieldtype}{\mathit{fieldtype}}_1 \href{../valid/matching.html#match-fieldtype}{\leq} \href{../syntax/types.html#syntax-fieldtype}{\mathit{fieldtype}}_2\)</span></p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="../valid/matching.html#match-resulttype"><span class="std std-ref">Result type</span></a></p></td>
 <td><p><span class="math notranslate nohighlight">\(C \href{../valid/matching.html#match-resulttype}{\vdash} \href{../syntax/types.html#syntax-resulttype}{\mathit{resulttype}}_1 \href{../valid/matching.html#match-resulttype}{\leq} \href{../syntax/types.html#syntax-resulttype}{\mathit{resulttype}}_2\)</span></p></td>
@@ -311,6 +369,18 @@
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="../valid/matching.html#match-functype"><span class="std std-ref">Function type</span></a></p></td>
 <td><p><span class="math notranslate nohighlight">\(C \href{../valid/matching.html#match-functype}{\vdash} \href{../syntax/types.html#syntax-functype}{\mathit{functype}}_1 \href{../valid/matching.html#match-functype}{\leq} \href{../syntax/types.html#syntax-functype}{\mathit{functype}}_2\)</span></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="../valid/matching.html#match-structtype"><span class="std std-ref">Structure type</span></a></p></td>
+<td><p><span class="math notranslate nohighlight">\(C \href{../valid/matching.html#match-structtype}{\vdash} \href{../syntax/types.html#syntax-structtype}{\mathit{structtype}}_1 \href{../valid/matching.html#match-structtype}{\leq} \href{../syntax/types.html#syntax-structtype}{\mathit{structtype}}_2\)</span></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="../valid/matching.html#match-arraytype"><span class="std std-ref">Array type</span></a></p></td>
+<td><p><span class="math notranslate nohighlight">\(C \href{../valid/matching.html#match-arraytype}{\vdash} \href{../syntax/types.html#syntax-arraytype}{\mathit{arraytype}}_1 \href{../valid/matching.html#match-arraytype}{\leq} \href{../syntax/types.html#syntax-arraytype}{\mathit{arraytype}}_2\)</span></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="../valid/matching.html#match-comptype"><span class="std std-ref">Compound type</span></a></p></td>
+<td><p><span class="math notranslate nohighlight">\(C \href{../valid/matching.html#match-comptype}{\vdash} \href{../syntax/types.html#syntax-comptype}{\mathit{comptype}}_1 \href{../valid/matching.html#match-comptype}{\leq} \href{../syntax/types.html#syntax-comptype}{\mathit{comptype}}_2\)</span></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="../valid/matching.html#match-deftype"><span class="std std-ref">Defined type</span></a></p></td>
+<td><p><span class="math notranslate nohighlight">\(C \href{../valid/matching.html#match-deftype}{\vdash} \href{../valid/conventions.html#syntax-deftype}{\mathit{deftype}}_1 \href{../valid/matching.html#match-deftype}{\leq} \href{../valid/conventions.html#syntax-deftype}{\mathit{deftype}}_2\)</span></p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="../valid/matching.html#match-tabletype"><span class="std std-ref">Table type</span></a></p></td>
 <td><p><span class="math notranslate nohighlight">\(C \href{../valid/matching.html#match-tabletype}{\vdash} \href{../syntax/types.html#syntax-tabletype}{\mathit{tabletype}}_1 \href{../valid/matching.html#match-tabletype}{\leq} \href{../syntax/types.html#syntax-tabletype}{\mathit{tabletype}}_2\)</span></p></td>
