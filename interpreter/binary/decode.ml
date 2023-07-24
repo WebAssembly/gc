@@ -846,6 +846,7 @@ let rec instr s =
     | 0x97l -> i16x8_min_u
     | 0x98l -> i16x8_max_s
     | 0x99l -> i16x8_max_u
+    | 0x9al as n -> illegal s pos (I32.to_int_u n)
     | 0x9bl -> i16x8_avgr_u
     | 0x9cl -> i16x8_extmul_low_i8x16_s
     | 0x9dl -> i16x8_extmul_high_i8x16_s
@@ -853,8 +854,10 @@ let rec instr s =
     | 0x9fl -> i16x8_extmul_high_i8x16_u
     | 0xa0l -> i32x4_abs
     | 0xa1l -> i32x4_neg
+    | 0xa2l as n -> illegal s pos (I32.to_int_u n)
     | 0xa3l -> i32x4_all_true
     | 0xa4l -> i32x4_bitmask
+    | 0xa5l | 0xa6l as n -> illegal s pos (I32.to_int_u n)
     | 0xa7l -> i32x4_extend_low_i16x8_s
     | 0xa8l -> i32x4_extend_high_i16x8_s
     | 0xa9l -> i32x4_extend_low_i16x8_u
@@ -863,7 +866,9 @@ let rec instr s =
     | 0xacl -> i32x4_shr_s
     | 0xadl -> i32x4_shr_u
     | 0xael -> i32x4_add
+    | 0xafl | 0xb0l as n -> illegal s pos (I32.to_int_u n)
     | 0xb1l -> i32x4_sub
+    | 0xb2l | 0xb3l | 0xb4l as n -> illegal s pos (I32.to_int_u n)
     | 0xb5l -> i32x4_mul
     | 0xb6l -> i32x4_min_s
     | 0xb7l -> i32x4_min_u
@@ -876,8 +881,10 @@ let rec instr s =
     | 0xbfl -> i32x4_extmul_high_i16x8_u
     | 0xc0l -> i64x2_abs
     | 0xc1l -> i64x2_neg
+    | 0xc2l as n -> illegal s pos (I32.to_int_u n)
     | 0xc3l -> i64x2_all_true
     | 0xc4l -> i64x2_bitmask
+    | 0xc5l | 0xc6l as n -> illegal s pos (I32.to_int_u n)
     | 0xc7l -> i64x2_extend_low_i32x4_s
     | 0xc8l -> i64x2_extend_high_i32x4_s
     | 0xc9l -> i64x2_extend_low_i32x4_u
@@ -886,7 +893,9 @@ let rec instr s =
     | 0xccl -> i64x2_shr_s
     | 0xcdl -> i64x2_shr_u
     | 0xcel -> i64x2_add
+    | 0xcfl | 0xd0l as n -> illegal s pos (I32.to_int_u n)
     | 0xd1l -> i64x2_sub
+    | 0xd2l | 0xd3l | 0xd4l as n -> illegal s pos (I32.to_int_u n)
     | 0xd5l -> i64x2_mul
     | 0xd6l -> i64x2_eq
     | 0xd7l -> i64x2_ne
@@ -900,6 +909,7 @@ let rec instr s =
     | 0xdfl -> i64x2_extmul_high_i32x4_u
     | 0xe0l -> f32x4_abs
     | 0xe1l -> f32x4_neg
+    | 0xe2l as n -> illegal s pos (I32.to_int_u n)
     | 0xe3l -> f32x4_sqrt
     | 0xe4l -> f32x4_add
     | 0xe5l -> f32x4_sub
