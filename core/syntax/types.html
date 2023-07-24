@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
-    <title>Types &#8212; WebAssembly 2.0 + tail calls + function references + gc (Draft 2023-07-23)</title>
+    <title>Types &#8212; WebAssembly 2.0 + tail calls + function references + gc (Draft 2023-07-24)</title>
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
     <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
@@ -139,7 +139,7 @@ There are three disjoint hierarchies of heap types:</p>
 <li><p><em>aggregate types</em> classify dynamically allocated <em>managed</em> data, such as <em>structures</em>, <em>arrays</em>, or <em>unboxed scalars</em>,</p></li>
 <li><p><em>external types</em> classify <em>external</em> references possibly owned by the <a class="reference internal" href="../intro/overview.html#embedder"><span class="std std-ref">embedder</span></a>.</p></li>
 </ul>
-<p>The values from the latter two hierarchies are interconvertible by ways of the <span class="math notranslate nohighlight">\(\href{../syntax/instructions.html#syntax-instr-extern}{\mathsf{extern.internalize}}\)</span> and <span class="math notranslate nohighlight">\(\href{../syntax/instructions.html#syntax-instr-extern}{\mathsf{extern.internalize}}\)</span> instructions.
+<p>The values from the latter two hierarchies are interconvertible by ways of the <span class="math notranslate nohighlight">\(\href{../syntax/instructions.html#syntax-instr-extern}{\mathsf{extern.internalize}}\)</span> and <span class="math notranslate nohighlight">\(\href{../syntax/instructions.html#syntax-instr-extern}{\mathsf{extern.externalize}}\)</span> instructions.
 That is, both type hierarchies are inhabited by an isomorphic set of values, but may have different, incompatible representations in practice.</p>
 <div class="math notranslate nohighlight">
 \[\begin{split}\begin{array}{llrl}
