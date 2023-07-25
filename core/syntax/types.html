@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
-    <title>Types &#8212; WebAssembly 2.0 + tail calls + function references + gc (Draft 2023-07-24)</title>
+    <title>Types &#8212; WebAssembly 2.0 + tail calls + function references + gc (Draft 2023-07-25)</title>
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
     <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
@@ -256,19 +256,19 @@ Structures are heterogeneous, but require static indexing, while arrays need to 
 </ul>
 </section>
 </section>
-<section id="compound-types">
-<span id="syntax-comptype"></span><span id="index-9"></span><h2>Compound Types<a class="headerlink" href="#compound-types" title="Permalink to this heading">¶</a></h2>
-<p><em>Compound types</em> are all types composed from simpler types,
+<section id="composite-types">
+<span id="syntax-comptype"></span><span id="index-9"></span><h2>Composite Types<a class="headerlink" href="#composite-types" title="Permalink to this heading">¶</a></h2>
+<p><em>Composite types</em> are all types composed from simpler types,
 including <a class="reference internal" href="#syntax-functype"><span class="std std-ref">function types</span></a> and <a class="reference internal" href="#syntax-aggrtype"><span class="std std-ref">aggregate types</span></a>.</p>
 <div class="math notranslate nohighlight">
 \[\begin{split}\begin{array}{llrl}
-\def\mathdef2838#1{{}}\mathdef2838{compound type} &amp; \href{../syntax/types.html#syntax-comptype}{\mathit{comptype}} &amp;::=&amp;
+\def\mathdef2838#1{{}}\mathdef2838{composite type} &amp; \href{../syntax/types.html#syntax-comptype}{\mathit{comptype}} &amp;::=&amp;
   \href{../syntax/types.html#syntax-comptype}{\mathsf{func}}~\href{../syntax/types.html#syntax-functype}{\mathit{functype}} ~|~ \href{../syntax/types.html#syntax-comptype}{\mathsf{struct}}~\href{../syntax/types.html#syntax-structtype}{\mathit{structtype}} ~|~ \href{../syntax/types.html#syntax-comptype}{\mathsf{array}}~\href{../syntax/types.html#syntax-arraytype}{\mathit{arraytype}} \\
 \end{array}\end{split}\]</div>
 </section>
 <section id="recursive-types">
 <span id="syntax-subtype"></span><span id="syntax-rectype"></span><span id="index-10"></span><h2>Recursive Types<a class="headerlink" href="#recursive-types" title="Permalink to this heading">¶</a></h2>
-<p><em>Recursive types</em> denote a group of mutually recursive <a class="reference internal" href="#syntax-comptype"><span class="std std-ref">compound types</span></a>, each of which can optionally declare a list of <a class="reference internal" href="modules.html#syntax-typeidx"><span class="std std-ref">type indices</span></a> of supertypes that it <a class="reference internal" href="../valid/matching.html#match-comptype"><span class="std std-ref">matches</span></a>.
+<p><em>Recursive types</em> denote a group of mutually recursive <a class="reference internal" href="#syntax-comptype"><span class="std std-ref">composite types</span></a>, each of which can optionally declare a list of <a class="reference internal" href="modules.html#syntax-typeidx"><span class="std std-ref">type indices</span></a> of supertypes that it <a class="reference internal" href="../valid/matching.html#match-comptype"><span class="std std-ref">matches</span></a>.
 Each type can also be declared <em>final</em>, preventing further subtyping.
 .</p>
 <div class="math notranslate nohighlight">
