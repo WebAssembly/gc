@@ -2,7 +2,7 @@
 # package manager to build. However, Opam package management is available
 # optionally through the check/install/uninstall targets.
 #
-# The $(JSLIB) target requires node.js and BuckleScript.
+# The $(JSLIB).js target requires Js_of_ocaml (using ocamlfind).
 #
 # See README.me for instructions.
 
@@ -14,29 +14,37 @@ UNOPT = 	$(NAME).debug
 OPT =   	$(NAME)
 LIB =		$(NAME)
 ZIP =		$(NAME).zip
-JSLIB =		wast.js
+JSLIB =		wast
 WINMAKE =	winmake.bat
 
-DIRS =		util syntax binary text valid exec script host main
-LIBS =		bigarray
-FLAGS = 	-cflags '-w +a-4-27-42-44-45 -warn-error +a'
-OCB =		ocamlbuild $(FLAGS) $(DIRS:%=-I %) $(LIBS:%=-libs %)
-JS =		# set to JS shell command to run JS tests
+DIRS =		util syntax binary text valid runtime exec script host main tests
+LIBS =		
+FLAGS = 	-lexflags -ml -cflags '-w +a-4-27-42-44-45-70 -warn-error +a-3'
+OCBA =		ocamlbuild $(FLAGS) $(DIRS:%=-I %)
+OCB =		$(OCBA) $(LIBS:%=-libs %)
+JSO =		js_of_ocaml -q --opt 3
+JS =		# set to JS shell command to run JS tests, empty to skip
 
 
 # Main targets
 
-.PHONY:		default opt unopt libopt libunopt jslib all land zip
+.PHONY:		default opt unopt libopt libunopt jslib all land zip smallint dunebuild
 
 default:	opt
+debug:		unopt
 opt:		$(OPT)
 unopt:		$(UNOPT)
-libopt:		_build/$(LIB).cmx
-libunopt:	_build/$(LIB).cmo
-jslib:		$(JSLIB)
+libopt:		_build/$(LIB).cmx _build/$(LIB).cmxa
+libunopt:	_build/$(LIB).cmo _build/$(LIB).cma
+jslib:		$(JSLIB).js
 all:		unopt opt libunopt libopt test
-land:		all $(WINMAKE)
+land:		$(WINMAKE) all
 zip: 		$(ZIP)
+smallint:	smallint.native
+ci:			land jslib dunebuild
+
+dunebuild:
+	dune build
 
 
 # Building executable
@@ -48,51 +56,70 @@ comma =		,
 .INTERMEDIATE:	_tags
 _tags:
 		echo >$@ "true: bin_annot"
+		echo >>$@ "true: debug"
 		echo >>$@ "<{$(subst $(space),$(comma),$(DIRS))}/*.cmx>: for-pack($(PACK))"
 
-$(UNOPT):	main.d.byte
+$(UNOPT):	main.byte
 		mv $< $@
 
 $(OPT):		main.native
 		mv $< $@
 
-.PHONY:		main.d.byte main.native
-main.d.byte:	_tags
+.PHONY:		main.byte main.native
+main.byte:	_tags
 		$(OCB) -quiet $@
 
 main.native:	_tags
 		$(OCB) -quiet $@
 
+.PHONY:		smallint.byte smallint.native
+smallint.byte: _tags
+		$(OCB) -quiet $@
+smallint.native: _tags
+		$(OCB) -quiet $@
+
 
 # Building library
 
+FILES =		$(shell ls $(DIRS:%=%/*) | grep '[.]ml[^.]*$$')
 PACK =		$(shell echo `echo $(LIB) | sed 's/^\(.\).*$$/\\1/g' | tr [:lower:] [:upper:]``echo $(LIB) | sed 's/^.\(.*\)$$/\\1/g'`)
 
 .INTERMEDIATE:	$(LIB).mlpack
 $(LIB).mlpack:	$(DIRS)
-		ls $(DIRS:%=%/*.ml*) \
+		ls $(FILES) \
 		| sed 's:\(.*/\)\{0,1\}\(.*\)\.[^\.]*:\2:' \
 		| grep -v main \
 		| sort | uniq \
 		>$@
 
-_build/$(LIB).cmo: $(LIB).mlpack
+.INTERMEDIATE:	$(LIB).mllib
+$(LIB).mllib:
+		echo Wasm >$@
+
+_build/$(LIB).cmo: $(FILES) $(LIB).mlpack _tags Makefile
 		$(OCB) -quiet $(LIB).cmo
 
-_build/$(LIB).cmx: $(LIB).mlpack
+_build/$(LIB).cmx: $(FILES) $(LIB).mlpack _tags Makefile
 		$(OCB) -quiet $(LIB).cmx
+
+_build/$(LIB).cma: $(FILES) $(LIB).mllib _tags Makefile
+		$(OCBA) -quiet $(LIB).cma
+
+_build/$(LIB).cmxa: $(FILES) $(LIB).mllib _tags Makefile
+		$(OCBA) -quiet $(LIB).cmxa
 
 
 # Building JavaScript library
 
-.PHONY:		$(JSLIB)
-$(JSLIB):	$(UNOPT)
-		mkdir -p _build/jslib/src
-		cp meta/jslib/* _build/jslib
-		cp $(DIRS:%=_build/%/*.ml*) meta/jslib/*.ml _build/jslib/src
-		rm _build/jslib/src/*.ml[^i]
-		(cd _build/jslib; ./build.sh ../../$@)
+JSLIB_DIR =		meta/jslib
+JSLIB_FLAGS =	-I $(JSLIB_DIR) -use-ocamlfind -pkg js_of_ocaml -pkg js_of_ocaml-ppx
 
+.INTERMEDIATE:	$(JSLIB).byte
+$(JSLIB).byte:	$(JSLIB_DIR)/$(JSLIB).ml
+		$(OCBA) $(JSLIB_FLAGS) $@
+
+$(JSLIB).js: $(JSLIB).byte
+		$(JSO) $<
 
 # Building Windows build file
 
@@ -100,32 +127,55 @@ $(WINMAKE):	clean
 		echo rem Auto-generated from Makefile! >$@
 		echo set NAME=$(NAME) >>$@
 		echo if \'%1\' neq \'\' set NAME=%1 >>$@
-		$(OCB) main.d.byte \
+		$(OCB) main.byte \
 		| grep -v ocamldep \
 		| grep -v mkdir \
 		| sed s:`which ocaml`:ocaml:g \
-		| sed s:host/main.d.byte:%NAME%.exe: \
+		| sed s:main/main.d.byte:%NAME%.exe: \
 		>>$@
 
 
 # Executing test suite
 
-.PHONY:		test debugtest
+TESTDIR =	../test/core
+# Skip _output directory, since that's a tmp directory, and list all other wast files.
+TESTFILES =	$(shell cd $(TESTDIR); ls *.wast; ls [a-z]*/*.wast)
+TESTS =		$(TESTFILES:%.wast=%)
 
-test:		$(OPT)
-		../test/core/run.py --wasm `pwd`/$(OPT) $(if $(JS),--js '$(JS)',)
-debugtest:	$(UNOPT)
-		../test/core/run.py --wasm `pwd`/$(UNOPT) $(if $(JS),--js '$(JS)',)
+.PHONY:		test debugtest partest dune-test
+
+test:		$(OPT) smallint
+		$(TESTDIR)/run.py --wasm `pwd`/$(OPT) $(if $(JS),--js '$(JS)',)
+		./smallint.native
+debugtest:	$(UNOPT) smallint
+		$(TESTDIR)/run.py --wasm `pwd`/$(UNOPT) $(if $(JS),--js '$(JS)',)
+		./smallint.native
 
 test/%:		$(OPT)
-		../test/core/run.py --wasm `pwd`/$(OPT) $(if $(JS),--js '$(JS)',) $(@:test/%=../test/core/%.wast)
+		$(TESTDIR)/run.py --wasm `pwd`/$(OPT) $(if $(JS),--js '$(JS)',) $(TESTDIR)/$*.wast
 debugtest/%:	$(UNOPT)
-		../test/core/run.py --wasm `pwd`/$(UNOPT) $(if $(JS),--js '$(JS)',) $(@:test/%=../test/core/%.wast)
+		$(TESTDIR)/run.py --wasm `pwd`/$(UNOPT) $(if $(JS),--js '$(JS)',) $(TESTDIR)/$*.wast
 
 run/%:		$(OPT)
-		./$(OPT) $(@:run/%=../test/core/%.wast)
-debugrun/%:		$(UNOPT)
-		./$(UNOPT) $(@:run/%=../test/core/%.wast)
+		./$(OPT) $(TESTDIR)/$*.wast
+debug/%:	$(UNOPT)
+		./$(UNOPT) $(TESTDIR)/$*.wast
+
+partest: 	$(TESTS:%=quiettest/%)
+		@echo All tests passed.
+
+quiettest/%:	$(OPT)
+		@ ( \
+		  $(TESTDIR)/run.py 2>$(@F).out --wasm `pwd`/$(OPT) $(if $(JS),--js '$(JS)',) $(TESTDIR)/$*.wast && \
+		  rm $(@F).out \
+		) || \
+		cat $(@F).out || rm $(@F).out || exit 1
+
+smallinttest:	smallint
+		@./smallint.native
+
+dunetest:
+	dune test
 
 
 # Miscellaneous targets
@@ -136,7 +186,7 @@ $(ZIP):		$(WINMAKE)
 		git archive --format=zip --prefix=$(NAME)/ -o $@ HEAD
 
 clean:
-		rm -rf _build/jslib wasm.mlpack _tags
+		rm -rf _build/jslib $(LIB).mlpack _tags $(JSLIB).js
 		$(OCB) -clean
 
 
@@ -150,9 +200,9 @@ check:
 		ocamlfind query $(LIBS)
 
 install:	_build/$(LIB).cmx _build/$(LIB).cmo
-		ocamlfind install wasm meta/findlib/META _build/wasm.o \
+		ocamlfind install $(LIB) meta/findlib/META _build/$(LIB).o \
 		  $(wildcard _build/$(LIB).cm*) \
 		  $(wildcard $(DIRS:%=%/*.mli))
 
 uninstall:
-		ocamlfind remove wasm
+		ocamlfind remove $(LIB)

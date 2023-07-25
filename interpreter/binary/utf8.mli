@@ -1,4 +1,7 @@
+type codepoint = int
+type unicode = codepoint list
+
 exception Utf8
 
-val decode : string -> int list (* raise UTf8 *)
-val encode : int list -> string (* raise Utf8 *)
+val decode : string -> unicode (* raises Utf8 *)
+val encode : unicode -> string (* raises Utf8 *)

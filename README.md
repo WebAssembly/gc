@@ -1,11 +1,22 @@
-[![Build Status](https://travis-ci.org/WebAssembly/spec.svg?branch=master)](https://travis-ci.org/WebAssembly/spec)
+[![CI for specs](https://github.com/WebAssembly/gc/actions/workflows/ci-spec.yml/badge.svg)](https://github.com/WebAssembly/gc/actions/workflows/ci-spec.yml)
+[![CI for interpreter & tests](https://github.com/WebAssembly/gc/actions/workflows/ci-interpreter.yml/badge.svg)](https://github.com/WebAssembly/gc/actions/workflows/ci-interpreter.yml)
 
 # GC Proposal for WebAssembly
 
 This repository is a clone of [github.com/WebAssembly/spec/](https://github.com/WebAssembly/spec/).
-It is meant for discussion, prototype specification and implementation of a proposal to add garbage collection support to WebAssembly.
+It is meant for discussion, prototype specification and implementation of a proposal to add garbage collection (GC) support to WebAssembly.
 
-See the [overview](proposals/gc/Overview.md) for a summary of the proposal.
+* See the [overview](proposals/gc/Overview.md) for a summary and rationale of the proposal.
+
+* See the [MVP](proposals/gc/MVP.md) for a draft specification of the concrete language extensions that are proposed for the first stage of GC support in Wasm.
+
+* See the [Post-MVP](proposals/gc/Post-MVP.md) for possible future extensions in later stages.
+
+<!--
+* See the [modified spec](https://webassembly.github.io/gc/core) for details.
+-->
+
+This repository is based on the [function references proposal](proposals/function-references/Overview.md) as a baseline and includes all respective changes.
 
 Original `README` from upstream repository follows...
 
@@ -30,3 +41,7 @@ should take place in
 [the WebAssembly design repository](https://github.com/WebAssembly/design)
 first, so that this spec repository can remain focused. And please follow the
 [guidelines for contributing](Contributing.md).
+
+# citing
+
+For citing WebAssembly in LaTeX, use [this bibtex file](wasm-specs.bib).

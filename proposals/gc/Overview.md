@@ -6,7 +6,7 @@ Note: Basic support for simple [reference types](https://github.com/WebAssembly/
 
 See [MVP](MVP.md) for a concrete v1 proposal and [Post-MVP](Post-MVP.md) for possible future features.
 
-WARNING: Some contents of this document may have gotten out of sync with the [MVP](MVP.md) design.
+WARNING: Some contents of this document may have gotten out of sync with the [MVP](MVP.md) design, which is more up-to-date.
 
 
 ### Motivation
@@ -144,7 +144,7 @@ The above could map to
 )
 
 (func $g
-  (array.new $vec3d (i64.const 1) (i32.const 3))
+  (array.new $vec3d (f64.const 1) (i32.const 3))
   (let (local $v (ref $vec3d))
     (array.set $vec3d (local.get $v) (i32.const 2) (i32.const 5))
     (array.get $vec3d (local.get $v) (i32.const 1))
@@ -157,7 +157,7 @@ The above could map to
   (local.set $b
     (struct.new $buf
       (i64.const 0)
-      (array.new $char-array (i32.const 4) (i32.const 0x41))
+      (array.new $char-array (i32.const 0x41) (i32.const 4))
     )
   )
   (array.get $buf
@@ -223,7 +223,7 @@ For example, `D.g`:
   )
 )
 ```
-The addition of [type parameters and fields](#type-parameters-and-fields) may later avoid this cast.
+The addition of [type fields](Post-MVP.md#type-parameters) may later avoid this cast.
 
 
 ### Closures
@@ -288,7 +288,7 @@ Needs:
 * down casts
 
 The down cast for the closure environment is necessary to go from the abstract closure type to the concrete.
-Statically type checking this would require (first-class) [type fields](#type-parameters-and-fields), a.k.a. existential types.
+Statically type checking this would require (first-class) [type fields](Post-MVP.md#type-parameters), a.k.a. existential types.
 
 Note that this example shows just one way to represent closures (with flattened closure environment).
 The proposal provides all necessary primitives allowing high-level language compilers to choose other representations.
@@ -335,7 +335,7 @@ Unless willing to implement runtime code specialisation (like C# / .NET) a type-
 
 The usual implementation technique is a uniform representation, potentially refined with local unboxing and type specialisation optimisations.
 
-The MVP proposal does not directly support parametric polymorphism (see the discussion of [type parameters and fields](#type-parameters-and-fields) below for its discussion as an extension).
+The MVP proposal does not directly support parametric polymorphism (see the discussion of [type parameters](Post-MVP.md#type-parameters)).
 However, compilation with a uniform representation can still be achieved in this proposal by consistently using the type  `anyref`, which is the super type of all references, and then down-cast from there:
 ```
 (type $pair (struct anyref anyref))
@@ -376,7 +376,7 @@ However, compilation with a uniform representation can still be achieved in this
 Note how type [`i31ref`](#tagged-integers) avoids Boolean values to be heap-allocated.
 Also note how a down cast is necessary to recover the original type after a value has been passed through (the compiled form of) a polymorphic function like `g` -- the compiler knows the type but Wasm does not.
 
-(Future versions of Wasm should support [type parameters](#type-parameters-and-fields) to make such use cases more efficient and avoid the excessive use of runtime types to compile source language polymorphism, but for the GC MVP this provides the necessary expressiveness.)
+(Future versions of Wasm should support [type parameters](Post-MVP.md#type-parameters) to make such use cases more efficient and avoid the excessive use of runtime types to compile source language polymorphism, but for the GC MVP this provides the necessary expressiveness.)
 
 Needs:
 * `anyref`
@@ -426,7 +426,7 @@ Structures are *managed* -- i.e., garbage-collected -- so manual deallocation is
 *Array* types define aggregates with _homogeneous elements_ that are _dynamically indexed_:
 ```
 (type $vector (array (mut f64)))
-(type $matrix (array (type $vector)))
+(type $matrix (array (mut (ref $vector))))
 ```
 Array types are used by forming reference types.
 For now, we assume that all array types have a ([flexible](#flexible-aggregates)) length dynamically computed at allocation time.
@@ -445,10 +445,10 @@ In the latter case, the access involves a runtime null check that will trap upon
 The index is checked against the array's length at execution time.
 A trap occurs if the index is out of bounds.
 
-Arrays are *allocated* with the `array.new` instruction that takes a length and an initialization value as operands, yielding a reference:
+Arrays are *allocated* with the `array.new` instruction that takes an initialization value and a length as operands, yielding a reference:
 ```
 (func $g
-  (call $f (array.new $vector (i32.const 0) (f64.const 3.14)))
+  (call $f (array.new $vector (f64.const 3.14) (i32.const 1)))
 )
 ```
 
@@ -465,7 +465,7 @@ Like structures, arrays are garbage-collected.
 Structure and array fields can have a packed *storage type* `i8` or `i16`:
 ```
 (type $s (struct (field $a i8) (field $b i16)))
-(type $buf (array i8))
+(type $buf (array (mut i8)))
 ```
 Loads of packed fields require a sign extension mode:
 ```
@@ -564,14 +564,14 @@ The embedder may define its own set of types (such as DOM objects) or allow the 
 Such *host types* can be [imported](import-and-export) into a module, where they are treated as opaque data types.
 
 There are no operations to manipulate such types, but a WebAssembly program can receive references to them as parameters or results of imported/exported Wasm functions. Such "foreign" references may point to objects on the _embedder_'s heap. Yet, they can safely be stored in or round-trip through Wasm code.
-
+```
 (type $Foreign (import "env" "Foreign"))
 (type $s (struct (field $a i32) (field $x (ref $Foreign)))
 
 (func (export "f") (param $x (ref $Foreign))
   ...
 )
-
+```
 
 ### Function References
 
@@ -617,7 +617,7 @@ Being reference types, unboxed scalars can be cast into `anyref`, and can partic
 
 To avoid portability hazards, the value range of `i31ref` has to be restricted to at most 31 bits, since that is the widest range that can be guaranteed to be efficiently representable on all platforms.
 
-Note: As a future extension, Wasm could also introduce wider integer references, such as `i32ref`. However, these sometimes will have to be boxed on some platforms, introducing the unpredictable cost of possible "hidden" allocation upon creation or branching upon access. They hence serve a different use case. Note also that such values can already equivalently be expressed in this proposal as structs with a single `i32` field, which implementations may choose to optimise accordingly (singleton structs that have no [runtime type information](#casting-and-runtime-types) can be flattened by engines).
+Note: As a future extension, Wasm could also introduce wider integer references, such as `i32ref`. However, these sometimes will have to be boxed on some platforms, introducing the unpredictable cost of possible "hidden" allocation upon creation or branching upon access. They hence serve a different use case.
 
 
 ## Type Structure
@@ -641,6 +641,7 @@ def_type       ::=  <data_type> | <func_type>
 ```
 where `value_type` is the type usable for parameters, local variables and the operand stack, and `def_type` describes the types that can be defined in the type section.
 
+Note that for the MVP, an additional restriction on the above grammar is that array fields must be mutable.
 
 ### Type Recursion
 
@@ -723,16 +724,15 @@ For safety, down casts have to be checked at runtime by the engine. Down casts h
 ```
 This instruction checks whether the runtime type stored in `<operand>` is a runtime subtype of the runtime type represented by the second operand.
 
-In order to cast down the type of a struct or array, the aggregate itself must be equipped with a suitable RTT. Attaching runtime type information to aggregates happens at allocation time but is optional. If no RTT is attached then their runtime type is treated as if it was `anyref` and a down cast to a more specific type will fail. Such aggregates can prevent client code from rediscovering their real type, enforcing a form of parametricity. They can also be optimised more aggressively (e.g., via flattening optimisations), since the VM knows that any possible additional fields forgotten via subtyping can never be rediscovered.
-
-A runtime type is an expression of type `rtt <type>`, which is another form of opaque reference type. It represents the static type `<type>` at runtime.
+In order to cast down the type of a struct or array, the aggregate itself must be equipped with a suitable RTT. Attaching runtime type information to aggregates happens at allocation time.
+A runtime type is an expression of type `rtt <type>`, which is another form of opaque value type. It represents the static type `<type>` at runtime.
 In its plain form, a runtime type is obtained using the instruction `rtt.get`
 ```
-(rtt.get <type>)
+(rtt.canon <type>)
 ```
-For example, this can be used to cast down from `anyref` to a concrete type:
+For example, this can be used to cast down from `dataref` to a concrete type:
 ```
-(ref.cast (<operand>) (rtt.get <type>))
+(ref.cast (<operand>) (rtt.canon <type>))
 ```
 
 More generally, runtime type checks can verify a subtype relation between runtime types.
@@ -771,9 +771,9 @@ There are a number of reasons to make RTTs explicit:
 
 * It makes all data and cost (in space and time) involved in casting explicit, which is a desirable property for an "assembly" language.
 
-* It allows to make RTT information optional: for example, structs that are not involved in any casts do not need to pay the overhead of carrying runtime type information (depending on specifics of the GC implementation strategy). For some languages that may mean that they never need to introduce any RTTs.
+* It allows more choice in producers' use of RTT information, including making it optional (post-MVP), in accordance with the pay-as-you-go principle: for example, structs that are not involved in any casts do not need to pay the overhead of carrying runtime type information (depending on specifics of the GC implementation strategy). Some languages may never need to introduce any RTTs at all.
 
-* Most importantly, making RTTs explicit separates the concerns of casting from Wasm-level polymorphism, i.e., [type parameters and fields](#type-paraemters-and-fields). Type parameters can thus be treated as purely a validation artifact with no bearing on runtime. This property, known as parametricity, drastically simplifies the implementation of such type parameterisation and avoids the substantial hidden costs of reified generics that would otherwise hvae to be paid for every single use of type parameters (short of non-trivial cross-procedural dataflow analysis in the engine).
+* Most importantly, making RTTs explicit separates the concerns of casting from Wasm-level polymorphism, i.e., [type parameters](Post-MVP.md#type-parameters). Type parameters can thus be treated as purely a validation artifact with no bearing on runtime. This property, known as parametricity, drastically simplifies the implementation of such type parameterisation and avoids the substantial hidden costs of reified generics that would otherwise hvae to be paid for every single use of type parameters (short of non-trivial cross-procedural dataflow analysis in the engine).
 
 
 ## Future Extensions
