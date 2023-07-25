@@ -193,7 +193,7 @@ This can compile to machine code that (1) reads the RTT from `$x`, (2) checks th
 
 Allocation of memory objects may fail for implementation-specific reasons, such as system resource exhaustion or a host-defined limit, or being unable to fit a large array in available address space.
 
-Handling of an allocation failure may be handled in an implementation-defined way, such as trapping or terminating the host process. Implementors should be aware this may be used as a denial of service vector.
+Similar to stack overflow, allocation failure may materialise in an implementation-dependent way, such as trapping or terminating the host process. Implementors should be aware this may be used as a denial of service vector.
 
 ### Instructions
 
