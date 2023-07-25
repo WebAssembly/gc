@@ -222,13 +222,13 @@ Perhaps add the following short-hands:
 * `struct.new_with_rtt <typeidx>` allocates a structure with RTT information determining its [runtime type](#values) and initialises its fields with given values
   - `struct.new_with_rtt $t : [t'* (rtt n $t)] -> [(ref $t)]`
     - iff `$t = struct (mut t')*`
-  - allocation failure behavior is [implementation-defined](#failure)
+  - allocation failure behavior is [implementation-dependent](#failure)
 
 * `struct.new_default_with_rtt <typeidx>` allocates a structure of type `$t` and initialises its fields with default values
   - `struct.new_default_with_rtt $t : [(rtt n $t)] -> [(ref $t)]`
     - iff `$t = struct (mut t')*`
     - and all `t'*` are defaultable
-  - allocation failure behavior is [implementation-defined](#failure)
+  - allocation failure behavior is [implementation-dependent](#failure)
 
 * `struct.get_<sx>? <typeidx> <fieldidx>` reads field `i` from a structure
   - `struct.get_<sx>? $t i : [(ref null $t)] -> [t]`
@@ -249,13 +249,13 @@ Perhaps add the following short-hands:
 * `array.new_with_rtt <typeidx>` allocates an array with RTT information determining its [runtime type](#values)
   - `array.new_with_rtt $t : [t' i32 (rtt n $t)] -> [(ref $t)]`
     - iff `$t = array (var t')`
-  - allocation failure behavior is [implementation-defined](#failure)
+  - allocation failure behavior is [implementation-dependent](#failure)
 
 * `array.new_default_with_rtt <typeidx>` allocates an array and initialises its fields with the default value
   - `array.new_default_with_rtt $t : [i32 (rtt n $t)] -> [(ref $t)]`
     - iff `$t = array (var t')`
     - and `t'` is defaultable
-  - allocation failure behavior is [implementation-defined](#failure)
+  - allocation failure behavior is [implementation-dependent](#failure)
 
 * `array.get_<sx>? <typeidx>` reads an element from an array
   - `array.get_<sx>? $t : [(ref null $t) i32] -> [t]`
