@@ -168,6 +168,7 @@ urlPrefix: https://webassembly.github.io/spec/core/; spec: WebAssembly; type: df
         text: var
         text: const
     text: address; url: exec/runtime.html#addresses
+    text: signed_31; url: exec/numerics.html#aux-signed
     text: signed_32; url: exec/numerics.html#aux-signed
     text: memory.grow; url: exec/instructions.html#exec-memory-grow
     text: current frame; url: exec/conventions.html#exec-notation-textual
@@ -1095,7 +1096,7 @@ The algorithm <dfn>ToJSValue</dfn>(|w|) coerces a [=WebAssembly value=] to a Jav
     1. Return [=𝔽=](|f64| interpreted as a mathematical value).
 1. If |w| is of the form [=ref.null=] |t|, return null.
 1. If |w| is of the form [=ref.i31=] |u31|,
-    1. Let |i31| be [=signed_32=](|u31|).
+    1. Let |i31| be [=signed_31=](|u31|).
     1. Let return [=𝔽=](|i31|).
 1. If |w| is of the form [=ref.struct=] |structaddr|, return the result of creating [=a new Exported GC Object=] from |structaddr| and "struct".
 1. If |w| is of the form [=ref.array=] |arrayaddr|, return the result of creating [=a new Exported GC Object=] from |arrayaddr| and "array".
@@ -1153,7 +1154,7 @@ The algorithm <dfn>ToWebAssemblyValue</dfn>(|v|, |type|) coerces a JavaScript va
         1. Let |r| be [=ref.null=] |heaptype|.
     1. Else if |v| [=is a Number=] and |v| is equal to [=?=] [$ToInt32$](|v|) and [=ℝ=](|v|) < 2<sup>30</sup> and [=ℝ=](|v|) ⩾ -2<sup>30</sup>,
         1. Let |i31| [=?=] [$ToInt32$](|v|).
-        1. Let |u31| be the unsigned integer such that |i31| is [=signed_32=](|i|).
+        1. Let |u31| be the unsigned integer such that |i31| is [=signed_31=](|i31|).
         1. Let |r| be [=ref.i31=] |u31|.
     1. Else if |v| is an [=Exported Function=],
         1. Let |funcaddr| be the value of |v|'s \[[FunctionAddress]] internal slot.
