@@ -85,8 +85,8 @@ Abbreviations
 There are shorthands for references to abstract heap types.
 
 .. math::
-   \begin{array}{llclll}
-   \production{reference type} &
+   \begin{array}{lcl}
+   \production{reference type}
      \text{anyref} &\equiv& \text{(}~\text{ref}~~\text{null}~~\text{any}~\text{)} \\
      \text{eqref} &\equiv& \text{(}~\text{ref}~~\text{null}~~\text{eq}~\text{)} \\
      \text{i31ref} &\equiv& \text{(}~\text{ref}~~\text{null}~~\text{i31}~\text{)} \\
@@ -255,30 +255,33 @@ Recursive Types
      \text{(}~\text{type}~~\Tid^?~~\X{st}{:}\Tsubtype_I~\text{)}
        &\Rightarrow& \X{st} \\
    \production{sub type} & \Tsubtype_I &::=&
-     \text{(}~\text{sub}~~\text{final}^?~~x^\ast{:\,}\Tvec(\Ttypeidx_I)~~\X{ct}{:}\Tcomptype_I~\text{)}
+     \text{(}~\text{sub}~~\text{open}^?~~x^\ast{:\,}\Tvec(\Ttypeidx_I)~~\X{ct}{:}\Tcomptype_I~\text{)}
        &\Rightarrow& \TSUB~\TFINAL^?~x^\ast~\X{ct} \\
    \end{array}
+
+.. note::
+   A subtype is :ref:`final <syntax-subtype>` if the :math:`\text{open}` keyword is not present, and vice versa.
 
 
 Abbreviations
 .............
 
-Singular recursive types can omit the |Trec| keyword:
+Singular recursive types can omit the :math:`\text{rec}` keyword:
 
 .. math::
-   \begin{array}{llclll}
+   \begin{array}{lcl}
    \production{recursive type} &
-     \Tsubtype &\equiv&
-     \text{(}~~\text{rec}~~\Tsubtype~~\text{)} \\
+     \Tdeftype &\equiv&
+     \text{(}~~\text{rec}~~\Tdeftype~~\text{)} \\
    \end{array}
 
-Similarly, final sub types with no super-types can omit the |Tsub| keyword and arguments:
+Similarly, final sub types with no super-types can omit the :math:`\text{sub}` keyword:
 
 .. math::
-   \begin{array}{llclll}
+   \begin{array}{lcl}
    \production{sub type} &
      \Tcomptype &\equiv&
-     \text{(}~~\text{sub}~~\text{final}~~\epsilon~~\Tcomptype~~\text{)} \\
+     \text{(}~~\text{sub}~~\Tcomptype~~\text{)} \\
    \end{array}
 
 
