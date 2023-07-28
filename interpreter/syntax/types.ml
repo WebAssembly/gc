@@ -308,8 +308,8 @@ let string_of_null = function
   | Null -> "null "
 
 let string_of_final = function
-  | NoFinal -> ""
-  | Final -> " final"
+  | NoFinal -> " open"
+  | Final -> ""
 
 let string_of_mut s = function
   | Cons -> s

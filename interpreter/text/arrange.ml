@@ -78,8 +78,8 @@ let val_type t = string_of_val_type t
 let storage_type t = string_of_storage_type t
 
 let final = function
-  | NoFinal -> ""
-  | Final -> " final"
+  | NoFinal -> " open"
+  | Final -> ""
 
 let decls kind ts = tab kind (atom val_type) ts
 
