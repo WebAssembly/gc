@@ -311,6 +311,7 @@
 .. |dataidx| mathdef:: \xref{syntax/modules}{syntax-dataidx}{\X{dataidx}}
 .. |localidx| mathdef:: \xref{syntax/modules}{syntax-localidx}{\X{localidx}}
 .. |labelidx| mathdef:: \xref{syntax/modules}{syntax-labelidx}{\X{labelidx}}
+.. |fieldidx| mathdef:: \xref{syntax/modules}{syntax-fieldidx}{\X{fieldidx}}
 
 
 .. Indices, meta functions
@@ -1505,6 +1506,8 @@
 .. |Bmodulenamesubsec| mathdef:: \xref{appendix/custom}{binary-modulenamesec}{\B{modulenamesubsec}}
 .. |Bfuncnamesubsec| mathdef:: \xref{appendix/custom}{binary-funcnamesec}{\B{funcnamesubsec}}
 .. |Blocalnamesubsec| mathdef:: \xref{appendix/custom}{binary-localnamesec}{\B{localnamesubsec}}
+.. |Btypenamesubsec| mathdef:: \xref{appendix/custom}{binary-typenamesec}{\B{typenamesubsec}}
+.. |Bfieldnamesubsec| mathdef:: \xref{appendix/custom}{binary-fieldnamesec}{\B{fieldnamesubsec}}
 
 
 .. Embedding
