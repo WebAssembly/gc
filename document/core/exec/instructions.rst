@@ -521,7 +521,7 @@ Reference Instructions
 .. _exec-struct.get:
 .. _exec-struct.get_sx:
 
-:math:`\STRUCTGET\K{\_}\sx^?~x~i`
+:math:`\STRUCTGET\K{\_}\sx^?~x~y`
 .................................
 
 .. todo:: unroll type
@@ -570,7 +570,7 @@ Reference Instructions
 
 .. _exec-struct.set:
 
-:math:`\STRUCTSET~x~i`
+:math:`\STRUCTSET~x~y`
 ......................
 
 .. todo:: unroll type

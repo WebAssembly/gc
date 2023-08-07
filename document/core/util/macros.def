@@ -742,6 +742,7 @@
 .. |Bdataidx| mathdef:: \xref{binary/modules}{binary-dataidx}{\B{dataidx}}
 .. |Blocalidx| mathdef:: \xref{binary/modules}{binary-localidx}{\B{localidx}}
 .. |Blabelidx| mathdef:: \xref{binary/modules}{binary-labelidx}{\B{labelidx}}
+.. |Bfieldidx| mathdef:: \xref{binary/modules}{binary-fieldidx}{\B{fieldidx}}
 
 
 .. Modules, non-terminals
