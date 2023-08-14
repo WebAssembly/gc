@@ -366,7 +366,7 @@ Aggregate Reference Instructions
    \frac{
      \expanddt(C.\CTYPES[x]) = \TSTRUCT~\X{ft}^\ast
      \qquad
-     \X{ft}^\ast[i] = \mut~\X{st}
+     \X{ft}^\ast[y] = \mut~\X{st}
      \qquad
      \sx = \epsilon \Leftrightarrow \X{st} = \unpacktype(\X{st})
    }{
@@ -394,7 +394,7 @@ Aggregate Reference Instructions
    \frac{
      \expanddt(C.\CTYPES[x]) = \TSTRUCT~\X{ft}^\ast
      \qquad
-     \X{ft}^\ast[i] = \MVAR~\X{st}
+     \X{ft}^\ast[y] = \MVAR~\X{st}
    }{
      C \vdashinstr \STRUCTSET~x~y : [(\REF~\NULL~x)~\unpacktype(\X{st})] \to []
    }
