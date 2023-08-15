@@ -12,6 +12,9 @@ let compare_pair cmp1 cmp2 (t11, t12) (t21, t22) =
   | 0 -> cmp2 t12 t22
   | i -> i
 
+let compare_triple cmp1 cmp2 cmp3 (t11, t12, t13) (t21, t22, t23) =
+  compare_pair cmp1 (compare_pair cmp2 cmp3) (t11, (t12, t13)) (t21, (t22, t23))
+
 let rec compare_list cmp ts1 ts2 =
   match ts1, ts2 with
   | [], [] -> 0
@@ -26,7 +29,7 @@ let compare_sub (tys : W.sub_type array) (su : int array) recs x1 x2 =
   let nullability n1 n2 = compare n1 n2 in
   let mutability m1 m2 = compare m1 m2 in
 
-  let rec syn_var v1 v2 y1 y2 =
+  let rec var v1 v2 y1 y2 =
     match IntSet.mem y1 recs, IntSet.mem y2 recs with
     | false, false -> compare su.(y1) su.(y2)
     | false, true -> -1
@@ -39,68 +42,66 @@ let compare_sub (tys : W.sub_type array) (su : int array) recs x1 x2 =
       | None, Some _ -> +1
 
   and var_type v1 v2 x1 x2 = match x1, x2 with
-    | SynVar x1', SynVar x2' ->
-      syn_var v1 v2 (Int32.to_int x1') (Int32.to_int x2')
+    | StatX x1', StatX x2' ->
+      var v1 v2 (Int32.to_int x1') (Int32.to_int x2')
     | _, _ -> assert false
 
   and num_type v1 v2 t1 t2 = compare t1 t2
 
   and heap_type v1 v2 t1 t2 = match t1, t2 with
-    | DefHeapType x1, DefHeapType x2
-    | RttHeapType x1, RttHeapType x2 -> var_type v1 v2 x1 x2
-    | _, DefHeapType _ -> -1
-    | DefHeapType _, _ -> +1
-    | _, RttHeapType _ -> -1
-    | RttHeapType _, _ -> +1
+    | VarHT x1, VarHT x2 -> var_type v1 v2 x1 x2
+    | _, VarHT _ -> -1
+    | VarHT _, _ -> +1
+    | DefHT _, _ | _, DefHT _ -> assert false
     | _, _ -> compare t1 t2
 
   and ref_type v1 v2 t1 t2 = compare_pair nullability (heap_type v1 v2) t1 t2
 
-  and value_type v1 v2 t1 t2 = match t1, t2 with
-    | NumType nt1, NumType nt2 -> num_type v1 v2 nt1 nt2
-    | RefType rt1, RefType rt2 -> ref_type v1 v2 rt1 rt2
+  and val_type v1 v2 t1 t2 = match t1, t2 with
+    | NumT nt1, NumT nt2 -> num_type v1 v2 nt1 nt2
+    | RefT rt1, RefT rt2 -> ref_type v1 v2 rt1 rt2
     | _, _ -> compare t1 t2
 
-  and result_type v1 v2 ts1 ts2 = compare_list (value_type v1 v2) ts1 ts2
+  and result_type v1 v2 ts1 ts2 = compare_list (val_type v1 v2) ts1 ts2
 
   and storage_type v1 v2 t1 t2 = match t1, t2 with
-    | ValueStorageType vt1, ValueStorageType vt2 -> value_type v1 v2 vt1 vt2
+    | ValStorageT vt1, ValStorageT vt2 -> val_type v1 v2 vt1 vt2
     | _, _ -> compare t1 t2
 
   and field_type v1 v2 t1 t2 = match t1, t2 with
-    | FieldType (st1, mut1), FieldType (st2, mut2) ->
+    | FieldT (mut1, st1), FieldT (mut2, st2) ->
       compare_pair mutability (storage_type v1 v2) (mut1, st1) (mut2, st2)
 
   and struct_type v1 v2 t1 t2 = match t1, t2 with
-    | StructType fts1, StructType fts2 ->
+    | StructT fts1, StructT fts2 ->
       compare_list (field_type v1 v2) fts1 fts2
 
   and array_type v1 v2 t1 t2 = match t1, t2 with
-    | ArrayType ft1, ArrayType ft2 -> field_type v1 v2 ft1 ft2
+    | ArrayT ft1, ArrayT ft2 -> field_type v1 v2 ft1 ft2
 
   and func_type v1 v2 t1 t2 = match t1, t2 with
-    | FuncType (ts11, ts12), FuncType (ts21, ts22) ->
+    | FuncT (ts11, ts12), FuncT (ts21, ts22) ->
       compare_pair (result_type v1 v2) (result_type v1 v2)
         (ts11, ts12) (ts21, ts22)
 
   and str_type v1 v2 t1 t2 = match t1, t2 with
-    | StructDefType st1, StructDefType st2 -> struct_type v1 v2 st1 st2
-    | ArrayDefType at1, ArrayDefType at2 -> array_type v1 v2 at1 at2
-    | FuncDefType ft1, FuncDefType ft2 -> func_type v1 v2 ft1 ft2
+    | DefStructT st1, DefStructT st2 -> struct_type v1 v2 st1 st2
+    | DefArrayT at1, DefArrayT at2 -> array_type v1 v2 at1 at2
+    | DefFuncT ft1, DefFuncT ft2 -> func_type v1 v2 ft1 ft2
     | _, _ -> compare t1 t2
 
   and sub_type v1 v2 t1 t2 = match t1, t2 with
-    | SubType (xs1, st1), SubType (xs2, st2) ->
-      let xs1' = List.sort (inv (var_type v1 v2)) xs1 in
-      let xs2' = List.sort (inv (var_type v1 v2)) xs2 in
-      compare_pair (compare_list (var_type v1 v2)) (str_type v1 v2)
-        (xs1', st1) (xs2', st2)
+    | SubT (fin1, hts1, st1), SubT (fin2, hts2, st2) ->
+      let hts1' = List.sort (inv (heap_type v1 v2)) hts1 in
+      let hts2' = List.sort (inv (heap_type v1 v2)) hts2 in
+      compare_triple compare (compare_list (heap_type v1 v2)) (str_type v1 v2)
+        (fin1, hts1', st1) (fin2, hts2', st2)
   in
   if x1 = x2 then 0 else sub_type [x1] [x2] tys.(x1) tys.(x2)
 
 
 type group =
-  {mutable bwd : IntSet.t; fwd : IntSet.t; is_rec : bool; mutable ord : int list}
+  {mutable bwd : IntSet.t; fwd : IntSet.t; mutable ord : int list}
 
 let compare_group (tys : W.sub_type array) su g1 g2 =
   assert (g1.ord <> []);
@@ -119,7 +120,7 @@ let swap a i j =
 let intset s =
   Wasm.Free.Set.fold (fun x s' -> IntSet.add (Int32.to_int x) s') s IntSet.empty
 
-let recify (sts : W.sub_type phrase list) : W.def_type phrase list * Subst.t =
+let recify (sts : W.sub_type phrase list) : W.rec_type phrase list * Subst.t =
   let sta = Array.of_list sts in
   let tys = Array.map Wasm.Source.it sta in
   let sccs = Array.of_list (Scc.sccs_of_subtypes tys) in
@@ -131,11 +132,7 @@ let recify (sts : W.sub_type phrase list) : W.def_type phrase list * Subst.t =
           IntSet.union s (intset Wasm.Free.((sub_type tys.(x)).types))
         ) scc IntSet.empty
       in
-      { bwd = IntSet.diff free scc;
-        fwd = scc;
-        is_rec = not (IntSet.disjoint free scc);
-        ord = [];
-      }
+      {bwd = IntSet.diff free scc; fwd = scc; ord = []}
     ) sccs
   in
 
@@ -212,7 +209,7 @@ let recify (sts : W.sub_type phrase list) : W.def_type phrase list * Subst.t =
     let sts = List.map (fun x -> tys.(x)) g.ord in
     let left = sta.(IntSet.min_elt g.fwd).at.left in
     let right = sta.(IntSet.max_elt g.fwd).at.right in
-    types := (W.RecDefType sts @@ {left; right}) :: !types
+    types := (W.RecT sts @@ {left; right}) :: !types
   ) groups;
 
   List.rev !types, !subst

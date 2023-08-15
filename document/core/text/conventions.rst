@@ -110,14 +110,14 @@ Contexts
 
 The text format allows the use of symbolic :ref:`identifiers <text-id>` in place of :ref:`indices <syntax-index>`.
 To resolve these identifiers into concrete indices,
-some grammar production are indexed by an *identifier context* :math:`I` as a synthesized attribute that records the declared identifiers in each :ref:`index space <syntax-index>`.
+some grammar productions are indexed by an *identifier context* :math:`I` as a synthesized attribute that records the declared identifiers in each :ref:`index space <syntax-index>`.
 In addition, the context records the types defined in the module, so that :ref:`parameter <text-param>` indices can be computed for :ref:`functions <text-func>`.
 
 It is convenient to define identifier contexts as :ref:`records <notation-record>` :math:`I` with abstract syntax as follows:
 
 .. math::
    \begin{array}{llll}
-   \production{(identifier context)} & I &::=&
+   \production{identifier context} & I &::=&
      \begin{array}[t]{l@{~}ll}
      \{ & \ITYPES & (\Tid^?)^\ast, \\
         & \IFUNCS & (\Tid^?)^\ast, \\
@@ -128,14 +128,18 @@ It is convenient to define identifier contexts as :ref:`records <notation-record
         & \IDATA & (\Tid^?)^\ast, \\
         & \ILOCALS & (\Tid^?)^\ast, \\
         & \ILABELS & (\Tid^?)^\ast, \\
-        & \ITYPEDEFS & \functype^\ast ~\} \\
+        & \IFIELDS & ((\Tid^?)^\ast)^\ast ~\} \\
+        & \ITYPEDEFS & \subtype^\ast ~\} \\
      \end{array}
    \end{array}
 
 For each index space, such a context contains the list of :ref:`identifiers <text-id>` assigned to the defined indices.
 Unnamed indices are associated with empty (:math:`\epsilon`) entries in these lists.
+Fields have *dependent* name spaces, and hence a separate list of field identifiers per type.
 
 An identifier context is *well-formed* if no index space contains duplicate identifiers.
+For fields, names need only be unique within a single type.
+
 
 
 Conventions

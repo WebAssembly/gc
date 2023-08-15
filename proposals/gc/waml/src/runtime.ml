@@ -12,16 +12,16 @@ let name_func_apply n =
 let funcs =
   let open Intrinsic in
   let open Wasm.Types in
-  let text ctxt = Lower.(lower_value_type ctxt Source.no_region (UnboxedRep Nonull) T.Text) in
-  let i32 ctxt = NumType I32Type in
+  let text ctxt = Lower.(lower_val_type ctxt Source.no_region (UnboxedRep NoNull) T.Text) in
+  let i32 _ctxt = NumT I32T in
   let ty fts1 fts2 ctxt =
     let with_ctxt f = f ctxt in
-    FuncType (List.map with_ctxt fts1, List.map with_ctxt fts2)
+    FuncT (List.map with_ctxt fts1, List.map with_ctxt fts2)
   in
   let ty_nary arity ctxt =
     let anyclos = Lower.lower_anyclos_type ctxt Source.no_region in
     let argts, _ = Lower.lower_param_types ctxt Source.no_region arity in
-    FuncType (Wasm.Operators.ref_ anyclos :: argts, [Lower.absref])
+    FuncT (Wasm.Operators.ref_ anyclos :: argts, [Lower.absref])
   in
   [ name_mem_alloc, (compile_mem_alloc, ty [i32] [i32]);
     name_text_new, (compile_text_new, ty [i32; i32] [text]);

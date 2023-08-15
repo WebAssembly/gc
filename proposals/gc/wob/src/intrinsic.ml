@@ -14,7 +14,7 @@ let compile_mem ctxt : int32 =
 let compile_mem_ptr ctxt : int32 =
   Emit.lookup_intrinsic ctxt "mem_ptr" (fun _ ->
     let at = Prelude.region in
-    emit_global ctxt at W.Mutable W.i32 None
+    emit_global ctxt at W.Var W.i32 None
   )
 
 let compile_mem_alloc ctxt : int32 =
@@ -59,22 +59,24 @@ let compile_mem_alloc ctxt : int32 =
 (* Text *)
 
 let compile_text_type ctxt : int32 =
-  let ft = W.(FieldType (PackedStorageType Pack8, Mutable)) in
-  emit_type ctxt Prelude.region W.(sub [] (array ft))
+  let ft = W.(FieldT (Var, PackStorageT Pack.Pack8)) in
+  emit_type ctxt Prelude.region W.(sub_final [] (array ft))
 
 
 let compile_text_new ctxt : int32 =
   Emit.lookup_intrinsic ctxt "text_new" (fun _ ->
     let at = Prelude.region in
     let typeidx = compile_text_type ctxt in
-    let t' = W.(RefType (Nullable, DefHeapType (SynVar typeidx))) in
+    let t' = W.(RefT (Null, VarHT (StatX typeidx))) in
     emit_func ctxt at W.[i32; i32] [t'] (fun ctxt _ ->
       let srcidx = emit_param ctxt at in
       let lenidx = emit_param ctxt at in
       let dstidx = emit_local ctxt at t' in
       List.iter (emit_instr ctxt at) W.[
         local_get (lenidx @@ at);
+(* RTTs
         rtt_canon (typeidx @@ at);
+*)
         array_new_default (typeidx @@ at);
         local_set (dstidx @@ at);
         block void (List.map (fun e -> e @@ at) [
@@ -104,7 +106,7 @@ let compile_text_cpy ctxt : int32 =
   Emit.lookup_intrinsic ctxt "text_cpy" (fun _ ->
     let at = Prelude.region in
     let typeidx = compile_text_type ctxt in
-    let t' = W.(RefType (Nullable, DefHeapType (SynVar typeidx))) in
+    let t' = W.(RefT (Null, VarHT (StatX typeidx))) in
     emit_func ctxt at W.[t'; i32; t'; i32; i32] [] (fun ctxt _ ->
       let dstidx = emit_param ctxt at in
       let dstkidx = emit_param ctxt at in
@@ -142,7 +144,7 @@ let compile_text_cat ctxt : int32 =
     let text_cpy = compile_text_cpy ctxt in
     let at = Prelude.region in
     let typeidx = compile_text_type ctxt in
-    let t' = W.(RefType (Nullable, DefHeapType (SynVar typeidx))) in
+    let t' = W.(RefT (Null, VarHT (StatX typeidx))) in
     emit_func ctxt at [t'; t'] [t'] (fun ctxt _ ->
       let arg1idx = emit_param ctxt at in
       let arg2idx = emit_param ctxt at in
@@ -153,7 +155,9 @@ let compile_text_cat ctxt : int32 =
         local_get (arg2idx @@ at);
         array_len;
         i32_add;
+(* RTTs
         rtt_canon (typeidx @@ at);
+*)
         array_new_default (typeidx @@ at);
         local_tee (tmpidx @@ at);
         i32_const (0l @@ at);
@@ -179,7 +183,7 @@ let compile_text_eq ctxt : int32 =
   Emit.lookup_intrinsic ctxt "text_eq" (fun _ ->
     let at = Prelude.region in
     let typeidx = compile_text_type ctxt in
-    let t' = W.(RefType (Nullable, DefHeapType (SynVar typeidx))) in
+    let t' = W.(RefT (Null, VarHT (StatX typeidx))) in
     emit_func ctxt at [t'; t'] W.[i32] (fun ctxt _ ->
       let arg1idx = emit_param ctxt at in
       let arg2idx = emit_param ctxt at in
@@ -230,16 +234,16 @@ let compile_text_eq ctxt : int32 =
 (* Runtime types *)
 
 let compile_rtt_type ctxt : int32 =
-  let rtt_vt = W.(RefType (Nullable, EqHeapType)) in
-  let rtt_ft = W.(FieldType (ValueStorageType rtt_vt, Mutable)) in
-  emit_type ctxt Prelude.region W.(sub [] (array rtt_ft))
+  let rtt_vt = W.(RefT (Null, EqHT)) in
+  let rtt_ft = W.(FieldT (Var, ValStorageT rtt_vt)) in
+  emit_type ctxt Prelude.region W.(sub_final [] (array rtt_ft))
 
 let compile_rtt_eq ctxt : int32 =
   Emit.lookup_intrinsic ctxt "rtt_eq" (fun _ ->
     let at = Prelude.region in
     let typeidx = compile_rtt_type ctxt in
-    let rtt_t' = W.(RefType (Nullable, DefHeapType (SynVar typeidx))) in
-    let t' = W.(RefType (Nullable, EqHeapType)) in
+    let rtt_t' = W.(RefT (Null, VarHT (StatX typeidx))) in
+    let t' = W.(RefT (Null, EqHT)) in
     emit_func ctxt at [t'; t'] W.[i32] (fun ctxt selfidx ->
       let arg1idx = emit_param ctxt at in
       let arg2idx = emit_param ctxt at in
@@ -258,14 +262,16 @@ let compile_rtt_eq ctxt : int32 =
           block void (List.map (fun e -> e @@ at) [
             block (result t') (List.map (fun e -> e @@ at) [
               local_get (arg1idx @@ at);
-              br_on_non_data (0l @@ at);
+(* RTTs
               rtt_canon (typeidx @@ at);
-              br_on_cast_fail (0l @@ at);
+*)
+              br_on_cast_fail (0l @@ at) (Null, EqHT) (NoNull, VarHT (StatX typeidx));
               local_set (rtt1idx @@ at);
               local_get (arg2idx @@ at);
-              br_on_non_data (0l @@ at);
+(* RTTs
               rtt_canon (typeidx @@ at);
-              br_on_cast_fail (0l @@ at);
+*)
+              br_on_cast_fail (0l @@ at) (Null, EqHT) (NoNull, VarHT (StatX typeidx));
               local_set (rtt2idx @@ at);
               br (1l @@ at);
             ]);

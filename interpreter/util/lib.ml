@@ -64,10 +64,6 @@ struct
   and make' n x xs =
     if n = 0 then xs else make' (n - 1) x (x::xs)
 
-  let rec table n f = table' n f []
-  and table' n f xs =
-    if n = 0 then xs else table' (n - 1) f (f (n - 1) :: xs)
-
   let rec take n xs =
     match n, xs with
     | 0, _ -> []
@@ -111,17 +107,6 @@ struct
 
   let index_of x = index_where ((=) x)
 
-  let rec map_filter f = function
-    | [] -> []
-    | x::xs ->
-      match f x with
-      | None -> map_filter f xs
-      | Some y -> y :: map_filter f xs
-
-  let rec concat_map f = function
-    | [] -> []
-    | x::xs -> f x @ concat_map f xs
-
   let rec pairwise f = function
     | [] -> []
     | x1::x2::xs -> f x1 x2 :: pairwise f xs
@@ -130,6 +115,10 @@ end
 
 module List32 =
 struct
+  let rec init n f = init' n f []
+  and init' n f xs =
+    if n = 0l then xs else init' (Int32.sub n 1l) f (f (Int32.sub n 1l) :: xs)
+
   let rec make n x = make' n x []
   and make' n x xs =
     if n = 0l then xs else make' (Int32.sub n 1l) x (x::xs)
@@ -147,6 +136,12 @@ struct
     | n, _::xs' when n > 0l -> nth xs' (Int32.sub n 1l)
     | _ -> failwith "nth"
 
+  let rec replace xs n y =
+    match n, xs with
+    | 0l, _::xs' -> y::xs'
+    | n, x::xs' when n > 0l -> x :: replace xs' (Int32.sub n 1l) y
+    | _ -> failwith "replace"
+
   let rec take n xs =
     match n, xs with
     | 0l, _ -> []
@@ -158,6 +153,11 @@ struct
     | 0l, _ -> xs
     | n, _::xs' when n > 0l -> drop (Int32.sub n 1l) xs'
     | _ -> failwith "drop"
+
+  let rec iteri f xs = iteri' f 0l xs
+  and iteri' f i = function
+    | [] -> ()
+    | x::xs -> f i x; iteri' f (Int32.add i 1l) xs
 
   let rec mapi f xs = mapi' f 0l xs
   and mapi' f i = function
@@ -178,7 +178,7 @@ module Array32 =
 struct
   let make n x =
     if n < 0l || Int64.of_int32 n > Int64.of_int max_int then
-      raise (Invalid_argument "Array32.make");
+      invalid_arg "Array32.make";
     Array.make (Int32.to_int n) x
 
   let length a = Int32.of_int (Array.length a)
@@ -201,7 +201,7 @@ struct
   struct
     let create kind layout n =
       if n < 0L || n > Int64.of_int max_int then
-        raise (Invalid_argument "Bigarray.Array1_64.create");
+        invalid_arg "Bigarray.Array1_64.create";
       Array1.create kind layout (Int64.to_int n)
 
     let dim a = Int64.of_int (Array1.dim a)
@@ -226,7 +226,7 @@ struct
   let force o =
     match o with
     | Some y -> y
-    | None -> raise (Invalid_argument "Option.force")
+    | None -> invalid_arg "Option.force"
 
   let map f = function
     | Some x -> Some (f x)

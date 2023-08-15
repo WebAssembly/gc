@@ -76,7 +76,7 @@ let rec resolve_imports (env : env) ims : env =
     else
       resolve_imports env ims'
 
-let dummy_et = ExternFuncType (FuncType ([], []))
+let dummy_et = ExternFuncT (DefT (RecT [], -1l))
 let resolve_exports (env : env) file exs : env =
   let name = Filename.chop_extension file in
   let ets = List.map (fun _ -> dummy_et) exs in
@@ -125,10 +125,8 @@ let rec merge_imports (env : env) file m ts ims cnt ims_out : env * counts * imp
         )
       | Some (ex, et) ->
         if not !Flags.unchecked then begin
-          let it =
-            sem_extern_type ts (extern_type_of_import_type (import_type_of m im)) in
-          let dts = List.map Wasm.Lib.Promise.value ts in
-          if not (Wasm.Match.match_extern_type dts et it) then
+          let it = extern_type_of_import_type (import_type_of m im) in
+          if not (Wasm.Match.match_extern_type ts et it) then
             error file (
               "imported module \"" ^ mname ^ "\" " ^
               "exports item \"" ^ iname ^ "\" with incompatible type\n" ^
@@ -159,15 +157,15 @@ let rec add_range s x y = function
 
 let rec add_types_range s x y = function
   | [] -> s
-  | {it = RecDefType []; at}::dts ->
+  | {it = RecT []; at}::dts ->
     add_types_range s x y dts
-  | {it = RecDefType (st::sts); at}::dts ->
+  | {it = RecT (st::sts); at}::dts ->
     add_types_range (Subst.Map.add x y s) (x +% 1l) (y +% 1l)
-      ({it = RecDefType sts; at}::dts)
+      ({it = RecT sts; at}::dts)
 
 let rec num_types = function
   | [] -> 0l
-  | {it = RecDefType sts; _}::dts -> Wasm.Lib.List32.length sts +% num_types dts
+  | {it = RecT sts; _}::dts -> Wasm.Lib.List32.length sts +% num_types dts
 
 let merge_defs (env : env) cnt m : env =
   let open Subst in
@@ -202,19 +200,20 @@ let merge_exports (env : env) file m ts exs : env =
     if !Flags.unchecked
     then List.map (fun _ -> dummy_et) exs
     else List.map (fun ex ->
-      sem_extern_type ts (extern_type_of_export_type (export_type_of m ex))) m.it.exports
+      extern_type_of_export_type (export_type_of m ex)) m.it.exports
   in
   {env with exports = Map.add name (List.combine exs ets) env.exports}
 
 let merge_start (env : env) starts m : module_' =
   match starts with
   | [] -> m
-  | [x] -> {m with start = Some x}
-  | x0::_ ->
-    let ftype = (Wasm.Lib.List32.nth m.funcs x0.it).it.ftype in
-    let body = List.map (fun x -> Call x @@ no_region) starts in
+  | [st] -> {m with start = Some st}
+  | st0::_ ->
+    let ftype = (Wasm.Lib.List32.nth m.funcs st0.it.sfunc.it).it.ftype in
+    let body = List.map (fun st -> Call st.it.sfunc @@ no_region) starts in
     let f = {ftype; locals = []; body} @@ no_region in
-    {m with start = Some (env.binds.nfuncs @@ no_region); funcs = m.funcs @ [f]}
+    let start = {sfunc = env.binds.nfuncs @@ no_region} @@ no_region in
+    {m with start = Some start; funcs = m.funcs @ [f]}
 
 let rec merge_modules (env : env) (modules : (string * module_) list) starts m : module_' =
   match modules with
@@ -232,7 +231,7 @@ let rec merge_modules (env : env) (modules : (string * module_) list) starts m :
     let starts' =
       match m_in.it.start with
       | None -> starts
-      | Some x -> starts @ [Subst.func_idx env'.subst x]
+      | Some st -> starts @ [Subst.start env'.subst st]
     in
     let m' =
       { types = m.types @ Subst.(list type_ env'.subst m_in.it.types);

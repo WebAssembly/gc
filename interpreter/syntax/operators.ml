@@ -1,63 +1,79 @@
 open Source
-open Types
 open Value
 open V128
 open Ast
+open Types
+open Pack
 
 
 (* Types *)
 
-let i32 = NumType I32Type
-let i64 = NumType I64Type
-let f32 = NumType F32Type
-let f64 = NumType F64Type
+let i32 = NumT I32T
+let i64 = NumT I64T
+let f32 = NumT F32T
+let f64 = NumT F64T
+let v128 = VecT V128T
 
-let any = AnyHeapType
-let eq = EqHeapType
-let i31 = I31HeapType
-let data = DataHeapType
-let func = FuncHeapType
-let type_ x = DefHeapType (SynVar x)
-let rtt x = RttHeapType (SynVar x)
+let any = AnyHT
+let eq = EqHT
+let i31 = I31HT
+let struct' = StructHT
+let array' = ArrayHT
+let none = NoneHT
+let func' = FuncHT
+let nofunc = NoFuncHT
+let extern = ExternHT
+let noextern = NoExternHT
+let type_ x = VarHT (StatX x)
 
-let ref_heap ht = RefType (NonNullable, ht)
-let ref_null_heap ht = RefType (Nullable, ht)
+let ref_heap ht = RefT (NoNull, ht)
+let ref_null_heap ht = RefT (Null, ht)
 let ref_ x = ref_heap (type_ x)
 let ref_null_ x = ref_null_heap (type_ x)
 let anyref = ref_null_heap any
 let eqref = ref_null_heap eq
 let i31ref = ref_null_heap i31
-let dataref = ref_null_heap data
-let funcref = ref_null_heap func
-let rttref x = ref_heap (rtt x)
+let structref = ref_null_heap struct'
+let arrayref = ref_null_heap array'
+let nullref = ref_null_heap none
+let funcref = ref_null_heap func'
+let nullfuncref = ref_null_heap nofunc
+let externref = ref_null_heap extern
+let nullexternref = ref_null_heap noextern
 
 let i8 = Pack8
 let i16 = Pack16
-let field t = FieldType (ValueStorageType t, Immutable)
-let field_mut t = FieldType (ValueStorageType t, Mutable)
-let field_pack t = FieldType (PackedStorageType t, Immutable)
-let field_mut_pack t = FieldType (PackedStorageType t, Mutable)
+let field t = FieldT (Cons, ValStorageT t)
+let field_mut t = FieldT (Var, ValStorageT t)
+let field_pack t = FieldT (Cons, PackStorageT t)
+let field_mut_pack t = FieldT (Var, PackStorageT t)
 
-let struct_ fts = StructDefType (StructType fts)
-let array ft = ArrayDefType (ArrayType ft)
-let func ts1 ts2 = FuncDefType (FuncType (ts1, ts2))
+let struct_ fts = DefStructT (StructT fts)
+let array ft = DefArrayT (ArrayT ft)
+let func ts1 ts2 = DefFuncT (FuncT (ts1, ts2))
 
-let sub xs st = SubType (List.map (fun x -> SynVar x) xs, st)
-let type_def st = RecDefType [sub [] st]
-let type_sub xs st = RecDefType [sub xs st]
-let type_rec sts = RecDefType (List.map (sub []) sts)
-let type_rec_sub xssts = RecDefType (List.map (fun (xs, st) -> sub xs st) xssts)
+let sub xs st = SubT (NoFinal, List.map type_ xs, st)
+let sub_final xs st = SubT (Final, List.map type_ xs, st)
+let def_struct fts = sub_final [] (struct_ fts)
+let def_array ft = sub_final [] (array ft)
+let def_func ts1 ts2 = sub_final [] (func ts1 ts2)
+let type_def st = RecT [sub_final [] st]
+let type_sub xs st = RecT [sub xs st]
+let type_sub_final xs st = RecT [sub_final xs st]
+let type_rec sts = RecT (List.map (sub []) sts)
+let type_rec_sub xssts = RecT (List.map (fun (xs, st) -> sub xs st) xssts)
+let type_rec_sub_final xssts = RecT (List.map (fun (xs, st) -> sub_final xs st) xssts)
 
 let void = ValBlockType None
 let result t = ValBlockType (Some t)
-let typeuse x = VarBlockType (SynVar x)
+let typeuse x = VarBlockType x
 
 let lim n m = {min = n; max = Some m}
 let lim_inf n = {min = n; max = None}
-let table_type lim rt = TableType (lim, rt)
-let memory_type lim = MemoryType lim
-let global_type t = GlobalType (t, Immutable)
-let global_type_mut t = GlobalType (t, Mutable)
+let table_type lim rt = TableT (lim, rt)
+let memory_type lim = MemoryT lim
+let global_type t = GlobalT (Cons, t)
+let global_type_mut t = GlobalT (Var, t)
 
 
 (* Instructions *)
@@ -78,30 +94,22 @@ let select t = Select t
 let block bt es = Block (bt, es)
 let loop bt es = Loop (bt, es)
 let if_ bt es1 es2 = If (bt, es1, es2)
-let let_ bt ts es = Let (bt, ts, es)
 
 let br x = Br x
 let br_if x = BrIf x
 let br_table xs x = BrTable (xs, x)
-let br_on_null x = BrCast (x, NullOp)
-let br_on_i31 x = BrCast (x, I31Op)
-let br_on_data x = BrCast (x, DataOp)
-let br_on_array x = BrCast (x, ArrayOp)
-let br_on_func x = BrCast (x, FuncOp)
-let br_on_cast x = BrCast (x, RttOp)
-let br_on_non_null x = BrCastFail (x, NullOp)
-let br_on_non_i31 x = BrCastFail (x, I31Op)
-let br_on_non_data x = BrCastFail (x, DataOp)
-let br_on_non_array x = BrCastFail (x, ArrayOp)
-let br_on_non_func x = BrCastFail (x, FuncOp)
-let br_on_cast_fail x = BrCastFail (x, RttOp)
+let br_on_null x = BrOnNull x
+let br_on_non_null x = BrOnNonNull x
+let br_on_cast x t1 t2 = BrOnCast (x, t1, t2)
+let br_on_cast_fail x t1 t2 = BrOnCastFail (x, t1, t2)
 
 let return = Return
 let call x = Call x
-let call_ref = CallRef
+let call_ref x = CallRef x
 let call_indirect x y = CallIndirect (x, y)
-let return_call_ref = ReturnCallRef
-let func_bind x = FuncBind x
+let return_call x = ReturnCall x
+let return_call_ref x = ReturnCallRef x
+let return_call_indirect x y = ReturnCallIndirect (x, y)
 
 let local_get x = LocalGet x
 let local_set x = LocalSet x
@@ -118,45 +126,45 @@ let table_copy x y = TableCopy (x, y)
 let table_init x y = TableInit (x, y)
 let elem_drop x = ElemDrop x
 
-let i32_load align offset = Load {ty = I32Type; align; offset; pack = None}
-let i64_load align offset = Load {ty = I64Type; align; offset; pack = None}
-let f32_load align offset = Load {ty = F32Type; align; offset; pack = None}
-let f64_load align offset = Load {ty = F64Type; align; offset; pack = None}
+let i32_load align offset = Load {ty = I32T; align; offset; pack = None}
+let i64_load align offset = Load {ty = I64T; align; offset; pack = None}
+let f32_load align offset = Load {ty = F32T; align; offset; pack = None}
+let f64_load align offset = Load {ty = F64T; align; offset; pack = None}
 let i32_load8_s align offset =
-  Load {ty = I32Type; align; offset; pack = Some (Pack8, SX)}
+  Load {ty = I32T; align; offset; pack = Some (Pack8, SX)}
 let i32_load8_u align offset =
-  Load {ty = I32Type; align; offset; pack = Some (Pack8, ZX)}
+  Load {ty = I32T; align; offset; pack = Some (Pack8, ZX)}
 let i32_load16_s align offset =
-  Load {ty = I32Type; align; offset; pack = Some (Pack16, SX)}
+  Load {ty = I32T; align; offset; pack = Some (Pack16, SX)}
 let i32_load16_u align offset =
-  Load {ty = I32Type; align; offset; pack = Some (Pack16, ZX)}
+  Load {ty = I32T; align; offset; pack = Some (Pack16, ZX)}
 let i64_load8_s align offset =
-  Load {ty = I64Type; align; offset; pack = Some (Pack8, SX)}
+  Load {ty = I64T; align; offset; pack = Some (Pack8, SX)}
 let i64_load8_u align offset =
-  Load {ty = I64Type; align; offset; pack = Some (Pack8, ZX)}
+  Load {ty = I64T; align; offset; pack = Some (Pack8, ZX)}
 let i64_load16_s align offset =
-  Load {ty = I64Type; align; offset; pack = Some (Pack16, SX)}
+  Load {ty = I64T; align; offset; pack = Some (Pack16, SX)}
 let i64_load16_u align offset =
-  Load {ty = I64Type; align; offset; pack = Some (Pack16, ZX)}
+  Load {ty = I64T; align; offset; pack = Some (Pack16, ZX)}
 let i64_load32_s align offset =
-  Load {ty = I64Type; align; offset; pack = Some (Pack32, SX)}
+  Load {ty = I64T; align; offset; pack = Some (Pack32, SX)}
 let i64_load32_u align offset =
-  Load {ty = I64Type; align; offset; pack = Some (Pack32, ZX)}
+  Load {ty = I64T; align; offset; pack = Some (Pack32, ZX)}
 
-let i32_store align offset = Store {ty = I32Type; align; offset; pack = None}
-let i64_store align offset = Store {ty = I64Type; align; offset; pack = None}
-let f32_store align offset = Store {ty = F32Type; align; offset; pack = None}
-let f64_store align offset = Store {ty = F64Type; align; offset; pack = None}
+let i32_store align offset = Store {ty = I32T; align; offset; pack = None}
+let i64_store align offset = Store {ty = I64T; align; offset; pack = None}
+let f32_store align offset = Store {ty = F32T; align; offset; pack = None}
+let f64_store align offset = Store {ty = F64T; align; offset; pack = None}
 let i32_store8 align offset =
-  Store {ty = I32Type; align; offset; pack = Some Pack8}
+  Store {ty = I32T; align; offset; pack = Some Pack8}
 let i32_store16 align offset =
-  Store {ty = I32Type; align; offset; pack = Some Pack16}
+  Store {ty = I32T; align; offset; pack = Some Pack16}
 let i64_store8 align offset =
-  Store {ty = I64Type; align; offset; pack = Some Pack8}
+  Store {ty = I64T; align; offset; pack = Some Pack8}
 let i64_store16 align offset =
-  Store {ty = I64Type; align; offset; pack = Some Pack16}
+  Store {ty = I64T; align; offset; pack = Some Pack16}
 let i64_store32 align offset =
-  Store {ty = I64Type; align; offset; pack = Some Pack32}
+  Store {ty = I64T; align; offset; pack = Some Pack32}
 
 let memory_size = MemorySize
 let memory_grow = MemoryGrow
@@ -165,18 +173,10 @@ let memory_copy = MemoryCopy
 let memory_init x = MemoryInit x
 let data_drop x = DataDrop x
 
-let ref_is_null = RefTest NullOp
-let ref_is_i31 = RefTest I31Op
-let ref_is_data = RefTest DataOp
-let ref_is_array = RefTest ArrayOp
-let ref_is_func = RefTest FuncOp
-let ref_test = RefTest RttOp
-let ref_as_non_null = RefCast NullOp
-let ref_as_i31 = RefCast I31Op
-let ref_as_data = RefCast DataOp
-let ref_as_array = RefCast ArrayOp
-let ref_as_func = RefCast FuncOp
-let ref_cast = RefCast RttOp
+let ref_is_null = RefIsNull
+let ref_as_non_null = RefAsNonNull  
+let ref_test t = RefTest t
+let ref_cast t = RefCast t
 let ref_eq = RefEq
 
 let i31_new = I31New
@@ -190,13 +190,21 @@ let struct_get_s x y = StructGet (x, y, Some SX)
 let struct_set x y = StructSet (x, y)
 let array_new x = ArrayNew (x, Explicit)
 let array_new_default x = ArrayNew (x, Implicit)
+let array_new_fixed x n = ArrayNewFixed (x, n)
+let array_new_elem x y = ArrayNewElem (x, y)
+let array_new_data x y = ArrayNewData (x, y)
 let array_get x = ArrayGet (x, None)
 let array_get_u x = ArrayGet (x, Some ZX)
 let array_get_s x = ArrayGet (x, Some SX)
 let array_set x = ArraySet x
 let array_len = ArrayLen
+let array_copy x y = ArrayCopy (x, y)
+let array_fill x = ArrayFill x
+let array_init_data x y = ArrayInitData (x, y)
+let array_init_elem x y = ArrayInitElem (x, y)
 
-let rtt_canon x = RttCanon x
+let extern_internalize = ExternConvert Internalize
+let extern_externalize = ExternConvert Externalize
 
 let i32_clz = Unary (I32 I32Op.Clz)
 let i32_ctz = Unary (I32 I32Op.Ctz)
@@ -340,51 +348,51 @@ let i64_reinterpret_f64 = Convert (I64 I64Op.ReinterpretFloat)
 let f32_reinterpret_i32 = Convert (F32 F32Op.ReinterpretInt)
 let f64_reinterpret_i64 = Convert (F64 F64Op.ReinterpretInt)
 
-let v128_load align offset = VecLoad {ty = V128Type; align; offset; pack = None}
+let v128_load align offset = VecLoad {ty = V128T; align; offset; pack = None}
 let v128_load8x8_s align offset =
-  VecLoad {ty = V128Type; align; offset; pack = Some (Pack64, ExtLane (Pack8x8, SX))}
+  VecLoad {ty = V128T; align; offset; pack = Some (Pack64, ExtLane (Pack8x8, SX))}
 let v128_load8x8_u align offset =
-  VecLoad {ty = V128Type; align; offset; pack = Some (Pack64, ExtLane (Pack8x8, ZX))}
+  VecLoad {ty = V128T; align; offset; pack = Some (Pack64, ExtLane (Pack8x8, ZX))}
 let v128_load16x4_s align offset =
-  VecLoad {ty = V128Type; align; offset; pack = Some (Pack64, ExtLane (Pack16x4, SX))}
+  VecLoad {ty = V128T; align; offset; pack = Some (Pack64, ExtLane (Pack16x4, SX))}
 let v128_load16x4_u align offset =
-  VecLoad {ty = V128Type; align; offset; pack = Some (Pack64, ExtLane (Pack16x4, ZX))}
+  VecLoad {ty = V128T; align; offset; pack = Some (Pack64, ExtLane (Pack16x4, ZX))}
 let v128_load32x2_s align offset =
-  VecLoad {ty = V128Type; align; offset; pack = Some (Pack64, ExtLane (Pack32x2, SX))}
+  VecLoad {ty = V128T; align; offset; pack = Some (Pack64, ExtLane (Pack32x2, SX))}
 let v128_load32x2_u align offset =
-  VecLoad {ty = V128Type; align; offset; pack = Some (Pack64, ExtLane (Pack32x2, ZX))}
+  VecLoad {ty = V128T; align; offset; pack = Some (Pack64, ExtLane (Pack32x2, ZX))}
 let v128_load8_splat align offset =
-  VecLoad {ty = V128Type; align; offset; pack = Some (Pack8, ExtSplat)}
+  VecLoad {ty = V128T; align; offset; pack = Some (Pack8, ExtSplat)}
 let v128_load16_splat align offset =
-  VecLoad {ty = V128Type; align; offset; pack = Some (Pack16, ExtSplat)}
+  VecLoad {ty = V128T; align; offset; pack = Some (Pack16, ExtSplat)}
 let v128_load32_splat align offset =
-  VecLoad {ty = V128Type; align; offset; pack = Some (Pack32, ExtSplat)}
+  VecLoad {ty = V128T; align; offset; pack = Some (Pack32, ExtSplat)}
 let v128_load64_splat align offset =
-  VecLoad {ty = V128Type; align; offset; pack = Some (Pack64, ExtSplat)}
+  VecLoad {ty = V128T; align; offset; pack = Some (Pack64, ExtSplat)}
 let v128_load32_zero align offset =
-  VecLoad {ty = V128Type; align; offset; pack = Some (Pack32, ExtZero)}
+  VecLoad {ty = V128T; align; offset; pack = Some (Pack32, ExtZero)}
 let v128_load64_zero align offset =
-  VecLoad {ty = V128Type; align; offset; pack = Some (Pack64, ExtZero)}
+  VecLoad {ty = V128T; align; offset; pack = Some (Pack64, ExtZero)}
 
-let v128_store align offset = VecStore {ty = V128Type; align; offset; pack = ()}
+let v128_store align offset = VecStore {ty = V128T; align; offset; pack = ()}
 
 let v128_load8_lane align offset i =
-  VecLoadLane ({ty = V128Type; align; offset; pack = Pack8}, i)
+  VecLoadLane ({ty = V128T; align; offset; pack = Pack8}, i)
 let v128_load16_lane align offset i =
-  VecLoadLane ({ty = V128Type; align; offset; pack = Pack16}, i)
+  VecLoadLane ({ty = V128T; align; offset; pack = Pack16}, i)
 let v128_load32_lane align offset i =
-  VecLoadLane ({ty = V128Type; align; offset; pack = Pack32}, i)
+  VecLoadLane ({ty = V128T; align; offset; pack = Pack32}, i)
 let v128_load64_lane align offset i =
-  VecLoadLane ({ty = V128Type; align; offset; pack = Pack64}, i)
+  VecLoadLane ({ty = V128T; align; offset; pack = Pack64}, i)
 
 let v128_store8_lane align offset i =
-  VecStoreLane ({ty = V128Type; align; offset; pack = Pack8}, i)
+  VecStoreLane ({ty = V128T; align; offset; pack = Pack8}, i)
 let v128_store16_lane align offset i =
-  VecStoreLane ({ty = V128Type; align; offset; pack = Pack16}, i)
+  VecStoreLane ({ty = V128T; align; offset; pack = Pack16}, i)
 let v128_store32_lane align offset i =
-  VecStoreLane ({ty = V128Type; align; offset; pack = Pack32}, i)
+  VecStoreLane ({ty = V128T; align; offset; pack = Pack32}, i)
 let v128_store64_lane align offset i =
-  VecStoreLane ({ty = V128Type; align; offset; pack = Pack64}, i)
+  VecStoreLane ({ty = V128T; align; offset; pack = Pack64}, i)
 
 let v128_not = VecUnaryBits (V128 V128Op.Not)
 let v128_and = VecBinaryBits (V128 V128Op.And)

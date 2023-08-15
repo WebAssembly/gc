@@ -51,6 +51,7 @@ val elem : t -> Ast.elem_segment -> Ast.elem_segment
 val data : t -> Ast.data_segment -> Ast.data_segment
 val export : t -> Ast.export -> Ast.export
 val import : t -> Ast.import -> Ast.import
+val start : t -> Ast.start -> Ast.start
 
 val module_ : t -> Ast.module_ -> Ast.module_
 

@@ -11,16 +11,17 @@ UNOPT = 	$(NAME).debug
 OPT =   	$(NAME)
 
 WASMBASE = ../../../interpreter
-WASMDIRS =	util syntax binary script text valid runtime exec host main
+WASMDIRS =	util syntax binary script text valid runtime exec host main tests
 WASMFILES = Makefile $(shell cd $(WASMBASE); ls $(foreach DIR,$(WASMDIRS),$(DIR)/*))
 
 WASMDIR =		_wasm
 WASMDEPS =	$(WASMFILES:%=$(WASMDIR)/%)
+WASMTESTDIR =	$(WASMBASE)/../test
 
 DIRS =		src
 LIBS =		bigarray wasm
 INCLS =		$(PWD)/_wasm/_build
-FLAGS = 	-lexflags -ml -cflags '-w +a-4-27-37-42-44-45 -warn-error +a-3'
+FLAGS = 	-lexflags -ml -cflags '-w +a-4-27-37-42-44-45-70 -warn-error +a-3'
 OCB =		ocamlbuild -verbose 8 $(FLAGS) $(DIRS:%=-I %) $(LIBS:%=-lib %) -cflags '$(INCLS:%=-I %)' -lflags '$(INCLS:%=-I %)'
 
 
@@ -51,12 +52,12 @@ $(WASMFILES:%=$(WASMDIR)/%): $(WASMDIR)/%: $(WASMBASE)/% $(WASMDIRS:%=$(WASMDIR)
 		cp $< $@
 
 $(WASMDIR)/_build/wasm.cmx $(WASMDIR)/_build/wasm.cmxa: $(WASMDEPS)
-		make -C $(WASMDIR) libopt
+		make -C $(WASMDIR) TESTDIR=$(WASMTESTDIR) libopt
 		touch $@
 		$(OCB) -clean
 
 $(WASMDIR)/_build/wasm.cmo $(WASMDIR)/_build/wasm.cma: $(WASMDEPS)
-		make -C $(WASMDIR) libunopt
+		make -C $(WASMDIR) TESTDIR=$(WASMTESTDIR) libunopt
 		touch $@
 		$(OCB) -clean
 

@@ -1,94 +1,48 @@
-open Types
-open Value
-
-type field =
-  | ValueField of value ref
-  | PackedField of pack_size * int ref
-
-type data =
-  | Struct of sem_var * Rtt.t * field list
-  | Array of sem_var * Rtt.t * field list
+type data = string ref
 type t = data
+type address = Memory.address
 
-type ref_ += DataRef of data
+exception Bounds
 
+let alloc bs = ref bs
 
-let gap sz = 32 - 8 * packed_size sz
-let wrap sz i = Int32.(to_int (logand i (shift_right_logical (-1l) (gap sz))))
-let extend_u sz i = Int32.of_int i
-let extend_s sz i = Int32.(shift_right (shift_left (of_int i) (gap sz)) (gap sz))
+let size seg = I64.of_int_u (String.length !seg)
 
-let alloc_field ft v =
-  let FieldType (st, _) = ft in
-  match st, v with
-  | ValueStorageType _, v -> ValueField (ref v)
-  | PackedStorageType sz, Num (I32 i) -> PackedField (sz, ref (wrap sz i))
-  | _, _ -> failwith "alloc_field"
+let drop seg = seg := ""
 
-let write_field fld v =
-  match fld, v with
-  | ValueField vr, v -> vr := v
-  | PackedField (sz, ir), Num (I32 i) -> ir := wrap sz i
-  | _, _ -> failwith "write_field"
+let load_byte seg a =
+  let i = Int64.to_int a in
+  if i < 0 || i >= String.length !seg then raise Bounds;
+  !seg.[i]
 
-let read_field fld exto =
-  match fld, exto with
-  | ValueField vr, None -> !vr
-  | PackedField (sz, ir), Some ZX -> Num (I32 (extend_u sz !ir))
-  | PackedField (sz, ir), Some SX -> Num (I32 (extend_s sz !ir))
-  | _, _ -> failwith "read_field"
+let load_bytes seg a n =
+  let i = Int64.to_int a in
+  if i < 0 || i + n < 0 || i + n > String.length !seg then raise Bounds;
+  String.sub !seg i n
 
 
-let alloc_struct x rtt vs =
-  let StructType fts = as_struct_str_type (expand_ctx_type (def_of x)) in
-  Struct (x, rtt, List.map2 alloc_field fts vs)
+(* Typed accessors *)
 
-let alloc_array x rtt n v =
-  let ArrayType ft = as_array_str_type (expand_ctx_type (def_of x)) in
-  Array (x, rtt, List.init (Int32.to_int n) (fun _ -> alloc_field ft v))
+let load_num seg a nt =
+  let bs = load_bytes seg a (Types.num_size nt) in
+  Value.num_of_bits nt bs
 
+let load_num_packed sz ext seg a nt =
+  let bs = load_bytes seg a (Pack.packed_size sz) in
+  Value.num_of_packed_bits nt sz ext bs
 
-let type_inst_of = function
-  | Struct (x, _, _) -> x
-  | Array (x, _, _) -> x
+let load_vec seg a vt =
+  let bs = load_bytes seg a (Types.vec_size vt) in
+  Value.vec_of_bits vt bs
 
-let struct_type_of d = as_struct_str_type (expand_ctx_type (def_of (type_inst_of d)))
-let array_type_of d = as_array_str_type (expand_ctx_type (def_of (type_inst_of d)))
+let load_vec_packed sz ext seg a t =
+  let bs = load_bytes seg a (Pack.packed_size sz) in
+  Value.vec_of_packed_bits t sz ext bs
 
-let read_rtt = function
-  | Struct (_, rtt, _) -> rtt
-  | Array (_, rtt, _) -> rtt
+let load_val seg a t =
+  let bs = load_bytes seg a (Types.val_size t) in
+  Value.val_of_bits t bs
 
-
-let () =
-  let type_of_ref' = !Value.type_of_ref' in
-  Value.type_of_ref' := function
-    | DataRef d -> DefHeapType (SemVar (type_inst_of d))
-    | r -> type_of_ref' r
-
-let string_of_field = function
-  | ValueField vr -> string_of_value !vr
-  | PackedField (_, ir) -> string_of_int !ir
-
-let string_of_fields fs =
-  let fs', ell =
-    if List.length fs > 5
-    then Lib.List.take 5 fs, ["..."]
-    else fs, []
-  in String.concat " " (List.map string_of_field fs' @ ell)
-
-let rec_for inner f x =
-  inner := true;
-  try let y = f x in inner := false; y
-  with exn -> inner := false; raise exn
-
-let () =
-  let string_of_ref' = !Value.string_of_ref' in
-  let inner = ref false in
-  Value.string_of_ref' := function
-    | DataRef _ when !inner -> "..."
-    | DataRef (Struct (_, _, fs)) ->
-      "(struct " ^ rec_for inner string_of_fields fs ^ ")"
-    | DataRef (Array (_, _, fs)) ->
-      "(array " ^ rec_for inner string_of_fields fs ^ ")"
-    | r -> string_of_ref' r
+let load_val_storage seg a st =
+  let bs = load_bytes seg a (Types.storage_size st) in
+  Value.val_of_storage_bits st bs

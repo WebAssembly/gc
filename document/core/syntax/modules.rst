@@ -12,9 +12,9 @@ In addition, it can declare :ref:`imports <syntax-import>` and :ref:`exports <sy
 and provide initialization in the form of :ref:`data <syntax-data>` and :ref:`element <syntax-elem>` segments, or a :ref:`start function <syntax-start>`.
 
 .. math::
-   \begin{array}{lllll}
+   \begin{array}{llrll}
    \production{module} & \module &::=& \{ &
-     \MTYPES~\vec(\functype), \\&&&&
+     \MTYPES~\vec(\rectype), \\&&&&
      \MFUNCS~\vec(\func), \\&&&&
      \MTABLES~\vec(\table), \\&&&&
      \MMEMS~\vec(\mem), \\&&&&
@@ -66,7 +66,7 @@ Definitions are referenced with zero-based *indices*.
 Each class of definition has its own *index space*, as distinguished by the following classes.
 
 .. math::
-   \begin{array}{llll}
+   \begin{array}{llrl}
    \production{type index} & \typeidx &::=& \u32 \\
    \production{function index} & \funcidx &::=& \u32 \\
    \production{table index} & \tableidx &::=& \u32 \\
@@ -106,26 +106,21 @@ Conventions
 
 * The meta variables :math:`x, y` range over indices in any of the other index spaces.
 
-* The notation :math:`\F{idx}(A)` denotes the set of indices from index space :math:`\X{idx}` occurring free in :math:`A`. We sometimes reinterpret this set as the :ref:`vector <syntax-vec>` of its elements.
+* The notation :math:`\F{idx}(A)` denotes the set of indices from index space :math:`\X{idx}` occurring free in :math:`A`. Sometimes this set is reinterpreted as the :ref:`vector <syntax-vec>` of its elements.
 
 .. note::
    For example, if :math:`\instr^\ast` is :math:`(\DATADROP~x) (\MEMORYINIT~y)`, then :math:`\freedataidx(\instr^\ast) = \{x, y\}`, or equivalently, the vector :math:`x~y`.
 
 
-.. index:: ! type definition, type index, function type
+.. index:: ! type definition, type index, function type, aggregate type
    pair: abstract syntax; type definition
 .. _syntax-typedef:
 
 Types
 ~~~~~
 
-The |MTYPES| component of a module defines a vector of :ref:`function types <syntax-functype>`.
-
-All function types used in a module must be defined in this component.
-They are referenced by :ref:`type indices <syntax-typeidx>`.
-
-.. note::
-   Future versions of WebAssembly may add additional forms of type definitions.
+The |MTYPES| component of a module defines a vector of :ref:`recursive types <syntax-rectype>`, each of consisting of a list of :ref:`sub types <syntax-subtype>` referenced by individual :ref:`type indices <syntax-typeidx>`.
+All :ref:`function <syntax-functype>` or :ref:`aggregate <syntax-aggrtype>` types used in a module must be defined in this component.
 
 
 .. index:: ! function, ! local, function index, local index, type index, value type, expression, import
@@ -140,9 +135,11 @@ Functions
 The |MFUNCS| component of a module defines a vector of *functions* with the following structure:
 
 .. math::
-   \begin{array}{llll}
+   \begin{array}{llrl}
    \production{function} & \func &::=&
-     \{ \FTYPE~\typeidx, \FLOCALS~\vec(\valtype), \FBODY~\expr \} \\
+     \{ \FTYPE~\typeidx, \FLOCALS~\vec(\local), \FBODY~\expr \} \\
+   \production{local} & \local &::=&
+     \{ \LTYPE~\valtype \} \\
    \end{array}
 
 The |FTYPE| of a function declares its signature by reference to a :ref:`type <syntax-type>` defined in the module.
@@ -168,15 +165,16 @@ Tables
 The |MTABLES| component of a module defines a vector of *tables* described by their :ref:`table type <syntax-tabletype>`:
 
 .. math::
-   \begin{array}{llll}
+   \begin{array}{llrl}
    \production{table} & \table &::=&
-     \{ \TTYPE~\tabletype \} \\
+     \{ \TTYPE~\tabletype, \TINIT~\expr \} \\
    \end{array}
 
-A table is a vector of opaque values of a particular :ref:`reference type <syntax-reftype>`.
-The |LMIN| size in the :ref:`limits <syntax-limits>` of the table type specifies the initial size of that table, while its |LMAX|, if present, restricts the size to which it can grow later.
+A table is an array of opaque values of a particular :ref:`reference type <syntax-reftype>`.
+Moreover, each table slot is initialized with the |TINIT| value given by a :ref:`constant <valid-constant>` initializer :ref:`expression <syntax-expr>`.
+Tables can further be initialized through :ref:`element segments <syntax-elem>`.
 
-Tables can be initialized through :ref:`element segments <syntax-elem>`.
+The |LMIN| size in the :ref:`limits <syntax-limits>` of the table type specifies the initial size of that table, while its |LMAX|, if present, restricts the size to which it can grow later.
 
 Tables are referenced through :ref:`table indices <syntax-tableidx>`,
 starting with the smallest index not referencing a table :ref:`import <syntax-import>`.
@@ -192,7 +190,7 @@ Memories
 The |MMEMS| component of a module defines a vector of *linear memories* (or *memories* for short) as described by their :ref:`memory type <syntax-memtype>`:
 
 .. math::
-   \begin{array}{llll}
+   \begin{array}{llrl}
    \production{memory} & \mem &::=&
      \{ \MTYPE~\memtype \} \\
    \end{array}
@@ -223,7 +221,7 @@ Globals
 The |MGLOBALS| component of a module defines a vector of *global variables* (or *globals* for short):
 
 .. math::
-   \begin{array}{llll}
+   \begin{array}{llrl}
    \production{global} & \global &::=&
      \{ \GTYPE~\globaltype, \GINIT~\expr \} \\
    \end{array}
@@ -259,7 +257,7 @@ An active element segment copies its elements into a table during :ref:`instanti
 A declarative element segment is not available at runtime but merely serves to forward-declare references that are formed in code with instructions like :math:`\REFFUNC`.
 
 .. math::
-   \begin{array}{llll}
+   \begin{array}{llrl}
    \production{element segment} & \elem &::=&
      \{ \ETYPE~\reftype, \EINIT~\vec(\expr), \EMODE~\elemmode \} \\
    \production{element segment mode} & \elemmode &::=&
@@ -271,10 +269,6 @@ A declarative element segment is not available at runtime but merely serves to f
 The |EOFFSET| is given by a :ref:`constant <valid-constant>` :ref:`expression <syntax-expr>`.
 
 Element segments are referenced through :ref:`element indices <syntax-elemidx>`.
-
-.. note::
-   In the current version of WebAssembly, only tables whose elements are :ref:`function references <syntax-reftype>` can be initialized with an element segment.
-   This limitation may be lifted in the future.
 
 
 .. index:: ! data, active, passive, data index, memory, memory index, expression, constant, byte, vector
@@ -296,7 +290,7 @@ A passive data segment's contents can be copied into a memory using the |MEMORYI
 An active data segment copies its contents into a memory during :ref:`instantiation <exec-instantiation>`, as specified by a :ref:`memory index <syntax-memidx>` and a :ref:`constant <valid-constant>` :ref:`expression <syntax-expr>` defining an offset into that memory.
 
 .. math::
-   \begin{array}{llll}
+   \begin{array}{llrl}
    \production{data segment} & \data &::=&
      \{ \DINIT~\vec(\byte), \DMODE~\datamode \} \\
    \production{data segment mode} & \datamode &::=&
@@ -321,14 +315,14 @@ Start Function
 The |MSTART| component of a module declares the :ref:`function index <syntax-funcidx>` of a *start function* that is automatically invoked when the module is :ref:`instantiated <exec-instantiation>`, after :ref:`tables <syntax-table>` and :ref:`memories <syntax-mem>` have been initialized.
 
 .. math::
-   \begin{array}{llll}
+   \begin{array}{llrl}
    \production{start function} & \start &::=&
      \{ \SFUNC~\funcidx \} \\
    \end{array}
 
 .. note::
    The start function is intended for initializing the state of a module.
-   The module and its exports are not accessible before this initialization has completed.
+   The module and its exports are not accessible externally before this initialization has completed.
 
 
 .. index:: ! export, name, index, function index, table index, memory index, global index, function, table, memory, global, instantiation
@@ -390,7 +384,7 @@ Imports
 The |MIMPORTS| component of a module defines a set of *imports* that are required for :ref:`instantiation <exec-instantiation>`.
 
 .. math::
-   \begin{array}{llll}
+   \begin{array}{llrl}
    \production{import} & \import &::=&
      \{ \IMODULE~\name, \INAME~\name, \IDESC~\importdesc \} \\
    \production{import description} & \importdesc &::=&

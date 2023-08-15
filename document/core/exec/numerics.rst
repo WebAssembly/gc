@@ -104,19 +104,22 @@ Conventions:
 
 
 
-.. index:: bit, integer, floating-point
+.. index:: bit, integer, floating-point, numeric vector, packed type, value type
 .. _aux-bits:
 
 Representations
 ~~~~~~~~~~~~~~~
 
-Numbers have an underlying binary representation as a sequence of bits:
+Numbers and numeric vectors have an underlying binary representation as a sequence of bits:
 
 .. math::
    \begin{array}{lll@{\qquad}l}
-   \bits_{\K{i}N}(i) &=& \ibits_N(i) \\
-   \bits_{\K{f}N}(z) &=& \fbits_N(z) \\
+   \bits_{\IN}(i) &=& \ibits_N(i) \\
+   \bits_{\FN}(z) &=& \fbits_N(z) \\
+   \bits_{\VN}(i) &=& \ibits_N(i) \\
    \end{array}
+
+The first case of these applies to representations of both integer :ref:`value types <syntax-valtype>` and :ref:`packed types <syntax-packedtype>`.
 
 Each of these functions is a bijection, hence they are invertible.
 
@@ -161,6 +164,33 @@ Floating-Point
 where :math:`M = \significand(N)` and :math:`E = \exponent(N)`.
 
 
+.. index:: numeric vector, shape, lane
+.. _aux-lanes:
+.. _syntax-i128:
+
+Vectors
+.......
+
+Numeric vectors have the same underlying representation as an |i128|.
+They can also be interpreted as a sequence of numeric values packed into a |V128| with a particular |shape|.
+
+.. math::
+   \begin{array}{l}
+   \begin{array}{lll@{\qquad}l}
+   \lanes_{t\K{x}N}(c) &=&
+     c_0~\dots~c_{N-1} \\
+   \end{array}
+   \\ \qquad
+     \begin{array}[t]{@{}r@{~}l@{}l@{~}l@{~}l}
+     (\where & B &=& |t| / 8 \\
+     \wedge & b^{16} &=& \bytes_{\i128}(c) \\
+     \wedge & c_i &=& \bytes_{t}^{-1}(b^{16}[i \cdot B \slice B]))
+     \end{array}
+   \end{array}
+
+These functions are bijections, so they are invertible.
+
+
 .. index:: byte, little endian, memory
 .. _aux-littleendian:
 .. _aux-bytes:
@@ -177,32 +207,7 @@ When a number is stored into :ref:`memory <syntax-mem>`, it is converted into a 
    \littleendian(d^8~{d'}^\ast~) &=& \littleendian({d'}^\ast)~\ibits_8^{-1}(d^8) \\
    \end{array}
 
-Again these functions are invertable bijections.
-
-
-.. index:: numeric vectors, shape
-.. _aux-lanes:
-
-Vectors
-.......
-
-Numeric vectors have the same underlying representation as an |i128|. They can also be interpreted as a sequence of numeric values packed into a |V128| with a particular |shape|.
-
-.. math::
-   \begin{array}{l}
-   \begin{array}{lll@{\qquad}l}
-   \lanes_{t\K{x}N}(c) &=&
-     c_0~\dots~c_{N-1} \\
-   \end{array}
-   \\ \qquad
-     \begin{array}[t]{@{}r@{~}l@{}}
-     (\where & B = |t| / 8 \\
-     \wedge & b^{16} = bytes_{\i128}(c) \\
-     \wedge & c_i = \bytes_{t}^{-1}(b^{16}[i \cdot B \slice B]))
-     \end{array}
-   \end{array}
-
-These functions are bijections, so they are invertible.
+Again these functions are invertible bijections.
 
 
 .. index:: integer
@@ -230,7 +235,7 @@ This function is bijective, and hence invertible.
 
 
 .. index:: Boolean
-.. _aux-bool:
+.. _aux-tobool:
 
 Boolean Interpretation
 ......................
@@ -239,8 +244,8 @@ The integer result of predicates -- i.e., :ref:`tests <syntax-testop>` and :ref:
 
 .. math::
    \begin{array}{lll@{\qquad}l}
-   \bool(C) &=& 1 & (\iff C) \\
-   \bool(C) &=& 0 & (\otherwise) \\
+   \tobool(C) &=& 1 & (\iff C) \\
+   \tobool(C) &=& 0 & (\otherwise) \\
    \end{array}
 
 
@@ -406,7 +411,7 @@ The integer result of predicates -- i.e., :ref:`tests <syntax-testop>` and :ref:
 
 .. math::
    \begin{array}{@{}lcll}
-   \iandnot_N(i_1, i_2) &=& \iand_N(i_1, \inot_N(i2))
+   \iandnot_N(i_1, i_2) &=& \iand_N(i_1, \inot_N(i_2))
    \end{array}
 
 .. _op-ior:
@@ -557,7 +562,7 @@ The integer result of predicates -- i.e., :ref:`tests <syntax-testop>` and :ref:
 
 .. math::
    \begin{array}{@{}lcll}
-   \ieqz_N(i) &=& \bool(i = 0)
+   \ieqz_N(i) &=& \tobool(i = 0)
    \end{array}
 
 
@@ -570,7 +575,7 @@ The integer result of predicates -- i.e., :ref:`tests <syntax-testop>` and :ref:
 
 .. math::
    \begin{array}{@{}lcll}
-   \ieq_N(i_1, i_2) &=& \bool(i_1 = i_2)
+   \ieq_N(i_1, i_2) &=& \tobool(i_1 = i_2)
    \end{array}
 
 
@@ -583,7 +588,7 @@ The integer result of predicates -- i.e., :ref:`tests <syntax-testop>` and :ref:
 
 .. math::
    \begin{array}{@{}lcll}
-   \ine_N(i_1, i_2) &=& \bool(i_1 \neq i_2)
+   \ine_N(i_1, i_2) &=& \tobool(i_1 \neq i_2)
    \end{array}
 
 
@@ -596,7 +601,7 @@ The integer result of predicates -- i.e., :ref:`tests <syntax-testop>` and :ref:
 
 .. math::
    \begin{array}{@{}lcll}
-   \iltu_N(i_1, i_2) &=& \bool(i_1 < i_2)
+   \iltu_N(i_1, i_2) &=& \tobool(i_1 < i_2)
    \end{array}
 
 
@@ -613,7 +618,7 @@ The integer result of predicates -- i.e., :ref:`tests <syntax-testop>` and :ref:
 
 .. math::
    \begin{array}{@{}lcll}
-   \ilts_N(i_1, i_2) &=& \bool(\signed_N(i_1) < \signed_N(i_2))
+   \ilts_N(i_1, i_2) &=& \tobool(\signed_N(i_1) < \signed_N(i_2))
    \end{array}
 
 
@@ -626,7 +631,7 @@ The integer result of predicates -- i.e., :ref:`tests <syntax-testop>` and :ref:
 
 .. math::
    \begin{array}{@{}lcll}
-   \igtu_N(i_1, i_2) &=& \bool(i_1 > i_2)
+   \igtu_N(i_1, i_2) &=& \tobool(i_1 > i_2)
    \end{array}
 
 
@@ -643,7 +648,7 @@ The integer result of predicates -- i.e., :ref:`tests <syntax-testop>` and :ref:
 
 .. math::
    \begin{array}{@{}lcll}
-   \igts_N(i_1, i_2) &=& \bool(\signed_N(i_1) > \signed_N(i_2))
+   \igts_N(i_1, i_2) &=& \tobool(\signed_N(i_1) > \signed_N(i_2))
    \end{array}
 
 
@@ -656,7 +661,7 @@ The integer result of predicates -- i.e., :ref:`tests <syntax-testop>` and :ref:
 
 .. math::
    \begin{array}{@{}lcll}
-   \ileu_N(i_1, i_2) &=& \bool(i_1 \leq i_2)
+   \ileu_N(i_1, i_2) &=& \tobool(i_1 \leq i_2)
    \end{array}
 
 
@@ -673,7 +678,7 @@ The integer result of predicates -- i.e., :ref:`tests <syntax-testop>` and :ref:
 
 .. math::
    \begin{array}{@{}lcll}
-   \iles_N(i_1, i_2) &=& \bool(\signed_N(i_1) \leq \signed_N(i_2))
+   \iles_N(i_1, i_2) &=& \tobool(\signed_N(i_1) \leq \signed_N(i_2))
    \end{array}
 
 
@@ -686,7 +691,7 @@ The integer result of predicates -- i.e., :ref:`tests <syntax-testop>` and :ref:
 
 .. math::
    \begin{array}{@{}lcll}
-   \igeu_N(i_1, i_2) &=& \bool(i_1 \geq i_2)
+   \igeu_N(i_1, i_2) &=& \tobool(i_1 \geq i_2)
    \end{array}
 
 
@@ -703,7 +708,7 @@ The integer result of predicates -- i.e., :ref:`tests <syntax-testop>` and :ref:
 
 .. math::
    \begin{array}{@{}lcll}
-   \iges_N(i_1, i_2) &=& \bool(\signed_N(i_1) \geq \signed_N(i_2))
+   \iges_N(i_1, i_2) &=& \tobool(\signed_N(i_1) \geq \signed_N(i_2))
    \end{array}
 
 
@@ -746,7 +751,7 @@ The integer result of predicates -- i.e., :ref:`tests <syntax-testop>` and :ref:
 
 * Let :math:`j` be the :ref:`signed interpretation <aux-signed>` of :math:`i`.
 
-* If :math:`j` greater than or equal to :math:`0`, then return :math:`i`.
+* If :math:`j` is greater than or equal to :math:`0`, then return :math:`i`.
 
 * Else return the negation of `j`, modulo :math:`2^N`.
 
@@ -793,8 +798,8 @@ The integer result of predicates -- i.e., :ref:`tests <syntax-testop>` and :ref:
 
 .. math::
    \begin{array}{@{}lcll}
-   \iminu_N(i_1, i_2) &=& i_1 & (\iff \ilts_N(i_1, i_2) = 1)\\
-   \iminu_N(i_1, i_2) &=& i_2 & (\otherwise)
+   \imins_N(i_1, i_2) &=& i_1 & (\iff \ilts_N(i_1, i_2) = 1)\\
+   \imins_N(i_1, i_2) &=& i_2 & (\otherwise)
    \end{array}
 
 
@@ -807,8 +812,8 @@ The integer result of predicates -- i.e., :ref:`tests <syntax-testop>` and :ref:
 
 .. math::
    \begin{array}{@{}lcll}
-   \iminu_N(i_1, i_2) &=& i_1 & (\iff \igtu_N(i_1, i_2) = 1)\\
-   \iminu_N(i_1, i_2) &=& i_2 & (\otherwise)
+   \imaxu_N(i_1, i_2) &=& i_1 & (\iff \igtu_N(i_1, i_2) = 1)\\
+   \imaxu_N(i_1, i_2) &=& i_2 & (\otherwise)
    \end{array}
 
 
@@ -821,8 +826,8 @@ The integer result of predicates -- i.e., :ref:`tests <syntax-testop>` and :ref:
 
 .. math::
    \begin{array}{@{}lcll}
-   \iminu_N(i_1, i_2) &=& i_1 & (\iff \igts_N(i_1, i_2) = 1)\\
-   \iminu_N(i_1, i_2) &=& i_2 & (\otherwise)
+   \imaxs_N(i_1, i_2) &=& i_1 & (\iff \igts_N(i_1, i_2) = 1)\\
+   \imaxs_N(i_1, i_2) &=& i_2 & (\otherwise)
    \end{array}
 
 
@@ -1060,13 +1065,13 @@ This non-deterministic result is expressed by the following auxiliary function p
 
 * Else if both :math:`z_1` and :math:`z_2` are infinities of equal sign, then return that infinity.
 
-* Else if one of :math:`z_1` or :math:`z_2` is an infinity, then return that infinity.
+* Else if either :math:`z_1` or :math:`z_2` is an infinity, then return that infinity.
 
 * Else if both :math:`z_1` and :math:`z_2` are zeroes of opposite sign, then return positive zero.
 
 * Else if both :math:`z_1` and :math:`z_2` are zeroes of equal sign, then return that zero.
 
-* Else if one of :math:`z_1` or :math:`z_2` is a zero, then return the other operand.
+* Else if either :math:`z_1` or :math:`z_2` is a zero, then return the other operand.
 
 * Else if both :math:`z_1` and :math:`z_2` are values with the same magnitude but opposite signs, then return positive zero.
 
@@ -1149,9 +1154,9 @@ This non-deterministic result is expressed by the following auxiliary function p
 
 * Else if both :math:`z_1` and :math:`z_2` are infinities of opposite sign, then return negative infinity.
 
-* Else if one of :math:`z_1` or :math:`z_2` is an infinity and the other a value with equal sign, then return positive infinity.
+* Else if either :math:`z_1` or :math:`z_2` is an infinity and the other a value with equal sign, then return positive infinity.
 
-* Else if one of :math:`z_1` or :math:`z_2` is an infinity and the other a value with opposite sign, then return negative infinity.
+* Else if either :math:`z_1` or :math:`z_2` is an infinity and the other a value with opposite sign, then return negative infinity.
 
 * Else if both :math:`z_1` and :math:`z_2` are zeroes of equal sign, then return positive zero.
 
@@ -1235,9 +1240,9 @@ This non-deterministic result is expressed by the following auxiliary function p
 
 * If either :math:`z_1` or :math:`z_2` is a NaN, then return an element of :math:`\nans_N\{z_1, z_2\}`.
 
-* Else if one of :math:`z_1` or :math:`z_2` is a negative infinity, then return negative infinity.
+* Else if either :math:`z_1` or :math:`z_2` is a negative infinity, then return negative infinity.
 
-* Else if one of :math:`z_1` or :math:`z_2` is a positive infinity, then return the other value.
+* Else if either :math:`z_1` or :math:`z_2` is a positive infinity, then return the other value.
 
 * Else if both :math:`z_1` and :math:`z_2` are zeroes of opposite signs, then return negative zero.
 
@@ -1264,9 +1269,9 @@ This non-deterministic result is expressed by the following auxiliary function p
 
 * If either :math:`z_1` or :math:`z_2` is a NaN, then return an element of :math:`\nans_N\{z_1, z_2\}`.
 
-* Else if one of :math:`z_1` or :math:`z_2` is a positive infinity, then return positive infinity.
+* Else if either :math:`z_1` or :math:`z_2` is a positive infinity, then return positive infinity.
 
-* Else if one of :math:`z_1` or :math:`z_2` is a negative infinity, then return the other value.
+* Else if either :math:`z_1` or :math:`z_2` is a negative infinity, then return the other value.
 
 * Else if both :math:`z_1` and :math:`z_2` are zeroes of opposite signs, then return positive zero.
 
@@ -1501,7 +1506,7 @@ This non-deterministic result is expressed by the following auxiliary function p
    \feq_N(\pm \NAN(n), z_2) &=& 0 \\
    \feq_N(z_1, \pm \NAN(n)) &=& 0 \\
    \feq_N(\pm 0, \mp 0) &=& 1 \\
-   \feq_N(z_1, z_2) &=& \bool(z_1 = z_2) \\
+   \feq_N(z_1, z_2) &=& \tobool(z_1 = z_2) \\
    \end{array}
 
 
@@ -1523,7 +1528,7 @@ This non-deterministic result is expressed by the following auxiliary function p
    \fne_N(\pm \NAN(n), z_2) &=& 1 \\
    \fne_N(z_1, \pm \NAN(n)) &=& 1 \\
    \fne_N(\pm 0, \mp 0) &=& 0 \\
-   \fne_N(z_1, z_2) &=& \bool(z_1 \neq z_2) \\
+   \fne_N(z_1, z_2) &=& \tobool(z_1 \neq z_2) \\
    \end{array}
 
 
@@ -1560,7 +1565,7 @@ This non-deterministic result is expressed by the following auxiliary function p
    \flt_N(z_1, + \infty) &=& 1 \\
    \flt_N(z_1, - \infty) &=& 0 \\
    \flt_N(\pm 0, \mp 0) &=& 0 \\
-   \flt_N(z_1, z_2) &=& \bool(z_1 < z_2) \\
+   \flt_N(z_1, z_2) &=& \tobool(z_1 < z_2) \\
    \end{array}
 
 
@@ -1597,7 +1602,7 @@ This non-deterministic result is expressed by the following auxiliary function p
    \fgt_N(z_1, + \infty) &=& 0 \\
    \fgt_N(z_1, - \infty) &=& 1 \\
    \fgt_N(\pm 0, \mp 0) &=& 0 \\
-   \fgt_N(z_1, z_2) &=& \bool(z_1 > z_2) \\
+   \fgt_N(z_1, z_2) &=& \tobool(z_1 > z_2) \\
    \end{array}
 
 
@@ -1634,7 +1639,7 @@ This non-deterministic result is expressed by the following auxiliary function p
    \fle_N(z_1, + \infty) &=& 1 \\
    \fle_N(z_1, - \infty) &=& 0 \\
    \fle_N(\pm 0, \mp 0) &=& 1 \\
-   \fle_N(z_1, z_2) &=& \bool(z_1 \leq z_2) \\
+   \fle_N(z_1, z_2) &=& \tobool(z_1 \leq z_2) \\
    \end{array}
 
 
@@ -1671,7 +1676,7 @@ This non-deterministic result is expressed by the following auxiliary function p
    \fge_N(z_1, + \infty) &=& 0 \\
    \fge_N(z_1, - \infty) &=& 1 \\
    \fge_N(\pm 0, \mp 0) &=& 1 \\
-   \fge_N(z_1, z_2) &=& \bool(z_1 \geq z_2) \\
+   \fge_N(z_1, z_2) &=& \tobool(z_1 \geq z_2) \\
    \end{array}
 
 

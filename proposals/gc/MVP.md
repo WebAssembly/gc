@@ -1,7 +1,5 @@
 # GC v1 Extensions
 
-*Note: This design is still in flux!*
-
 See [overview](Overview.md) for background.
 
 The functionality provided with this first version of GC support for Wasm is intentionally limited in the spirit of a "a minimal viable product" (MVP).
@@ -27,15 +25,39 @@ Both proposals are prerequisites.
 
 #### Heap Types
 
-[Heap types](https://github.com/WebAssembly/function-references/blob/master/proposals/function-references/Overview.md#types) classify reference types and are extended:
+[Heap types](https://github.com/WebAssembly/function-references/blob/master/proposals/function-references/Overview.md#types) classify reference types and are extended. There now are 3 disjoint hierarchies of heap types:
+
+1. _Internal_ (values in Wasm representation)
+2. _External_ (values in a host-specific representation)
+3. _Functions_
+
+Heap types `extern` and `func` already exist via [reference types proposal](https://github.com/WebAssembly/reference-types), and `(ref null? $t)` via [typed references](https://github.com/WebAssembly/function-references); `extern` and `func` are the common supertypes (a.k.a. top) of all external and function types, respectively.
+
+The following additions are made to the hierarchies of heap types:
+
+* `any` is a new heap type
+  - `heaptype ::= ... | any`
+  - the common supertype (a.k.a. top) of all internal types
+
+* `none` is a new heap type
+  - `heaptype ::= ... | none`
+  - the common subtype (a.k.a. bottom) of all internal types
+
+* `noextern` is a new heap type
+  - `heaptype ::= ... | noextern`
+  - the common subtype (a.k.a. bottom) of all external types
+
+* `nofunc` is a new heap type
+  - `heaptype ::= ... | nofunc`
+  - the common subtype (a.k.a. bottom) of all function types
 
 * `eq` is a new heap type
   - `heaptype ::= ... | eq`
-  - the common supertype of all referenceable types on which comparison (`ref.eq`) is allowed
+  - the common supertype of all referenceable types on which comparison (`ref.eq`) is allowed (this may include host-defined external types)
 
-* `data` is a new heap type
-  - `heaptype ::= ... | data`
-  - the common supertype of all compound data types, like struct and array types and possibly host-defined types, for which casts are allowed
+* `struct` is a new heap type
+  - `heaptype ::= ... | struct`
+  - the common supertype of all struct types
 
 * `array` is a new heap type
   - `heaptype ::= ... | array`
@@ -45,43 +67,38 @@ Both proposals are prerequisites.
   - `heaptype ::= ... | i31`
   - the type of unboxed scalars
 
-* `rtt <typeidx>` is a new heap type that is a runtime representation of the static type `<typeidx>`
-  - `heaptype ::= ... | rtt <typeidx>`
-  - `rtt t ok` iff `t ok`
-
-* `extern` is renamed back to `any`
-  - the common supertype of all referenceable types
-  - the name `extern` is kept as an alias in the text format for backwards compatibility
-
-* Note: heap types `func` and `extern` already exist via [reference types proposal](https://github.com/WebAssembly/reference-types), and `(ref null? $t)` via [typed references](https://github.com/WebAssembly/function-references)
-
-We distinguish these *abstract* heap types from *concrete* heap types `(type $t)`.
-Each abstract heap type is a supertype of a class of concrete heap types.
-Moreover, they form a small [subtype hierarchy](#subtyping).
+We distinguish these *abstract* heap types from *concrete* heap types `$t` that reference actual definitions in the type section.
+Most abstract heap types are a supertype of a class of concrete heap types.
+Moreover, they form several small [subtype hierarchies](#subtyping) among themselves.
 
 
 #### Reference Types
 
 New abbreviations are introduced for reference types in binary and text format, corresponding to `funcref` and `externref`:
 
+* `anyref` is a new reference type
+  - `anyref == (ref null any)`
+
+* `nullref` is a new reference type
+  - `nullref == (ref null none)`
+
+* `nullexternref` is a new reference type
+  - `nullexternref == (ref null noextern)`
+
+* `nullfuncref` is a new reference type
+  - `nullfuncref == (ref null nofunc)`
+
 * `eqref` is a new reference type
   - `eqref == (ref null eq)`
 
-* `dataref` is a new reference type
-  - `dataref == (ref data)`
+* `structref` is a new reference type
+  - `structref == (ref null struct)`
 
 * `arrayref` is a new reference type
-  - `arrayref == (ref array)`
+  - `arrayref == (ref null array)`
 
 * `i31ref` is a new reference type
-  - `i31ref == (ref i31)`
-
-* `rtt <typeidx>` is a new reference type
-  - `(rtt $t) == (ref (rtt $t))`
-
-* `externref` is renamed to `anyref`
-  - `anyref == (ref null any)`
-  - the name `externref` is kept as an alias in the text format for backwards compatibility
+  - `i31ref == (ref null i31)`
 
 
 #### Type Definitions
@@ -91,21 +108,21 @@ New abbreviations are introduced for reference types in binary and text format, 
   - `module ::= {..., types vec(<deftype>)}`
   - a `rec` definition defines a group of mutually recursive types that can refer to each other; it thereby defines several type indices at a time
   - a single type definition, as in Wasm before this proposal, is reinterpreted as a short-hand for a recursive group containing just one type
+  - Note that the number of type section entries is now the number of recursion groups rather than the number of individual types.
 
 * `subtype` is a new category of type defining a single type, as a subtype of possible other types
-  - `subtype ::= sub <typeidx>* <strtype>`
-  - the preexisting syntax with no `sub` clause is redefined to be a shorthand for a `sub` clause with empty `typeidx` list: `<strtype> == sub () <strtype>`
+  - `subtype ::= sub final? <typeidx>* <comptype>`
+  - the preexisting syntax with no `sub` clause is redefined to be a shorthand for a `sub` clause with empty `typeidx` list: `<comptype> == sub final () <comptype>`
   - Note: This allows multiple supertypes. For the MVP, it is restricted to at most one supertype.
 
-* `strtype` is a new category of types covering the different forms of concrete structural reference types
-  - `strtype ::= <functype> | <structtype> | <arraytype>`
+* `comptype` is a new category of types covering the different forms of *composite* types
+  - `comptype ::= <functype> | <structtype> | <arraytype>`
 
 * `structtype` describes a structure with statically indexed fields
   - `structtype ::= struct <fieldtype>*`
 
 * `arraytype` describes an array with dynamically indexed fields
   - `arraytype ::= array <fieldtype>`
-  - Note: in the MVP, all arrays must be defined as mutable
 
 * `fieldtype` describes a struct or array field and whether it is mutable
   - `fieldtype ::= <mutability> <storagetype>`
@@ -122,6 +139,10 @@ Validity of a module is checked under a context storing the definitions for each
 ctxtype ::= <deftype>.<i>
 ```
 
+Both `C.types` and `C.funcs` in typing contexts `C` as defined by the spec now carry `ctxtype`s as opposed to `functype`s like before.
+In the case of `C.funcs`, it is an invariant that all types [expand](#auxiliary-definitions) to a function type.
+
+
 #### Auxiliary Definitions
 
 * Unpacking a storage type yields `i32` for packed types, otherwise the type itself
@@ -134,8 +155,22 @@ ctxtype ::= <deftype>.<i>
 
 * Expanding a type definition unrolls it and returns its plain definition
   - `expand($t)                 = expand(<ctxtype>)`  iff `$t = <ctxtype>`
-  - `expand(<ctxtype>) = <strtype>`
-    - where `unroll(<ctxttype>) = sub x* <strtype>`
+  - `expand(<ctxtype>)          = <comptype>`
+    - where `unroll(<ctxttype>) = sub final? x* <comptype>`
+
+* Finality of a type just checks the flag
+  - `final($t)                  = final(<ctxtype>)`  iff `$t = <ctxtype>`
+  - `final(<ctxtype>)           = final? =/= empty`
+    - where `unroll(<ctxttype>) = sub final? x* <comptype>`
+
+
+#### External Types
+
+Unlike in the current spec, external function types need to be represented by a type index/address, in order to preserve the structure and equivalence of iso-recursive types:
+```
+externtype ::= func <typeidx> | ...
+```
+The type is then looked up and expanded as needed. (This was `func <functype>` before.)
 
 
 #### Type Validity
@@ -154,19 +189,20 @@ Some of the rules define a type as `ok` for a certain index, written `ok(x)`. Th
     - and `N = |<subtype>*|-1`
     - and `<ctxtype>*  = (rec <subtype>*).0, ..., (rec <subtype>*).N`
 
-* a sequence of subtype's is valid of each of them is valid for their respective index
+* a sequence of subtype's is valid if each of them is valid for their respective index
   - `<subtype0> <subtype>* ok($t)`
     - iff `<subtype0> ok($t)`
     - and `<subtype>* ok($t+1)`
 
-* an individual subtype is valid if its definition is valid, matches every supertype, and no supertype has an index higher than its own
-  - `sub $t* <strtype> ok($t')`
-    - iff `<strtype> ok`
-    - and `(<strtype> <: expand($t))*`
+* an individual subtype is valid if its definition is valid, matches every supertype, and no supertype is final or has an index higher than its own
+  - `sub final? $t* <comptype> ok($t')`
+    - iff `<comptype> ok`
+    - and `(<comptype> <: expand($t))*`
+    - and `(not final($t))*`
     - and `($t < $t')*`
   - Note: the upper bound on the supertype indices ensures that subtyping hierarchies are never circular, because definitions need to be ordered.
 
-* as [before](https://github.com/WebAssembly/function-references/proposals/function-references/Overview.md#types), a strtype is valid if all the occurring value types are valid
+* as [before](https://github.com/WebAssembly/function-references/proposals/function-references/Overview.md#types), a comptype is valid if all the occurring value types are valid
   - specifically, a concrete reference type `(ref $t)` is valid when `$t` is defined in the context
 
 Example: Consider two mutually recursive types:
@@ -223,10 +259,11 @@ With that:
     - iff `(<subtype> == <subtype'>)*`
   - Note: This rule is only used on types that have been tied, which prevents looping.
 
-* notably, two subtypes are equivalent if their structure is equivalent and they have equivalent supertypes
-  - `(sub $t* <strtype>) == (sub $t'* <strtype'>)`
-    - iff `<strtype> == <strtype'>`
+* notably, two subtypes are equivalent if their structure is equivalent, they have equivalent supertypes, and their finality flag matches
+  - `(sub final1? $t* <comptype>) == (sub final2? $t'* <comptype'>)`
+    - iff `<comptype> == <comptype'>`
     - and `($t == $t')*`
+    - and `final1? = final2?`
 
 Example: As explained above, the mutually recursive types
 ```
@@ -281,7 +318,7 @@ In the [existing rules](https://github.com/WebAssembly/function-references/propo
 * Type indices are subtypes if they either define [equivalent](#type-equivalence) types or a suitable (direct or indirect) subtype relation has been declared
   - `$t <: $t'`
     - if `$t = <ctxtype>` and `$t' = <ctxtype'>` and `<ctxtype> == <ctxtype'>`
-    - or `unroll($t) = sub $1* $t'' $t2* strtype` and `$t'' <: $t`
+    - or `unroll($t) = sub final? $t1* $t'' $t2* comptype` and `$t'' <: $t'`
   - Note: This rule climbs the supertype hierarchy until an equivalent type has been found. Effectively, this means that subtyping is "nominal" modulo type canonicalisation.
 
 
@@ -289,56 +326,81 @@ In the [existing rules](https://github.com/WebAssembly/function-references/propo
 
 In addition to the [existing rules](https://github.com/WebAssembly/function-references/proposals/function-references/Overview.md#subtyping) for heap types, the following are added:
 
-* every type is a subtype of `any`
+* every internal type is a subtype of `any`
   - `t <: any`
+    - if `t = any/eq/struct/array/i31` or `t = $t` and `$t = <structtype>` or `$t = <arraytype>`
 
-* `dataref` is a subtype of `eqref`
-  - `data <: eq`
-  - TODO: provide a way to make data types non-eq, especially immutable ones?
+* every internal type is a supertype of `none`
+  - `none <: t`
+    - if `t <: any`
 
-* `arrayref` is a subtype of `dataref`
-  - `array <: data`
+* every external type is a subtype of `extern`
+  - `t <: extern`
+    - if `t = extern`
+  - note: there may be other subtypes of `extern` in the future
+
+* every external type is a supertype of `noextern`
+  - `noextern <: t`
+    - if `t <: extern`
+
+* every function type is a subtype of `func`
+  - `t <: func`
+    - if `t = func` or `t = $t` and `$t = <functype>`
+
+* every function type is a supertype of `nofunc`
+  - `nofunc <: t`
+    - if `t <: func`
+
+* `structref` is a subtype of `eqref`
+  - `struct <: eq`
+  - TODO: provide a way to make aggregate types non-eq, especially immutable ones?
+
+* `arrayref` is a subtype of `eqref`
+  - `array <: eq`
 
 * `i31ref` is a subtype of `eqref`
   - `i31 <: eq`
 
-* Any concrete type is a subtype of either `data` or `func`
-  - `$t <: data`
-     - if `$t = <structtype>` or `$t = <arraytype>`
+* Any concrete struct type is a subtype of `struct`
+  - `$t <: struct`
+     - if `$t = <structtype>`
+
+* Any concrete array type is a subtype of `array`
+  - `$t <: struct`
+     - if `$t = <arraytype>`
+
+* Any concrete function type is a subtype of `func`
   - `$t <: func`
      - if `$t = <functype>`
 
-* Any concrete array type is a subtype of `array`
-  - `(type $t) <: array`
-     - if `$t = <arraytype>`
-
-* `rtt $t` is a subtype of `eq`
-  - `rtt $t <: eq`
-  - Note: `rtt $t1` is *not* a subtype of `rtt $t2`, unless `$t1` and `$t2` are equivalent; covariant subtyping would be unsound, since RTTs are used in both co- and contravariant roles (e.g., both when constructing and consuming a reference)
-
 Note: This creates a hierarchy of *abstract* Wasm heap types that looks as follows.
 ```
-      any
-     /   \
-   eq    func
-  /  \
-i31  data
-       \
-       array
+      any  extern  func
+       |
+       eq
+    /  |   \
+i31  struct  array
 ```
-All *concrete* heap types (of the form `(type $t)`) are situated below either `data` or `func`.
-RTTs are below `eq`.
+The hierarchy consists of several disjoint sub hierarchies, each starting from one of the *top* heap types `any`, `extern`, or `func`.
 
-In addition, a host environment may introduce additional inhabitants of type `any`
-that are are in neither of the above three leaf type categories.
-The interpretation of such values is defined by the host environment.
+All *concrete* types (of the form `$t`) are situated below either `struct`, `array`, or `func`.
+Not shown in the graph are `none`, `noextern`, and `nofunc`, which are below the other "leaf" types.
 
-Note: In the future, this hierarchy could be refined, e.g., to distinguish compound data types that are not subtypes of `eq`.
+A host environment may introduce additional inhabitants of type `any`
+that are are in neither of the above leaf type categories.
+The interpretation of such values is defined by the host environment, they are opaque within Wasm code.
+
+Note: In the future, this hierarchy could be refined, e.g., to distinguish aggregate types that are not subtypes of `eq`.
 
 
-##### Structural Types
+##### Composite Types
 
-The subtyping rules for structural types are only invoked during validation of a `sub` [type definition](#type-definitions).
+The subtyping rules for composite types are only invoked during validation of a `sub` [type definition](#type-definitions).
+
+* Function types are covariant on their results and contravariant on their parameters
+  - `func <valtype11>* -> <valtype12>* <: func <valtype21>* -> <valtype22>*`
+    - iff `(<valtype21> <: <valtype11>)*`
+    - and `(<valtype12> <: <valtype22>)*`
 
 * Structure types support width and depth subtyping
   - `struct <fieldtype1>* <fieldtype1'>* <: struct <fieldtype2>*`
@@ -349,10 +411,13 @@ The subtyping rules for structural types are only invoked during validation of a
     - iff `<fieldtype1> <: <fieldtype2>`
 
 * Field types are covariant if they are immutable, invariant otherwise
-  - `const <valtype1> <: const <valtype2>`
-    - iff `<valtype1> <: <valtype2>`
-  - `var <valtype> <: var <valtype>`
+  - `const <storagetype1> <: const <storagetype2>`
+    - iff `<storagetype1> <: <storagetype2>`
+  - `var <storagetype> <: var <storagetype>`
   - Note: mutable fields are *not* subtypes of immutable ones, so `const` really means constant, not read-only
+
+* Storage types inherent subtyping from value types, packed types must be equivalent
+  - `<packedtype> <: <packedtype>`
 
 
 ##### Type Definitions
@@ -364,9 +429,7 @@ Subtyping is not defined on type definitions.
 
 #### Runtime Types
 
-* Runtime types (RTTs) are explicit values representing concrete types at runtime; a value of type `rtt <typeidx>` is a dynamic representative of the static type `<typeidx>`.
-
-* All RTTs are explicitly created and all operations involving dynamic type information (like casts) operate on explicit RTT operands. This allows maximum flexibility and custom choices wrt which RTTs to represent a source type.
+* Runtime types (RTTs) are values representing concrete types at runtime. In the MVP, *canonical* RTTs are implicitly created by all instructions depending on runtime type information. In future versions, RTTs may become explicit values, and non-canonical versions of these instructions will be introduced.
 
 * An RTT value r1 is *equal* to another RTT value r2 iff they both represent the same static type.
 
@@ -377,7 +440,7 @@ RTT equality can be implemented as a single pointer test by memoising RTT values
 More interestingly, runtime casts along the hierarchy encoded in these values can be implemented in an engine efficiently
 by using well-known techniques such as including a vector of its (direct and indirect) super-RTTs in each RTT value (with itself as the last entry).
 A subtype check between two RTT values can be implemented as follows using such a representation.
-Assume RTT value v1 has static type `(rtt $t1)` and v2 has type `(rtt $t2)`.
+Assume RTT value v1 represents static type `$t1` and v2 type `$t2`.
 Let `n1` and `n2` be the lengths of the respective supertype vectors.
 To check whether v1 denotes a subtype RTT of v2, first verify that `n1 >= n2` --
 if both `n1` and `n2` are known statically, this can be performed at compile time;
@@ -393,20 +456,17 @@ Note: This assumes that there is at most one supertype. For hierarchies with mul
 
 Example: Consider three types and corresponding RTTs:
 ```
-(type $A (struct))
+(type $A (sub (struct)))
 (type $B (sub $A (struct (field i32))))
 (type $C (sub $B (struct (field i32 i64))))
-
-(global $rttA (rtt 0 $A) (rtt.canon $A))
-(global $rttB (rtt 1 $B) (rtt.canon $B))
-(global $rttC (rtt 2 $C) (rtt.canon $C))
 ```
-Here, `$rttA` would carry supertype vector `[$rttA]`, `$rttB` has `[$rttA, $rttB]`, and `$rttC` has `[$rttA, $rttB, $rttC]`.
+Assume the respective RTTs for types `$A`, `$B`, and `$C` are called `$rttA`, `$rttB`, and `$rttC`.
+Then, `$rttA` would carry supertype vector `[$rttA]`, `$rttB` has `[$rttA, $rttB]`, and `$rttC` has `[$rttA, $rttB, $rttC]`.
 
 Now consider a function that casts a `$B` to a `$C`:
 ```
 (func $castBtoC (param $x (ref $B)) (result (ref $C))
-  (ref.cast (local.get $x) (global.get $rttC))
+  (ref.cast $C (local.get $x))
 )
 ```
 This can compile to machine code that (1) reads the RTT from `$x`, (2) checks that the length of its supertype table is >= 3, and (3) pointer-compares table[2] against `$rttC`.
@@ -414,16 +474,16 @@ This can compile to machine code that (1) reads the RTT from `$x`, (2) checks th
 
 #### Values
 
-* Creating a structure or array requires supplying a suitable RTT value to represent its runtime type.
-
-* Reference values of data or function type have an associated runtime type:
-  - for structures or arrays, it is the RTT value provided upon creation,
+* Reference values of aggregate or function type have an associated runtime type:
+  - for structures or arrays, it is the RTT value implictly produced upon creation,
   - for functions, it is the RTT value for the function's type (which may be recursive).
-
-* Note: as a future extension, we could allow a value's RTT to be a supertype of the value's actual type. For example, a structure or array with RTT `any` would become fully opaque to runtime type checks, and an implementation may choose to optimize away its RTT.
 
 
 ### Instructions
+
+Note: Instructions not mentioned here remain the same.
+In particular, `ref.null` is typed as before, despite the introduction of `none`/`nofunc`/`noextern`.
+
 
 #### Equality
 
@@ -433,14 +493,17 @@ This can compile to machine code that (1) reads the RTT from `$x`, (2) checks th
 
 #### Structures
 
-* `struct.new_with_rtt <typeidx>` allocates a structure with RTT information determining its [runtime type](#values) and initialises its fields with given values
-  - `struct.new_with_rtt $t : [t'* (rtt $t)] -> [(ref $t)]`
-    - iff `expand($t) = struct (mut t')*`
+* `struct.new <typeidx>` allocates a structure with canonical [RTT](#values) and initialises its fields with given values
+  - `struct.new $t : [t'*] -> [(ref $t)]`
+    - iff `expand($t) = struct (mut t'')*`
+    - and `(t' = unpacked(t''))*`
+  - this is a *constant instruction*
 
-* `struct.new_default_with_rtt <typeidx>` allocates a structure of type `$t` and initialises its fields with default values
-  - `struct.new_default_with_rtt $t : [(rtt $t)] -> [(ref $t)]`
+* `struct.new_default <typeidx>` allocates a structure of type `$t` with canonical [RTT](#values) and initialises its fields with default values
+  - `struct.new_default $t : [] -> [(ref $t)]`
     - iff `expand($t) = struct (mut t')*`
     - and all `t'*` are defaultable
+  - this is a *constant instruction*
 
 * `struct.get_<sx>? <typeidx> <fieldidx>` reads field `i` from a structure
   - `struct.get_<sx>? $t i : [(ref null $t)] -> [t]`
@@ -458,14 +521,43 @@ This can compile to machine code that (1) reads the RTT from `$x`, (2) checks th
 
 #### Arrays
 
-* `array.new_with_rtt <typeidx>` allocates an array with RTT information determining its [runtime type](#values)
-  - `array.new_with_rtt $t : [t' i32 (rtt $t)] -> [(ref $t)]`
-    - iff `expand($t) = array (var t')`
+* `array.new <typeidx>` allocates an array with canonical [RTT](#values)
+  - `array.new $t : [t' i32] -> [(ref $t)]`
+    - iff `expand($t) = array (mut t'')`
+    - and `t' = unpacked(t'')`
+  - this is a *constant instruction*
 
-* `array.new_default_with_rtt <typeidx>` allocates an array and initialises its fields with the default value
-  - `array.new_default_with_rtt $t : [i32 (rtt $t)] -> [(ref $t)]`
-    - iff `expand($t) = array (var t')`
+* `array.new_default <typeidx>` allocates an array with canonical [RTT](#values) and initialises its fields with the default value
+  - `array.new_default $t : [i32] -> [(ref $t)]`
+    - iff `expand($t) = array (mut t')`
     - and `t'` is defaultable
+  - this is a *constant instruction*
+
+* `array.new_fixed <typeidx> <N>` allocates an array with canonical [RTT](#values) of fixed size and initialises it from operands
+  - `array.new_fixed $t N : [t^N] -> [(ref $t)]`
+    - iff `expand($t) = array (mut t'')`
+    - and `t' = unpacked(t'')`
+  - this is a *constant instruction*
+
+* `array.new_data <typeidx> <dataidx>` allocates an array with canonical [RTT](#values) and initialises it from a data segment
+  - `array.new_data $t $d : [i32 i32] -> [(ref $t)]`
+    - iff `expand($t) = array (mut t')`
+    - and `t'` is numeric, vector, or packed
+    - and `$d` is a defined data segment
+  - the 1st operand is the `offset` into the segment
+  - the 2nd operand is the `size` of the array
+  - traps if `offset + |t'|*size > len($d)`
+  - note: for now, this is _not_ a constant instruction, in order to side-step issues of recursion between binary sections; this restriction will be lifted later
+
+* `array.new_elem <typeidx> <elemidx>` allocates an array with canonical [RTT](#values) and initialises it from an element segment
+  - `array.new_elem $t $e : [i32 i32] -> [(ref $t)]`
+    - iff `expand($t) = array (mut t')`
+    - and `$e : rt`
+    - and `rt <: t'`
+  - the 1st operand is the `offset` into the segment
+  - the 2nd operand is the `size` of the array
+  - traps if `offset + size > len($e)`
+  - note: for now, this is _not_ a constant instruction, in order to side-step issues of recursion between binary sections; this restriction will be lifted later
 
 * `array.get_<sx>? <typeidx>` reads an element from an array
   - `array.get_<sx>? $t : [(ref null $t) i32] -> [t]`
@@ -484,164 +576,138 @@ This can compile to machine code that (1) reads the RTT from `$x`, (2) checks th
   - `array.len : [(ref null array)] -> [i32]`
   - traps on `null`
 
+* `array.fill <typeidx>` fills a slice of an array with a given value
+  - `array.fill $t : [(ref null $t) i32 t i32] -> []`
+    - iff `expand($t) = array (mut t')`
+    - and `t = unpacked(t')`
+  - the 1st operand is the `array` to fill
+  - the 2nd operand is the `offset` into the array at which to begin filling
+  - the 3rd operand is the `value` with which to fill
+  - the 4th operand is the `size` of the filled slice
+  - traps if `array` is null or `offset + size > len(array)`
+
+* `array.copy <typeidx> <typeidx>` copies a sequence of elements between two arrays
+  - `array.copy $t1 $t2 : [(ref null $t1) i32 (ref null $t2) i32 i32] -> []`
+    - iff `expand($t1) = array (mut t1)`
+    - and `expand($t2) = array (mut? t2)`
+    - and `t2 <: t1`
+  - the 1st operand is the `dest` array that will be copied to
+  - the 2nd operand is the `dest_offset` at which the copy will begin in `dest`
+  - the 3rd operand is the `src` array that will be copied from
+  - the 4th operand is the `src_offset` at which the copy will begin in `src`
+  - the 5th operand is the `size` of the copy
+  - traps if `dest` is null or `src` is null
+  - traps if `dest_offset + size > len(dest)` or `src_offset + size > len(src)`
+  - note: `dest` and `src` may be the same array and the source and destination
+    regions may overlap. This must be handled correctly just like it is for
+    `memory.copy`.
+
+* `array.init_elem <typeidx> <elemidx>` copies a sequence of elements from an element segment to an array
+  - `array.init_elem $t $e : [(ref null $t) i32 i32 i32] -> []`
+    - iff `expand($t) = array (mut t)`
+    - and `$e : rt`
+    - and `rt <: t`
+  - the 1st operand is the `array` to be initialized
+  - the 2nd operand is the `dest_offset` at which the copy will begin in `array`
+  - the 3rd operand is the `src_offset` at which the copy will begin in `$e`
+  - the 4th operand is the `size` of the copy
+  - traps if `array` is null
+  - traps if `dest_offset + size > len(array)` or `src_offset + size > len($e)`
+
+* `array.init_data <typeidx> <dataidx>` copies a sequence of values from a data segment to an array
+  - `array.init_data $t $d : [(ref null $t) i32 i32 i32] -> []`
+    - iff `expand($t) = array (mut t)`
+    - and `t` is numeric, vector, or packed
+    - and `$d` is a defined data segment
+  - the 1st operand is the `array` to be initialized
+  - the 2nd operand is the `dest_offset` at which the copy will begin in `array`
+  - the 3rd operand is the `src_offset` at which the copy will begin in `$d`
+  - the 4th operand is the `size` of the copy in array slots
+  - note: The size of the source region is `size * |t|`. If `t` is a packed
+    type, the source is interpreted as packed in the same way.
+  - traps if `array` is null
+  - traps if `dest_offset + size > len(array)` or `src_offset + size * |t| > len($d)`
 
 #### Unboxed Scalars
 
-Tentatively, support a type of guaranteed unboxed scalars.
-
 * `i31.new` creates an `i31ref` from a 32 bit value, truncating high bit
-  - `i31.new : [i32] -> [i31ref]`
+  - `i31.new : [i32] -> [(ref i31)]`
   - this is a *constant instruction*
 
 * `i31.get_<sx>` extracts the value, zero- or sign-extending
-  - `i31.get_<sx> : [i31ref] -> [i32]`
+  - `i31.get_<sx> : [(ref null i31)] -> [i32]`
+  - traps if the operand is null
 
 
-#### Classification
+#### External conversion
 
-* `ref.is_func` checks whether a reference is a function
-  - `ref.is_func : [anyref] -> [i32]`
-
-* `ref.is_data` checks whether a reference is compound data
-  - `ref.is_data : [anyref] -> [i32]`
-
-* `ref.is_array` checks whether a reference is an array
-  - `ref.is_array : [anyref] -> [i32]`
-
-* `ref.is_i31` checks whether a reference is an i31
-  - `ref.is_i31 : [anyref] -> [i32]`
-
-* `br_on_func <labelidx>` branches if a reference is a function
-  - `br_on_func $l : [t0* t] -> [t0* t]`
-    - iff `$l : [t0* t']`
-    - and `t <: anyref`
-    - and `(ref func) <: t'`
-  - passes operand along with branch as a function, plus possible extra args
-
-* `br_on_non_func <labelidx>` branches if a reference is not a function
-  - `br_on_non_func $l : [t0* t] -> [t0* (ref func)]`
-    - iff `$l : [t0* t']`
-    - and `t <: anyref`
-    - and `t <: t'`
-  - passes operand along with branch, plus possible extra args
-
-* `br_on_data <labelidx>` branches if a reference is compound data
-  - `br_on_data $l : [t0* t] -> [t0* t]`
-    - iff `$l : [t0* t']`
-    - and `t <: anyref`
-    - and `(ref data) <: t'`
-  - passes operand along with branch as data, plus possible extra args
-
-* `br_on_non_data <labelidx>` branches if a reference is not compound data
-  - `br_on_non_data $l : [t0* t] -> [t0* (ref data)]`
-    - iff `$l : [t0* t']`
-    - and `t <: anyref`
-    - and `t <: t'`
-  - passes operand along with branch, plus possible extra args
-
-* `br_on_array <labelidx>` branches if a reference is an array
-  - `br_on_array $l : [t0* t] -> [t0* t]`
-    - iff `$l : [t0* t']`
-    - and `t <: anyref`
-    - and `(ref array) <: t'`
-  - passes operand along with branch as data, plus possible extra args
-
-* `br_on_non_array <labelidx>` branches if a reference is not an array
-  - `br_on_non_array $l : [t0* t] -> [t0* (ref array)]`
-    - iff `$l : [t0* t']`
-    - and `t <: anyref`
-    - and `t <: t'`
-  - passes operand along with branch, plus possible extra args
-
-* `br_on_i31 <labelidx>` branches if a reference is an integer
-  - `br_on_i31 $l : [t0* t] -> [t0* t]`
-    - iff `$l : [t0* t']`
-    - and `t <: anyref`
-    - and `(ref i31) <: t'`
-  - passes operand along with branch as a scalar, plus possible extra args
-
-* `br_on_non_i31 <labelidx>` branches if a reference is not an integer
-  - `br_on_non_i31 $l : [t0* t] -> [t0* (ref i31)]`
-    - iff `$l : [t0* t']`
-    - and `t <: anyref`
-    - and `t <: t'`
-  - passes operand along with branch, plus possible extra args
-
-* `ref.as_func` converts to a function reference
-  - `ref.as_func : [anyref] -> [(ref func)]`
-  - traps if reference is not a function
-  - equivalent to `(block $l (param anyref) (result (ref func)) (br_on_func $l) (unreachable))`
-
-* `ref.as_data` converts to a data reference
-  - `ref.as_data : [anyref] -> [(ref data)]`
-  - traps if reference is not compound data
-  - equivalent to `(block $l (param anyref) (result (ref data)) (br_on_data $l) (unreachable))`
-
-* `ref.as_array` converts to an array reference
-  - `ref.as_array : [anyref] -> [(ref array)]`
-  - traps if reference is not an array
-  - equivalent to `(block $l (param anyref) (result (ref array)) (br_on_array $l) (unreachable))`
-
-* `ref.as_i31` converts to an integer reference
-  - `ref.as_i31 : [anyref] -> [(ref i31)]`
-  - traps if reference is not an integer
-  - equivalent to `(block $l (param anyref) (result (ref i31)) (br_on_i31 $l) (unreachable))`
-
-Note: The [reference types](https://github.com/WebAssembly/reference-types) and [typed function references](https://github.com/WebAssembly/function-references)already introduce similar `ref.is_null`, `br_on_null`, and `br_on_non_null` instructions.
-
-Note: The `br_on_*` instructions allow an operand of unrelated reference type, even though this cannot possibly succeed. That's because subtyping allows to forget that information, so by the subtype substitutibility property, it would be accepted in any case. The given typing rules merely allow this type to also propagate to the result, which avoids the need to compute a least upper bound between the operand type and the target type in the typing algorithm.
-
-
-#### Runtime Types
-
-* `rtt.canon <typeidx>` returns the RTT of the specified type
-  - `rtt.canon $t : [] -> [(rtt $t)]`
-  - multiple invocations of this instruction yield the same observable RTTs
+* `extern.internalize` converts an external value into the internal representation
+  - `extern.internalize : [(ref null1? extern)] -> [(ref null2? any)]`
+    - iff `null1? = null2?`
   - this is a *constant instruction*
+  - note: this succeeds for all values, composing this with `extern.externalize` (in either order) yields the original value
 
-TODO: Add the ability to generate new (non-canonical) RTT values to implement casting in nominal type hierarchies?
+* `extern.externalize` converts an internal value into the external representation
+  - `extern.externalize : [(ref null1? any)] -> [(ref null2? extern)]`
+    - iff `null1? = null2?`
+  - this is a *constant instruction*
+  - note: this succeeds for all values; moreover, composing this with `extern.internalize` (in either order) yields the original value
 
 
 #### Casts
 
-RTT-based casts can only be performed with respect to concrete types, and require a data or function reference as input, which are known to carry an RTT.
+Casts work for both abstract and concrete types. In the latter case, they test if the operand's RTT is a sub-RTT of the target type.
 
-* `ref.test` tests whether a reference value's [runtime type](#values) is a [runtime subtype](#runtime) of a given RTT
-  - `ref.test : [t' (rtt $t)] -> [i32]`
-    - iff `t' <: (ref null data)` or `t' <: (ref null func)`
-  - returns 1 if the first operand is not null and its runtime type is a sub-RTT of the RTT operand, 0 otherwise
+* `ref.test <reftype>` tests whether a reference has a given type
+  - `ref.test rt : [rt'] -> [i32]`
+    - iff `rt <: rt'`
+  - if `rt` contains `null`, returns 1 for null, otherwise 0
 
-* `ref.cast` casts a reference value down to a type given by a RTT representation
-  - `ref.cast : [(ref null1? ht) (rtt $t)] -> [(ref null2? $t)]`
-    - iff `ht <: data` or `ht <: func`
-    - and `null1? = null2?`
-  - returns null if the first operand is null
-  - traps if the first operand is not null and its runtime type is not a sub-RTT of the RTT operand
+* `ref.cast <reftype>` tries to convert a reference to a given type
+  - `ref.cast rt : [rt'] -> [rt]`
+    - iff `rt <: rt'`
+  - traps if reference is not of requested type
+  - if `rt` contains `null`, a null operand is passed through, otherwise traps on null
+  - equivalent to `(block $l (param trt) (result rt) (br_on_cast $l rt) (unreachable))`
 
-* `br_on_cast <labelidx>` branches if a value can be cast down to a given reference type
-  - `br_on_cast $l : [t0* t (rtt $t')] -> [t0* t]`
-    - iff `$l : [t0* t']`
-    - and `t <: (ref null data)` or `t <: (ref null func)`
-    - and `(ref $t') <: t'`
-  - branches iff the first operand is not null and its runtime type is a sub-RTT of the RTT operand
-  - passes cast operand along with branch, plus possible extra args
+* `br_on_cast <labelidx> <reftype> <reftype>` branches if a reference has a given type
+  - `br_on_cast $l rt1 rt2 : [t0* rt1] -> [t0* rt1\rt2]`
+    - iff `$l : [t0* rt2]`
+    - and `rt2 <: rt1`
+  - passes operand along with branch under target type, plus possible extra args
+  - if `rt2` contains `null`, branches on null, otherwise does not
 
-* `br_on_cast_fail <labelidx>` branches if a value can not be cast down to a given reference type
-  - `br_on_cast_fail $l : [t0* t (rtt $t')] -> [t0* (ref $t')]`
-    - iff `$l : [t0* t']`
-    - and `t <: (ref null data)` or `t <: (ref null func)`
-    - and `t <: t'`
-  - branches iff the first operand is null or its runtime type is not a sub-RTT of the RTT operand
+* `br_on_cast_fail <labelidx> <reftype> <reftype>` branches if a reference does not have a given type
+  - `br_on_cast_fail $l rt1 rt2 : [t0* rt1] -> [t0* rt2]`
+    - iff `$l : [t0* rt1\rt2]`
+    - and `rt2 <: rt1`
   - passes operand along with branch, plus possible extra args
+  - if `rt2` contains `null`, does not branch on null, otherwise does
 
-Note: These instructions allow an operand of unrelated reference type, even though this cannot possibly succeed. The reasoning is the same as for classification instructions.
+where:
+  - `(ref null1? ht1)\(ref null ht2) = (ref ht1)`
+  - `(ref null1? ht1)\(ref ht2)      = (ref null1? ht1)`
+
+Note: The [reference types](https://github.com/WebAssembly/reference-types) and [typed function references](https://github.com/WebAssembly/function-references)already introduce similar `ref.is_null`, `br_on_null`, and `br_on_non_null` instructions. These can now be interpreted as syntactic sugar:
+
+* `ref.is_null` is equivalent to `ref.test null ht`, where `ht` is the suitable bottom type (`none`, `nofunc`, or `noextern`)
+
+* `br_on_null` is equivalent to `br_on_cast null ht`, where `ht` is the suitable bottom type, except that it does not forward the null value
+
+* `br_on_non_null` is equivalent to `(br_on_cast_fail null ht) (drop)`, where `ht` is the suitable bottom type
+
+* finally, `ref.as_non_null` is equivalent to `ref.cast ht`, where `ht` is the heap type of the operand
 
 
 #### Constant Expressions
 
 In order to allow RTTs to be initialised as globals, the following extensions are made to the definition of *constant expressions*:
 
-* `rtt.canon` is a constant instruction
+* `i31.new` is a constant instruction
+* `struct.new` and `struct.new_default` are constant instructions
+* `array.new`, `array.new_default`, and `array.new_fixed` are constant instructions
+  - Note: `array.new_data` and `array.new_elem` are not for the time being, see above
+* `extern.internalize` and `extern.externalize` are constant instructions
 * `global.get` is a constant instruction and can access preceding (immutable) global definitions, not just imports as in the MVP
 
 
@@ -663,14 +729,17 @@ This extends the [encodings](https://github.com/WebAssembly/function-references/
 | Opcode | Type            | Parameters | Note |
 | ------ | --------------- | ---------- | ---- |
 | -0x10  | `funcref`       |            | shorthand, from reftype proposal |
-| -0x11  | `anyref`        |            | shorthand, from reftype proposal |
+| -0x11  | `externref`     |            | shorthand, from reftype proposal |
+| -0x12  | `anyref`        |            | shorthand |
 | -0x13  | `eqref`         |            | shorthand |
 | -0x14  | `(ref null ht)` | `ht : heaptype (s33)` | from funcref proposal |
 | -0x15  | `(ref ht)`      | `ht : heaptype (s33)` | from funcref proposal |
 | -0x16  | `i31ref`        |            | shorthand |
-| -0x18  | `(rtt $t)`      | `i : typeidx` | shorthand |
-| -0x19  | `dataref`       |            | shorthand |
+| -0x17  | `nullfuncref`   |            | shorthand |
+| -0x18  | `nullexternref` |            | shorthand |
+| -0x19  | `structref`     |            | shorthand |
 | -0x1a  | `arrayref`      |            | shorthand |
+| -0x1b  | `nullref`       |            | shorthand |
 
 #### Heap Types
 
@@ -680,14 +749,17 @@ The opcode for heap types is encoded as an `s33`.
 | ------ | --------------- | ---------- | ---- |
 | i >= 0 | `(type i)`      |            | from funcref proposal |
 | -0x10  | `func`          |            | from funcref proposal |
-| -0x11  | `any`           |            | from funcref proposal |
+| -0x11  | `extern`        |            | from funcref proposal |
+| -0x12  | `any`           |            | |
 | -0x13  | `eq`            |            | |
 | -0x16  | `i31`           |            | |
-| -0x18  | `(rtt i)`       | `i : typeidx` | |
-| -0x19  | `data`          |            | |
+| -0x17  | `nofunc`        |            | |
+| -0x18  | `noextern`      |            | |
+| -0x19  | `struct`        |            | |
 | -0x1a  | `array`         |            | |
+| -0x1b  | `none`          |            | |
 
-#### Structured Types
+#### Composite Types
 
 | Opcode | Type            | Parameters |
 | ------ | --------------- | ---------- |
@@ -700,7 +772,8 @@ The opcode for heap types is encoded as an `s33`.
 | ------ | --------------- | ---------- | ---- |
 | -0x21  | `struct ft*`    | `ft* : vec(fieldtype)` | shorthand |
 | -0x22  | `array ft`      | `ft : fieldtype`       | shorthand |
-| -0x30  | `sub $t* st`    | `$t* : vec(typeidx)`, `st : strtype` | |
+| -0x30  | `sub $t* st`    | `$t* : vec(typeidx)`, `st : comptype` | |
+| -0x32  | `sub final $t* st` | `$t* : vec(typeidx)`, `st : comptype` | |
 
 #### Defined Types
 
@@ -708,8 +781,9 @@ The opcode for heap types is encoded as an `s33`.
 | ------ | --------------- | ---------- | ---- |
 | -0x21  | `struct ft*`    | `ft* : vec(fieldtype)` | shorthand |
 | -0x22  | `array ft`      | `ft : fieldtype`       | shorthand |
-| -0x30  | `sub $t* st`    | `$t* : vec(typeidx)`, `st : strtype` | shorthand |
+| -0x30  | `sub $t* st`    | `$t* : vec(typeidx)`, `st : comptype` | shorthand |
 | -0x31  | `rec dt*`       | `dt* : vec(subtype)` | |
+| -0x32  | `sub final $t* st` | `$t* : vec(typeidx)`, `st : comptype` | shorthand |
 
 #### Field Types
 
@@ -723,44 +797,45 @@ The opcode for heap types is encoded as an `s33`.
 | Opcode | Type            | Parameters |
 | ------ | --------------- | ---------- |
 | 0xd5   | `ref.eq`        |            |
-| 0xd6   | `br_on_non_null` | |
-| 0xfb01 | `struct.new_with_rtt $t` | `$t : typeidx` |
-| 0xfb02 | `struct.new_default_with_rtt $t` | `$t : typeidx` |
+| 0xd6   | `br_on_non_null $l` | `$l : labelidx` |
+| 0xfb01 | `struct.new $t` | `$t : typeidx` |
+| 0xfb02 | `struct.new_default $t` | `$t : typeidx` |
 | 0xfb03 | `struct.get $t i` | `$t : typeidx`, `i : fieldidx` |
 | 0xfb04 | `struct.get_s $t i` | `$t : typeidx`, `i : fieldidx` |
 | 0xfb05 | `struct.get_u $t i` | `$t : typeidx`, `i : fieldidx` |
 | 0xfb06 | `struct.set $t i` | `$t : typeidx`, `i : fieldidx` |
-| 0xfb11 | `array.new_with_rtt $t` | `$t : typeidx` |
-| 0xfb12 | `array.new_default_with_rtt $t` | `$t : typeidx` |
+| 0xfb0f | `array.fill $t` | `$t : typeidx` |
+| 0xfb11 | `array.new $t` | `$t : typeidx` |
+| 0xfb12 | `array.new_default $t` | `$t : typeidx` |
 | 0xfb13 | `array.get $t` | `$t : typeidx` |
 | 0xfb14 | `array.get_s $t` | `$t : typeidx` |
 | 0xfb15 | `array.get_u $t` | `$t : typeidx` |
 | 0xfb16 | `array.set $t` | `$t : typeidx` |
-| 0xfb17 | `array.len` | `_ : u32` (TODO: remove, was typeidx) |
+| 0xfb17 | `array.len` | |
+| 0xfb18 | `array.copy $t1 $t2` | `$t1 : typeidx`, `$t2 : typeidx` |
+| 0xfb19 | `array.new_fixed $t N` | `$t : typeidx`, `N : u32` |
+| 0xfb1b | `array.new_data $t $d` | `$t : typeidx`, `$d : dataidx` |
+| 0xfb1c | `array.new_elem $t $e` | `$t : typeidx`, `$e : elemidx` |
 | 0xfb20 | `i31.new` |  |
 | 0xfb21 | `i31.get_s` |  |
 | 0xfb22 | `i31.get_u` |  |
-| 0xfb30 | `rtt.canon $t` | `$t : typeidx` |
-| 0xfb40 | `ref.test $t` | `$t : typeidx` |
-| 0xfb41 | `ref.cast $t` | `$t : typeidx` |
-| 0xfb42 | `br_on_cast $l` | `$l : labelidx` |
-| 0xfb43 | `br_on_cast_fail $l` | `$l : labelidx` |
-| 0xfb50 | `ref.is_func` | |
-| 0xfb51 | `ref.is_data` | |
-| 0xfb52 | `ref.is_i31` | |
-| 0xfb53 | `ref.is_array` | |
-| 0xfb58 | `ref.as_func` | |
-| 0xfb59 | `ref.as_data` | |
-| 0xfb5a | `ref.as_i31` | |
-| 0xfb5b | `ref.as_array` | |
-| 0xfb60 | `br_on_func` | |
-| 0xfb61 | `br_on_data` | |
-| 0xfb62 | `br_on_i31` | |
-| 0xfb63 | `br_on_non_func` | |
-| 0xfb64 | `br_on_non_data` | |
-| 0xfb65 | `br_on_non_i31` | |
-| 0xfb66 | `br_on_array` | |
-| 0xfb67 | `br_on_non_array` | |
+| 0xfb40 | `ref.test (ref ht)` | `ht : heaptype` |
+| 0xfb41 | `ref.cast (ref ht)` | `ht : heaptype` |
+| 0xfb48 | `ref.test (ref null ht)` | `ht : heaptype` |
+| 0xfb49 | `ref.cast (ref null ht)` | `ht : heaptype` |
+| 0xfb4e | `br_on_cast $l (ref null1? ht1) (ref null2? ht2)` | `flags : u8`, $l : labelidx`, `ht1 : heaptype`, `ht2 : heaptype` |
+| 0xfb4f | `br_on_cast_fail $l (ref null1? ht1) (ref null2? ht2)` | `flags : u8`, $l : labelidx`, `ht1 : heaptype`, `ht2 : heaptype` |
+| 0xfb54 | `array.init_data $t $d` | `$t : typeidx`, `$d: dataidx` |
+| 0xfb55 | `array.init_elem $t $e` | `$t : typeidx`, `$d: elemidx` |
+| 0xfb70 | `extern.internalize` | |
+| 0xfb71 | `extern.externalize` | |
+
+Flag byte encoding for `br_on_cast(_fail)?`:
+
+| Bit | Function      |
+| --- | ------------- |
+| 0   | null1 present |
+| 1   | null2 present |
 
 
 ## JS API
@@ -770,21 +845,15 @@ See [GC JS API document](MVP-JS.md) .
 
 ## Questions
 
-* Make rtt operands nullable?
-
-* Make `i31.new` a constant instruction. Others too?
-
 * Enable `i31` as a type definition.
 
-* Should reference types be generalised to *unions*, e.g., of the form `(ref null? i31? data? func? extern? $t?)`? Perhaps even allowing multiple concrete types?
+* Should reference types be generalised to *unions*, e.g., of the form `(ref null? i31? struct? array? func? extern? $t?)`? Perhaps even allowing multiple concrete types?
 
-* Provide functionality to generate fresh, non-canonical RTTs?
-
-* Provide a way to make data types non-eq, especially immutable ones?
+* Provide a way to make aggregate types non-eq, especially immutable ones?
 
 
 
-## Appendix: Formal Rules
+## Appendix: Formal Rules for Types
 
 ### Validity
 
@@ -811,7 +880,7 @@ C |- ref x ok
 ...and so on.
 
 
-#### Structural Types (`C |- <strtype> ok`)
+#### Composite Types (`C |- <comptype> ok`)
 ```
 (C |- t1 ok)*
 (C |- t2 ok)*
@@ -832,9 +901,10 @@ C |- array ft ok
 ```
 C |- st ok
 (C |- st <: expand(C(x)))*
+(not final(C(x)))*
 (x < x')*
---------------------------
-C |- sub x* st ok(x')
+----------------------------
+C |- sub final? x* st ok(x')
 
 C |- st ok(x)
 C |- st'* ok(x+1)
@@ -909,7 +979,7 @@ C |- t == t'
 C |- mut t == mut t'
 ```
 
-#### Structural Types (`C |- <strtype> == <strtype'>`)
+#### Composite Types (`C |- <comptype> == <comptype'>`)
 
 ```
 (C |- t1 == t1')*
@@ -931,8 +1001,9 @@ C |- array ft == array ft'
 ```
 (C |- x == x')*
 C |- st == st'
------------------------------
-C |- sub x* st == sub x'* st'
+final1? = final2?
+---------------------------------------------
+C |- sub final1? x* st == sub final2? x'* st'
 ```
 
 ### Subtyping
@@ -944,9 +1015,9 @@ C |- x == x'
 ------------
 C |- x <: x'
 
-unroll(C(x)) = sub (x1* x'' x2*) st
+unroll(C(x)) = sub final? (x1* x'' x2*) st
 C |- x'' <: x'
------------------------------------
+------------------------------------------
 C |- x <: x'
 ```
 
@@ -973,7 +1044,7 @@ C |- t == t'
 C |- mut t <: mut t'
 ```
 
-#### Structural Types (`C |- <strtype> <: <strtype'>`)
+#### Composite Types (`C |- <comptype> <: <comptype'>`)
 
 ```
 (C |- t1' <: t1)*

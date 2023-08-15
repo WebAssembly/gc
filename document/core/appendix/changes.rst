@@ -7,7 +7,7 @@ Change History
 Since the original release 1.0 of the WebAssembly specification, a number of proposals for extensions have been integrated.
 The following sections provide an overview of what has changed.
 
-Release 1.1
+Release 2.0
 ~~~~~~~~~~~
 
 .. index:: instruction, integer
@@ -53,7 +53,7 @@ Added |FUNCREF| and |EXTERNREF| as new value types and respective instructions [
 
 * New :ref:`reference instructions <syntax-instr-ref>`: |REFNULL|, |REFFUNC|, |REFISNULL|
 
-* Enrich :ref:`parametric instruction <syntax-instr-parametric>`: |SELECT| with optional type immediate
+* Extended :ref:`parametric instruction <syntax-instr-parametric>`: |SELECT| with optional type immediate
 
 * New :ref:`declarative <syntax-elemmode>` form of :ref:`element segment <syntax-elem>`
 
@@ -138,6 +138,61 @@ Added vector type and instructions that manipulate multiple numeric values in pa
 * New injection/projection :ref:`vector instructions <syntax-instr-vec>`: :math:`\K{i}\!N\!\K{x}\!M\!\K{.splat}`, :math:`\K{f}\!N\!\K{x}\!M\!\K{.splat}`, :math:`\K{i}\!N\!\K{x}\!M\!\K{.bitmask}`
 
 
+Release 2.?
+~~~~~~~~~~~
+
+.. index:: reference, reference type, heap type, value type, local, local type, instruction, instruction type, table, function, function type, matching, subtyping
+
+Typeful References
+..................
+
+Added more precise types for references [#proposal-typedref]_.
+
+* New generalised form of :ref:`reference types <syntax-reftype>`: :math:`(\REF~\NULL^?~\heaptype)`
+
+* New class of :ref:`heap types <syntax-heaptype>`: |FUNC|, |EXTERN|, :math:`\typeidx`
+
+* Basic :ref:`subtyping <match>` on :ref:`reference <match-reftype>` and :ref:`value <match-valtype>` types
+
+* New :ref:`reference instructions <syntax-instr-ref>`: |REFASNONNULL|, |BRONNULL|, |BRONNONNULL|
+
+* New :ref:`control instruction <syntax-instr-control>`: |CALLREF|
+
+* Refined typing of :ref:`reference instruction <syntax-instr-ref>` |REFFUNC| with more precise result type
+
+* Refined typing of :ref:`local instructions <valid-instr-variable>` and :ref:`instruction sequences <valid-instr-seq>` to track the :ref:`initialization status <syntax-init>` of :ref:`locals <syntax-local>` with non-:ref:`defaultable <valid-defaultable>` type
+
+* Extended :ref:`table definitions <syntax-table>` with optional initializer expression
+
+
+.. index:: reference, reference type, heap type, field type, storage type, structure type, array type, composite type, sub type, recrusive type
+
+Garbage Collection
+~~~~~~~~~~~~~~~~~~
+
+Added managed reference types [#proposal-gc]_.
+
+* New forms of :ref:`heap types <syntax-heaptype>`: |ANY|, |EQT|, |I31|, |STRUCT|, |ARRAY|, |NONE|, |NOFUNC|, |NOEXTERN|
+
+* New :ref:`reference type <syntax-reftype>` short-hands: |ANYREF|, |EQREF|, |I31REF|, |STRUCTREF|, |ARRAYREF|, |NULLREF|, |NULLFUNCREF|, |NULLEXTERNREF|
+
+* New forms of type definitions: :ref:`structure <syntax-structtype>` and :ref:`array types <syntax-arraytype>`, :ref:`sub types <syntax-subtype>`, and :ref:`recursive types <syntax-rectype>`
+
+* Enriched :ref:`subtyping <match>` based on explicitly declared :ref:`sub types <syntax-subtype>` and the new heap types
+
+* New generic :ref:`reference instructions <syntax-instr-ref>`: |REFEQ|, |REFTEST|, |REFCAST|, |BRONCAST|, |BRONCASTFAIL|
+
+* New :ref:`reference instructions <syntax-instr-ref>` for :ref:`unboxed scalars <syntax-i31>`: |I31NEW|, :math:`\I31GET\K{\_}\sx`
+
+* New :ref:`reference instructions <syntax-instr-ref>` for :ref:`structure types <syntax-structtype>`: |STRUCTNEW|, |STRUCTNEWDEFAULT|, :math:`\STRUCTGET\K{\_}\sx^?`, |STRUCTSET|
+
+* New :ref:`reference instructions <syntax-instr-ref>` for :ref:`array types <syntax-structtype>`: |ARRAYNEW|, |ARRAYNEWDEFAULT|, |ARRAYNEWFIXED|, |ARRAYNEWDATA|, |ARRAYNEWELEM|, :math:`\ARRAYGET\K{\_}\sx^?`, |ARRAYSET|, |ARRAYLEN|, |ARRAYFILL|, |ARRAYCOPY|, |ARRAYINITDATA|, |ARRAYINITELEM|
+
+* New :ref:`reference instructions <syntax-instr-ref>` for converting :ref:`host types <syntax-externtype>`: |EXTERNINTERNALIZE|, |EXTERNEXTERNALIZE|
+
+* Extended set of :ref:`constant instructions <valid-const>` with |I31NEW|, |STRUCTNEW|, |STRUCTNEWDEFAULT|, |ARRAYNEW|, |ARRAYNEWDEFAULT|, |ARRAYNEWFIXED|, |EXTERNINTERNALIZE|, |EXTERNEXTERNALIZE|, and |GLOBALGET| for any previously declared immutable :ref:`global <syntax-global>`
+
+
 .. [#proposal-signext]
    https://github.com/WebAssembly/spec/tree/main/proposals/sign-extension-ops/
 
@@ -155,3 +210,9 @@ Added vector type and instructions that manipulate multiple numeric values in pa
 
 .. [#proposal-vectype]
    https://github.com/WebAssembly/spec/tree/main/proposals/simd/
+
+.. [#proposal-typedref]
+   https://github.com/WebAssembly/spec/tree/main/proposals/function-references/
+
+.. [#proposal-gc]
+   https://github.com/WebAssembly/spec/tree/main/proposals/gc/

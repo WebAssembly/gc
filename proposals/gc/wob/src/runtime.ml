@@ -11,12 +11,12 @@ let name_mem = "mem"
 let funcs =
   let open Intrinsic in
   let open Wasm.Types in
-  let text ctxt = RefType (Nullable, DefHeapType (SynVar (compile_text_type ctxt))) in
-  let rtt ctxt = RefType (Nullable, EqHeapType) in
-  let i32 ctxt = NumType I32Type in
+  let text ctxt = RefT (Null, VarHT (StatX (compile_text_type ctxt))) in
+  let rtt ctxt = RefT (Null, EqHT) in
+  let i32 ctxt = NumT I32T in
   let ty fts1 fts2 ctxt =
     let with_ctxt f = f ctxt in
-    FuncType (List.map with_ctxt fts1, List.map with_ctxt fts2)
+    FuncT (List.map with_ctxt fts1, List.map with_ctxt fts2)
   in
   [ name_mem_alloc, (compile_mem_alloc, ty [i32] [i32]);
     name_text_new, (compile_text_new, ty [i32; i32] [text]);

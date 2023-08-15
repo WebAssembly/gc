@@ -227,13 +227,14 @@ let string_of_nan = function
   | ArithmeticNan -> "nan:arithmetic"
 
 let type_of_result r =
+  let open Types in
   match r with
-  | NumResult (NumPat n) -> Types.NumType (Value.type_of_num n.it)
-  | NumResult (NanPat n) -> Types.NumType (Value.type_of_num n.it)
-  | VecResult (VecPat _) -> Types.VecType Types.V128Type
-  | RefResult (RefPat r) -> Types.RefType (Value.type_of_ref r.it)
-  | RefResult (RefTypePat t) -> Types.(RefType (NonNullable, t))
-  | RefResult (NullPat) -> Types.(RefType (Nullable, AnyHeapType))
+  | NumResult (NumPat n) -> NumT (Value.type_of_num n.it)
+  | NumResult (NanPat n) -> NumT (Value.type_of_num n.it)
+  | VecResult (VecPat v) -> VecT (Value.type_of_vec v)
+  | RefResult (RefPat r) -> RefT (Value.type_of_ref r.it)
+  | RefResult (RefTypePat t) -> RefT (NoNull, t)  (* assume closed *)
+  | RefResult (NullPat) -> RefT (Null, ExternHT)
 
 let string_of_num_pat (p : num_pat) =
   match p with
@@ -324,13 +325,14 @@ let run_action act : Value.t list =
     let inst = lookup_instance x_opt act.at in
     (match Instance.export inst name with
     | Some (Instance.ExternFunc f) ->
-      let Types.FuncType (ins, out) = Func.type_of f in
-      if List.length vs <> List.length ins then
+      let Types.FuncT (ts1, _ts2) =
+        Types.(as_func_str_type (expand_def_type (Func.type_of f))) in
+      if List.length vs <> List.length ts1 then
         Script.error act.at "wrong number of arguments";
       List.iter2 (fun v t ->
-        if not (Match.match_value_type [] (Value.type_of_value v.it) t) then
+        if not (Match.match_val_type [] (Value.type_of_value v.it) t) then
           Script.error v.at "wrong type of argument"
-      ) vs ins;
+      ) vs ts1;
       Eval.invoke f (List.map (fun v -> v.it) vs)
     | Some _ -> Assert.error act.at "export is not a function"
     | None -> Assert.error act.at "undefined export"
@@ -381,12 +383,14 @@ let assert_vec_pat v p =
 let assert_ref_pat r p =
   match p, r with
   | RefPat r', r -> Value.eq_ref r r'.it
-  | RefTypePat Types.AnyHeapType, _
-  | RefTypePat Types.EqHeapType, (I31.I31Ref _ | Data.DataRef _)
-  | RefTypePat Types.I31HeapType, I31.I31Ref _
-  | RefTypePat Types.DataHeapType, Data.DataRef _
-  | RefTypePat Types.ArrayHeapType, Data.DataRef (Data.Array _) -> true
-  | RefTypePat Types.FuncHeapType, Instance.FuncRef _
+  | RefTypePat Types.AnyHT, Instance.FuncRef _ -> false
+  | RefTypePat Types.AnyHT, _
+  | RefTypePat Types.EqHT, (I31.I31Ref _ | Aggr.StructRef _ | Aggr.ArrayRef _)
+  | RefTypePat Types.I31HT, I31.I31Ref _
+  | RefTypePat Types.StructHT, Aggr.StructRef _
+  | RefTypePat Types.ArrayHT, Aggr.ArrayRef _ -> true
+  | RefTypePat Types.FuncHT, Instance.FuncRef _
+  | RefTypePat Types.ExternHT, _ -> true
   | NullPat, Value.NullRef _ -> true
   | _ -> false
 

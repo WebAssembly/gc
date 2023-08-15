@@ -51,12 +51,13 @@ let string_of_field_type ctxt idx i =
 
 let rec _print_cls ctxt cls =
   let open Printf in
-  printf "inst_idx = %ld = %!%s\n" cls.inst_idx (string_of_type ctxt cls.inst_idx);
-  printf "disp_idx = %ld = %s\n" cls.disp_idx (string_of_type ctxt cls.disp_idx);
-  printf "cls_idx = %ld = %s\n" cls.cls_idx (string_of_type ctxt cls.cls_idx);
-  printf "new : %s\n" (string_of_field_type ctxt cls.cls_idx cls_new);
-  printf "pre : %s\n" (string_of_field_type ctxt cls.cls_idx cls_pre_alloc);
-  printf "post : %s\n" (string_of_field_type ctxt cls.cls_idx cls_post_alloc);
+  printf "inst_tidx = %ld = %!%s\n" cls.inst_tidx (string_of_type ctxt cls.inst_tidx);
+  printf "disp_tidx = %ld = %s\n" cls.disp_tidx (string_of_type ctxt cls.disp_tidx);
+  printf "cls_tidx = %ld = %s\n" cls.cls_tidx (string_of_type ctxt cls.cls_tidx);
+  printf "new_tidx = %ld = %s\n" cls.new_tidx (string_of_type ctxt cls.new_tidx);
+  printf "new : %s\n" (string_of_field_type ctxt cls.cls_tidx cls_new);
+  printf "pre : %s\n" (string_of_field_type ctxt cls.cls_tidx cls_pre_alloc);
+  printf "post : %s\n" (string_of_field_type ctxt cls.cls_tidx cls_post_alloc);
   if not (Lazy.is_val cls.def) then printf "(under definition)\n" else begin
     let lazy def = cls.def in
     printf "inst_flds =";
@@ -66,11 +67,11 @@ let rec _print_cls ctxt cls =
       List.iter (printf " %s") (List.map W.string_of_field_type def.disp_flds);
       printf "\n";
     printf "param_vals =";
-      List.iter (printf " %s") (List.map W.string_of_value_type def.param_vals);
+      List.iter (printf " %s") (List.map W.string_of_val_type def.param_vals);
       printf "\n";
     printf "pre_vals =";
       List.iter (fun (x, t) ->
-        printf " %s:%s" x (W.string_of_value_type t)) def.pre_vals;
+        printf " %s:%s" x (W.string_of_val_type t)) def.pre_vals;
       printf "\n";
     printf "overrides =";
       List.iter (fun (i, (x, ft)) ->
@@ -175,34 +176,35 @@ let compile_coerce_block_type ctxt at t =
   | T.Tup [] -> emit_instr ctxt at W.(drop)
   | _ -> ()
 
-let compile_coerce_value_type ctxt at t =
+let compile_coerce_val_type ctxt at t =
   match t with
   | T.Tup [] ->
     emit_instr ctxt at (W.ref_null (lower_heap_type ctxt at (T.Tup [])))
   | _ -> ()
 
-let compile_coerce_abs_value_type ctxt at t =
+let compile_coerce_abs_val_type ctxt at t =
   let emit ctxt = List.iter (emit_instr ctxt at) in
   match t with
   | T.Null | T.Bot | T.Tup [] ->
     emit ctxt W.[drop; ref_null (lower_heap_type ctxt at t)]
   | T.Box (T.Bool | T.Byte) ->
-    emit ctxt W.[ref_as_i31]
+    emit ctxt W.[ref_cast (NoNull, I31HT)]
   | T.Text | T.Box _ | T.Tup _ | T.Obj
   | T.Inst _ | T.Array _ | T.Func _ | T.Class _ ->
-    let t' = lower_value_type ctxt at t in
-    let tmpidx = emit_local ctxt at W.(RefType (Nullable, EqHeapType)) in
+    let t' = lower_val_type ctxt at t in
+    let tmpidx = emit_local ctxt at W.(RefT (Null, EqHT)) in
     let typeidx = lower_var_type ctxt at t in
     emit ctxt W.[
       local_tee (tmpidx @@ at);
       ref_is_null;
       if_ (result t') [
-        ref_null (DefHeapType (SynVar typeidx)) @@ at
+        ref_null (VarHT (StatX typeidx)) @@ at
       ] (
         [ local_get (tmpidx @@ at) @@ at;
-          ref_as_data @@ at;
+(* RTTs
           rtt_canon (typeidx @@ at) @@ at;
-          ref_cast @@ at;
+*)
+          ref_cast (NoNull, VarHT (StatX typeidx)) @@ at;
         ]
       )
     ]
@@ -212,7 +214,7 @@ let compile_coerce_abs_block_type ctxt at t =
   let emit ctxt = List.iter (emit_instr ctxt at) in
   match t with
   | T.Tup [] -> emit ctxt W.[drop]
-  | _ -> compile_coerce_abs_value_type ctxt at t
+  | _ -> compile_coerce_abs_val_type ctxt at t
 
 
 let compile_coerce_null_type ctxt at t1 t2 =
@@ -278,7 +280,7 @@ let rec compile_typ_var ctxt x ts t' : typ list =
       let s, loc = (E.find_typ (Source.(@@) x' x.at) cls_def.env).it in
       assert (s = T.LetS);
       emit ctxt W.[
-        struct_get (cls.inst_idx @@ x.at) (as_direct_loc loc @@ x.at)
+        struct_get (cls.inst_tidx @@ x.at) (as_direct_loc loc @@ x.at)
       ];
     | _ -> assert false
     );
@@ -348,13 +350,15 @@ and compile_typ ctxt t =
   in
   if ts <> [] then begin
     let rtt_idx = lower_var_rtt ctxt t.at in
-    let tagtmp = emit_local ctxt t.at W.(RefType (Nullable, EqHeapType)) in
+    let tagtmp = emit_local ctxt t.at W.(RefT (Null, EqHT)) in
     let arrtmp =
-      emit_local ctxt t.at W.(RefType (Nullable, DefHeapType (SynVar rtt_idx))) in
+      emit_local ctxt t.at W.(RefT (Null, VarHT (StatX rtt_idx))) in
     emit ctxt W.[
       local_set (tagtmp @@ t.at);
       i32_const (int32 (List.length ts + 1) @@ t.at);
+(* RTTs
       rtt_canon (rtt_idx @@ t.at);
+*)
       array_new_default (rtt_idx @@ t.at);
       local_tee (arrtmp @@ t.at);
       i32_const (0l @@ t.at);
@@ -535,8 +539,13 @@ and compile_exp ctxt e =
       emit ctxt W.[i31_new]
     | _ ->
       let typeidx = lower_var_type ctxt e.at (type_of e) in
-      compile_coerce_value_type ctxt e1.at (type_of e1);
-      emit ctxt W.[rtt_canon (typeidx @@ e.at); struct_new (typeidx @@ e.at)]
+      compile_coerce_val_type ctxt e1.at (type_of e1);
+      emit ctxt W.[
+(* RTTs
+        rtt_canon (typeidx @@ e.at);
+*)
+        struct_new (typeidx @@ e.at)
+      ]
     )
 
   | UnboxE e1 ->
@@ -562,9 +571,14 @@ and compile_exp ctxt e =
     let typeidx = lower_var_type ctxt e.at (type_of e) in
     List.iter (fun eI ->
       compile_exp ctxt eI;
-      compile_coerce_value_type ctxt eI.at (type_of eI);
+      compile_coerce_val_type ctxt eI.at (type_of eI);
     ) es;
-    emit ctxt W.[rtt_canon (typeidx @@ e.at); struct_new (typeidx @@ e.at)]
+    emit ctxt W.[
+(* RTTs
+      rtt_canon (typeidx @@ e.at);
+*)
+      struct_new (typeidx @@ e.at)
+    ]
 
   | ProjE (e1, n) ->
     let typeidx = lower_var_type ctxt e.at (type_of e1) in
@@ -581,12 +595,14 @@ and compile_exp ctxt e =
     let typeidx = lower_var_type ctxt e.at (type_of e) in
     emit ctxt W.[
       i32_const (int32 (List.length es) @@ e.at);
+(* RTTs
       rtt_canon (typeidx @@ e.at);
+*)
       array_new_default (typeidx @@ e.at);
     ];
     let tmpidx =
       if List.length es = 0 then 0l else begin
-        let t' = W.(RefType (Nullable, DefHeapType (SynVar typeidx))) in
+        let t' = W.(RefT (Null, VarHT (StatX typeidx))) in
         let tmpidx = emit_local ctxt e.at t' in
         emit ctxt W.[local_tee (tmpidx @@ e.at)];
         tmpidx
@@ -595,7 +611,7 @@ and compile_exp ctxt e =
     List.iteri (fun i eI ->
       emit ctxt W.[local_get (tmpidx @@ e.at); i32_const (int32 i @@ e.at)];
       compile_exp ctxt eI;
-      compile_coerce_value_type ctxt eI.at (type_of eI);
+      compile_coerce_val_type ctxt eI.at (type_of eI);
       emit ctxt W.[array_set (typeidx @@ e.at)];
     ) es
 
@@ -632,7 +648,7 @@ and compile_exp ctxt e =
           end;
           List.iter2 (fun eI tI ->
             compile_exp ctxt eI;
-            compile_coerce_value_type ctxt eI.at (type_of eI);
+            compile_coerce_val_type ctxt eI.at (type_of eI);
             compile_coerce_null_type ctxt eI.at (type_of eI) (T.subst subst tI);
           ) es ts1;
           emit ctxt W.[call (as_direct_loc loc @@ x.at)]
@@ -651,7 +667,7 @@ and compile_exp ctxt e =
         let cls = lower_class ctxt e11.at (fst (T.as_inst t11)) in
         let lazy cls_def = cls.def in
         let s, loc = (E.find_val x cls_def.env).it in
-        let tmpidx = emit_local ctxt e11.at (lower_value_type ctxt e11.at t11) in
+        let tmpidx = emit_local ctxt e11.at (lower_val_type ctxt e11.at t11) in
         compile_exp ctxt e11;
         emit ctxt W.[local_tee (tmpidx @@ e.at)];
         let ys, ts1, _ = T.as_func (type_of e1) in
@@ -663,16 +679,22 @@ and compile_exp ctxt e =
         end;
         List.iter2 (fun eI tI ->
           compile_exp ctxt eI;
-          compile_coerce_value_type ctxt eI.at (type_of eI);
+          compile_coerce_val_type ctxt eI.at (type_of eI);
           compile_coerce_null_type ctxt eI.at (type_of eI) (T.subst subst tI);
         ) es ts1;
         (match s with
         | T.FuncS ->
+          let i = as_direct_loc loc in
+          let meth_idx =
+            match W.Lib.List32.nth cls_def.disp_flds i with
+            | W.(FieldT (_, ValStorageT (RefT (_, VarHT (StatX x))))) -> x
+            | _ -> assert false
+          in
           emit ctxt W.[
             local_get (tmpidx @@ e11.at);
-            struct_get (cls.inst_idx @@ e11.at) (0l @@ x.at);
-            struct_get (cls.disp_idx @@ e11.at) (as_direct_loc loc @@ x.at);
-            call_ref;
+            struct_get (cls.inst_tidx @@ e11.at) (0l @@ x.at);
+            struct_get (cls.disp_tidx @@ e11.at) (i @@ x.at);
+            call_ref (meth_idx @@ e1.at);
           ];
         | T.LetS | T.VarS -> nyi e.at "indirect function calls"
         | T.ClassS -> nyi e.at "nested classes"
@@ -704,27 +726,29 @@ and compile_exp ctxt e =
     end;
     List.iter2 (fun eI tI ->
       compile_exp ctxt eI;
-      compile_coerce_value_type ctxt eI.at (type_of eI);
+      compile_coerce_val_type ctxt eI.at (type_of eI);
       compile_coerce_null_type ctxt eI.at (type_of eI) (T.subst subst tI);
     ) es tcls.T.vparams;
     compile_var ctxt x (T.Class tcls);
     emit ctxt W.[
-      struct_get (cls.cls_idx @@ x.at) (cls_new @@ x.at);
-      call_ref;
+      struct_get (cls.cls_tidx @@ x.at) (cls_new @@ x.at);
+      call_ref (cls.new_tidx @@ e.at);
     ]
 
   | NewArrayE (t, e1, e2) ->
     let typeidx = lower_var_type ctxt e.at (type_of e) in
-    let t' = lower_value_type ctxt e1.at (type_of e1) in
+    let t' = lower_val_type ctxt e1.at (type_of e1) in
     let tmpidx = emit_local ctxt e1.at t' in
     compile_exp ctxt e1;
     emit ctxt W.[local_set (tmpidx @@ e1.at)];
     compile_exp ctxt e2;
-    compile_coerce_value_type ctxt e2.at (type_of e2);
+    compile_coerce_val_type ctxt e2.at (type_of e2);
     compile_coerce_null_type ctxt e2.at (type_of e2) (type_of t);
     emit ctxt W.[
       local_get (tmpidx @@ e1.at);
+(* RTTs
       rtt_canon (typeidx @@ e.at);
+*)
       array_new (typeidx @@ e.at);
     ]
 
@@ -742,7 +766,7 @@ and compile_exp ctxt e =
         | _ -> W.struct_get
       in
       emit ctxt [
-        struct_get_sxopt (cls.inst_idx @@ e1.at) (as_direct_loc loc @@ x.at)
+        struct_get_sxopt (cls.inst_tidx @@ e1.at) (as_direct_loc loc @@ x.at)
       ];
       compile_coerce_abs_block_type ctxt e.at (type_of e)
     | T.FuncS -> nyi e.at "closures"
@@ -758,12 +782,12 @@ and compile_exp ctxt e =
       | PreScope -> assert false
       | BlockScope | FuncScope ->
         compile_exp ctxt e2;
-        compile_coerce_value_type ctxt e2.at (type_of e2);
+        compile_coerce_val_type ctxt e2.at (type_of e2);
         compile_coerce_null_type ctxt e2.at (type_of e2) (type_of e1);
         emit_instr ctxt x.at W.(local_set (as_direct_loc loc @@ x.at))
       | GlobalScope ->
         compile_exp ctxt e2;
-        compile_coerce_value_type ctxt e2.at (type_of e2);
+        compile_coerce_val_type ctxt e2.at (type_of e2);
         compile_coerce_null_type ctxt e2.at (type_of e2) (type_of e1);
         emit_instr ctxt x.at W.(global_set (as_direct_loc loc @@ x.at))
       | ClassScope this_t ->
@@ -779,7 +803,7 @@ and compile_exp ctxt e =
       compile_exp ctxt e11;
       compile_exp ctxt e12;
       compile_exp ctxt e2;
-      compile_coerce_value_type ctxt e2.at (type_of e2);
+      compile_coerce_val_type ctxt e2.at (type_of e2);
       compile_coerce_null_type ctxt e2.at (type_of e2) t111;
       emit ctxt W.[array_set (typeidx @@ e.at)]
 
@@ -792,10 +816,10 @@ and compile_exp ctxt e =
       assert (s = T.VarS);
       compile_exp ctxt e11;
       compile_exp ctxt e2;
-      compile_coerce_value_type ctxt e2.at (type_of e2);
+      compile_coerce_val_type ctxt e2.at (type_of e2);
       compile_coerce_null_type ctxt e2.at (type_of e2) (snd (List.assoc x.it tcls.T.def));
       emit ctxt W.[
-        struct_set (cls.inst_idx @@ e11.at) (as_direct_loc loc @@ x.at)
+        struct_set (cls.inst_tidx @@ e11.at) (as_direct_loc loc @@ x.at)
       ]
 
     | _ -> assert false
@@ -811,39 +835,36 @@ and compile_exp ctxt e =
       compile_exp ctxt e1;
       compile_coerce_null_type ctxt e1.at (type_of e1) (type_of e);
     end else begin
-      let t1' = lower_value_type ctxt e1.at (type_of e1) in
-      let t' = lower_value_type ctxt e.at (type_of e) in
+      let t' = lower_val_type ctxt e.at (type_of e) in
       let tcls, _ = T.as_inst (type_of e) in
       let cls = lower_class ctxt e.at tcls in
-      let tmpidx = emit_local ctxt e1.at t1' in
-      let tmpidx2 = emit_local ctxt e1.at t' in
-      let clsidx = emit_local ctxt x.at (lower_value_type ctxt x.at (T.Class tcls)) in
+      let tmpidx = emit_local ctxt e1.at t' in
+(* RTTs
+      let clsidx = emit_local ctxt x.at (lower_val_type ctxt x.at (T.Class tcls)) in
+*)
       let bt = lower_block_type ctxt e.at (type_of e) in
       emit_block ctxt e.at W.block bt (fun ctxt ->
         (* Push default null result *)
         emit ctxt W.[
           ref_null (lower_heap_type ctxt e.at (type_of e));
         ];
-        (* Compile operand *)
-        compile_exp ctxt e1;
-        compile_coerce_null_type ctxt e1.at (type_of e1) (type_of e);
-        (* Check for null *)
-        emit ctxt W.[
-          local_tee (tmpidx @@ e1.at);
-          ref_is_null;
-          br_if (0l @@ e.at);
-        ];
-        (* Cast down representation type *)
         let bt2 = lower_block_type_func ctxt e.at [type_of e] [type_of e; type_of e] in
         emit_block ctxt e.at W.block bt2 (fun ctxt ->
-          emit ctxt W.[
-            local_get (tmpidx @@ e1.at);
-          ];
+          (* Compile operand *)
+          compile_exp ctxt e1;
+          compile_coerce_null_type ctxt e1.at (type_of e1) (type_of e);
+          (* Cast down representation type *)
+(* RTTs
           compile_var ctxt x (T.Class tcls);
+*)
           emit ctxt W.[
+(* RTTs
             local_tee (clsidx @@ x.at);
-            struct_get (cls.cls_idx @@ x.at) (cls_rtt @@ x.at);
-            br_on_cast (0l @@ e.at);
+            struct_get (cls.cls_tidx @@ x.at) (cls_rtt @@ x.at);
+*)
+            br_on_cast (0l @@ e.at)
+              (Null, lower_heap_type ctxt x.at (type_of e1))
+              (NoNull, VarHT (StatX cls.inst_tidx));
             drop;
             br (1l @@ e.at);
           ];
@@ -852,11 +873,14 @@ and compile_exp ctxt e =
         let lazy cls_def = cls.def in
         let offset = List.length cls_def.disp_flds - 1 in
         emit ctxt W.[
-          local_tee (tmpidx2 @@ e1.at);
-          struct_get (cls.inst_idx @@ e1.at) (0l @@ e1.at);
-          struct_get (cls.disp_idx @@ x.at) (int32 offset @@ x.at);
+          local_tee (tmpidx @@ e1.at);
+          struct_get (cls.inst_tidx @@ e1.at) (0l @@ e1.at);
+          struct_get (cls.disp_tidx @@ x.at) (int32 offset @@ x.at);
+]; compile_var ctxt x (T.Class tcls); emit ctxt W.[
+(* RTTs
           local_get (clsidx @@ x.at);
-          struct_get (cls.cls_idx @@ x.at) (cls_disp @@ x.at);
+*)
+          struct_get (cls.cls_tidx @@ x.at) (cls_disp @@ x.at);
           ref_eq;
           i32_eqz;
           br_if (0l @@ e.at);
@@ -866,8 +890,8 @@ and compile_exp ctxt e =
         List.iteri (fun i t ->
           compile_typ ctxt t;
           emit ctxt W.[
-            local_get (tmpidx2 @@ e1.at);
-            struct_get (cls.inst_idx @@ x.at) (int32 (i + start) @@ x.at);
+            local_get (tmpidx @@ e1.at);
+            struct_get (cls.inst_tidx @@ x.at) (int32 (i + start) @@ x.at);
             call (intrinsic_rtt_eq ctxt @@ t.at);
             i32_eqz;
             br_if (0l @@ e.at);
@@ -876,7 +900,7 @@ and compile_exp ctxt e =
         (* Return result *)
         emit ctxt W.[
           drop;
-          local_get (tmpidx2 @@ e1.at);
+          local_get (tmpidx @@ e1.at);
         ]
       )
     end
@@ -954,27 +978,27 @@ and alloc_funcdec ctxt d =
   | ClassD (x, _, _, _, _) ->
     let tcls = T.as_class (bind_type_of d) in
     let cls = lower_class ctxt d.at tcls in
-    let cls_ht = W.(DefHeapType (SynVar cls.cls_idx)) in
-    let cls_vt = W.(RefType (Nullable, cls_ht)) in
+    let cls_ht = W.(VarHT (StatX cls.cls_tidx)) in
+    let cls_vt = W.(RefT (Null, cls_ht)) in
     let idx =
       match scope with
       | BlockScope | FuncScope -> emit_local ctxt x.at cls_vt
-      | GlobalScope -> emit_global ctxt x.at W.Mutable cls_vt None
+      | GlobalScope -> emit_global ctxt x.at W.Var cls_vt None
       | ClassScope _ -> nyi d.at "nested class definitions"
       | PreScope -> assert false
     in
 
-    let new_idx, define_new = emit_func_deferred ctxt d.at in
-    let pre_alloc_idx, define_pre_alloc = emit_func_deferred ctxt d.at in
-    let post_alloc_idx, define_post_alloc = emit_func_deferred ctxt d.at in
+    let new_fidx, define_new = emit_func_deferred ctxt d.at in
+    let pre_alloc_fidx, define_pre_alloc = emit_func_deferred ctxt d.at in
+    let post_alloc_fidx, define_post_alloc = emit_func_deferred ctxt d.at in
     let lazy cls_def = cls.def in
-    cls_def.new_idx <- new_idx;
-    cls_def.pre_alloc_idx <- pre_alloc_idx;
-    cls_def.post_alloc_idx <- post_alloc_idx;
+    cls_def.new_fidx <- new_fidx;
+    cls_def.pre_alloc_fidx <- pre_alloc_fidx;
+    cls_def.post_alloc_fidx <- post_alloc_fidx;
     ctxt.ext.funcs := !(ctxt.ext.funcs)
-      |> FuncEnv.add new_idx define_new
-      |> FuncEnv.add pre_alloc_idx define_pre_alloc
-      |> FuncEnv.add post_alloc_idx define_post_alloc;
+      |> FuncEnv.add new_fidx define_new
+      |> FuncEnv.add pre_alloc_fidx define_pre_alloc
+      |> FuncEnv.add post_alloc_fidx define_post_alloc;
 
     if not !Flags.parametric then begin
       env := E.extend_typ !env x (T.ClassS, DirectLoc idx)
@@ -998,8 +1022,8 @@ and compile_dec pass ctxt d =
 
   | LetD (x, e) ->
     compile_exp ctxt e;
-    compile_coerce_value_type ctxt e.at t;
-    let t' = lower_value_type ctxt x.at t in
+    compile_coerce_val_type ctxt e.at t;
+    let t' = lower_val_type ctxt x.at t in
     let loc =
       match scope with
       | PreScope -> assert false
@@ -1012,7 +1036,7 @@ and compile_dec pass ctxt d =
 
       | GlobalScope ->
         assert (pass = FullPass);
-        let idx = emit_global ctxt x.at W.Mutable t' None in
+        let idx = emit_global ctxt x.at W.Var t' None in
         emit ctxt W.[global_set (idx @@ x.at)];
         DirectLoc idx
 
@@ -1031,7 +1055,7 @@ and compile_dec pass ctxt d =
     env := E.extend_val !env x (T.VarS, InstanceLoc x.it)
 
   | VarD (x, _, e) ->
-    let t' = lower_value_type ctxt x.at t in
+    let t' = lower_val_type ctxt x.at t in
     let loc =
       match scope with
       | PreScope -> assert false
@@ -1040,16 +1064,16 @@ and compile_dec pass ctxt d =
         assert (pass = FullPass);
         let idx = emit_local ctxt x.at t' in
         compile_exp ctxt e;
-        compile_coerce_value_type ctxt e.at t;
+        compile_coerce_val_type ctxt e.at t;
         compile_coerce_null_type ctxt e.at (type_of e) t;
         emit ctxt W.[local_set (idx @@ d.at)];
         DirectLoc idx
 
       | GlobalScope ->
         assert (pass = FullPass);
-        let idx = emit_global ctxt x.at W.Mutable t' None in
+        let idx = emit_global ctxt x.at W.Var t' None in
         compile_exp ctxt e;
-        compile_coerce_value_type ctxt e.at t;
+        compile_coerce_val_type ctxt e.at t;
         compile_coerce_null_type ctxt e.at (type_of e) t;
         emit ctxt W.[global_set (idx @@ d.at)];
         DirectLoc idx
@@ -1077,13 +1101,13 @@ and compile_dec pass ctxt d =
 
   | TypD (x, ys, t) ->
     if not !Flags.parametric then begin
-      let t2' = lower_value_rtt ctxt x.at in
+      let t2' = lower_val_rtt ctxt x.at in
       let ts1 = List.map (fun _ -> t2') ys in
       let ts1' =
         if pass <> FuncPass then ts1 else
         let tcls = Option.get ctxt.ext.tcls in
         let cls = lower_class ctxt x.at tcls in
-        W.(RefType (Nullable, DefHeapType (SynVar cls.inst_idx))) :: ts1
+        W.(RefT (Null, VarHT (StatX cls.inst_tidx))) :: ts1
       in
       let idx =
         match (E.find_typ x !env).it with
@@ -1116,15 +1140,15 @@ and compile_dec pass ctxt d =
     env := E.extend_val !env x (T.FuncS, InstanceLoc x.it)
 
   | FuncD (x, ys, xts, tr, e) ->
-    let W.FuncType (ts1, ts2) = lower_func_type ctxt d.at t in
+    let W.FuncT (ts1, ts2) = lower_func_type ctxt d.at t in
     let ts1', ts2', override_opt =
       if pass <> FuncPass then ts1, ts2, None else
       let tcls = Option.get ctxt.ext.tcls in
       let cls = lower_class ctxt x.at tcls in
       let lazy cls_def = cls.def in
-      let this_t = W.(RefType (Nullable, DefHeapType (SynVar cls.inst_idx))) in
+      let this_t = W.(RefT (Null, VarHT (StatX cls.inst_tidx))) in
       match List.find_opt (fun (_, (x', _)) -> x' = x.it) cls_def.overrides with
-      | Some (_, (_, W.FuncType (ts1', ts2'))) ->
+      | Some (_, (_, W.FuncT (ts1', ts2'))) ->
         ts1', ts2', Some (tcls, cls, this_t, List.tl ts1')
       | None -> this_t::ts1, ts2, None
     in
@@ -1160,25 +1184,27 @@ and compile_dec pass ctxt d =
               let this = emit_local ctxt x.at this_t in
               emit ctxt W.[
                 local_get (this_param @@ x.at);
+(* RTTs
               ];
               compile_var ctxt Source.(ctxt.ext.self @@ x.at) (T.Class tcls);
               emit ctxt W.[
-                struct_get (cls.cls_idx @@ x.at) (cls_rtt @@ x.at);
-                ref_cast;
+                struct_get (cls.cls_tidx @@ x.at) (cls_rtt @@ x.at);
+*)
+                ref_cast (NoNull, VarHT (StatX cls.inst_tidx));
                 local_set (this @@ x.at);
               ];
               (* Downcast params if necessary (non-generic override of generic method) *)
               let offset = if !Flags.parametric then 0 else List.length ys in
               let i = ref (1 + offset) in
               List.iter2 (fun (x, t) param_t ->
-                let t' = lower_value_type ctxt t.at (type_of t) in
+                let t' = lower_val_type ctxt t.at (type_of t) in
                 if t' <> param_t then begin
                   let local = emit_local ctxt x.at t' in
                   env := E.extend_val !env x (T.LetS, DirectLoc local);
                   emit ctxt W.[
                     local_get (int32 !i @@ x.at);
                   ];
-                  compile_coerce_abs_value_type ctxt x.at (type_of t);
+                  compile_coerce_abs_val_type ctxt x.at (type_of t);
                   emit ctxt W.[
                     local_set (local @@ x.at);
                   ]
@@ -1201,10 +1227,10 @@ and compile_dec pass ctxt d =
     let tcls = T.as_class t in
     let cls = lower_class ctxt d.at tcls in
     let lazy cls_def = cls.def in
-    let cls_ht = W.(DefHeapType (SynVar cls.cls_idx)) in
-    let cls_vt = W.(RefType (Nullable, cls_ht)) in
+    let cls_ht = W.(VarHT (StatX cls.cls_tidx)) in
+    let cls_vt = W.(RefT (Null, cls_ht)) in
     let inst_t = T.Inst (tcls, List.map T.var tcls.T.tparams) in
-    let inst_vt = lower_value_type ctxt d.at inst_t in
+    let inst_vt = lower_val_type ctxt d.at inst_t in
 
     let idx =
       match (E.find_val x !env).it with
@@ -1265,8 +1291,8 @@ and compile_dec pass ctxt d =
         let sup_cls = lower_class ctxt x2.at (type_of sup) in
         let lazy sup_def = sup_cls.def in
         let sup_t = T.Class (type_of sup) in
-        let sup_ht = W.(DefHeapType (SynVar sup_cls.cls_idx)) in
-        let sup_vt = W.(RefType (Nullable, sup_ht)) in
+        let sup_ht = W.(VarHT (StatX sup_cls.cls_tidx)) in
+        let sup_vt = W.(RefT (Null, sup_ht)) in
 
         (* Load class *)
         let suptmp = emit_local ctxt x2.at sup_vt in
@@ -1278,11 +1304,11 @@ and compile_dec pass ctxt d =
             local_set (suptmp @@ x2.at);
           ]
         else begin
-          let disp_ht = W.(DefHeapType (SynVar sup_cls.disp_idx)) in
-          let disptmp = emit_local ctxt x2.at W.(RefType (Nullable, disp_ht)) in
+          let disp_ht = W.(VarHT (StatX sup_cls.disp_tidx)) in
+          let disptmp = emit_local ctxt x2.at W.(RefT (Null, disp_ht)) in
           emit ctxt W.[
             local_tee (suptmp @@ x2.at);
-            struct_get (sup_cls.cls_idx @@ x2.at) (cls_disp @@ x2.at);
+            struct_get (sup_cls.cls_tidx @@ x2.at) (cls_disp @@ x2.at);
             local_set (disptmp @@ x2.at);
           ];
 
@@ -1291,7 +1317,7 @@ and compile_dec pass ctxt d =
             | None ->
               emit ctxt W.[
                 local_get (disptmp @@ x2.at);
-                struct_get (sup_cls.disp_idx @@ x2.at) (int32 i @@ x2.at);
+                struct_get (sup_cls.disp_tidx @@ x2.at) (int32 i @@ x2.at);
               ];
             | Some (x, _) ->
               let _, loc = (E.find_val Source.(x @@ x2.at) func_env).it in
@@ -1314,7 +1340,7 @@ and compile_dec pass ctxt d =
     ) (E.sorted_vals func_env);
 
     (* Third, push place holder for own class *)
-    let disp_ht = W.(DefHeapType (SynVar cls.disp_idx)) in
+    let disp_ht = W.(VarHT (StatX cls.disp_tidx)) in
     if not !Flags.parametric then
       emit ctxt W.[
         ref_null disp_ht;
@@ -1322,19 +1348,21 @@ and compile_dec pass ctxt d =
 
     (* Fourth, allocate dispatch table (and leave on stack) *)
     emit ctxt W.[
-      rtt_canon (cls.disp_idx @@ d.at);
-      struct_new (cls.disp_idx @@ d.at);
+(* RTTs
+      rtt_canon (cls.disp_tidx @@ d.at);
+*)
+      struct_new (cls.disp_tidx @@ d.at);
     ];
 
     (* Finally, tie knot for dispatch table *)
     if not !Flags.parametric then begin
-      let disptmp = emit_local ctxt d.at W.(RefType (Nullable, disp_ht)) in
+      let disptmp = emit_local ctxt d.at W.(RefT (Null, disp_ht)) in
       let lazy cls_def = cls.def in
       let offset = List.length cls_def.disp_flds - 1 in
       emit ctxt W.[
         local_tee (disptmp @@ d.at);
         local_get (disptmp @@ d.at);
-        struct_set (cls.disp_idx @@ d.at) (int32 offset @@ d.at);
+        struct_set (cls.disp_tidx @@ d.at) (int32 offset @@ d.at);
         local_get (disptmp @@ d.at);
         ref_as_non_null;
       ]
@@ -1342,11 +1370,14 @@ and compile_dec pass ctxt d =
 
     (* Allocate RTT (and leave on stack) *)
     emit ctxt W.[
-      rtt_canon (cls.inst_idx @@ d.at);
+ref_null NoneHT
+(* RTTs
+      rtt_canon (cls.inst_tidx @@ d.at);
+*)
     ];
 
     (* Emit pre-alloc function *)
-    FuncEnv.find cls_def.pre_alloc_idx !(ctxt.ext.funcs) ctxt
+    FuncEnv.find cls_def.pre_alloc_fidx !(ctxt.ext.funcs) ctxt
       cls_def.param_vals (List.map snd cls_def.pre_vals)
       (fun ctxt _ ->
         if not !Flags.parametric then begin
@@ -1372,64 +1403,53 @@ and compile_dec pass ctxt d =
             List.iter (compile_exp ctxt) es2;
             compile_var ctxt x sup_t;
             emit ctxt W.[
-              struct_get (cls.cls_idx @@ x2.at) (cls_sup @@ x2.at);
-              struct_get (sup_cls.cls_idx @@ d.at) (cls_pre_alloc @@ d.at);
-              call_ref;
+              struct_get (cls.cls_tidx @@ x2.at) (cls_sup @@ x2.at);
+              struct_get (sup_cls.cls_tidx @@ d.at) (cls_pre_alloc @@ d.at);
+              call_ref (sup_cls.pre_tidx @@ d.at);
             ];
             sup_def.pre_vals, sup.at
         in
 
         (* Return (parent's and) own parameters and let values *)
-        (* Bind parent's let values to locals if necessary *)
-        let _, sup_let_depth =
-          List.fold_right (fun (x, _t) (i, max) ->
-            (i + 1, if is_hidden x then max else i)
-          ) sup_pre_vals (1, 0)
+        (* Bind parent's rightmost let values to locals if necessary *)
+        let rec drop_hidden_prefix = function
+          | (x, _t)::locals' when is_hidden x -> drop_hidden_prefix locals'
+          | locals -> locals
         in
-        let offset = if !Flags.parametric then 0 else List.length ys in
-        if sup_let_depth = 0 then begin
-          if not !Flags.parametric then begin
-            List.iteri (fun i yI ->
-              emit ctxt W.[local_get (int32 i @@ yI.at)]
-            ) ys;
-          end;
-          List.iteri (fun i (x, _) ->
-            emit ctxt W.[local_get (int32 (i + offset) @@ x.at)]
-          ) xts;
-          compile_decs LetPass ctxt ds;
-        end else begin
-          let rest_len = List.length sup_pre_vals - sup_let_depth in
-          let locals = W.Lib.List.drop rest_len sup_pre_vals in
-          let results = W.Lib.List.drop rest_len cls_def.pre_vals in
-          let bt = W.(typeuse (emit_type ctxt sup_at
-            (sub [] (func [] (List.map snd results))))) in
-          emit_let ctxt sup_at bt (List.map snd locals) (fun ctxt ->
-            List.iteri (fun i (xI, _) ->
-              let loc = DirectLoc (int32 i) in
-              env := E.extend_val !env Source.(xI @@ sup_at) (T.LetS, loc);
-              emit ctxt W.[local_get (int32 i @@ sup_at)]
-            ) locals;
-            if not !Flags.parametric then begin
-              List.iteri (fun i yI ->
-                let loc = DirectLoc (int32 (i + sup_let_depth)) in
-                env := E.extend_typ !env yI (T.LetS, loc);
-                emit ctxt W.[local_get (int32 (i + sup_let_depth) @@ yI.at)]
-              ) ys;
-            end;
-            List.iteri (fun i (xI, _) ->
-              let loc = DirectLoc (int32 (i + offset + sup_let_depth)) in
-              env := E.extend_val !env xI (T.LetS, loc);
-              emit ctxt W.[local_get (int32 (i + offset + sup_let_depth) @@ xI.at)]
-            ) xts;
-            compile_decs LetPass ctxt ds;
-          )
+        let locals = drop_hidden_prefix sup_pre_vals in
+        if locals <> [] then begin
+          let idxs = List.map (emit_local ctxt sup_at) (List.map snd locals) in
+          (* Store parent results, so they can be used by local initializers *)
+          List.iter (fun i ->
+            emit ctxt W.[local_set (i @@ sup_at)]
+          ) (List.rev idxs);
+          (* Repush parent results *)
+          List.iter2 (fun i (xI, _) ->
+            if not (is_hidden xI) then
+              env := E.extend_val !env Source.(xI @@ sup_at) (T.LetS, DirectLoc i);
+            emit ctxt W.[local_get (i @@ sup_at)]
+          ) idxs locals;
         end;
-
+        (* Push type arguments *)
+        if not !Flags.parametric then begin
+          List.iteri (fun i yI ->
+            env := E.extend_typ !env yI (T.LetS, DirectLoc (int32 i));
+            emit ctxt W.[local_get (int32 i @@ yI.at)]
+          ) ys;
+        end;
+        let num_tparams = if !Flags.parametric then 0 else List.length ys in
+        (* Push value arguments *)
+        List.iteri (fun i (xI, _) ->
+          env := E.extend_val !env xI (T.LetS, DirectLoc (int32 (i + num_tparams)));
+          emit ctxt W.[local_get (int32 (i + num_tparams) @@ xI.at)]
+        ) xts;
+        (* Push let values *)
+        compile_decs LetPass ctxt ds;
         env := save_env
       );
 
     (* Emit post-alloc function *)
-    FuncEnv.find cls_def.post_alloc_idx !(ctxt.ext.funcs) ctxt [inst_vt] []
+    FuncEnv.find cls_def.post_alloc_fidx !(ctxt.ext.funcs) ctxt [inst_vt] []
       (fun ctxt _ ->
         let this = emit_param ctxt d.at in
 
@@ -1440,9 +1460,9 @@ and compile_dec pass ctxt d =
           ];
           compile_var ctxt x sup_t;
           emit ctxt W.[
-            struct_get (cls.cls_idx @@ d.at) (cls_sup @@ d.at);
-            struct_get (sup_cls.cls_idx @@ d.at) (cls_post_alloc @@ d.at);
-            call_ref;
+            struct_get (cls.cls_tidx @@ d.at) (cls_sup @@ d.at);
+            struct_get (sup_cls.cls_tidx @@ d.at) (cls_post_alloc @@ d.at);
+            call_ref (sup_cls.post_tidx @@ d.at);
           ];
         ) sup_opt;
 
@@ -1455,8 +1475,8 @@ and compile_dec pass ctxt d =
       );
 
     (* Emit constructor function *)
-    let W.FuncType (ts1', ts2') = lower_func_type ctxt d.at (T.Class tcls) in
-    FuncEnv.find cls_def.new_idx !(ctxt.ext.funcs) ctxt ts1' ts2'
+    let W.FuncT (ts1', ts2') = lower_func_type ctxt d.at (T.Class tcls) in
+    FuncEnv.find cls_def.new_fidx !(ctxt.ext.funcs) ctxt ts1' ts2'
       (fun ctxt _ ->
         if not !Flags.parametric then begin
           List.iter (fun yI -> ignore (emit_param ctxt yI.at)) ys
@@ -1471,7 +1491,7 @@ and compile_dec pass ctxt d =
         (* Prepare dispatch table *)
         emit ctxt W.[
           local_tee (self @@ d.at);
-          struct_get (cls.cls_idx @@ d.at) (cls_disp @@ d.at);
+          struct_get (cls.cls_tidx @@ d.at) (cls_disp @@ d.at);
         ];
 
         (* Call pre-alloc function *)
@@ -1488,23 +1508,25 @@ and compile_dec pass ctxt d =
         ) xts;
         emit ctxt W.[
           local_get (self @@ d.at);
-          struct_get (cls.cls_idx @@ d.at) (cls_pre_alloc @@ d.at);
-          call_ref;
+          struct_get (cls.cls_tidx @@ d.at) (cls_pre_alloc @@ d.at);
+          call_ref (cls.pre_tidx @@ d.at);
         ];
 
         (* Alloc instance *)
         emit ctxt W.[
+(* RTTs
           local_get (self @@ d.at);
-          struct_get (cls.cls_idx @@ d.at) (cls_rtt @@ d.at);
-          struct_new (cls.inst_idx @@ d.at);
+          struct_get (cls.cls_tidx @@ d.at) (cls_rtt @@ d.at);
+*)
+          struct_new (cls.inst_tidx @@ d.at);
           local_tee (this @@ x.at);
         ];
 
         (* Call post-alloc function *)
         emit ctxt W.[
           local_get (self @@ d.at);
-          struct_get (cls.cls_idx @@ d.at) (cls_post_alloc @@ d.at);
-          call_ref;
+          struct_get (cls.cls_tidx @@ d.at) (cls_post_alloc @@ d.at);
+          call_ref (cls.post_tidx @@ d.at);
         ];
 
         (* Return *)
@@ -1520,13 +1542,13 @@ and compile_dec pass ctxt d =
     assert (cls_pre_alloc = 3l);
     assert (cls_post_alloc = 4l);
     assert (cls_sup = 5l);
-    emit_func_ref ctxt d.at cls_def.new_idx;
-    emit_func_ref ctxt d.at cls_def.pre_alloc_idx;
-    emit_func_ref ctxt d.at cls_def.post_alloc_idx;
+    emit_func_ref ctxt d.at cls_def.new_fidx;
+    emit_func_ref ctxt d.at cls_def.pre_alloc_fidx;
+    emit_func_ref ctxt d.at cls_def.post_alloc_fidx;
     emit ctxt W.[
-      ref_func (cls_def.new_idx @@ d.at);
-      ref_func (cls_def.pre_alloc_idx @@ d.at);
-      ref_func (cls_def.post_alloc_idx @@ d.at);
+      ref_func (cls_def.new_fidx @@ d.at);
+      ref_func (cls_def.pre_alloc_fidx @@ d.at);
+      ref_func (cls_def.post_alloc_fidx @@ d.at);
     ];
     (if sup_opt = None then
       emit ctxt W.[i32_const (0l @@ d.at)]
@@ -1534,8 +1556,10 @@ and compile_dec pass ctxt d =
       emit ctxt W.[local_get (suptmp @@ sup_at); ref_as_non_null]  (* TODO *)
     );
     emit ctxt W.[
-      rtt_canon (cls.cls_idx @@ d.at);
-      struct_new (cls.cls_idx @@ d.at);
+(* RTTs
+      rtt_canon (cls.cls_tidx @@ d.at);
+*)
+      struct_new (cls.cls_tidx @@ d.at);
     ];
 
     (* Store in target variable *)
@@ -1577,14 +1601,14 @@ let compile_imp ctxt d =
         let idx =
           match sort with
           | T.LetS | T.VarS ->
-            emit_global_import ctxt xI.at url xI.it W.Mutable
-              (lower_value_type ctxt xI.at t);
+            emit_global_import ctxt xI.at url xI.it W.Var
+              (lower_val_type ctxt xI.at t);
           | T.FuncS ->
             emit_func_import ctxt xI.at url xI.it
               (lower_func_type ctxt xI.at t);
           | T.ClassS ->
-            emit_global_import ctxt xI.at url xI.it W.Mutable
-              (lower_value_type ctxt xI.at t)
+            emit_global_import ctxt xI.at url xI.it W.Var
+              (lower_val_type ctxt xI.at t)
           | T.ProhibitedS -> assert false
         in
         env := E.extend_val !env x' (sort, DirectLoc idx);
@@ -1598,9 +1622,9 @@ let compile_imp ctxt d =
           match class_opt with
           | Some idx -> idx, T.ClassS
           | None ->
-            let t2' = lower_value_rtt ctxt xI.at in
+            let t2' = lower_val_rtt ctxt xI.at in
             let ts1' = List.init k (fun _ -> t2') in
-            let ft = W.FuncType (ts1', [t2']) in
+            let ft = W.FuncT (ts1', [t2']) in
             emit_func_import ctxt xI.at url ("type " ^ xI.it) ft, T.FuncS
         in
         env := E.extend_typ !env x' (sort, DirectLoc idx)
@@ -1614,14 +1638,14 @@ let compile_prog p : W.module_ =
   let data = if !Flags.headless then "" else data_prog ctxt p in
   List.iter (compile_imp ctxt) is;
   ctxt_flush ctxt;
-  let t' = lower_value_type ctxt p.at (type_of p) in
-  let result_idx = emit_global ctxt p.at W.Mutable t' None in
+  let t' = lower_val_type ctxt p.at (type_of p) in
+  let result_idx = emit_global ctxt p.at W.Var t' None in
   let start_idx =
     emit_func ctxt p.at [] [] (fun ctxt _ ->
       if data <> "" then begin
         let seg = emit_passive_data ctxt p.at data in
         let len = int32 (String.length data) in
-        let dataidx = emit_global ctxt p.at W.Mutable W.i32 None in
+        let dataidx = emit_global ctxt p.at W.Var W.i32 None in
         ctxt.ext.data := dataidx;
         emit ctxt W.[
           i32_const (len @@ p.at);
@@ -1634,7 +1658,7 @@ let compile_prog p : W.module_ =
         ]
       end;
       compile_block ctxt ds;
-      compile_coerce_value_type ctxt p.at (type_of p);
+      compile_coerce_val_type ctxt p.at (type_of p);
       emit ctxt W.[
         global_set (result_idx @@ p.at)
       ];

@@ -11,13 +11,17 @@ See [overview](Overview.md) for addition background.
 * [Field references](#field-references) (a.k.a. member pointers)
 * [Fixed-size arrays](#fixed-sized-arrays)
 * [Nested data structures](#nested-data-structures) (flattening)
+* [Explicit RTTs](#explicit-rtts)
 * [Type parameters](#type-parameters) (polymorphism, generics)
 * [Variants](#variants) (a.k.a. disjoint unions or tagging)
 * [Static fields](#static-fields) (meta structures)
+* [Closures](#closures)
 * [Custom function RTTs](#custom-function-RTTs)
 * [Threads and shared references](#threads-and-shared-references)
 * [Weak references](#weak-references)
-
+* [Method dispatch](#method-dispatch)
+* [Handle nondefaultable fields in `struct.new_default`](#handle-nondefaultable-fields-in-structnew_default)
+* [Throwing versions of trapping instructions](#throwing-versions-of-trapping-instructions)
 
 ## Bulk Operations
 
@@ -35,17 +39,50 @@ To that end, _bulk copying_ instructions could be added, similar to the [bulk in
   - `struct.copy $d : [(ref $d) (ref $s)] -> []` where both `$d` and `$s` are struct types, `$d` has only mutable fields, and `$s <: $d` modulo mutability
 
 * An instruction for bulk copying an array range:
-  - `array.copy $d : [(ref $d) i32 (ref $s) i32 i32] -> []`
-    - iff both `$d` and `$s` are array types
-    - and `$d` has mutable element type
-    - and `$s <: $d` modulo mutability
-  - the remaining operands are destination and source offset and length of the range
+  - `array.copy $d $s : [(ref null $d) i32 (ref null $s) i32 i32] -> []`
+    - iff `expand($d) = array (var t1)`
+    - and `expand($s) = array (mut t2)`
+    - and `t2 <: t1`
+  - the 1st i32 operand is the `destination` offset in the first array
+  - the 2nd i32 operand is the `source` offset in the second array
+  - the 3rd i32 operand is the `length` of the array subrange
+  - traps if either array is null
+  - traps if `destination + length > len(array1)`
+  - traps if `source + length > len(array2)`
 
 * An instruction for bulk setting an array range:
-  - `array.fill $d : [(ref $d) i32 t i32] -> []`
-    - iff `$d = (array (mut st))`
-    - and `t = unpacked(st)`
-  - the remaining operands are destination offset, initialisation value, and length of the range
+  - `array.fill $t : [(ref null $t) i32 t i32] -> []`
+    - iff `expand($t) = array (var t')`
+    - and `t = unpacked(t')`
+  - the 1st operand is the `offset` in the array
+  - the 2nd operand is the `length` of the array subrange
+  - traps if the array is null
+  - traps if `offset + length > len(array)`
+
+* An instruction to (re)initialise an array range from a data segment
+  - `array.init_data $t $d : [(ref null $t) i32 i32 i32] -> []`
+    - iff `expand($t) = array (var t')`
+    - and `t'` is numeric or packed numeric
+    - and `$d` is a defined data segment
+  - the 1st operand is the `destination` offset in the array
+  - the 2nd operand is the `source` offset in the segment
+  - the 3rd operand is the `length` of the array subrange
+  - traps if the array is null
+  - traps if `destination + length > len(array)`
+  - traps if `source + |t'|*length > len($d)`
+
+* An instruction to (re)initialise an array range from an element segment
+  - `array.init_elem $t $e : [(ref null $t) i32 i32 i32] -> []`
+    - iff `expand($t) = array (var t')`
+    - and `t'` is a reference type
+    - and `$e` is a defined element segment
+  - the 1st operand is the `destination` offset in the array
+  - the 2nd operand is the `source` offset in the segment
+  - the 3rd operand is the `length` of the array subrange
+  - traps if the array is null
+  - traps if `destination + length > len(array)`
+  - traps if `source + length > len($e)`
+
 
 
 ## Array with Fields
@@ -331,6 +368,110 @@ Interior references:
 * TBD: As sketched here, interior references can only point to nested aggregates. Should there also be interior references to plain fields?
 
 
+## Explicit RTTs
+
+In the MVP, canonical RTTs can be statically created, and they are hence implicit. With extensions like [type parameters](#type-parameters) or type imports, that is no longer the case, and RTTs need to be handled explicitly in order to control when, where, and how they are created and passed.
+
+* Runtime types are explicit values representing concrete types at runtime; a value of type `rtt <typeidx>` is a dynamic representative of the static type `<typeidx>`.
+
+* All RTTs are explicitly created and all operations involving dynamic type information (like casts) operate on explicit RTT operands.
+
+This will require adding a new form of heap type:
+
+* `rtt <typeidx>` is a new heap type that is a runtime representation of the static type `<typeidx>`
+  - `heaptype ::= ... | rtt <typeidx>`
+  - `rtt t ok` iff `t ok`
+  - the reference type `(rtt $t)` is a shorthand for `(ref (rtt $t))`
+
+* `rtt $t` is a subtype of `eq`
+  - `rtt $t <: eq`
+  - Note: `rtt $t1` is *not* a subtype of `rtt $t2`, unless `$t1` and `$t2` are equivalent; covariant subtyping would be unsound, since RTTs are used in both co- and contravariant roles (e.g., both when constructing and consuming a reference)
+
+At a baseline, RTT values can be created with a new instruction:
+```
+* `rtt.canon <typeidx>` returns the RTT of the specified type
+  - `rtt.canon $t : [] -> [(rtt $t)]`
+  - multiple invocations of this instruction yield the same observable RTTs
+  - this is a *constant instruction*
+```
+With extensions like [type parameters](#type-parameters), this instruction will become more nuanced and will involve additional RTT operands if `$t` has type paramters.
+
+Correspondingly, all allocation and cast instructions will get counter parts taking an explicit RTT operand. The MVP's canonical versions can be reinterpreted as the combination of the explicit ones whose RTT operand is created with `rtt.canon`:
+
+* `struct.new <typeidx>` allocates a structure with RTT information determining its [runtime type](#values) and initialises its fields with given values
+  - `struct.new $t : [t'* (rtt $t)] -> [(ref $t)]`
+    - iff `expand($t) = struct (mut t')*`
+  - this is a *constant instruction*
+
+* `struct.new_default <typeidx>` allocates a structure of type `$t` and initialises its fields with default values
+  - `struct.new_default $t : [(rtt $t)] -> [(ref $t)]`
+    - iff `expand($t) = struct (mut t')*`
+    - and all `t'*` are defaultable
+  - this is a *constant instruction*
+
+* `array.new <typeidx>` allocates an array with RTT information determining its [runtime type](#values)
+  - `array.new $t : [t' i32 (rtt $t)] -> [(ref $t)]`
+    - iff `expand($t) = array (mut t')`
+  - this is a *constant instruction*
+ 
+* `array.new_default <typeidx>` allocates an array and initialises its fields with the default value
+  - `array.new_default $t : [i32 (rtt $t)] -> [(ref $t)]`
+    - iff `expand($t) = array (mut t')`
+    - and `t'` is defaultable
+  - this is a *constant instruction*
+ 
+* `array.new_fixed <typeidx> <N>` allocates an array of fixed size and initialises it from operands
+  - `array.new_fixed $t N : [t^N (rtt $t)] -> [(ref $t)]`
+    - iff `expand($t) = array (mut t')`
+  - this is a *constant instruction*
+ 
+* `array.new_data <typeidx> <dataidx>` allocates an array and initialises it from a data segment
+  - `array.new_data $t $d : [i32 i32 (rtt $t)] -> [(ref $t)]`
+    - iff `expand($t) = array (mut t')`
+    - and `t'` is numeric or packed numeric
+    - and `$d` is a defined data segment
+  - the 1st operand is the `offset` into the segment
+  - the 2nd operand is the `size` of the array
+  - traps if `offset + |t'|*size > len($d)`
+
+* `array.new_elem <typeidx> <elemidx>` allocates an array and initialises it from an element segment
+  - `array.new_elem $t $e : [i32 i32 (rtt $t)] -> [(ref $t)]`
+    - iff `expand($t) = array (mut t')`
+    - and `$e : rt`
+    - and `rt <: t'`
+  - the 1st operand is the `offset` into the segment
+  - the 2nd operand is the `size` of the array
+  - traps if `offset + size > len($e)`
+
+* `ref.test` tests whether a reference value's [runtime type](#values) is a [runtime subtype](#runtime) of a given RTT
+  - `ref.test : [t' (rtt $t)] -> [i32]`
+    - iff `t' <: (ref null data)` or `t' <: (ref null func)`
+  - returns 1 if the first operand is not null and its runtime type is a sub-RTT of the RTT operand, 0 otherwise
+ 
+* `ref.cast` casts a reference value down to a type given by a RTT representation
+  - `ref.cast : [(ref null1? ht) (rtt $t)] -> [(ref null2? $t)]`
+    - iff `ht <: data` or `ht <: func`
+    - and `null1? = null2?`
+  - returns null if the first operand is null
+  - traps if the first operand is not null and its runtime type is not a sub-RTT of the RTT operand
+ 
+* `br_on_cast <labelidx>` branches if a value can be cast down to a given reference type
+  - `br_on_cast $l : [t0* t (rtt $t')] -> [t0* t]`
+    - iff `$l : [t0* t']`
+    - and `t <: (ref null data)` or `t <: (ref null func)`
+    - and `(ref $t') <: t'`
+  - branches iff the first operand is not null and its runtime type is a sub-RTT of the RTT operand
+  - passes cast operand along with branch, plus possible extra args
+ 
+* `br_on_cast_fail <labelidx>` branches if a value can not be cast down to a given reference type
+  - `br_on_cast_fail $l : [t0* t (rtt $t')] -> [t0* (ref $t')]`
+    - iff `$l : [t0* t']`
+    - and `t <: (ref null data)` or `t <: (ref null func)`
+    - and `t <: t'`
+  - branches iff the first operand is null or its runtime type is not a sub-RTT of the RTT operand
+  - passes operand along with branch, plus possible extra args
+
+
 ## Type Parameters
 
 The MVP does not support any type parameters for types or functions (also known as _parametric polymorphism_ or _generics_).
@@ -389,7 +530,7 @@ Both methods have severe limitations:
 To address this shortcoming, it seems necessary to enrich the Wasm type system with a form of type parameters, which allows more accurate tracking of type information for such definitions, avoiding the need to fallback to a universal type.
 However, there are a number of challenges:
 
-1. It is _highly_ desirable to avoid the rabbit hole of _reified generics_, where every type parameter has to be backed by runtime type information. That approach is both highly complex and has a substantial overhead, even where that information isn't needed.
+1. It is _highly_ desirable to avoid the rabbit hole of _reified generics_, where every type parameter has to be backed by runtime type information. That approach is both highly complex and has a substantial overhead, even where that information isn't needed because the parameterized function does not allocate or cast to the parameter type. Generic containers, for example, would only receive and return references to values of their parameter types and would never have to use those types in casts or allocations. 
 
   Instead, type parameters should adhere to the don't-pay-what-you-don't-use principle, which would be violated if _every_ parameter had to be backed by runtime types.
 
@@ -517,7 +658,51 @@ Since a Wasm engine already has to store its own meta information in heap values
 The basic idea would be introducing a notion of _static fields_ in a form of immutable meta object that is shared between multiple instances of the same type.
 There are various ways in which this could be modelled, details are TBD.
 
+If we allow allocating separate instances of the static data for a type, for example by allocating separate RTTs corresponding to the same type with different static data attached to them, then those different RTT values should not be distinguishable via existing cast instructions. In other words, RTTs should continue to precisely represent static types with respect to casting. This will avoid invalidating existing cast optimizations in optimizers and engines. New instructions can be introduced to perform metaobject identity checks with type refinement if necessary. 
+
 **Why Post-MVP:** Such a feature only saves space, so isn't critical for the MVP. Furthermore, there isn't much precedent for exposing such a mechanism to user code in low-level form, so no obvious design philosophy to follow.
+
+
+## Closures
+
+Function references could be generalised to represent closures by means of an instruction that takes a prefix of the function's arguments and returns a new function reference with those parameters bound.
+
+* `func.bind` creates or extends a closure by binding several parameters
+  - `func.bind $t $t' : [t0* (ref null $t)] -> [(ref $t')]`
+    - iff `unroll($t) = [t0* t1*] -> [t2*]`
+    - and `unroll($t') = [t1'*] -> [t2'*]`
+    - and `t1'* <: t1*`
+    - and `t2* <: t2'*`
+  - traps on `null`
+
+With this extension, closures are interchangeable with regular function references. That is, conceptually, all function references would be closures of 0 or more parameters.
+
+An alternative design would be to distinguish closures from raw functions. In such a design, we would introduce:
+
+* `closure $t` is a new heap type
+  - `heaptype ::= ... | closure $t`
+  - `(closure $t) ok` iff `$t = [t1*] -> [t2*]`
+
+* `closure $t` also is a new reference type shorthand
+  - `reftype ::= ... | closure $t`
+   - shorthand for `(ref (closure $t))`
+
+There would be two bind instructions, both returning a closure:
+
+* `closure.new` creates a closure from a function
+  - `closure.new $t : [(ref null $t)] -> [(ref (closure $t))]`
+    - iff `unroll($t) = [t1*] -> [t2*]`
+  - traps on `null`
+
+* `closure.bind` creates a new closure by binding (additional) parameters of an existing closure
+  - `closure.bind $t $t' : [t0* (ref null (closure $t))] -> [(ref (closure $t'))]`
+    - iff `unroll($t) = [t0* t1*] -> [t2*]`
+    - and `unroll($t') = [t1'*] -> [t2'*]`
+    - and `t1'* <: t1*`
+    - and `t2* <: t2'*`
+  - traps on `null`
+
+As a variant, `closure.new` could be generalised to `func.bind` like above, but returning a closure.
 
 
 ## Custom Function RTTs
@@ -574,3 +759,33 @@ The main challenge is the large variety of different semantics that existing lan
 Clearly, Wasm cannot build in all of them, so we need to be looking for a mechanism that can emulate most of them with acceptable performance loss.
 
 **Why Post-MVP:** Unfortunately, it is not clear at this point what a sufficiently simple and efficient set of primitives for weak references and finalisation could be. This requires more investigation, and should not block basic GC functionality.
+
+
+## Method and Closure Typing
+
+Right now OO-style method dispatch requires downcasting the receiver parameter from the base class receiver type in the implementation of overriding methods. As of May 2022, unsafely removing this receiver downcast improved performance by 3-4% across a suite of real-world j2wasm workloads. A closely related problem exists for client-side encodings of closures.
+
+The problem could be addressed by extending the type system with features that allow typing the receiver/environment parameter more precisely, for which a number of solutions are known (e.g., [1](https://dl.acm.org/doi/pdf/10.1145/354222.353192), [2](http://lucacardelli.name/Papers/ObjectEncodings.pdf)). A fallback solution could be the introduction of a primitive method and dispatch mechanism besides functions, e.g., as an extension to the static fields mechanism.
+
+**Why Post-MVP:** Methods and closures can be easily expressed without being built into WebAssembly, so this would be a fair amount of extra complexity for a modest performance improvement and no additional benefits. Considering this as an optimimzation after shipping the MVP makes the most sense.
+
+## Handle nondefaultable fields in `struct.new_default`
+
+As proposed in #174. The idea is that `struct.new_default` would take values for nondefaultable fields in the struct from the stack. This would be a code size optimization over having to specify every single field with `struct.new` when allocating a struct containing nondefaultable fields.
+
+**Why Post-MVP:** This is a local code size optimization that does not affect expressivity, so getting it into the MVP is not urgent.
+
+
+## Throwing versions of trapping instructions
+
+Some language implementers have expressed interest in having throwing versions of operations like `struct.get` to simplify the implementation of e.g. Java's `NullPointerException`. It may be worth investigating what the potential code size or performance benefits of these instructions would be. See [#208](https://github.com/WebAssembly/gc/issues/208) for details and previous discussion.
+
+**Why Post-MVP:** Null checks followed by throws are easily expressible in the MVP, so there is no pressing need to add additional instructions for this pattern. Also, throwing instructions would depend on the exception handling proposal, and we would prefer to avoid that dependency in the MVP.
+
+
+## Equality-comparable funcref
+
+Being able to compare function references for equality would enable more precise polymorphic devirtualization. On the other hand, some polymorphic devirtualization should already be possible by taking advantage of patterns in vtables and letting functions be equality comparable would inhibit function deduplication optimizations. See [#239](https://github.com/WebAssembly/gc/issues/239) for details and previous discussion.
+
+**Why Post-MVP:** The benefits of this change are unknown and would likely be small, so it's not urgent that we get this into the MVP.
+

@@ -36,15 +36,15 @@ let empty : t =
   slabel = Map.empty;
 }
 
-let add_type s x y = {s with stype = Map.add x y s.stype}
-let add_global s x y = {s with sglobal = Map.add x y s.sglobal}
-let add_table s x y = {s with stable = Map.add x y s.stable}
-let add_memory s x y = {s with smemory = Map.add x y s.smemory}
-let add_func s x y = {s with sfunc = Map.add x y s.sfunc}
-let add_elem s x y = {s with selem = Map.add x y s.selem}
-let add_data s x y = {s with sdata = Map.add x y s.sdata}
-let add_local s x y = {s with slocal = Map.add x y s.slocal}
-let add_label s x y = {s with slabel = Map.add x y s.slabel}
+let add_type (s : t) x y = {s with stype = Map.add x y s.stype}
+let add_global (s : t) x y = {s with sglobal = Map.add x y s.sglobal}
+let add_table (s : t) x y = {s with stable = Map.add x y s.stable}
+let add_memory (s : t) x y = {s with smemory = Map.add x y s.smemory}
+let add_func (s : t) x y = {s with sfunc = Map.add x y s.sfunc}
+let add_elem (s : t) x y = {s with selem = Map.add x y s.selem}
+let add_data (s : t) x y = {s with sdata = Map.add x y s.sdata}
+let add_local (s : t) x y = {s with slocal = Map.add x y s.slocal}
+let add_label (s : t) x y = {s with slabel = Map.add x y s.slabel}
 
 let union_space = Map.union (fun _ _ _ -> assert false)
 let union (s1 : t) (s2 : t) : t =
@@ -69,15 +69,15 @@ let lookup s x =
   | None -> x
 
 let idx s x = lookup s x.it @@ x.at
-let type_idx s = idx s.stype
-let global_idx s = idx s.sglobal
-let table_idx s = idx s.stable
-let memory_idx s = idx s.smemory
-let func_idx s = idx s.sfunc
-let elem_idx s = idx s.selem
-let data_idx s = idx s.sdata
-let local_idx s = idx s.slocal
-let label_idx s = idx s.slabel
+let type_idx (s : t) = idx s.stype
+let global_idx (s : t) = idx s.sglobal
+let table_idx (s : t) = idx s.stable
+let memory_idx (s : t) = idx s.smemory
+let func_idx (s : t) = idx s.sfunc
+let elem_idx (s : t) = idx s.selem
+let data_idx (s : t) = idx s.sdata
+let local_idx (s : t) = idx s.slocal
+let label_idx (s : t) = idx s.slabel
 
 let shift n s =
   Map.fold Int32.(fun x y s -> Map.add (add x n) (add y n) s) s Map.empty
@@ -86,74 +86,76 @@ let opt subst s xo = Option.map (subst s) xo
 let list subst s xs = List.map (subst s) xs
 
 let var_type s = function
-  | SynVar x -> SynVar (lookup s.stype x)
+  | StatX x -> StatX (lookup s.stype x)
   | _ -> assert false
 
 let num_type s = function
-  | (I32Type | I64Type | F32Type | F64Type) as t -> t
+  | I32T | I64T | F32T | F64T as t -> t
 
 let vec_type s = function
-  | V128Type as t -> t
+  | V128T as t -> t
 
 let heap_type s = function
-  | ( AnyHeapType | EqHeapType | I31HeapType | DataHeapType | ArrayHeapType
-    | FuncHeapType | BotHeapType ) as t -> t
-  | DefHeapType x -> DefHeapType (var_type s x)
-  | RttHeapType x -> RttHeapType (var_type s x)
+  | AnyHT | EqHT | I31HT | StructHT | ArrayHT | NoneHT
+  | FuncHT | NoFuncHT | ExternHT | NoExternHT as t -> t
+  | VarHT x -> VarHT (var_type s x)
+  | DefHT _ | BotHT -> assert false
 
 let ref_type s = function
   | (nul, t) -> (nul, heap_type s t)
 
-let value_type s = function
-  | NumType t -> NumType (num_type s t)
-  | VecType t -> VecType (vec_type s t)
-  | RefType t -> RefType (ref_type s t)
-  | BotType -> BotType
+let val_type s = function
+  | NumT t -> NumT (num_type s t)
+  | VecT t -> VecT (vec_type s t)
+  | RefT t -> RefT (ref_type s t)
+  | BotT -> BotT
 
-let packed_type s t = t
+let pack_type s t = t
 
 let storage_type s = function
-  | ValueStorageType t -> ValueStorageType (value_type s t)
-  | PackedStorageType t -> PackedStorageType (packed_type s t)
+  | ValStorageT t -> ValStorageT (val_type s t)
+  | PackStorageT t -> PackStorageT (pack_type s t)
 
-let field_type s (FieldType (st, mut)) = FieldType (storage_type s st, mut)
+let field_type s (FieldT (mut, st)) = FieldT (mut, storage_type s st)
 
-let struct_type s (StructType fts) = StructType (list field_type s fts)
-let array_type s (ArrayType ft) = ArrayType (field_type s ft)
-let func_type s (FuncType (ts1, ts2)) =
-  FuncType (list value_type s ts1, list value_type s ts2)
+let struct_type s (StructT fts) = StructT (list field_type s fts)
+let array_type s (ArrayT ft) = ArrayT (field_type s ft)
+let func_type s (FuncT (ts1, ts2)) =
+  FuncT (list val_type s ts1, list val_type s ts2)
 
 let str_type s = function
-  | StructDefType st -> StructDefType (struct_type s st)
-  | ArrayDefType at -> ArrayDefType (array_type s at)
-  | FuncDefType ft -> FuncDefType (func_type s ft)
+  | DefStructT st -> DefStructT (struct_type s st)
+  | DefArrayT at -> DefArrayT (array_type s at)
+  | DefFuncT ft -> DefFuncT (func_type s ft)
 
 let sub_type s = function
-  | SubType (xs, st) -> SubType (List.map (var_type s) xs, str_type s st)
+  | SubT (fin, hts, st) -> SubT (fin, List.map (heap_type s) hts, str_type s st)
 
-let def_type s = function
-  | RecDefType sts -> RecDefType (List.map (sub_type s) sts)
+let rec_type s = function
+  | RecT sts -> RecT (List.map (sub_type s) sts)
 
-let global_type s (GlobalType (t, mut)) = GlobalType (value_type s t, mut)
-let table_type s (TableType (lim, t)) = TableType (lim, ref_type s t)
-let memory_type s (MemoryType lim) = MemoryType lim
+let global_type s (GlobalT (mut, t)) = GlobalT (mut, val_type s t)
+let table_type s (TableT (lim, t)) = TableT (lim, ref_type s t)
+let memory_type s (MemoryT lim) = MemoryT lim
 
 let block_type s = function
-  | VarBlockType x -> VarBlockType (var_type s x)
-  | ValBlockType t -> ValBlockType (opt value_type s t)
+  | VarBlockType x -> VarBlockType (lookup s.stype x.it @@ x.at)
+  | ValBlockType t -> ValBlockType (opt val_type s t)
 
-let local s (l : local) = value_type s l.it @@ l.at
+let local s (l : local) = {ltype = val_type s l.it.ltype} @@ l.at
 
 let rec instr s (e : instr) = instr' s e.it @@ e.at
 and instr' s = function
   | Unreachable -> Unreachable
   | Nop -> Nop
   | Drop -> Drop
-  | Select tso -> Select (opt (list value_type) s tso)
+  | Select tso -> Select (opt (list val_type) s tso)
   | RefNull t -> RefNull (heap_type s t)
+  | RefIsNull -> RefIsNull
+  | RefAsNonNull -> RefAsNonNull
   | RefFunc x -> RefFunc (func_idx s x)
-  | RefTest op -> RefTest op
-  | RefCast op -> RefCast op
+  | RefTest rt -> RefTest (ref_type s rt)
+  | RefCast rt -> RefCast (ref_type s rt)
   | RefEq -> RefEq
   | I31New -> I31New
   | I31Get op -> I31Get op
@@ -161,10 +163,17 @@ and instr' s = function
   | StructGet (x, i, op) -> StructGet (type_idx s x, i, op)
   | StructSet (x, op) -> StructSet (type_idx s x, op)
   | ArrayNew (x, op) -> ArrayNew (type_idx s x, op)
+  | ArrayNewFixed (x, n) -> ArrayNewFixed (type_idx s x, n)
+  | ArrayNewElem (x, y) -> ArrayNewElem (type_idx s x, elem_idx s y)
+  | ArrayNewData (x, y) -> ArrayNewData (type_idx s x, data_idx s y)
   | ArrayGet (x, op) -> ArrayGet (type_idx s x, op)
   | ArraySet x -> ArraySet (type_idx s x)
   | ArrayLen -> ArrayLen
-  | RttCanon x -> RttCanon (type_idx s x)
+  | ArrayFill x -> ArrayFill (type_idx s x)
+  | ArrayCopy (x, y) -> ArrayCopy (type_idx s x, type_idx s y)
+  | ArrayInitElem (x, y) -> ArrayInitElem (type_idx s x, elem_idx s y)
+  | ArrayInitData (x, y) -> ArrayInitData (type_idx s x, data_idx s y)
+  | ExternConvert op -> ExternConvert op
   | Const c -> Const c
   | Test op -> Test op
   | Compare op -> Compare op
@@ -189,20 +198,20 @@ and instr' s = function
   | Block (bt, es) -> Block (block_type s bt, block s es)
   | Loop (bt, es) -> Loop (block_type s bt, block s es)
   | If (bt, es1, es2) -> If (block_type s bt, block s es1, block s es2)
-  | Let (bt, ls, es) ->
-    let s' = {s with slocal = shift (Wasm.Lib.List32.length ls) s.slocal} in
-    Let (block_type s bt, list local s ls, block s' es)
   | Br x -> Br (label_idx s x)
   | BrIf x -> BrIf (label_idx s x)
-  | BrCast (x, op) -> BrCast (label_idx s x, op)
-  | BrCastFail (x, op) -> BrCastFail (label_idx s x, op)
+  | BrOnNull x -> BrOnNull (label_idx s x)
+  | BrOnNonNull x -> BrOnNonNull (label_idx s x)
+  | BrOnCast (x, rt1, rt2) -> BrOnCast (label_idx s x, ref_type s rt1, ref_type s rt2)
+  | BrOnCastFail (x, rt1, rt2) -> BrOnCastFail (label_idx s x, ref_type s rt1, ref_type s rt2)
   | BrTable (xs, x) -> BrTable (list label_idx s xs, label_idx s x)
   | Return -> Return
   | Call x -> Call (func_idx s x)
+  | CallRef x -> CallRef (type_idx s x)
   | CallIndirect (x, y) -> CallIndirect (table_idx s x, type_idx s y)
-  | CallRef -> CallRef
-  | ReturnCallRef -> ReturnCallRef
-  | FuncBind x -> FuncBind (type_idx s x)
+  | ReturnCall x -> ReturnCall (type_idx s x)
+  | ReturnCallRef x -> ReturnCallRef (type_idx s x)
+  | ReturnCallIndirect (x, y) -> ReturnCallIndirect (table_idx s x, type_idx s y)
   | LocalGet x -> LocalGet (local_idx s x)
   | LocalSet x -> LocalSet (local_idx s x)
   | LocalTee x -> LocalTee (local_idx s x)
@@ -250,7 +259,7 @@ let func s (f : func) =
     body = block s f.it.body;
   } @@ f.at
 
-let table s (t : table) = {ttype = table_type s t.it.ttype} @@ t.at
+let table s (t : table) = {t.it with ttype = table_type s t.it.ttype} @@ t.at
 let memory s (m : memory) = {mtype = memory_type s m.it.mtype} @@ m.at
 
 let segment_mode idx s (m : segment_mode) =
@@ -296,7 +305,9 @@ let import s (i : import) =
     idesc = import_desc s i.it.idesc;
   } @@ i.at
 
-let type_ s (t : type_) = def_type s t.it @@ t.at
+let start s (f : start) = {sfunc = func_idx s f.it.sfunc} @@ f.at
+
+let type_ s (t : type_) = rec_type s t.it @@ t.at
 
 let module_ s (m : module_) =
   { types = list type_ s m.it.types;
@@ -304,7 +315,7 @@ let module_ s (m : module_) =
     tables = list table s m.it.tables;
     memories = list memory s m.it.memories;
     funcs = list func s m.it.funcs;
-    start = opt func_idx s m.it.start;
+    start = opt start s m.it.start;
     elems = list elem s m.it.elems;
     datas = list data s m.it.datas;
     imports = list import s m.it.imports;

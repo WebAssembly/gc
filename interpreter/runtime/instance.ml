@@ -7,19 +7,19 @@ type module_inst =
   tables : table_inst list;
   memories : memory_inst list;
   globals : global_inst list;
-  exports : export_inst list;
   elems : elem_inst list;
   datas : data_inst list;
+  exports : export_inst list;
 }
 
-and type_inst = Types.sem_var
+and type_inst = def_type
 and func_inst = module_inst Lib.Promise.t Func.t
 and table_inst = Table.t
 and memory_inst = Memory.t
 and global_inst = Global.t
+and elem_inst = Elem.t
+and data_inst = Data.t
 and export_inst = Ast.name * extern
-and elem_inst = Value.ref_ list ref
-and data_inst = string ref
 
 and extern =
   | ExternFunc of func_inst
@@ -42,7 +42,7 @@ let () =
 let () =
   let type_of_ref' = !Value.type_of_ref' in
   Value.type_of_ref' := function
-    | FuncRef f -> DefHeapType (SemVar (Func.type_inst_of f))
+    | FuncRef f -> DefHT (Func.type_of f)
     | r -> type_of_ref' r
 
 let () =
@@ -59,17 +59,25 @@ let () =
     | _, _ -> eq_ref' r1 r2
 
 
+(* Projections *)
+
+let func_inst_of_extern = function ExternFunc f -> f | _ -> failwith "func_inst_of_extern"
+let table_inst_of_extern = function ExternTable f -> f | _ -> failwith "table_inst_of_extern"
+let memory_inst_of_extern = function ExternMemory f -> f | _ -> failwith "memory_inst_of_extern"
+let global_inst_of_extern = function ExternGlobal f -> f | _ -> failwith "global_inst_of_extern"
+
+
 (* Auxiliary functions *)
 
 let empty_module_inst =
   { types = []; funcs = []; tables = []; memories = []; globals = [];
-    exports = []; elems = []; datas = [] }
+    elems = []; datas = []; exports = [] }
 
 let extern_type_of c = function
-  | ExternFunc func -> ExternFuncType (Func.type_of func)
-  | ExternTable tab -> ExternTableType (Table.type_of tab)
-  | ExternMemory mem -> ExternMemoryType (Memory.type_of mem)
-  | ExternGlobal glob -> ExternGlobalType (Global.type_of glob)
+  | ExternFunc func -> ExternFuncT (Func.type_of func)
+  | ExternTable tab -> ExternTableT (Table.type_of tab)
+  | ExternMemory mem -> ExternMemoryT (Memory.type_of mem)
+  | ExternGlobal glob -> ExternGlobalT (Global.type_of glob)
 
 let export inst name =
   try Some (List.assoc name inst.exports) with Not_found -> None

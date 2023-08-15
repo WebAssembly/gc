@@ -144,7 +144,7 @@ The above could map to
 )
 
 (func $g
-  (array.new $vec3d (i32.const 3) (f64.const 1))
+  (array.new $vec3d (f64.const 1) (i32.const 3))
   (let (local $v (ref $vec3d))
     (array.set $vec3d (local.get $v) (i32.const 2) (i32.const 5))
     (array.get $vec3d (local.get $v) (i32.const 1))
@@ -157,7 +157,7 @@ The above could map to
   (local.set $b
     (struct.new $buf
       (i64.const 0)
-      (array.new $char-array (i32.const 4) (i32.const 0x41))
+      (array.new $char-array (i32.const 0x41) (i32.const 4))
     )
   )
   (array.get $buf
@@ -445,10 +445,10 @@ In the latter case, the access involves a runtime null check that will trap upon
 The index is checked against the array's length at execution time.
 A trap occurs if the index is out of bounds.
 
-Arrays are *allocated* with the `array.new` instruction that takes a length and an initialization value as operands, yielding a reference:
+Arrays are *allocated* with the `array.new` instruction that takes an initialization value and a length as operands, yielding a reference:
 ```
 (func $g
-  (call $f (array.new $vector (i32.const 1) (f64.const 3.14)))
+  (call $f (array.new $vector (f64.const 3.14) (i32.const 1)))
 )
 ```
 
@@ -564,14 +564,14 @@ The embedder may define its own set of types (such as DOM objects) or allow the 
 Such *host types* can be [imported](import-and-export) into a module, where they are treated as opaque data types.
 
 There are no operations to manipulate such types, but a WebAssembly program can receive references to them as parameters or results of imported/exported Wasm functions. Such "foreign" references may point to objects on the _embedder_'s heap. Yet, they can safely be stored in or round-trip through Wasm code.
-
+```
 (type $Foreign (import "env" "Foreign"))
 (type $s (struct (field $a i32) (field $x (ref $Foreign)))
 
 (func (export "f") (param $x (ref $Foreign))
   ...
 )
-
+```
 
 ### Function References
 

@@ -12,20 +12,21 @@ UNOPT = 	$(NAME).debug
 OPT =   	$(NAME)
 RUNTIME =	$(NAME)-runtime
 
-WASMBASE = ../../../interpreter
-WASMDIRS =	util syntax binary script text valid runtime exec host main
+WASMBASE =	$(PWD)/../../../interpreter
+WASMDIRS =	util syntax binary script text valid runtime exec host main tests
 WASMFILES = Makefile $(shell cd $(WASMBASE); ls $(foreach DIR,$(WASMDIRS),$(DIR)/*))
 
 WASMDIR =		_wasm
 WASMDEPS =	$(WASMFILES:%=$(WASMDIR)/%)
+WASMTESTDIR =	$(WASMBASE)/../test
 
 WASMLINK =	wln
-WASMLINKDIR =	../$(WASMLINK)
+WASMLINKDIR =	$(PWD)/../$(WASMLINK)
 
 DIRS =		src
 LIBS =		bigarray wasm
 INCLS =		$(PWD)/_wasm/_build
-FLAGS = 	-lexflags -ml -cflags '-w +a-4-27-37-42-44-45 -warn-error +a-3'
+FLAGS = 	-lexflags -ml -cflags '-w +a-4-27-37-42-44-45-70 -warn-error +a-3'
 OCB =		ocamlbuild -verbose 8 $(FLAGS) $(DIRS:%=-I %) $(LIBS:%=-lib %) -cflags '$(INCLS:%=-I %)' -lflags '$(INCLS:%=-I %)'
 
 NODE =		node --experimental-wasm-gc
@@ -58,17 +59,17 @@ $(WASMFILES:%=$(WASMDIR)/%): $(WASMDIR)/%: $(WASMBASE)/% $(WASMDIRS:%=$(WASMDIR)
 		cp $< $@
 
 $(WASMDIR)/_build/wasm.cmx $(WASMDIR)/_build/wasm.cmxa: $(WASMDEPS)
-		make -C $(WASMDIR) libopt
+		make -C $(WASMDIR) TESTDIR=$(WASMTESTDIR) libopt
 		touch $@
 		$(OCB) -clean
 
 $(WASMDIR)/_build/wasm.cmo $(WASMDIR)/_build/wasm.cma: $(WASMDEPS)
-		make -C $(WASMDIR) libunopt
+		make -C $(WASMDIR) TESTDIR=$(WASMTESTDIR) libunopt
 		touch $@
 		$(OCB) -clean
 
 $(WASMDIR)/wasm: $(WASMDEPS)
-		make -C $(WASMDIR)
+		make -C $(WASMDIR) TESTDIR=$(WASMTESTDIR)
 
 
 # Building linker
@@ -138,6 +139,13 @@ debugtest/%:	$(UNOPT)
 runtimetest:	$(OPT) titletest/Test-runtime
 		@./$(NAME) -v -g $(TESTDIR)/$(RUNTIME).wasm -g $(TESTDIR)/$(RUNTIME).wat
 		@make cleantest
+
+wasmgen/%:		$(OPT)
+	    /bin/echo -n '$(@F).$(EXT)> '; \
+	    ./$(NAME) -c $(shell grep "@FLAGS" $(TESTDIR)/$(@F).$(EXT) | sed 's/.*@FLAGS//g') $(TESTDIR)/$(@F).$(EXT); \
+	    $(WASMBASE)/wasm -d -u $(TESTDIR)/$(@F).wasm -o $(TESTDIR)/$(@F).wast; \
+	    rm $(TESTDIR)/$(@F).wasm; \
+	    $(WASMBASE)/wasm -d $(TESTDIR)/$(@F).wast
 
 wasmtest/%:		$(OPT)
 	  @ if ! grep -q "@FAIL-WASM" $(TESTDIR)/$(@F).$(EXT); \
