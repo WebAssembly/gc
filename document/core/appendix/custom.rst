@@ -146,6 +146,7 @@ It consists of an :ref:`indirect name map <binary-indirectnamemap>` assigning lo
      \Bnamesubsection_2(\Bindirectnamemap) \\
    \end{array}
 
+
 .. index:: type, type index
 .. _binary-typenamesec:
 
@@ -160,6 +161,7 @@ It consists of a :ref:`name map <binary-namemap>` assigning type names to :ref:`
    \production{type name subsection} & \Btypenamesubsec &::=&
      \Bnamesubsection_1(\Bnamemap) \\
    \end{array}
+
 
 .. index:: type, field, type index, field index
 .. _binary-fieldnamesec:

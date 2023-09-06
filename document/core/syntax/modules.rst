@@ -93,6 +93,7 @@ Label indices reference :ref:`structured control instructions <syntax-instr-cont
 
 Each :ref:`aggregate type <syntax-aggrtype>` provides an index space for its :ref:`fields <syntax-fieldtype>`.
 
+
 .. _free-typeidx:
 .. _free-funcidx:
 .. _free-tableidx:
