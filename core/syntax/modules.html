@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
-    <title>Modules &#8212; WebAssembly 2.0 + tail calls + function references + gc (Draft 2023-09-07)</title>
+    <title>Modules &#8212; WebAssembly 2.0 + tail calls + function references + gc (Draft 2023-09-08)</title>
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
     <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
@@ -107,7 +107,7 @@ and provide initialization in the form of <a class="reference internal" href="#s
 \end{array}\end{split}\]</div>
 <p>Each of the vectors – and thus the entire module – may be empty.</p>
 <section id="indices">
-<span id="syntax-index"></span><span id="syntax-labelidx"></span><span id="syntax-localidx"></span><span id="syntax-dataidx"></span><span id="syntax-elemidx"></span><span id="syntax-globalidx"></span><span id="syntax-memidx"></span><span id="syntax-tableidx"></span><span id="syntax-funcidx"></span><span id="syntax-typeidx"></span><span id="index-1"></span><h2>Indices<a class="headerlink" href="#indices" title="Permalink to this heading">¶</a></h2>
+<span id="syntax-index"></span><span id="syntax-fieldidx"></span><span id="syntax-labelidx"></span><span id="syntax-localidx"></span><span id="syntax-dataidx"></span><span id="syntax-elemidx"></span><span id="syntax-globalidx"></span><span id="syntax-memidx"></span><span id="syntax-tableidx"></span><span id="syntax-funcidx"></span><span id="syntax-typeidx"></span><span id="index-1"></span><h2>Indices<a class="headerlink" href="#indices" title="Permalink to this heading">¶</a></h2>
 <p>Definitions are referenced with zero-based <em>indices</em>.
 Each class of definition has its own <em>index space</em>, as distinguished by the following classes.</p>
 <div class="math notranslate nohighlight">
@@ -121,14 +121,16 @@ Each class of definition has its own <em>index space</em>, as distinguished by t
 \def\mathdef2866#1{{}}\mathdef2866{data index} &amp; \href{../syntax/modules.html#syntax-dataidx}{\mathit{dataidx}} &amp;::=&amp; \href{../syntax/values.html#syntax-int}{\mathit{u32}} \\
 \def\mathdef2866#1{{}}\mathdef2866{local index} &amp; \href{../syntax/modules.html#syntax-localidx}{\mathit{localidx}} &amp;::=&amp; \href{../syntax/values.html#syntax-int}{\mathit{u32}} \\
 \def\mathdef2866#1{{}}\mathdef2866{label index} &amp; \href{../syntax/modules.html#syntax-labelidx}{\mathit{labelidx}} &amp;::=&amp; \href{../syntax/values.html#syntax-int}{\mathit{u32}} \\
+\def\mathdef2866#1{{}}\mathdef2866{field index} &amp; \href{../syntax/modules.html#syntax-fieldidx}{\mathit{fieldidx}} &amp;::=&amp; \href{../syntax/values.html#syntax-int}{\mathit{u32}} \\
 \end{array}\end{split}\]</div>
 <p>The index space for <a class="reference internal" href="#syntax-func"><span class="std std-ref">functions</span></a>, <a class="reference internal" href="#syntax-table"><span class="std std-ref">tables</span></a>, <a class="reference internal" href="#syntax-mem"><span class="std std-ref">memories</span></a> and <a class="reference internal" href="#syntax-global"><span class="std std-ref">globals</span></a> includes respective <a class="reference internal" href="#syntax-import"><span class="std std-ref">imports</span></a> declared in the same module.
 The indices of these imports precede the indices of other definitions in the same index space.</p>
 <p>Element indices reference <a class="reference internal" href="#syntax-elem"><span class="std std-ref">element segments</span></a> and data indices reference <a class="reference internal" href="#syntax-data"><span class="std std-ref">data segments</span></a>.</p>
 <p>The index space for <a class="reference internal" href="#syntax-local"><span class="std std-ref">locals</span></a> is only accessible inside a <a class="reference internal" href="#syntax-func"><span class="std std-ref">function</span></a> and includes the parameters of that function, which precede the local variables.</p>
 <p>Label indices reference <a class="reference internal" href="instructions.html#syntax-instr-control"><span class="std std-ref">structured control instructions</span></a> inside an instruction sequence.</p>
+<p>Each <a class="reference internal" href="types.html#syntax-aggrtype"><span class="std std-ref">aggregate type</span></a> provides an index space for its <a class="reference internal" href="types.html#syntax-fieldtype"><span class="std std-ref">fields</span></a>.</p>
 <section id="conventions">
-<span id="free-index"></span><span id="free-labelidx"></span><span id="free-localidx"></span><span id="free-dataidx"></span><span id="free-elemidx"></span><span id="free-globalidx"></span><span id="free-memidx"></span><span id="free-tableidx"></span><span id="free-funcidx"></span><span id="free-typeidx"></span><h3>Conventions<a class="headerlink" href="#conventions" title="Permalink to this heading">¶</a></h3>
+<span id="free-index"></span><span id="free-fieldidx"></span><span id="free-labelidx"></span><span id="free-localidx"></span><span id="free-dataidx"></span><span id="free-elemidx"></span><span id="free-globalidx"></span><span id="free-memidx"></span><span id="free-tableidx"></span><span id="free-funcidx"></span><span id="free-typeidx"></span><h3>Conventions<a class="headerlink" href="#conventions" title="Permalink to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>The meta variable <span class="math notranslate nohighlight">\(l\)</span> ranges over label indices.</p></li>
 <li><p>The meta variables <span class="math notranslate nohighlight">\(x, y\)</span> range over indices in any of the other index spaces.</p></li>
