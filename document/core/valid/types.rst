@@ -405,7 +405,7 @@ Recursive Types
      C \vdashrectype \TREC~\subtype~{\subtype'}^\ast ~{\ok}(x)
    }
 
-:math:`\TSUB~\TFINAL^?~y^\ast~\comptype`
+:math:`\TSUB~\ext~y^\ast~\comptype`
 ........................................
 
 * The :ref:`composite type <syntax-comptype>` :math:`\comptype` must be :ref:`valid <valid-comptype>`.
@@ -420,7 +420,7 @@ Recursive Types
 
   * Let :math:`\subtype_i` be the :ref:`unrolling <aux-unroll-deftype>` of the :ref:`defined type <syntax-deftype>` :math:`C.\CTYPES[y_i]`.
 
-  * The :ref:`sub type <syntax-subtype>` :math:`\subtype_i` must not contain :math:`\TFINAL`.
+  * The :ref:`sub type <syntax-subtype>` :math:`\subtype_i` must contain :math:`\TOPEN`.
 
   * Let :math:`\comptype'_i` be the :ref:`expansion <aux-expand-deftype>` of the :ref:`defined type <syntax-deftype>` :math:`C.\CTYPES[y_i]`.
 
@@ -435,14 +435,14 @@ Recursive Types
      \qquad
      (y < x)^\ast
      \qquad
-     (\unrolldt(C.\CTYPES[y]) = \TSUB~{y'}^\ast~\comptype')^\ast
+     (\unrolldt(C.\CTYPES[y]) = \TSUB~\TOPEN~{y'}^\ast~\comptype')^\ast
      \\
      C \vdashcomptype \comptype \ok
      \qquad
      (C \vdashcomptypematch \comptype \matchescomptype \comptype')^\ast
      \end{array}
    }{
-     C \vdashsubtype \TSUB~\TFINAL^?~y^\ast~\comptype ~{\ok}(x)
+     C \vdashsubtype \TSUB~\ext~y^\ast~\comptype ~{\ok}(x)
    }
 
 .. note::

@@ -291,25 +291,27 @@ including :ref:`function types <syntax-functype>` and :ref:`aggregate types <syn
    \end{array}
 
 
-.. index:: ! recursive type, ! sub type, composite type, ! final, subtyping, ! roll, ! unroll, recursive type index
+.. index:: ! recursive type, ! sub type, composite type, ! open, ! final, subtyping, ! roll, ! unroll, recursive type index
    pair: abstract syntax; recursive type
    pair: abstract syntax; sub type
 .. _syntax-rectype:
 .. _syntax-subtype:
+.. _syntax-ext:
 
 Recursive Types
 ~~~~~~~~~~~~~~~
 
 *Recursive types* denote a group of mutually recursive :ref:`composite types <syntax-comptype>`, each of which can optionally declare a list of :ref:`type indices <syntax-typeidx>` of supertypes that it :ref:`matches <match-comptype>`.
-Each type can also be declared *final*, preventing further subtyping.
-.
+Each type can also be declared *open*, in which case they may have further subtypes, or *final*, preventing further subtyping.
 
 .. math::
    \begin{array}{llrl}
    \production{recursive type} & \rectype &::=&
      \TREC~\subtype^\ast \\
    \production{sub types} & \subtype &::=&
-     \TSUB~\TFINAL^?~\typeidx^\ast~\comptype \\
+     \TSUB~\ext~\typeidx^\ast~\comptype \\
+   \production{extension type} & \ext &::=&
+     \TOPEN ~|~ \TFINAL \\
    \end{array}
 
 In a :ref:`module <syntax-module>`, each member of a recursive type is assigned a separate :ref:`type index <syntax-typeidx>`.

@@ -111,7 +111,7 @@ New abbreviations are introduced for reference types in binary and text format, 
   - Note that the number of type section entries is now the number of recursion groups rather than the number of individual types.
 
 * `subtype` is a new category of type defining a single type, as a subtype of possible other types
-  - `subtype ::= sub final? <typeidx>* <comptype>`
+  - `subtype ::= sub <ext> <typeidx>* <comptype>`
   - the preexisting syntax with no `sub` clause is redefined to be a shorthand for a `sub` clause with empty `typeidx` list: `<comptype> == sub final () <comptype>`
   - Note: This allows multiple supertypes. For the MVP, it is restricted to at most one supertype.
 
@@ -128,6 +128,9 @@ New abbreviations are introduced for reference types in binary and text format, 
   - `fieldtype ::= <mutability> <storagetype>`
   - `storagetype ::= <valtype> | <packedtype>`
   - `packedtype ::= i8 | i16`
+
+* `ext` determines whether a subtype can have further subtypes (if it is `open`) or not (if it is `final`).
+  - `ext ::= open | final`
 
 TODO: Need to be able to use `i31` as a type definition.
 
@@ -156,12 +159,12 @@ In the case of `C.funcs`, it is an invariant that all types [expand](#auxiliary-
 * Expanding a type definition unrolls it and returns its plain definition
   - `expand($t)                 = expand(<ctxtype>)`  iff `$t = <ctxtype>`
   - `expand(<ctxtype>)          = <comptype>`
-    - where `unroll(<ctxttype>) = sub final? x* <comptype>`
+    - where `unroll(<ctxttype>) = sub ext x* <comptype>`
 
 * Finality of a type just checks the flag
   - `final($t)                  = final(<ctxtype>)`  iff `$t = <ctxtype>`
   - `final(<ctxtype>)           = final? =/= empty`
-    - where `unroll(<ctxttype>) = sub final? x* <comptype>`
+    - where `unroll(<ctxttype>) = sub ext x* <comptype>`
 
 
 #### External Types
@@ -195,10 +198,10 @@ Some of the rules define a type as `ok` for a certain index, written `ok(x)`. Th
     - and `<subtype>* ok($t+1)`
 
 * an individual subtype is valid if its definition is valid, matches every supertype, and no supertype is final or has an index higher than its own
-  - `sub final? $t* <comptype> ok($t')`
+  - `sub ext $t* <comptype> ok($t')`
     - iff `<comptype> ok`
     - and `(<comptype> <: expand($t))*`
-    - and `(not final($t))*`
+    - and `(open($t))*`
     - and `($t < $t')*`
   - Note: the upper bound on the supertype indices ensures that subtyping hierarchies are never circular, because definitions need to be ordered.
 
@@ -260,10 +263,10 @@ With that:
   - Note: This rule is only used on types that have been tied, which prevents looping.
 
 * notably, two subtypes are equivalent if their structure is equivalent, they have equivalent supertypes, and their finality flag matches
-  - `(sub final1? $t* <comptype>) == (sub final2? $t'* <comptype'>)`
+  - `(sub <ext> $t* <comptype>) == (sub <ext'> $t'* <comptype'>)`
     - iff `<comptype> == <comptype'>`
     - and `($t == $t')*`
-    - and `final1? = final2?`
+    - and `<ext> = <ext'>`
 
 Example: As explained above, the mutually recursive types
 ```
@@ -318,7 +321,7 @@ In the [existing rules](https://github.com/WebAssembly/function-references/propo
 * Type indices are subtypes if they either define [equivalent](#type-equivalence) types or a suitable (direct or indirect) subtype relation has been declared
   - `$t <: $t'`
     - if `$t = <ctxtype>` and `$t' = <ctxtype'>` and `<ctxtype> == <ctxtype'>`
-    - or `unroll($t) = sub final? $t1* $t'' $t2* comptype` and `$t'' <: $t'`
+    - or `unroll($t) = sub ext $t1* $t'' $t2* comptype` and `$t'' <: $t'`
   - Note: This rule climbs the supertype hierarchy until an equivalent type has been found. Effectively, this means that subtyping is "nominal" modulo type canonicalisation.
 
 
@@ -456,9 +459,9 @@ Note: This assumes that there is at most one supertype. For hierarchies with mul
 
 Example: Consider three types and corresponding RTTs:
 ```
-(type $A (sub (struct)))
-(type $B (sub $A (struct (field i32))))
-(type $C (sub $B (struct (field i32 i64))))
+(type $A (sub open (struct)))
+(type $B (sub open $A (struct (field i32))))
+(type $C (sub open $B (struct (field i32 i64))))
 ```
 Assume the respective RTTs for types `$A`, `$B`, and `$C` are called `$rttA`, `$rttB`, and `$rttC`.
 Then, `$rttA` would carry supertype vector `[$rttA]`, `$rttB` has `[$rttA, $rttB]`, and `$rttC` has `[$rttA, $rttB, $rttC]`.
@@ -774,7 +777,7 @@ The opcode for heap types is encoded as an `s33`.
 | -0x20  | `func t1* t2*`  | `t1* : vec(valtype)`, `t2* : vec(valtype)` | shorthand |
 | -0x21  | `struct ft*`    | `ft* : vec(fieldtype)` | shorthand |
 | -0x22  | `array ft`      | `ft : fieldtype`       | shorthand |
-| -0x30  | `sub $t* st`    | `$t* : vec(typeidx)`, `st : comptype` | |
+| -0x30  | `sub open $t* st`  | `$t* : vec(typeidx)`, `st : comptype` | |
 | -0x31  | `sub final $t* st` | `$t* : vec(typeidx)`, `st : comptype` | |
 
 #### Defined Types
@@ -784,7 +787,7 @@ The opcode for heap types is encoded as an `s33`.
 | -0x20  | `func t1* t2*`  | `t1* : vec(valtype)`, `t2* : vec(valtype)` | shorthand |
 | -0x21  | `struct ft*`    | `ft* : vec(fieldtype)` | shorthand |
 | -0x22  | `array ft`      | `ft : fieldtype`       | shorthand |
-| -0x30  | `sub $t* st`    | `$t* : vec(typeidx)`, `st : comptype` | shorthand |
+| -0x30  | `sub open $t* st`  | `$t* : vec(typeidx)`, `st : comptype` | shorthand |
 | -0x31  | `sub final $t* st` | `$t* : vec(typeidx)`, `st : comptype` | shorthand |
 | -0x32  | `rec dt*`       | `dt* : vec(subtype)` | |
 
@@ -909,10 +912,10 @@ C |- array ft ok
 ```
 C |- st ok
 (C |- st <: expand(C(x)))*
-(not final(C(x)))*
+(open(C(x)))*
 (x < x')*
 ----------------------------
-C |- sub final? x* st ok(x')
+C |- sub ext x* st ok(x')
 
 C |- st ok(x)
 C |- st'* ok(x+1)
@@ -1009,9 +1012,9 @@ C |- array ft == array ft'
 ```
 (C |- x == x')*
 C |- st == st'
-final1? = final2?
+ext = ext'
 ---------------------------------------------
-C |- sub final1? x* st == sub final2? x'* st'
+C |- sub ext x* st == sub ext' x'* st'
 ```
 
 ### Subtyping
@@ -1023,7 +1026,7 @@ C |- x == x'
 ------------
 C |- x <: x'
 
-unroll(C(x)) = sub final? (x1* x'' x2*) st
+unroll(C(x)) = sub ext (x1* x'' x2*) st
 C |- x'' <: x'
 ------------------------------------------
 C |- x <: x'

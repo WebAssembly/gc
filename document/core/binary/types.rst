@@ -223,7 +223,7 @@ Recursive Types
 ~~~~~~~~~~~~~~~
 
 :ref:`Recursive types <syntax-rectype>` are encoded by the byte :math:`\hex{31}` followed by a :ref:`vector <binary-vec>` of :ref:`sub types <syntax-subtype>`.
-Additional shorthands are recognized for unary recursions and sub types without super types.
+Additional shorthands are recognized for unary recursions and final sub types without super types.
 
 .. math::
    \begin{array}{llclll@{\qquad\qquad}l}
@@ -234,7 +234,7 @@ Additional shorthands are recognized for unary recursions and sub types without 
        &\Rightarrow& \TREC~\X{st} \\
    \production{sub type} & \Bsubtype &::=&
      \hex{50}~~x^\ast{:\,}\Bvec(\Btypeidx)~~\X{ct}{:}\Bcomptype
-       &\Rightarrow& \TSUB~x^\ast~\X{ct} \\ &&|&
+       &\Rightarrow& \TSUB~\TOPEN~x^\ast~\X{ct} \\ &&|&
      \hex{4E}~~x^\ast{:\,}\Bvec(\Btypeidx)~~\X{ct}{:}\Bcomptype
        &\Rightarrow& \TSUB~\TFINAL~x^\ast~\X{ct} \\ &&|&
      \X{ct}{:}\Bcomptype

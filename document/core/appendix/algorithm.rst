@@ -57,8 +57,9 @@ Similarly, :ref:`defined types <syntax-deftype>` :code:`def_type` can be represe
    type array_type = Array(fields : field_type)
    type func_type = Func(params : list(val_type), results : list(val_type))
    type comp_type = struct_type | array_type | func_type
+   type ext_type = Open | Final
 
-   type sub_type = Sub(super : list(def_type), body : comp_type, final : bool)
+   type sub_type = Sub(super : list(def_type), body : comp_type, ext : ext_type)
    type rec_type = Rec(types : list(sub_type))
 
    type def_type = Def(rec : rec_type, proj : int32)

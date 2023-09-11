@@ -174,13 +174,13 @@ let check_sub_type (c : context) (sut : sub_type) at =
   check_str_type c st at
 
 let check_sub_type_sub (c : context) (sut : sub_type) x at =
-  let SubT (_fin, hts, st) = sut in
+  let SubT (_ext, hts, st) = sut in
   List.iter (fun hti ->
     let xi = match hti with VarHT (StatX xi) -> xi | _ -> assert false in
-    let SubT (fini, _, sti) = unroll_def_type (type_ c (xi @@ at)) in
+    let SubT (ext, _, sti) = unroll_def_type (type_ c (xi @@ at)) in
     require (xi < x) at ("forward use of type " ^ I32.to_string_u xi ^
       " in sub type definition");
-    require (fini = NoFinal) at ("sub type " ^ I32.to_string_u x ^
+    require (ext = Open) at ("sub type " ^ I32.to_string_u x ^
       " has final super type " ^ I32.to_string_u xi);
     require (match_str_type c.types st sti) at ("sub type " ^ I32.to_string_u x ^
       " does not match super type " ^ I32.to_string_u xi)

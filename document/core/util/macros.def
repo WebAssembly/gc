@@ -234,6 +234,7 @@
 .. |TARRAY| mathdef:: \xref{syntax/types}{syntax-comptype}{\K{array}}
 .. |TSUB| mathdef:: \xref{syntax/types}{syntax-subtype}{\K{sub}}
 .. |TREC| mathdef:: \xref{syntax/types}{syntax-rectype}{\K{rec}}
+.. |TOPEN| mathdef:: \xref{syntax/types}{syntax-subtype}{\K{open}}
 .. |TFINAL| mathdef:: \xref{syntax/types}{syntax-subtype}{\K{final}}
 
 .. |MVAR| mathdef:: \xref{syntax/types}{syntax-mut}{\K{var}}
@@ -270,6 +271,7 @@
 .. |subtype| mathdef:: \xref{syntax/types}{syntax-subtype}{\X{subtype}}
 .. |rectype| mathdef:: \xref{syntax/types}{syntax-rectype}{\X{rectype}}
 .. |deftype| mathdef:: \xref{valid/conventions}{syntax-deftype}{\X{deftype}}
+.. |ext| mathdef:: \xref{syntax/types}{syntax-ext}{\X{ext}}
 
 .. |globaltype| mathdef:: \xref{syntax/types}{syntax-globaltype}{\X{globaltype}}
 .. |tabletype| mathdef:: \xref{syntax/types}{syntax-tabletype}{\X{tabletype}}
@@ -906,6 +908,7 @@
 .. |Tstoragetype| mathdef:: \xref{text/types}{text-storagetype}{\T{storagetype}}
 .. |Tpackedtype| mathdef:: \xref{text/types}{text-packedtype}{\T{packedtype}}
 .. |Tcomptype| mathdef:: \xref{text/types}{text-comptype}{\T{comptype}}
+.. |Texttype| mathdef:: \xref{text/types}{text-exttype}{\T{exttype}}
 .. |Tsubtype| mathdef:: \xref{text/types}{text-subtype}{\T{subtype}}
 .. |Tdeftype| mathdef:: \xref{text/types}{text-deftype}{\T{deftype}}
 .. |Trectype| mathdef:: \xref{text/types}{text-rectype}{\T{rectype}}

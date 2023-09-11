@@ -257,7 +257,7 @@ let inline_func_type_explicit (c : context) x ft at =
 %token ANYREF NULLREF EQREF I31REF STRUCTREF ARRAYREF
 %token FUNCREF NULLFUNCREF EXTERNREF NULLEXTERNREF
 %token ANY NONE EQ I31 REF NOFUNC EXTERN NOEXTERN NULL
-%token MUT FIELD STRUCT ARRAY SUB FINAL REC
+%token MUT FIELD STRUCT ARRAY SUB OPEN FINAL REC
 %token UNREACHABLE NOP DROP SELECT
 %token BLOCK END IF THEN ELSE LOOP
 %token BR BR_IF BR_TABLE
@@ -413,9 +413,9 @@ str_type :
 
 sub_type :
   | str_type { fun c x -> SubT (Final, [], $1 c x) }
-  | LPAR SUB var_list str_type RPAR
-    { fun c x -> SubT (NoFinal,
-        List.map (fun y -> VarHT (StatX y.it)) ($3 c type_), $4 c x) }
+  | LPAR SUB OPEN var_list str_type RPAR
+    { fun c x -> SubT (Open,
+        List.map (fun y -> VarHT (StatX y.it)) ($4 c type_), $5 c x) }
   | LPAR SUB FINAL var_list str_type RPAR
     { fun c x -> SubT (Final,
         List.map (fun y -> VarHT (StatX y.it)) ($4 c type_), $5 c x) }

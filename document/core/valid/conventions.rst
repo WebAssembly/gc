@@ -52,7 +52,7 @@ they only occur during :ref:`validation <valid>` or :ref:`execution <exec>`.
    \production{heap type} & \heaptype &::=&
      \dots ~|~ \deftype ~|~ \REC~i \\
    \production{sub types} & \subtype &::=&
-     \TSUB~\TFINAL^?~\heaptype^\ast~\comptype \\
+     \TSUB~\ext~\heaptype^\ast~\comptype \\
    \end{array}
 
 The unique :ref:`value type <syntax-valtype>` |BOT| is a *bottom type* that :ref:`matches <match-heaptype>` all value types.
@@ -180,7 +180,7 @@ In addition, the following auxiliary function denotes the *expansion* of a :ref:
 
 .. math::
    \begin{array}{@{}llll@{}}
-   \expanddt(\deftype) &=& \comptype & (\iff \unrolldt(\deftype) = \TSUB~\TFINAL^?~\X{ht}^?~\comptype) \\
+   \expanddt(\deftype) &=& \comptype & (\iff \unrolldt(\deftype) = \TSUB~\ext~\X{ht}^?~\comptype) \\
    \end{array}
 
 
