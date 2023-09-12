@@ -87,7 +87,7 @@
   <section id="instructions">
 <span id="valid-instr"></span><span id="index-0"></span><h1>Instructions<a class="headerlink" href="#instructions" title="Permalink to this heading">¶</a></h1>
 <p><a class="reference internal" href="../syntax/instructions.html#syntax-instr"><span class="std std-ref">Instructions</span></a> are classified by <a class="reference internal" href="conventions.html#syntax-instrtype"><span class="std std-ref">instruction types</span></a> that describe how they manipulate the <a class="reference internal" href="../exec/runtime.html#stack"><span class="std std-ref">operand stack</span></a> and initialize <a class="reference internal" href="../syntax/modules.html#syntax-local"><span class="std std-ref">locals</span></a>:
-A type <span class="math notranslate nohighlight">\([t_1^\ast] \def\mathdef4598#1{\rightarrow_{#1}}\mathdef4598{x^\ast} [t_2^\ast]\)</span> describes the required input stack with argument values of types <span class="math notranslate nohighlight">\(t_1^\ast\)</span> that an instruction pops off
+A type <span class="math notranslate nohighlight">\([t_1^\ast] \def\mathdef4602#1{\rightarrow_{#1}}\mathdef4602{x^\ast} [t_2^\ast]\)</span> describes the required input stack with argument values of types <span class="math notranslate nohighlight">\(t_1^\ast\)</span> that an instruction pops off
 and the provided output stack with result values of types <span class="math notranslate nohighlight">\(t_2^\ast\)</span> that it pushes back.
 Moreover, it enumerates the <a class="reference internal" href="../syntax/modules.html#syntax-localidx"><span class="std std-ref">indices</span></a> <span class="math notranslate nohighlight">\(x^\ast\)</span> of locals that have been set by the instruction.
 In most cases, this is empty.</p>
@@ -95,10 +95,10 @@ In most cases, this is empty.</p>
 <p class="admonition-title">Note</p>
 <p>For example, the instruction <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{add}}\)</span> has type <span class="math notranslate nohighlight">\([\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}~\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}] \href{../syntax/types.html#syntax-instrtype}{\rightarrow} [\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}]\)</span>,
 consuming two <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}\)</span> values and producing one.
-The instruction <span class="math notranslate nohighlight">\(\href{../syntax/instructions.html#syntax-instr-variable}{\mathsf{local.set}}~x\)</span> has type <span class="math notranslate nohighlight">\([t] \def\mathdef4599#1{\rightarrow_{#1}}\mathdef4599{x} []\)</span>, provided <span class="math notranslate nohighlight">\(t\)</span> is the type declared for the local <span class="math notranslate nohighlight">\(x\)</span>.</p>
+The instruction <span class="math notranslate nohighlight">\(\href{../syntax/instructions.html#syntax-instr-variable}{\mathsf{local.set}}~x\)</span> has type <span class="math notranslate nohighlight">\([t] \def\mathdef4603#1{\rightarrow_{#1}}\mathdef4603{x} []\)</span>, provided <span class="math notranslate nohighlight">\(t\)</span> is the type declared for the local <span class="math notranslate nohighlight">\(x\)</span>.</p>
 </div>
 <p>Typing extends to <a class="reference internal" href="#valid-instr-seq"><span class="std std-ref">instruction sequences</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/instructions.html#syntax-instr}{\mathit{instr}}^\ast\)</span>.
-Such a sequence has an instruction type <span class="math notranslate nohighlight">\([t_1^\ast] \def\mathdef4600#1{\rightarrow_{#1}}\mathdef4600{x^\ast} [t_2^\ast]\)</span> if the accumulative effect of executing the instructions is consuming values of types <span class="math notranslate nohighlight">\(t_1^\ast\)</span> off the operand stack, pushing new values of types <span class="math notranslate nohighlight">\(t_2^\ast\)</span>, and setting all locals <span class="math notranslate nohighlight">\(x^\ast\)</span>.</p>
+Such a sequence has an instruction type <span class="math notranslate nohighlight">\([t_1^\ast] \def\mathdef4604#1{\rightarrow_{#1}}\mathdef4604{x^\ast} [t_2^\ast]\)</span> if the accumulative effect of executing the instructions is consuming values of types <span class="math notranslate nohighlight">\(t_1^\ast\)</span> off the operand stack, pushing new values of types <span class="math notranslate nohighlight">\(t_2^\ast\)</span>, and setting all locals <span class="math notranslate nohighlight">\(x^\ast\)</span>.</p>
 <p id="polymorphism">For some instructions, the typing rules do not fully constrain the type,
 and therefore allow for multiple types.
 Such instructions are called <em>polymorphic</em>.
@@ -1003,13 +1003,13 @@ In contrast,</p>
 <ul class="simple">
 <li><p>The local <span class="math notranslate nohighlight">\(C.\href{../valid/conventions.html#context}{\mathsf{locals}}[x]\)</span> must be defined in the context.</p></li>
 <li><p>Let <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-init}{\mathit{init}}~t\)</span> be the <a class="reference internal" href="conventions.html#syntax-localtype"><span class="std std-ref">local type</span></a> <span class="math notranslate nohighlight">\(C.\href{../valid/conventions.html#context}{\mathsf{locals}}[x]\)</span>.</p></li>
-<li><p>Then the instruction is valid with type <span class="math notranslate nohighlight">\([t] \def\mathdef4601#1{\rightarrow_{#1}}\mathdef4601{x} []\)</span>.</p></li>
+<li><p>Then the instruction is valid with type <span class="math notranslate nohighlight">\([t] \def\mathdef4605#1{\rightarrow_{#1}}\mathdef4605{x} []\)</span>.</p></li>
 </ul>
 <div class="math notranslate nohighlight">
 \[\frac{
   C.\href{../valid/conventions.html#context}{\mathsf{locals}}[x] = \href{../syntax/types.html#syntax-init}{\mathit{init}}~t
 }{
-  C \href{../valid/instructions.html#valid-instr}{\vdash} \href{../syntax/instructions.html#syntax-instr-variable}{\mathsf{local.set}}~x : [t] \def\mathdef4602#1{\rightarrow_{#1}}\mathdef4602{x} []
+  C \href{../valid/instructions.html#valid-instr}{\vdash} \href{../syntax/instructions.html#syntax-instr-variable}{\mathsf{local.set}}~x : [t] \def\mathdef4606#1{\rightarrow_{#1}}\mathdef4606{x} []
 }\]</div>
 </section>
 <section id="xref-syntax-instructions-syntax-instr-variable-mathsf-local-tee-x">
@@ -1017,13 +1017,13 @@ In contrast,</p>
 <ul class="simple">
 <li><p>The local <span class="math notranslate nohighlight">\(C.\href{../valid/conventions.html#context}{\mathsf{locals}}[x]\)</span> must be defined in the context.</p></li>
 <li><p>Let <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-init}{\mathit{init}}~t\)</span> be the <a class="reference internal" href="conventions.html#syntax-localtype"><span class="std std-ref">local type</span></a> <span class="math notranslate nohighlight">\(C.\href{../valid/conventions.html#context}{\mathsf{locals}}[x]\)</span>.</p></li>
-<li><p>Then the instruction is valid with type <span class="math notranslate nohighlight">\([t] \def\mathdef4603#1{\rightarrow_{#1}}\mathdef4603{x} [t]\)</span>.</p></li>
+<li><p>Then the instruction is valid with type <span class="math notranslate nohighlight">\([t] \def\mathdef4607#1{\rightarrow_{#1}}\mathdef4607{x} [t]\)</span>.</p></li>
 </ul>
 <div class="math notranslate nohighlight">
 \[\frac{
   C.\href{../valid/conventions.html#context}{\mathsf{locals}}[x] = \href{../syntax/types.html#syntax-init}{\mathit{init}}~t
 }{
-  C \href{../valid/instructions.html#valid-instr}{\vdash} \href{../syntax/instructions.html#syntax-instr-variable}{\mathsf{local.tee}}~x : [t] \def\mathdef4604#1{\rightarrow_{#1}}\mathdef4604{x} [t]
+  C \href{../valid/instructions.html#valid-instr}{\vdash} \href{../syntax/instructions.html#syntax-instr-variable}{\mathsf{local.tee}}~x : [t] \def\mathdef4608#1{\rightarrow_{#1}}\mathdef4608{x} [t]
 }\]</div>
 </section>
 <section id="xref-syntax-instructions-syntax-instr-variable-mathsf-global-get-x">
@@ -1471,7 +1471,7 @@ the instruction sequence <span class="math notranslate nohighlight">\(\href{../s
 <section id="xref-syntax-instructions-syntax-instr-control-mathsf-loop-xref-syntax-instructions-syntax-blocktype-mathit-blocktype-xref-syntax-instructions-syntax-instr-mathit-instr-ast-xref-syntax-instructions-syntax-instr-control-mathsf-end">
 <span id="valid-loop"></span><h3><span class="math notranslate nohighlight">\(\href{../syntax/instructions.html#syntax-instr-control}{\mathsf{loop}}~\href{../syntax/instructions.html#syntax-blocktype}{\mathit{blocktype}}~\href{../syntax/instructions.html#syntax-instr}{\mathit{instr}}^\ast~\href{../syntax/instructions.html#syntax-instr-control}{\mathsf{end}}\)</span><a class="headerlink" href="#xref-syntax-instructions-syntax-instr-control-mathsf-loop-xref-syntax-instructions-syntax-blocktype-mathit-blocktype-xref-syntax-instructions-syntax-instr-mathit-instr-ast-xref-syntax-instructions-syntax-instr-control-mathsf-end" title="Permalink to this heading">¶</a></h3>
 <ul class="simple">
-<li><p>The <a class="reference internal" href="../syntax/instructions.html#syntax-blocktype"><span class="std std-ref">block type</span></a> must be <a class="reference internal" href="types.html#valid-blocktype"><span class="std std-ref">valid</span></a> as some <a class="reference internal" href="../syntax/types.html#syntax-functype"><span class="std std-ref">instruction type</span></a> <span class="math notranslate nohighlight">\([t_1^\ast] \def\mathdef4605#1{\rightarrow_{#1}}\mathdef4605{x^\ast} [t_2^\ast]\)</span>.</p></li>
+<li><p>The <a class="reference internal" href="../syntax/instructions.html#syntax-blocktype"><span class="std std-ref">block type</span></a> must be <a class="reference internal" href="types.html#valid-blocktype"><span class="std std-ref">valid</span></a> as some <a class="reference internal" href="../syntax/types.html#syntax-functype"><span class="std std-ref">instruction type</span></a> <span class="math notranslate nohighlight">\([t_1^\ast] \def\mathdef4609#1{\rightarrow_{#1}}\mathdef4609{x^\ast} [t_2^\ast]\)</span>.</p></li>
 <li><p>Let <span class="math notranslate nohighlight">\(C'\)</span> be the same <a class="reference internal" href="conventions.html#context"><span class="std std-ref">context</span></a> as <span class="math notranslate nohighlight">\(C\)</span>, but with the <a class="reference internal" href="../syntax/types.html#syntax-resulttype"><span class="std std-ref">result type</span></a> <span class="math notranslate nohighlight">\([t_1^\ast]\)</span> prepended to the <span class="math notranslate nohighlight">\(\href{../valid/conventions.html#context}{\mathsf{labels}}\)</span> vector.</p></li>
 <li><p>Under context <span class="math notranslate nohighlight">\(C'\)</span>,
 the instruction sequence <span class="math notranslate nohighlight">\(\href{../syntax/instructions.html#syntax-instr}{\mathit{instr}}^\ast\)</span> must be <a class="reference internal" href="#valid-instr-seq"><span class="std std-ref">valid</span></a> with type <span class="math notranslate nohighlight">\([t_1^\ast] \href{../syntax/types.html#syntax-instrtype}{\rightarrow} [t_2^\ast]\)</span>.</p></li>
@@ -1738,7 +1738,7 @@ which is the case for functions not returning anything.</p>
 <li><p>Let <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-limits}{\mathit{limits}}~t\)</span> be the <a class="reference internal" href="../syntax/types.html#syntax-tabletype"><span class="std std-ref">table type</span></a> <span class="math notranslate nohighlight">\(C.\href{../valid/conventions.html#context}{\mathsf{tables}}[x]\)</span>.</p></li>
 <li><p>The <a class="reference internal" href="../syntax/types.html#syntax-reftype"><span class="std std-ref">reference type</span></a> <span class="math notranslate nohighlight">\(t\)</span> must <a class="reference internal" href="matching.html#match-reftype"><span class="std std-ref">match</span></a> type <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-reftype}{\mathsf{ref}}~\href{../syntax/types.html#syntax-reftype}{\mathsf{null}}~\href{../syntax/types.html#syntax-heaptype}{\mathsf{func}}\)</span>.</p></li>
 <li><p>The type <span class="math notranslate nohighlight">\(C.\href{../valid/conventions.html#context}{\mathsf{types}}[y]\)</span> must be defined in the context.</p></li>
-<li><p>Let <span class="math notranslate nohighlight">\([t_1^\ast] \href{../syntax/types.html#syntax-functype}{\rightarrow} [t_2^\ast]\)</span> be the <a class="reference internal" href="../syntax/types.html#syntax-functype"><span class="std std-ref">function type</span></a> <span class="math notranslate nohighlight">\(C.\href{../valid/conventions.html#context}{\mathsf{types}}[y]\)</span>.</p></li>
+<li><p>The <a class="reference internal" href="conventions.html#aux-expand-deftype"><span class="std std-ref">expansion</span></a> of <span class="math notranslate nohighlight">\(C.\href{../valid/conventions.html#context}{\mathsf{types}}[y]\)</span> must be a <a class="reference internal" href="../syntax/types.html#syntax-functype"><span class="std std-ref">function type</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-comptype}{\mathsf{func}}~[t_1^\ast] \href{../syntax/types.html#syntax-functype}{\rightarrow} [t_2^\ast]\)</span>.</p></li>
 <li><p>Then the instruction is valid with type <span class="math notranslate nohighlight">\([t_1^\ast~\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}] \href{../syntax/types.html#syntax-instrtype}{\rightarrow} [t_2^\ast]\)</span>.</p></li>
 </ul>
 <div class="math notranslate nohighlight">
@@ -1747,7 +1747,7 @@ which is the case for functions not returning anything.</p>
   \qquad
   C \href{../valid/matching.html#match-valtype}{\vdash} t \href{../valid/matching.html#match-reftype}{\leq} \href{../syntax/types.html#syntax-reftype}{\mathsf{ref}}~\href{../syntax/types.html#syntax-reftype}{\mathsf{null}}~\href{../syntax/types.html#syntax-heaptype}{\mathsf{func}}
   \qquad
-  C.\href{../valid/conventions.html#context}{\mathsf{types}}[y] = [t_1^\ast] \href{../syntax/types.html#syntax-functype}{\rightarrow} [t_2^\ast]
+  \href{../valid/conventions.html#aux-expand-deftype}{\mathrm{expand}}(C.\href{../valid/conventions.html#context}{\mathsf{types}}[y]) = \href{../syntax/types.html#syntax-comptype}{\mathsf{func}}~[t_1^\ast] \href{../syntax/types.html#syntax-functype}{\rightarrow} [t_2^\ast]
 }{
   C \href{../valid/instructions.html#valid-instr}{\vdash} \href{../syntax/instructions.html#syntax-instr-control}{\mathsf{call\_indirect}}~x~y : [t_1^\ast~\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}] \href{../syntax/types.html#syntax-instrtype}{\rightarrow} [t_2^\ast]
 }\]</div>
@@ -1758,12 +1758,14 @@ which is the case for functions not returning anything.</p>
 <li><p>The return type <span class="math notranslate nohighlight">\(C.\href{../valid/conventions.html#context}{\mathsf{return}}\)</span> must not be absent in the context.</p></li>
 <li><p>The function <span class="math notranslate nohighlight">\(C.\href{../valid/conventions.html#context}{\mathsf{funcs}}[x]\)</span> must be defined in the context.</p></li>
 <li><p>Let <span class="math notranslate nohighlight">\([t_1^\ast] \href{../syntax/types.html#syntax-functype}{\rightarrow} [t_2^\ast]\)</span> be the <a class="reference internal" href="../syntax/types.html#syntax-functype"><span class="std std-ref">function type</span></a> <span class="math notranslate nohighlight">\(C.\href{../valid/conventions.html#context}{\mathsf{funcs}}[x]\)</span>.</p></li>
-<li><p>The <a class="reference internal" href="../syntax/types.html#syntax-resulttype"><span class="std std-ref">result type</span></a> <span class="math notranslate nohighlight">\([t_2^\ast]\)</span> must be the same as <span class="math notranslate nohighlight">\(C.\href{../valid/conventions.html#context}{\mathsf{return}}\)</span>.</p></li>
+<li><p>The <a class="reference internal" href="../syntax/types.html#syntax-resulttype"><span class="std std-ref">result type</span></a> <span class="math notranslate nohighlight">\([t_2^\ast]\)</span> must <a class="reference internal" href="matching.html#match-resulttype"><span class="std std-ref">match</span></a> <span class="math notranslate nohighlight">\(C.\href{../valid/conventions.html#context}{\mathsf{return}}\)</span>.</p></li>
 <li><p>Then the instruction is valid with any <a class="reference internal" href="types.html#valid-instrtype"><span class="std std-ref">valid</span></a> type <span class="math notranslate nohighlight">\([t_3^\ast~t_1^\ast] \href{../syntax/types.html#syntax-instrtype}{\rightarrow} [t_4^\ast]\)</span>.</p></li>
 </ul>
 <div class="math notranslate nohighlight">
 \[\frac{
-  C.\href{../valid/conventions.html#context}{\mathsf{funcs}}[x] = [t_1^\ast] \href{../syntax/types.html#syntax-functype}{\rightarrow} C.\href{../valid/conventions.html#context}{\mathsf{return}}
+  C.\href{../valid/conventions.html#context}{\mathsf{funcs}}[x] = [t_1^\ast] \href{../syntax/types.html#syntax-functype}{\rightarrow} [t_2^\ast]
+  \qquad
+  C \href{../valid/matching.html#match-resulttype}{\vdash} [t_2^\ast] \href{../valid/matching.html#match-resulttype}{\leq} C.\href{../valid/conventions.html#context}{\mathsf{return}}
 }{
   C \href{../valid/instructions.html#valid-instr}{\vdash} \href{../syntax/instructions.html#syntax-instr-control}{\mathsf{return\_call}}~x : [t_3^\ast~t_1^\ast] \href{../syntax/types.html#syntax-instrtype}{\rightarrow} [t_4^\ast]
 }\]</div>
@@ -1776,13 +1778,15 @@ which is the case for functions not returning anything.</p>
 <span id="valid-return-call-ref"></span><h3><span class="math notranslate nohighlight">\(\href{../syntax/instructions.html#syntax-instr-control}{\mathsf{return\_call\_ref}}~x\)</span><a class="headerlink" href="#xref-syntax-instructions-syntax-instr-control-mathsf-return-call-ref-x" title="Permalink to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>The type <span class="math notranslate nohighlight">\(C.\href{../valid/conventions.html#context}{\mathsf{types}}[x]\)</span> must be defined in the context.</p></li>
-<li><p>Let <span class="math notranslate nohighlight">\([t_1^\ast] \href{../syntax/types.html#syntax-functype}{\rightarrow} [t_2^\ast]\)</span> be the <a class="reference internal" href="../syntax/types.html#syntax-functype"><span class="std std-ref">function type</span></a> <span class="math notranslate nohighlight">\(C.\href{../valid/conventions.html#context}{\mathsf{types}}[x]\)</span>.</p></li>
-<li><p>The <a class="reference internal" href="../syntax/types.html#syntax-resulttype"><span class="std std-ref">result type</span></a> <span class="math notranslate nohighlight">\([t_2^\ast]\)</span> must be the same as <span class="math notranslate nohighlight">\(C.\href{../valid/conventions.html#context}{\mathsf{return}}\)</span>.</p></li>
+<li><p>The <a class="reference internal" href="conventions.html#aux-expand-deftype"><span class="std std-ref">expansion</span></a> of <span class="math notranslate nohighlight">\(C.\href{../valid/conventions.html#context}{\mathsf{types}}[x]\)</span> must be a <a class="reference internal" href="../syntax/types.html#syntax-functype"><span class="std std-ref">function type</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-comptype}{\mathsf{func}}~[t_1^\ast] \href{../syntax/types.html#syntax-functype}{\rightarrow} [t_2^\ast]\)</span>.</p></li>
+<li><p>The <a class="reference internal" href="../syntax/types.html#syntax-resulttype"><span class="std std-ref">result type</span></a> <span class="math notranslate nohighlight">\([t_2^\ast]\)</span> must <a class="reference internal" href="matching.html#match-resulttype"><span class="std std-ref">match</span></a> <span class="math notranslate nohighlight">\(C.\href{../valid/conventions.html#context}{\mathsf{return}}\)</span>.</p></li>
 <li><p>Then the instruction is valid with any <a class="reference internal" href="types.html#valid-instrtype"><span class="std std-ref">valid</span></a> type <span class="math notranslate nohighlight">\([t_3^\ast~t_1^\ast~(\href{../syntax/types.html#syntax-reftype}{\mathsf{ref}}~\href{../syntax/types.html#syntax-reftype}{\mathsf{null}}~x)] \href{../syntax/types.html#syntax-instrtype}{\rightarrow} [t_4^\ast]\)</span>.</p></li>
 </ul>
 <div class="math notranslate nohighlight">
 \[\frac{
-  C.\href{../valid/conventions.html#context}{\mathsf{types}}[x] = [t_1^\ast] \href{../syntax/types.html#syntax-functype}{\rightarrow} C.\href{../valid/conventions.html#context}{\mathsf{return}}
+  \href{../valid/conventions.html#aux-expand-deftype}{\mathrm{expand}}(C.\href{../valid/conventions.html#context}{\mathsf{types}}[x]) = \href{../syntax/types.html#syntax-comptype}{\mathsf{func}}~[t_1^\ast] \href{../syntax/types.html#syntax-functype}{\rightarrow} [t_2^\ast]
+  \qquad
+  C \href{../valid/matching.html#match-resulttype}{\vdash} [t_2^\ast] \href{../valid/matching.html#match-resulttype}{\leq} C.\href{../valid/conventions.html#context}{\mathsf{return}}
 }{
   C \href{../valid/instructions.html#valid-instr}{\vdash} \href{../syntax/instructions.html#syntax-instr-control}{\mathsf{call\_ref}}~x : [t_3^\ast~t_1^\ast~(\href{../syntax/types.html#syntax-reftype}{\mathsf{ref}}~\href{../syntax/types.html#syntax-reftype}{\mathsf{null}}~x)] \href{../syntax/types.html#syntax-instrtype}{\rightarrow} [t_4^\ast]
 }\]</div>
@@ -1796,18 +1800,22 @@ which is the case for functions not returning anything.</p>
 <ul class="simple">
 <li><p>The return type <span class="math notranslate nohighlight">\(C.\href{../valid/conventions.html#context}{\mathsf{return}}\)</span> must not be empty in the context.</p></li>
 <li><p>The table <span class="math notranslate nohighlight">\(C.\href{../valid/conventions.html#context}{\mathsf{tables}}[x]\)</span> must be defined in the context.</p></li>
-<li><p>Let <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-limits}{\mathit{limits}}~\href{../syntax/types.html#syntax-reftype}{\mathit{reftype}}\)</span> be the <a class="reference internal" href="../syntax/types.html#syntax-tabletype"><span class="std std-ref">table type</span></a> <span class="math notranslate nohighlight">\(C.\href{../valid/conventions.html#context}{\mathsf{tables}}[x]\)</span>.</p></li>
-<li><p>The <a class="reference internal" href="../syntax/types.html#syntax-reftype"><span class="std std-ref">reference type</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-reftype}{\mathit{reftype}}\)</span> must be <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-reftype}{\mathsf{funcref}}\)</span>.</p></li>
+<li><p>Let <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-limits}{\mathit{limits}}~t\)</span> be the <a class="reference internal" href="../syntax/types.html#syntax-tabletype"><span class="std std-ref">table type</span></a> <span class="math notranslate nohighlight">\(C.\href{../valid/conventions.html#context}{\mathsf{tables}}[x]\)</span>.</p></li>
+<li><p>The <a class="reference internal" href="../syntax/types.html#syntax-reftype"><span class="std std-ref">reference type</span></a> <span class="math notranslate nohighlight">\(t\)</span> must <a class="reference internal" href="matching.html#match-reftype"><span class="std std-ref">match</span></a> type <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-reftype}{\mathsf{ref}}~\href{../syntax/types.html#syntax-reftype}{\mathsf{null}}~\href{../syntax/types.html#syntax-heaptype}{\mathsf{func}}\)</span>.</p></li>
 <li><p>The type <span class="math notranslate nohighlight">\(C.\href{../valid/conventions.html#context}{\mathsf{types}}[y]\)</span> must be defined in the context.</p></li>
-<li><p>Let <span class="math notranslate nohighlight">\([t_1^\ast] \href{../syntax/types.html#syntax-functype}{\rightarrow} [t_2^\ast]\)</span> be the <a class="reference internal" href="../syntax/types.html#syntax-functype"><span class="std std-ref">function type</span></a> <span class="math notranslate nohighlight">\(C.\href{../valid/conventions.html#context}{\mathsf{types}}[y]\)</span>.</p></li>
-<li><p>The <a class="reference internal" href="../syntax/types.html#syntax-resulttype"><span class="std std-ref">result type</span></a> <span class="math notranslate nohighlight">\([t_2^\ast]\)</span> must be the same as <span class="math notranslate nohighlight">\(C.\href{../valid/conventions.html#context}{\mathsf{return}}\)</span>.</p></li>
+<li><p>The <a class="reference internal" href="conventions.html#aux-expand-deftype"><span class="std std-ref">expansion</span></a> of <span class="math notranslate nohighlight">\(C.\href{../valid/conventions.html#context}{\mathsf{types}}[y]\)</span> must be a <a class="reference internal" href="../syntax/types.html#syntax-functype"><span class="std std-ref">function type</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-comptype}{\mathsf{func}}~[t_1^\ast] \href{../syntax/types.html#syntax-functype}{\rightarrow} [t_2^\ast]\)</span>.</p></li>
+<li><p>The <a class="reference internal" href="../syntax/types.html#syntax-resulttype"><span class="std std-ref">result type</span></a> <span class="math notranslate nohighlight">\([t_2^\ast]\)</span> must <a class="reference internal" href="matching.html#match-resulttype"><span class="std std-ref">match</span></a> <span class="math notranslate nohighlight">\(C.\href{../valid/conventions.html#context}{\mathsf{return}}\)</span>.</p></li>
 <li><p>Then the instruction is valid with type <span class="math notranslate nohighlight">\([t_3^\ast~t_1^\ast~\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}] \href{../syntax/types.html#syntax-instrtype}{\rightarrow} [t_4^\ast]\)</span>, for any sequences of <a class="reference internal" href="../syntax/types.html#syntax-valtype"><span class="std std-ref">value types</span></a> <span class="math notranslate nohighlight">\(t_3^\ast\)</span> and <span class="math notranslate nohighlight">\(t_4^\ast\)</span>.</p></li>
 </ul>
 <div class="math notranslate nohighlight">
 \[\frac{
-  C.\href{../valid/conventions.html#context}{\mathsf{tables}}[x] = \href{../syntax/types.html#syntax-limits}{\mathit{limits}}~\href{../syntax/types.html#syntax-reftype}{\mathsf{funcref}}
+  C.\href{../valid/conventions.html#context}{\mathsf{tables}}[x] = \href{../syntax/types.html#syntax-limits}{\mathit{limits}}~t
   \qquad
-  C.\href{../valid/conventions.html#context}{\mathsf{types}}[y] = [t_1^\ast] \href{../syntax/types.html#syntax-functype}{\rightarrow} C.\href{../valid/conventions.html#context}{\mathsf{return}}
+  C \href{../valid/matching.html#match-valtype}{\vdash} t \href{../valid/matching.html#match-reftype}{\leq} \href{../syntax/types.html#syntax-reftype}{\mathsf{ref}}~\href{../syntax/types.html#syntax-reftype}{\mathsf{null}}~\href{../syntax/types.html#syntax-heaptype}{\mathsf{func}}
+  \qquad
+  \href{../valid/conventions.html#aux-expand-deftype}{\mathrm{expand}}(C.\href{../valid/conventions.html#context}{\mathsf{types}}[y]) = \href{../syntax/types.html#syntax-comptype}{\mathsf{func}}~[t_1^\ast] \href{../syntax/types.html#syntax-functype}{\rightarrow} [t_2^\ast]
+  \qquad
+  C \href{../valid/matching.html#match-resulttype}{\vdash} [t_2^\ast] \href{../valid/matching.html#match-resulttype}{\leq} C.\href{../valid/conventions.html#context}{\mathsf{return}}
 }{
   C \href{../valid/instructions.html#valid-instr}{\vdash} \href{../syntax/instructions.html#syntax-instr-control}{\mathsf{return\_call\_indirect}}~x~y : [t_3^\ast~t_1^\ast~\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}] \href{../syntax/types.html#syntax-instrtype}{\rightarrow} [t_4^\ast]
 }\]</div>
@@ -1834,29 +1842,29 @@ which is the case for functions not returning anything.</p>
 <section id="non-empty-instruction-sequence-xref-syntax-instructions-syntax-instr-mathit-instr-xref-syntax-instructions-syntax-instr-mathit-instr-ast">
 <h3>Non-empty Instruction Sequence: <span class="math notranslate nohighlight">\(\href{../syntax/instructions.html#syntax-instr}{\mathit{instr}}~{\href{../syntax/instructions.html#syntax-instr}{\mathit{instr}}'}^\ast\)</span><a class="headerlink" href="#non-empty-instruction-sequence-xref-syntax-instructions-syntax-instr-mathit-instr-xref-syntax-instructions-syntax-instr-mathit-instr-ast" title="Permalink to this heading">¶</a></h3>
 <ul class="simple">
-<li><p>The instruction <span class="math notranslate nohighlight">\(\href{../syntax/instructions.html#syntax-instr}{\mathit{instr}}\)</span> must be valid with some type <span class="math notranslate nohighlight">\([t_1^\ast] \def\mathdef4606#1{\rightarrow_{#1}}\mathdef4606{x_1^\ast} [t_2^\ast]\)</span>.</p></li>
+<li><p>The instruction <span class="math notranslate nohighlight">\(\href{../syntax/instructions.html#syntax-instr}{\mathit{instr}}\)</span> must be valid with some type <span class="math notranslate nohighlight">\([t_1^\ast] \def\mathdef4610#1{\rightarrow_{#1}}\mathdef4610{x_1^\ast} [t_2^\ast]\)</span>.</p></li>
 <li><p>Let <span class="math notranslate nohighlight">\(C'\)</span> be the same <a class="reference internal" href="conventions.html#context"><span class="std std-ref">context</span></a> as <span class="math notranslate nohighlight">\(C\)</span>,
 but with:</p>
 <ul>
 <li><p><span class="math notranslate nohighlight">\(\href{../valid/conventions.html#context}{\mathsf{locals}}\)</span> the same as in C, except that for every <a class="reference internal" href="../syntax/modules.html#syntax-localidx"><span class="std std-ref">local index</span></a> <span class="math notranslate nohighlight">\(x\)</span> in <span class="math notranslate nohighlight">\(x_1^\ast\)</span>, the <a class="reference internal" href="conventions.html#syntax-localtype"><span class="std std-ref">local type</span></a> <span class="math notranslate nohighlight">\(\href{../valid/conventions.html#context}{\mathsf{locals}}[x]\)</span> has been updated to <a class="reference internal" href="conventions.html#syntax-init"><span class="std std-ref">initialization status</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-init}{\mathrel{\mbox{set}}}\)</span>.</p></li>
 </ul>
 </li>
-<li><p>Under the context <span class="math notranslate nohighlight">\(C'\)</span>, the instruction sequence <span class="math notranslate nohighlight">\({\href{../syntax/instructions.html#syntax-instr}{\mathit{instr}}'}^\ast\)</span> must be valid with some type <span class="math notranslate nohighlight">\([t_2^\ast] \def\mathdef4607#1{\rightarrow_{#1}}\mathdef4607{x_2^\ast} [t_3^\ast]\)</span>.</p></li>
-<li><p>Then the combined instruction sequence is valid with type <span class="math notranslate nohighlight">\([t_1^\ast] \def\mathdef4608#1{\rightarrow_{#1}}\mathdef4608{x_1^\ast x_2^\ast} [t_3^\ast]\)</span>.</p></li>
+<li><p>Under the context <span class="math notranslate nohighlight">\(C'\)</span>, the instruction sequence <span class="math notranslate nohighlight">\({\href{../syntax/instructions.html#syntax-instr}{\mathit{instr}}'}^\ast\)</span> must be valid with some type <span class="math notranslate nohighlight">\([t_2^\ast] \def\mathdef4611#1{\rightarrow_{#1}}\mathdef4611{x_2^\ast} [t_3^\ast]\)</span>.</p></li>
+<li><p>Then the combined instruction sequence is valid with type <span class="math notranslate nohighlight">\([t_1^\ast] \def\mathdef4612#1{\rightarrow_{#1}}\mathdef4612{x_1^\ast x_2^\ast} [t_3^\ast]\)</span>.</p></li>
 </ul>
 <div class="math notranslate nohighlight">
 \[\begin{split}\frac{
   \begin{array}{&#64;{}l&#64;{\qquad}l&#64;{}}
-  C \href{../valid/instructions.html#valid-instr}{\vdash} \href{../syntax/instructions.html#syntax-instr}{\mathit{instr}} : [t_1^\ast] \def\mathdef4609#1{\rightarrow_{#1}}\mathdef4609{x_1^\ast} [t_2^\ast]
+  C \href{../valid/instructions.html#valid-instr}{\vdash} \href{../syntax/instructions.html#syntax-instr}{\mathit{instr}} : [t_1^\ast] \def\mathdef4613#1{\rightarrow_{#1}}\mathdef4613{x_1^\ast} [t_2^\ast]
   &amp;
   (C.\href{../valid/conventions.html#context}{\mathsf{locals}}[x_1] = \href{../syntax/types.html#syntax-init}{\mathit{init}}~t)^\ast
   \\
-  C' \href{../valid/instructions.html#valid-instr-seq}{\vdash} {\href{../syntax/instructions.html#syntax-instr}{\mathit{instr}}'}^\ast : [t_2^\ast] \def\mathdef4610#1{\rightarrow_{#1}}\mathdef4610{x_2^\ast} [t_3^\ast]
+  C' \href{../valid/instructions.html#valid-instr-seq}{\vdash} {\href{../syntax/instructions.html#syntax-instr}{\mathit{instr}}'}^\ast : [t_2^\ast] \def\mathdef4614#1{\rightarrow_{#1}}\mathdef4614{x_2^\ast} [t_3^\ast]
   &amp;
   C' = C~(\href{../syntax/conventions.html#notation-replace}{\mathrel{\mbox{with}}} C.\href{../valid/conventions.html#context}{\mathsf{locals}}[x_1] = \href{../syntax/types.html#syntax-init}{\mathrel{\mbox{set}}}~t)^\ast
   \end{array}
 }{
-  C \href{../valid/instructions.html#valid-instr-seq}{\vdash} \href{../syntax/instructions.html#syntax-instr}{\mathit{instr}}~{\href{../syntax/instructions.html#syntax-instr}{\mathit{instr}}'}^\ast : [t_1^\ast] \def\mathdef4611#1{\rightarrow_{#1}}\mathdef4611{x_1^\ast x_2^\ast} [t_2^\ast~t_3^\ast]
+  C \href{../valid/instructions.html#valid-instr-seq}{\vdash} \href{../syntax/instructions.html#syntax-instr}{\mathit{instr}}~{\href{../syntax/instructions.html#syntax-instr}{\mathit{instr}}'}^\ast : [t_1^\ast] \def\mathdef4615#1{\rightarrow_{#1}}\mathdef4615{x_1^\ast x_2^\ast} [t_2^\ast~t_3^\ast]
 }\end{split}\]</div>
 </section>
 <section id="subsumption-for-xref-syntax-instructions-syntax-instr-mathit-instr-ast">

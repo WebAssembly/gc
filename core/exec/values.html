@@ -202,23 +202,23 @@ That ensures that it is compatible with any nullable type in that hierarchy.</p>
   S \href{../appendix/properties.html#valid-val}{\vdash} \href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}func}}~a : \href{../syntax/types.html#syntax-reftype}{\mathsf{ref}}~\href{../valid/conventions.html#syntax-deftype}{\mathit{deftype}}
 }\]</div>
 </section>
-<section id="host-references-xref-exec-runtime-syntax-ref-host-mathsf-ref-host-a">
-<h3><a class="reference internal" href="runtime.html#syntax-ref-host"><span class="std std-ref">Host References</span></a> <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-ref.host}{\mathsf{ref{.}host}}~a\)</span><a class="headerlink" href="#host-references-xref-exec-runtime-syntax-ref-host-mathsf-ref-host-a" title="Permalink to this heading">¶</a></h3>
+<section id="host-references-xref-exec-runtime-syntax-ref-mathsf-ref-host-a">
+<h3><a class="reference internal" href="runtime.html#syntax-ref-host"><span class="std std-ref">Host References</span></a> <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}host}}~a\)</span><a class="headerlink" href="#host-references-xref-exec-runtime-syntax-ref-mathsf-ref-host-a" title="Permalink to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>The value is valid with <a class="reference internal" href="../syntax/types.html#syntax-reftype"><span class="std std-ref">reference type</span></a> <span class="math notranslate nohighlight">\((\href{../syntax/types.html#syntax-reftype}{\mathsf{ref}}~\href{../syntax/types.html#syntax-heaptype}{\mathsf{any}})\)</span>.</p></li>
 </ul>
 <div class="math notranslate nohighlight">
 \[\frac{
 }{
-  S \href{../appendix/properties.html#valid-val}{\vdash} \href{../exec/runtime.html#syntax-ref.host}{\mathsf{ref{.}host}}~a : \href{../syntax/types.html#syntax-reftype}{\mathsf{ref}}~\href{../syntax/types.html#syntax-heaptype}{\mathsf{any}}
+  S \href{../appendix/properties.html#valid-val}{\vdash} \href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}host}}~a : \href{../syntax/types.html#syntax-reftype}{\mathsf{ref}}~\href{../syntax/types.html#syntax-heaptype}{\mathsf{any}}
 }\]</div>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>A host reference is considered internalized by this rule.</p>
 </div>
 </section>
-<section id="external-references-xref-exec-runtime-syntax-ref-extern-mathsf-ref-extern-xref-exec-runtime-syntax-ref-mathit-ref">
-<h3><a class="reference internal" href="runtime.html#syntax-ref-extern"><span class="std std-ref">External References</span></a> <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-ref.extern}{\mathsf{ref{.}extern}}~\href{../exec/runtime.html#syntax-ref}{\mathit{ref}}\)</span><a class="headerlink" href="#external-references-xref-exec-runtime-syntax-ref-extern-mathsf-ref-extern-xref-exec-runtime-syntax-ref-mathit-ref" title="Permalink to this heading">¶</a></h3>
+<section id="external-references-xref-exec-runtime-syntax-ref-mathsf-ref-extern-xref-exec-runtime-syntax-ref-mathit-ref">
+<h3><a class="reference internal" href="runtime.html#syntax-ref-extern"><span class="std std-ref">External References</span></a> <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}extern}}~\href{../exec/runtime.html#syntax-ref}{\mathit{ref}}\)</span><a class="headerlink" href="#external-references-xref-exec-runtime-syntax-ref-mathsf-ref-extern-xref-exec-runtime-syntax-ref-mathit-ref" title="Permalink to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>The reference value <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-ref}{\mathit{ref}}\)</span> must be valid with some <a class="reference internal" href="../syntax/types.html#syntax-reftype"><span class="std std-ref">reference type</span></a> <span class="math notranslate nohighlight">\((\href{../syntax/types.html#syntax-reftype}{\mathsf{ref}}~\href{../syntax/types.html#syntax-reftype}{\mathsf{null}}^?~t)\)</span>.</p></li>
 <li><p>The <a class="reference internal" href="../syntax/types.html#syntax-heaptype"><span class="std std-ref">heap type</span></a> <span class="math notranslate nohighlight">\(t\)</span> must <a class="reference internal" href="../valid/matching.html#match-heaptype"><span class="std std-ref">match</span></a> the heap type <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-heaptype}{\mathsf{any}}\)</span>.</p></li>
@@ -230,7 +230,7 @@ That ensures that it is compatible with any nullable type in that hierarchy.</p>
   \qquad
   \href{../valid/matching.html#match-heaptype}{\vdash} t \href{../valid/matching.html#match-heaptype}{\leq} \href{../syntax/types.html#syntax-heaptype}{\mathsf{any}}
 }{
-  S \href{../appendix/properties.html#valid-val}{\vdash} \href{../exec/runtime.html#syntax-ref.extern}{\mathsf{ref{.}extern}} : \href{../syntax/types.html#syntax-reftype}{\mathsf{ref}}~\href{../syntax/types.html#syntax-reftype}{\mathsf{null}}^?~\href{../syntax/types.html#syntax-heaptype}{\mathsf{extern}}
+  S \href{../appendix/properties.html#valid-val}{\vdash} \href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}extern}}~\href{../exec/runtime.html#syntax-ref}{\mathit{ref}} : \href{../syntax/types.html#syntax-reftype}{\mathsf{ref}}~\href{../syntax/types.html#syntax-reftype}{\mathsf{null}}^?~\href{../syntax/types.html#syntax-heaptype}{\mathsf{extern}}
 }\]</div>
 </section>
 </section>

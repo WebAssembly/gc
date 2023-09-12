@@ -253,6 +253,12 @@
 <tr class="row-odd"><td><p><a class="reference internal" href="properties.html#valid-result"><span class="std std-ref">Result</span></a></p></td>
 <td><p><span class="math notranslate nohighlight">\(S \href{../appendix/properties.html#valid-result}{\vdash} \href{../exec/runtime.html#syntax-result}{\mathit{result}} : \href{../syntax/types.html#syntax-resulttype}{\mathit{resulttype}}\)</span></p></td>
 </tr>
+<tr class="row-even"><td><p><a class="reference internal" href="properties.html#valid-packedval"><span class="std std-ref">Packed value</span></a></p></td>
+<td><p><span class="math notranslate nohighlight">\(S \href{../appendix/properties.html#valid-packedval}{\vdash} \href{../exec/runtime.html#syntax-packedval}{\mathit{packedval}} : \href{../syntax/types.html#syntax-packedtype}{\mathit{packedtype}}\)</span></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="properties.html#valid-fieldval"><span class="std std-ref">Field value</span></a></p></td>
+<td><p><span class="math notranslate nohighlight">\(S \href{../appendix/properties.html#valid-fieldval}{\vdash} \href{../exec/runtime.html#syntax-fieldval}{\mathit{fieldval}} : \href{../syntax/types.html#syntax-storagetype}{\mathit{storagetype}}\)</span></p></td>
+</tr>
 <tr class="row-even"><td><p><a class="reference internal" href="../exec/values.html#valid-externval"><span class="std std-ref">External value</span></a></p></td>
 <td><p><span class="math notranslate nohighlight">\(S \href{../exec/values.html#valid-externval}{\vdash} \href{../exec/runtime.html#syntax-externval}{\mathit{externval}} : \href{../syntax/types.html#syntax-externtype}{\mathit{externtype}}\)</span></p></td>
 </tr>
@@ -273,6 +279,12 @@
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="properties.html#valid-datainst"><span class="std std-ref">Data instance</span></a></p></td>
 <td><p><span class="math notranslate nohighlight">\(S \href{../appendix/properties.html#valid-datainst}{\vdash} \href{../exec/runtime.html#syntax-datainst}{\mathit{datainst}} \mathrel{\mbox{ok}}\)</span></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="properties.html#valid-structinst"><span class="std std-ref">Structure instance</span></a></p></td>
+<td><p><span class="math notranslate nohighlight">\(S \href{../appendix/properties.html#valid-structinst}{\vdash} \href{../exec/runtime.html#syntax-structinst}{\mathit{structinst}} \mathrel{\mbox{ok}}\)</span></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="properties.html#valid-arrayinst"><span class="std std-ref">Array instance</span></a></p></td>
+<td><p><span class="math notranslate nohighlight">\(S \href{../appendix/properties.html#valid-arrayinst}{\vdash} \href{../exec/runtime.html#syntax-arrayinst}{\mathit{arrayinst}} \mathrel{\mbox{ok}}\)</span></p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="properties.html#valid-exportinst"><span class="std std-ref">Export instance</span></a></p></td>
 <td><p><span class="math notranslate nohighlight">\(S \href{../appendix/properties.html#valid-exportinst}{\vdash} \href{../exec/runtime.html#syntax-exportinst}{\mathit{exportinst}} \mathrel{\mbox{ok}}\)</span></p></td>
@@ -426,6 +438,12 @@
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="properties.html#extend-datainst"><span class="std std-ref">Data instance</span></a></p></td>
 <td><p><span class="math notranslate nohighlight">\(\href{../appendix/properties.html#extend-datainst}{\vdash} \href{../exec/runtime.html#syntax-datainst}{\mathit{datainst}}_1 \href{../appendix/properties.html#extend}{\preceq} \href{../exec/runtime.html#syntax-datainst}{\mathit{datainst}}_2\)</span></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="properties.html#extend-structinst"><span class="std std-ref">Structure instance</span></a></p></td>
+<td><p><span class="math notranslate nohighlight">\(\href{../appendix/properties.html#extend-structinst}{\vdash} \href{../exec/runtime.html#syntax-structinst}{\mathit{structinst}}_1 \href{../appendix/properties.html#extend}{\preceq} \href{../exec/runtime.html#syntax-structinst}{\mathit{structinst}}_2\)</span></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="properties.html#extend-arrayinst"><span class="std std-ref">Array instance</span></a></p></td>
+<td><p><span class="math notranslate nohighlight">\(\href{../appendix/properties.html#extend-arrayinst}{\vdash} \href{../exec/runtime.html#syntax-arrayinst}{\mathit{arrayinst}}_1 \href{../appendix/properties.html#extend}{\preceq} \href{../exec/runtime.html#syntax-arrayinst}{\mathit{arrayinst}}_2\)</span></p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="properties.html#extend-store"><span class="std std-ref">Store</span></a></p></td>
 <td><p><span class="math notranslate nohighlight">\(\href{../appendix/properties.html#extend-store}{\vdash} \href{../exec/runtime.html#syntax-store}{\mathit{store}}_1 \href{../appendix/properties.html#extend}{\preceq} \href{../exec/runtime.html#syntax-store}{\mathit{store}}_2\)</span></p></td>

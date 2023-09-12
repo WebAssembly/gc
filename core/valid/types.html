@@ -134,17 +134,6 @@ However, restrictions apply to most other types, such as <a class="reference int
   C \href{../valid/types.html#valid-heaptype}{\vdash} \href{../syntax/modules.html#syntax-typeidx}{\mathit{typeidx}} \mathrel{\mbox{ok}}
 }\]</div>
 </section>
-<section id="xref-valid-conventions-syntax-heaptype-ext-mathsf-bot">
-<h3><span class="math notranslate nohighlight">\(\href{../valid/conventions.html#syntax-heaptype-ext}{\mathsf{bot}}\)</span><a class="headerlink" href="#xref-valid-conventions-syntax-heaptype-ext-mathsf-bot" title="Permalink to this heading">¶</a></h3>
-<ul class="simple">
-<li><p>The heap type is valid.</p></li>
-</ul>
-<div class="math notranslate nohighlight">
-\[\frac{
-}{
-  C \href{../valid/types.html#valid-heaptype}{\vdash} \href{../valid/conventions.html#syntax-heaptype-ext}{\mathsf{bot}} \mathrel{\mbox{ok}}
-}\]</div>
-</section>
 </section>
 <section id="reference-types">
 <span id="valid-reftype"></span><span id="index-3"></span><h2>Reference Types<a class="headerlink" href="#reference-types" title="Permalink to this heading">¶</a></h2>
@@ -164,19 +153,8 @@ However, restrictions apply to most other types, such as <a class="reference int
 </section>
 </section>
 <section id="value-types">
-<span id="valid-valtype-bot"></span><span id="valid-valtype"></span><span id="index-4"></span><h2>Value Types<a class="headerlink" href="#value-types" title="Permalink to this heading">¶</a></h2>
-<p>Valid <a class="reference internal" href="../syntax/types.html#syntax-valtype"><span class="std std-ref">value types</span></a> are either valid <a class="reference internal" href="#valid-numtype"><span class="std std-ref">number type</span></a>,  <a class="reference internal" href="#valid-reftype"><span class="std std-ref">reference type</span></a>, or the <a class="reference internal" href="conventions.html#syntax-valtype-ext"><span class="std std-ref">bottom type</span></a>.</p>
-<section id="xref-valid-conventions-syntax-valtype-ext-mathsf-bot">
-<h3><span class="math notranslate nohighlight">\(\href{../valid/conventions.html#syntax-valtype-ext}{\mathsf{bot}}\)</span><a class="headerlink" href="#xref-valid-conventions-syntax-valtype-ext-mathsf-bot" title="Permalink to this heading">¶</a></h3>
-<ul class="simple">
-<li><p>The value type is valid.</p></li>
-</ul>
-<div class="math notranslate nohighlight">
-\[\frac{
-}{
-  C \href{../valid/types.html#valid-valtype}{\vdash} \href{../valid/conventions.html#syntax-valtype-ext}{\mathsf{bot}} \mathrel{\mbox{ok}}
-}\]</div>
-</section>
+<span id="valid-valtype"></span><span id="index-4"></span><h2>Value Types<a class="headerlink" href="#value-types" title="Permalink to this heading">¶</a></h2>
+<p>Valid <a class="reference internal" href="../syntax/types.html#syntax-valtype"><span class="std std-ref">value types</span></a> are either valid <a class="reference internal" href="#valid-numtype"><span class="std std-ref">number types</span></a>, valid <a class="reference internal" href="#valid-vectype"><span class="std std-ref">vector types</span></a>, or valid <a class="reference internal" href="#valid-reftype"><span class="std std-ref">reference types</span></a>.</p>
 </section>
 <section id="block-types">
 <span id="valid-blocktype"></span><span id="index-5"></span><h2>Block Types<a class="headerlink" href="#block-types" title="Permalink to this heading">¶</a></h2>
@@ -243,7 +221,7 @@ However, restrictions apply to most other types, such as <a class="reference int
   \qquad
   (C.\href{../valid/conventions.html#context}{\mathsf{locals}}[x] = \href{../valid/conventions.html#syntax-localtype}{\mathit{localtype}})^\ast
 }{
-  C \href{../valid/types.html#valid-functype}{\vdash} [t_1^\ast] \def\mathdef4735#1{\rightarrow_{#1}}\mathdef4735{x^\ast} [t_2^\ast] \mathrel{\mbox{ok}}
+  C \href{../valid/types.html#valid-functype}{\vdash} [t_1^\ast] \def\mathdef4739#1{\rightarrow_{#1}}\mathdef4739{x^\ast} [t_2^\ast] \mathrel{\mbox{ok}}
 }\]</div>
 </section>
 </section>
@@ -344,10 +322,6 @@ However, restrictions apply to most other types, such as <a class="reference int
 <p><a class="reference internal" href="../syntax/types.html#syntax-rectype"><span class="std std-ref">Recursive types</span></a> are validated for a specific <a class="reference internal" href="../syntax/modules.html#syntax-typeidx"><span class="std std-ref">type index</span></a> that denotes the index of the type defined by the recursive group.</p>
 <section id="xref-syntax-types-syntax-rectype-mathsf-rec-xref-syntax-types-syntax-subtype-mathit-subtype-ast">
 <h3><span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-rectype}{\mathsf{rec}}~\href{../syntax/types.html#syntax-subtype}{\mathit{subtype}}^\ast\)</span><a class="headerlink" href="#xref-syntax-types-syntax-rectype-mathsf-rec-xref-syntax-types-syntax-subtype-mathit-subtype-ast" title="Permalink to this heading">¶</a></h3>
-<div class="admonition-todo admonition" id="id2">
-<p class="admonition-title">Todo</p>
-<p>add version of this for extended type syntax to appendix</p>
-</div>
 <ul class="simple">
 <li><p>Either the sequence <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-subtype}{\mathit{subtype}}^\ast\)</span> is empty.</p></li>
 <li><p>Or:</p>
@@ -383,7 +357,7 @@ However, restrictions apply to most other types, such as <a class="reference int
 <li><p>The <a class="reference internal" href="../syntax/modules.html#syntax-typeidx"><span class="std std-ref">type index</span></a> <span class="math notranslate nohighlight">\(y_i\)</span> must exist in the context <span class="math notranslate nohighlight">\(C\)</span>.</p></li>
 <li><p>Let <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-subtype}{\mathit{subtype}}_i\)</span> be the <a class="reference internal" href="conventions.html#aux-unroll-deftype"><span class="std std-ref">unrolling</span></a> of the <a class="reference internal" href="conventions.html#syntax-deftype"><span class="std std-ref">defined type</span></a> <span class="math notranslate nohighlight">\(C.\href{../valid/conventions.html#context}{\mathsf{types}}[y_i]\)</span>.</p></li>
 <li><p>The <a class="reference internal" href="../syntax/types.html#syntax-subtype"><span class="std std-ref">sub type</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-subtype}{\mathit{subtype}}_i\)</span> must not contain <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-subtype}{\mathsf{final}}\)</span>.</p></li>
-<li><p>Let <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-comptype}{\mathit{comptype}}'_i\)</span> be the <a class="reference internal" href="conventions.html#aux-expand-deftype"><span class="std std-ref">expansion</span></a> of the <a class="reference internal" href="conventions.html#syntax-deftype"><span class="std std-ref">defined type</span></a> <span class="math notranslate nohighlight">\(C.\href{../valid/conventions.html#context}{\mathsf{types}}[y_i]\)</span>.</p></li>
+<li><p>Let <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-comptype}{\mathit{comptype}}'_i\)</span> be the <a class="reference internal" href="../syntax/types.html#syntax-comptype"><span class="std std-ref">composite type</span></a> in <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-subtype}{\mathit{subtype}}_i\)</span>.</p></li>
 <li><p>The <a class="reference internal" href="../syntax/types.html#syntax-comptype"><span class="std std-ref">composite type</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-comptype}{\mathit{comptype}}\)</span> must <a class="reference internal" href="matching.html#match-comptype"><span class="std std-ref">match</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-comptype}{\mathit{comptype}}'_i\)</span>.</p></li>
 </ul>
 </li>
@@ -574,8 +548,8 @@ preventing cyclic subtype hierarchies.</p>
 <section id="defaultable-types">
 <span id="valid-defaultable"></span><span id="index-18"></span><h2>Defaultable Types<a class="headerlink" href="#defaultable-types" title="Permalink to this heading">¶</a></h2>
 <p>A type is <em>defaultable</em> if it has a <a class="reference internal" href="../exec/runtime.html#default-val"><span class="std std-ref">default value</span></a> for initialization.</p>
-<section id="id3">
-<h3>Value Types<a class="headerlink" href="#id3" title="Permalink to this heading">¶</a></h3>
+<section id="id2">
+<h3>Value Types<a class="headerlink" href="#id2" title="Permalink to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>A defaultable <a class="reference internal" href="../syntax/types.html#syntax-valtype"><span class="std std-ref">value type</span></a> <span class="math notranslate nohighlight">\(t\)</span> must be:</p>
 <ul>
