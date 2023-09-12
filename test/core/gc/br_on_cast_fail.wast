@@ -102,14 +102,14 @@
 ;; Concrete Types
 
 (module
-  (type $t0 (sub (struct)))
-  (type $t1 (sub $t0 (struct (field i32))))
-  (type $t1' (sub $t0 (struct (field i32))))
-  (type $t2 (sub $t1 (struct (field i32 i32))))
-  (type $t2' (sub $t1' (struct (field i32 i32))))
-  (type $t3 (sub $t0 (struct (field i32 i32))))
-  (type $t0' (sub $t0 (struct)))
-  (type $t4 (sub $t0' (struct (field i32 i32))))
+  (type $t0 (sub open (struct)))
+  (type $t1 (sub open $t0 (struct (field i32))))
+  (type $t1' (sub open $t0 (struct (field i32))))
+  (type $t2 (sub open $t1 (struct (field i32 i32))))
+  (type $t2' (sub open $t1' (struct (field i32 i32))))
+  (type $t3 (sub open $t0 (struct (field i32 i32))))
+  (type $t0' (sub open $t0 (struct)))
+  (type $t4 (sub open $t0' (struct (field i32 i32))))
 
   (table 20 structref)
 
