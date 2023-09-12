@@ -431,7 +431,7 @@ A :ref:`defined type <syntax-deftype>` :math:`\deftype_1` matches a type :math:`
 
 * Or:
 
-  * Let the :ref:`sub type <syntax-subtype>` :math:`\TSUB~\TFINAL^?~\heaptype^\ast~\comptype` be the result of :ref:`unrolling <aux-unroll-deftype>` :math:`\deftype_1`.
+  * Let the :ref:`sub type <syntax-subtype>` :math:`\TSUB~\ext~\heaptype^\ast~\comptype` be the result of :ref:`unrolling <aux-unroll-deftype>` :math:`\deftype_1`.
 
   * Then there must exist a :ref:`heap type <syntax-heaptype>` :math:`\heaptype_i` in :math:`\heaptype^\ast` that :ref:`matches <match-heaptype>` :math:`\deftype_2`.
 
@@ -446,7 +446,7 @@ A :ref:`defined type <syntax-deftype>` :math:`\deftype_1` matches a type :math:`
 .. math::
    ~\\[-1ex]
    \frac{
-     \unrolldt(\deftype_1) = \TSUB~\TFINAL^?~\heaptype^\ast~\comptype
+     \unrolldt(\deftype_1) = \TSUB~\ext~\heaptype^\ast~\comptype
      \qquad
      C \vdashheaptypematch \heaptype^\ast[i] \matchesheaptype \deftype_2
    }{

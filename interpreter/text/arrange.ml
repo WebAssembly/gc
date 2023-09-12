@@ -77,9 +77,9 @@ let heap_type t = string_of_heap_type t
 let val_type t = string_of_val_type t
 let storage_type t = string_of_storage_type t
 
-let final = function
-  | NoFinal -> ""
-  | Final -> " final"
+let extendability = function
+  | Open -> "open"
+  | Final -> "final"
 
 let decls kind ts = tab kind (atom val_type) ts
 
@@ -103,9 +103,9 @@ let str_type st =
 
 let sub_type = function
   | SubT (Final, [], st) -> str_type st
-  | SubT (fin, xs, st) ->
+  | SubT (ext, xs, st) ->
     Node (String.concat " "
-      (("sub" ^ final fin ):: List.map heap_type xs), [str_type st])
+      (("sub " ^ extendability ext):: List.map heap_type xs), [str_type st])
 
 let rec_type i j st =
   Node ("type $" ^ nat (i + j), [sub_type st])

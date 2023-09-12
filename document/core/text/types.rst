@@ -242,6 +242,7 @@ Composite Types
 .. _text-rectype:
 .. _text-subtype:
 .. _text-deftype:
+.. _text-exttype:
 
 Recursive Types
 ~~~~~~~~~~~~~~~
@@ -255,8 +256,11 @@ Recursive Types
      \text{(}~\text{type}~~\Tid^?~~\X{st}{:}\Tsubtype_I~\text{)}
        &\Rightarrow& \X{st} \\
    \production{sub type} & \Tsubtype_I &::=&
-     \text{(}~\text{sub}~~\text{final}^?~~x^\ast{:\,}\Tvec(\Ttypeidx_I)~~\X{ct}{:}\Tcomptype_I~\text{)}
-       &\Rightarrow& \TSUB~\TFINAL^?~x^\ast~\X{ct} \\
+     \text{(}~\text{sub}~~\X{ext}{:}\Texttype~~x^\ast{:\,}\Tvec(\Ttypeidx_I)~~\X{ct}{:}\Tcomptype_I~\text{)}
+       &\Rightarrow& \TSUB~\X{ext}~x^\ast~\X{ct} \\
+   \production{extension type} & \Texttype &::=&
+     \text{open} &\Rightarrow& \TOPEN \\ &&|&
+     \text{final} &\Rightarrow& \TFINAL \\
    \end{array}
 
 

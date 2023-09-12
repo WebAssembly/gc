@@ -181,7 +181,7 @@ struct
   let sub_type = function
     | SubT (Final, [], st) -> str_type st
     | SubT (Final, hts, st) -> s7 (-0x31); vec var_heap_type hts; str_type st
-    | SubT (NoFinal, hts, st) -> s7 (-0x30); vec var_heap_type hts; str_type st
+    | SubT (Open, hts, st) -> s7 (-0x30); vec var_heap_type hts; str_type st
 
   let rec_type = function
     | RecT [st] -> sub_type st

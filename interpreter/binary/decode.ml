@@ -258,7 +258,7 @@ let sub_type s =
   | Some i when i = -0x30 land 0x7f ->
     skip 1 s;
     let xs = vec (var_type u32) s in
-    SubT (NoFinal, List.map (fun x -> VarHT x) xs, str_type s)
+    SubT (Open, List.map (fun x -> VarHT x) xs, str_type s)
   | Some i when i = -0x31 land 0x7f ->
     skip 1 s;
     let xs = vec (var_type u32) s in

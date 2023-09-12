@@ -7,7 +7,7 @@ type name = Utf8.unicode
 type null = NoNull | Null
 type mut = Cons | Var
 type init = Set | Unset
-type final = NoFinal | Final
+type ext = Open | Final
 type 'a limits = {min : 'a; max : 'a option}
 
 type var = StatX of type_idx | RecX of int32
@@ -39,7 +39,7 @@ and str_type =
   | DefArrayT of array_type
   | DefFuncT of func_type
 
-and sub_type = SubT of final * heap_type list * str_type
+and sub_type = SubT of ext * heap_type list * str_type
 and rec_type = RecT of sub_type list
 and def_type = DefT of rec_type * int32
 
@@ -307,9 +307,9 @@ let string_of_null = function
   | NoNull -> ""
   | Null -> "null "
 
-let string_of_final = function
-  | NoFinal -> ""
-  | Final -> " final"
+let string_of_ext = function
+  | Open -> "open"
+  | Final -> "final"
 
 let string_of_mut s = function
   | Cons -> s
@@ -379,9 +379,9 @@ and string_of_str_type = function
 
 and string_of_sub_type = function
   | SubT (Final, [], st) -> string_of_str_type st
-  | SubT (fin, hts, st) ->
+  | SubT (ext, hts, st) ->
     String.concat " "
-      (("sub" ^ string_of_final fin) :: List.map string_of_heap_type hts) ^
+      (("sub " ^ string_of_ext ext) :: List.map string_of_heap_type hts) ^
     " (" ^ string_of_str_type st ^ ")"
 
 and string_of_rec_type = function
