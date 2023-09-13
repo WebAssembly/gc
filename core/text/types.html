@@ -252,13 +252,13 @@ They cannot be referenced from anywhere.</p>
 \end{array}\end{split}\]</div>
 </section>
 <section id="recursive-types">
-<span id="text-deftype"></span><span id="text-subtype"></span><span id="text-rectype"></span><span id="index-9"></span><h2>Recursive Types<a class="headerlink" href="#recursive-types" title="Permalink to this heading">¶</a></h2>
+<span id="text-typedef"></span><span id="text-subtype"></span><span id="text-rectype"></span><span id="index-9"></span><h2>Recursive Types<a class="headerlink" href="#recursive-types" title="Permalink to this heading">¶</a></h2>
 <div class="math notranslate nohighlight">
 \[\begin{split}\begin{array}{llclll&#64;{\qquad\qquad}l}
 \def\mathdef4164#1{{}}\mathdef4164{recursive type} &amp; \href{../text/types.html#text-rectype}{\mathtt{rectype}}_I &amp;::=&amp;
-  \def\mathdef4326#1{\mbox{‘}\mathtt{#1}\mbox{’}}\mathdef4326{(}~\def\mathdef4327#1{\mbox{‘}\mathtt{#1}\mbox{’}}\mathdef4327{rec}~~\mathit{st}^\ast{:\,}\href{../text/conventions.html#text-vec}{\mathtt{vec}}(\href{../text/types.html#text-deftype}{\mathtt{deftype}}_I)~\def\mathdef4328#1{\mbox{‘}\mathtt{#1}\mbox{’}}\mathdef4328{)}
+  \def\mathdef4326#1{\mbox{‘}\mathtt{#1}\mbox{’}}\mathdef4326{(}~\def\mathdef4327#1{\mbox{‘}\mathtt{#1}\mbox{’}}\mathdef4327{rec}~~\mathit{st}^\ast{:\,}\href{../text/conventions.html#text-vec}{\mathtt{vec}}(\href{../text/types.html#text-typedef}{\mathtt{typedef}}_I)~\def\mathdef4328#1{\mbox{‘}\mathtt{#1}\mbox{’}}\mathdef4328{)}
     &amp;\Rightarrow&amp; \href{../syntax/types.html#syntax-rectype}{\mathsf{rec}}~\mathit{st}^\ast \\
-\def\mathdef4164#1{{}}\mathdef4164{defined type} &amp; \href{../text/types.html#text-deftype}{\mathtt{deftype}}_I &amp;::=&amp;
+\def\mathdef4164#1{{}}\mathdef4164{defined type} &amp; \href{../text/types.html#text-typedef}{\mathtt{typedef}}_I &amp;::=&amp;
   \def\mathdef4329#1{\mbox{‘}\mathtt{#1}\mbox{’}}\mathdef4329{(}~\def\mathdef4330#1{\mbox{‘}\mathtt{#1}\mbox{’}}\mathdef4330{type}~~\href{../text/values.html#text-id}{\mathtt{id}}^?~~\mathit{st}{:}\href{../text/types.html#text-subtype}{\mathtt{subtype}}_I~\def\mathdef4331#1{\mbox{‘}\mathtt{#1}\mbox{’}}\mathdef4331{)}
     &amp;\Rightarrow&amp; \mathit{st} \\
 \def\mathdef4164#1{{}}\mathdef4164{sub type} &amp; \href{../text/types.html#text-subtype}{\mathtt{subtype}}_I &amp;::=&amp;
@@ -271,8 +271,8 @@ They cannot be referenced from anywhere.</p>
 <div class="math notranslate nohighlight">
 \[\begin{split}\begin{array}{llclll}
 \def\mathdef4164#1{{}}\mathdef4164{recursive type} &amp;
-  \href{../text/types.html#text-subtype}{\mathtt{subtype}} &amp;\equiv&amp;
-  \def\mathdef4337#1{\mbox{‘}\mathtt{#1}\mbox{’}}\mathdef4337{(}~~\def\mathdef4338#1{\mbox{‘}\mathtt{#1}\mbox{’}}\mathdef4338{rec}~~\href{../text/types.html#text-subtype}{\mathtt{subtype}}~~\def\mathdef4339#1{\mbox{‘}\mathtt{#1}\mbox{’}}\mathdef4339{)} \\
+  \href{../text/types.html#text-typedef}{\mathtt{typedef}} &amp;\equiv&amp;
+  \def\mathdef4337#1{\mbox{‘}\mathtt{#1}\mbox{’}}\mathdef4337{(}~~\def\mathdef4338#1{\mbox{‘}\mathtt{#1}\mbox{’}}\mathdef4338{rec}~~\href{../text/types.html#text-typedef}{\mathtt{typedef}}~~\def\mathdef4339#1{\mbox{‘}\mathtt{#1}\mbox{’}}\mathdef4339{)} \\
 \end{array}\end{split}\]</div>
 <p>Similarly, final sub types with no super-types can omit the <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-subtype}{\mathsf{sub}}\)</span> keyword and arguments:</p>
 <div class="math notranslate nohighlight">
