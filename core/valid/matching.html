@@ -538,16 +538,16 @@ It may also <em>add</em> variables to the init set, provided these are already s
 <span id="match-externtype"></span><span id="index-16"></span><h2>External Types<a class="headerlink" href="#external-types" title="Permalink to this heading">¶</a></h2>
 <section id="functions">
 <h3>Functions<a class="headerlink" href="#functions" title="Permalink to this heading">¶</a></h3>
-<p>An <a class="reference internal" href="../syntax/types.html#syntax-externtype"><span class="std std-ref">external type</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-externtype}{\mathsf{func}}~\href{../syntax/types.html#syntax-functype}{\mathit{functype}}_1\)</span> matches <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-externtype}{\mathsf{func}}~\href{../syntax/types.html#syntax-functype}{\mathit{functype}}_2\)</span> if and only if:</p>
+<p>An <a class="reference internal" href="../syntax/types.html#syntax-externtype"><span class="std std-ref">external type</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-externtype}{\mathsf{func}}~\href{../valid/conventions.html#syntax-deftype}{\mathit{deftype}}_1\)</span> matches <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-externtype}{\mathsf{func}}~\href{../valid/conventions.html#syntax-deftype}{\mathit{deftype}}_2\)</span> if and only if:</p>
 <ul class="simple">
-<li><p>The <a class="reference internal" href="../syntax/types.html#syntax-functype"><span class="std std-ref">function type</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-functype}{\mathit{functype}}_1\)</span> <a class="reference internal" href="#match-functype"><span class="std std-ref">matches</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-functype}{\mathit{functype}}_2\)</span>.</p></li>
+<li><p>The <a class="reference internal" href="conventions.html#syntax-deftype"><span class="std std-ref">defined type</span></a> <span class="math notranslate nohighlight">\(\href{../valid/conventions.html#syntax-deftype}{\mathit{deftype}}_1\)</span> <a class="reference internal" href="#match-deftype"><span class="std std-ref">matches</span></a> <span class="math notranslate nohighlight">\(\href{../valid/conventions.html#syntax-deftype}{\mathit{deftype}}_2\)</span>.</p></li>
 </ul>
 <div class="math notranslate nohighlight">
 \[\begin{split}~\\[-1ex]
 \frac{
-  C \href{../valid/matching.html#match-functype}{\vdash} \href{../syntax/types.html#syntax-functype}{\mathit{functype}}_1 \href{../valid/matching.html#match-functype}{\leq} \href{../syntax/types.html#syntax-functype}{\mathit{functype}}_2
+  C \href{../valid/matching.html#match-deftype}{\vdash} \href{../valid/conventions.html#syntax-deftype}{\mathit{deftype}}_1 \href{../valid/matching.html#match-functype}{\leq} \href{../valid/conventions.html#syntax-deftype}{\mathit{deftype}}_2
 }{
-  C \href{../valid/matching.html#match-externtype}{\vdash} \href{../syntax/types.html#syntax-externtype}{\mathsf{func}}~\href{../syntax/types.html#syntax-functype}{\mathit{functype}}_1 \href{../valid/matching.html#match-externtype}{\leq} \href{../syntax/types.html#syntax-externtype}{\mathsf{func}}~\href{../syntax/types.html#syntax-functype}{\mathit{functype}}_2
+  C \href{../valid/matching.html#match-externtype}{\vdash} \href{../syntax/types.html#syntax-externtype}{\mathsf{func}}~\href{../valid/conventions.html#syntax-deftype}{\mathit{deftype}}_1 \href{../valid/matching.html#match-externtype}{\leq} \href{../syntax/types.html#syntax-externtype}{\mathsf{func}}~\href{../valid/conventions.html#syntax-deftype}{\mathit{deftype}}_2
 }\end{split}\]</div>
 </section>
 <section id="tables">

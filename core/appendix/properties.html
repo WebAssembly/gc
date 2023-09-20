@@ -134,7 +134,7 @@ the <a class="reference internal" href="../valid/conventions.html#context"><span
 </ul>
 <div class="math notranslate nohighlight">
 \[\frac{
-  C.\href{../valid/matching.html#context-rec}{\mathsf{recs}}[i] = \href{../syntax/types.html#syntax-subtype}{\mathit{subtype}}^\ast
+  C.\href{../valid/matching.html#context-rec}{\mathsf{recs}}[i] = \href{../syntax/types.html#syntax-subtype}{\mathit{subtype}}
 }{
   C \href{../valid/types.html#valid-heaptype}{\vdash} \href{../syntax/types.html#syntax-heaptype}{\mathsf{rec}}~i \mathrel{\mbox{ok}}
 }\]</div>
@@ -255,7 +255,7 @@ the <a class="reference internal" href="../valid/conventions.html#context"><span
 </ul>
 <div class="math notranslate nohighlight">
 \[\frac{
-  C.\href{../valid/matching.html#context-rec}{\mathsf{recs}}[i] = \href{../syntax/types.html#syntax-subtype}{\mathsf{sub}}~\href{../syntax/types.html#syntax-subtype}{\mathsf{final}}^?~\mathit{ht}_1^\ast~\mathit{ht}~\mathit{ht}_2^\ast~\href{../syntax/types.html#syntax-comptype}{\mathit{comptype}}
+  C.\href{../valid/matching.html#context-rec}{\mathsf{recs}}[i] = \href{../syntax/types.html#syntax-subtype}{\mathsf{sub}}~\href{../syntax/types.html#syntax-subtype}{\mathsf{final}}^?~(\mathit{ht}_1^\ast~\mathit{ht}~\mathit{ht}_2^\ast)~\href{../syntax/types.html#syntax-comptype}{\mathit{comptype}}
 }{
   C \href{../valid/matching.html#match-heaptype}{\vdash} \href{../syntax/types.html#syntax-heaptype}{\mathsf{rec}}~i \href{../valid/matching.html#match-heaptype}{\leq} \mathit{ht}
 }\]</div>
