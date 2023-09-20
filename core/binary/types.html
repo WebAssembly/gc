@@ -96,11 +96,11 @@ Thus, the binary format for type constructors corresponds to the encodings of sm
 <p><a class="reference internal" href="../syntax/types.html#syntax-numtype"><span class="std std-ref">Number types</span></a> are encoded by a single byte.</p>
 <div class="math notranslate nohighlight">
 \[\begin{split}\begin{array}{llclll&#64;{\qquad\qquad}l}
-\def\mathdef2128#1{{}}\mathdef2128{number type} &amp; \href{../binary/types.html#binary-numtype}{\mathtt{numtype}} &amp;::=&amp;
-  \def\mathdef2167#1{\mathtt{0x#1}}\mathdef2167{7F} &amp;\Rightarrow&amp; \href{../syntax/types.html#syntax-valtype}{\mathsf{i32}} \\ &amp;&amp;|&amp;
-  \def\mathdef2168#1{\mathtt{0x#1}}\mathdef2168{7E} &amp;\Rightarrow&amp; \href{../syntax/types.html#syntax-valtype}{\mathsf{i64}} \\ &amp;&amp;|&amp;
-  \def\mathdef2169#1{\mathtt{0x#1}}\mathdef2169{7D} &amp;\Rightarrow&amp; \href{../syntax/types.html#syntax-valtype}{\mathsf{f32}} \\ &amp;&amp;|&amp;
-  \def\mathdef2170#1{\mathtt{0x#1}}\mathdef2170{7C} &amp;\Rightarrow&amp; \href{../syntax/types.html#syntax-valtype}{\mathsf{f64}} \\
+\def\mathdef2103#1{{}}\mathdef2103{number type} &amp; \href{../binary/types.html#binary-numtype}{\mathtt{numtype}} &amp;::=&amp;
+  \def\mathdef2142#1{\mathtt{0x#1}}\mathdef2142{7F} &amp;\Rightarrow&amp; \href{../syntax/types.html#syntax-valtype}{\mathsf{i32}} \\ &amp;&amp;|&amp;
+  \def\mathdef2143#1{\mathtt{0x#1}}\mathdef2143{7E} &amp;\Rightarrow&amp; \href{../syntax/types.html#syntax-valtype}{\mathsf{i64}} \\ &amp;&amp;|&amp;
+  \def\mathdef2144#1{\mathtt{0x#1}}\mathdef2144{7D} &amp;\Rightarrow&amp; \href{../syntax/types.html#syntax-valtype}{\mathsf{f32}} \\ &amp;&amp;|&amp;
+  \def\mathdef2145#1{\mathtt{0x#1}}\mathdef2145{7C} &amp;\Rightarrow&amp; \href{../syntax/types.html#syntax-valtype}{\mathsf{f64}} \\
 \end{array}\end{split}\]</div>
 </section>
 <section id="vector-types">
@@ -108,8 +108,8 @@ Thus, the binary format for type constructors corresponds to the encodings of sm
 <p><a class="reference internal" href="../syntax/types.html#syntax-vectype"><span class="std std-ref">Vector types</span></a> are also encoded by a single byte.</p>
 <div class="math notranslate nohighlight">
 \[\begin{split}\begin{array}{llclll&#64;{\qquad\qquad}l}
-\def\mathdef2128#1{{}}\mathdef2128{vector type} &amp; \href{../binary/types.html#binary-vectype}{\mathtt{vectype}} &amp;::=&amp;
-  \def\mathdef2171#1{\mathtt{0x#1}}\mathdef2171{7B} &amp;\Rightarrow&amp; \href{../syntax/types.html#syntax-valtype}{\mathsf{v128}} \\
+\def\mathdef2103#1{{}}\mathdef2103{vector type} &amp; \href{../binary/types.html#binary-vectype}{\mathtt{vectype}} &amp;::=&amp;
+  \def\mathdef2146#1{\mathtt{0x#1}}\mathdef2146{7B} &amp;\Rightarrow&amp; \href{../syntax/types.html#syntax-valtype}{\mathsf{v128}} \\
 \end{array}\end{split}\]</div>
 </section>
 <section id="heap-types">
@@ -117,20 +117,20 @@ Thus, the binary format for type constructors corresponds to the encodings of sm
 <p><a class="reference internal" href="../syntax/types.html#syntax-reftype"><span class="std std-ref">Heap types</span></a> are encoded as either a single byte, or as a <a class="reference internal" href="modules.html#binary-typeidx"><span class="std std-ref">type index</span></a> encoded as a positive <a class="reference internal" href="values.html#binary-sint"><span class="std std-ref">signed integer</span></a>.</p>
 <div class="math notranslate nohighlight">
 \[\begin{split}\begin{array}{llclll&#64;{\qquad\qquad}l}
-\def\mathdef2128#1{{}}\mathdef2128{abstract heap type} &amp; \href{../binary/types.html#binary-absheaptype}{\mathtt{absheaptype}} &amp;::=&amp;
-  \def\mathdef2172#1{\mathtt{0x#1}}\mathdef2172{73} &amp;\Rightarrow&amp; \href{../syntax/types.html#syntax-heaptype}{\mathsf{nofunc}} \\ &amp;&amp;|&amp;
-  \def\mathdef2173#1{\mathtt{0x#1}}\mathdef2173{72} &amp;\Rightarrow&amp; \href{../syntax/types.html#syntax-heaptype}{\mathsf{noextern}} \\ &amp;&amp;|&amp;
-  \def\mathdef2174#1{\mathtt{0x#1}}\mathdef2174{71} &amp;\Rightarrow&amp; \href{../syntax/types.html#syntax-heaptype}{\mathsf{none}} \\ &amp;&amp;|&amp;
-  \def\mathdef2175#1{\mathtt{0x#1}}\mathdef2175{70} &amp;\Rightarrow&amp; \href{../syntax/types.html#syntax-heaptype}{\mathsf{func}} \\ &amp;&amp;|&amp;
-  \def\mathdef2176#1{\mathtt{0x#1}}\mathdef2176{6F} &amp;\Rightarrow&amp; \href{../syntax/types.html#syntax-heaptype}{\mathsf{extern}} \\ &amp;&amp;|&amp;
-  \def\mathdef2177#1{\mathtt{0x#1}}\mathdef2177{6E} &amp;\Rightarrow&amp; \href{../syntax/types.html#syntax-heaptype}{\mathsf{any}} \\ &amp;&amp;|&amp;
-  \def\mathdef2178#1{\mathtt{0x#1}}\mathdef2178{6D} &amp;\Rightarrow&amp; \href{../syntax/types.html#syntax-heaptype}{\mathsf{eq}} \\ &amp;&amp;|&amp;
-  \def\mathdef2179#1{\mathtt{0x#1}}\mathdef2179{6C} &amp;\Rightarrow&amp; \href{../syntax/types.html#syntax-heaptype}{\mathsf{i31}} \\ &amp;&amp;|&amp;
-  \def\mathdef2180#1{\mathtt{0x#1}}\mathdef2180{6B} &amp;\Rightarrow&amp; \href{../syntax/types.html#syntax-heaptype}{\mathsf{struct}} \\ &amp;&amp;|&amp;
-  \def\mathdef2181#1{\mathtt{0x#1}}\mathdef2181{6A} &amp;\Rightarrow&amp; \href{../syntax/types.html#syntax-heaptype}{\mathsf{array}} \\
-\def\mathdef2128#1{{}}\mathdef2128{heap type} &amp; \href{../binary/types.html#binary-heaptype}{\mathtt{heaptype}} &amp;::=&amp;
+\def\mathdef2103#1{{}}\mathdef2103{abstract heap type} &amp; \href{../binary/types.html#binary-absheaptype}{\mathtt{absheaptype}} &amp;::=&amp;
+  \def\mathdef2147#1{\mathtt{0x#1}}\mathdef2147{73} &amp;\Rightarrow&amp; \href{../syntax/types.html#syntax-heaptype}{\mathsf{nofunc}} \\ &amp;&amp;|&amp;
+  \def\mathdef2148#1{\mathtt{0x#1}}\mathdef2148{72} &amp;\Rightarrow&amp; \href{../syntax/types.html#syntax-heaptype}{\mathsf{noextern}} \\ &amp;&amp;|&amp;
+  \def\mathdef2149#1{\mathtt{0x#1}}\mathdef2149{71} &amp;\Rightarrow&amp; \href{../syntax/types.html#syntax-heaptype}{\mathsf{none}} \\ &amp;&amp;|&amp;
+  \def\mathdef2150#1{\mathtt{0x#1}}\mathdef2150{70} &amp;\Rightarrow&amp; \href{../syntax/types.html#syntax-heaptype}{\mathsf{func}} \\ &amp;&amp;|&amp;
+  \def\mathdef2151#1{\mathtt{0x#1}}\mathdef2151{6F} &amp;\Rightarrow&amp; \href{../syntax/types.html#syntax-heaptype}{\mathsf{extern}} \\ &amp;&amp;|&amp;
+  \def\mathdef2152#1{\mathtt{0x#1}}\mathdef2152{6E} &amp;\Rightarrow&amp; \href{../syntax/types.html#syntax-heaptype}{\mathsf{any}} \\ &amp;&amp;|&amp;
+  \def\mathdef2153#1{\mathtt{0x#1}}\mathdef2153{6D} &amp;\Rightarrow&amp; \href{../syntax/types.html#syntax-heaptype}{\mathsf{eq}} \\ &amp;&amp;|&amp;
+  \def\mathdef2154#1{\mathtt{0x#1}}\mathdef2154{6C} &amp;\Rightarrow&amp; \href{../syntax/types.html#syntax-heaptype}{\mathsf{i31}} \\ &amp;&amp;|&amp;
+  \def\mathdef2155#1{\mathtt{0x#1}}\mathdef2155{6B} &amp;\Rightarrow&amp; \href{../syntax/types.html#syntax-heaptype}{\mathsf{struct}} \\ &amp;&amp;|&amp;
+  \def\mathdef2156#1{\mathtt{0x#1}}\mathdef2156{6A} &amp;\Rightarrow&amp; \href{../syntax/types.html#syntax-heaptype}{\mathsf{array}} \\
+\def\mathdef2103#1{{}}\mathdef2103{heap type} &amp; \href{../binary/types.html#binary-heaptype}{\mathtt{heaptype}} &amp;::=&amp;
   \mathit{ht}{:}\href{../binary/types.html#binary-absheaptype}{\mathtt{absheaptype}} &amp;\Rightarrow&amp; \mathit{ht} \\ &amp;&amp;|&amp;
-  x{:}\href{../binary/values.html#binary-int}{\def\mathdef2138#1{{\mathtt{s}#1}}\mathdef2138{\mathtt{33}}} &amp;\Rightarrow&amp; x &amp; (\mathrel{\mbox{if}} x \geq 0) \\
+  x{:}\href{../binary/values.html#binary-int}{\def\mathdef2113#1{{\mathtt{s}#1}}\mathdef2113{\mathtt{33}}} &amp;\Rightarrow&amp; x &amp; (\mathrel{\mbox{if}} x \geq 0) \\
 \end{array}\end{split}\]</div>
 </section>
 <section id="reference-types">
@@ -138,9 +138,9 @@ Thus, the binary format for type constructors corresponds to the encodings of sm
 <p><a class="reference internal" href="../syntax/types.html#syntax-reftype"><span class="std std-ref">Reference types</span></a> are either encoded by a single byte followed by a <a class="reference internal" href="#binary-heaptype"><span class="std std-ref">heap type</span></a>, or, as a short form, directly as an <a class="reference internal" href="#binary-absheaptype"><span class="std std-ref">abstract heap type</span></a>.</p>
 <div class="math notranslate nohighlight">
 \[\begin{split}\begin{array}{llclll&#64;{\qquad\qquad}l}
-\def\mathdef2128#1{{}}\mathdef2128{reference type} &amp; \href{../binary/types.html#binary-reftype}{\mathtt{reftype}} &amp;::=&amp;
-  \def\mathdef2182#1{\mathtt{0x#1}}\mathdef2182{64}~~\mathit{ht}{:}\href{../binary/types.html#binary-heaptype}{\mathtt{heaptype}} &amp;\Rightarrow&amp; \href{../syntax/types.html#syntax-reftype}{\mathsf{ref}}~\mathit{ht} \\ &amp;&amp;|&amp;
-  \def\mathdef2183#1{\mathtt{0x#1}}\mathdef2183{63}~~\mathit{ht}{:}\href{../binary/types.html#binary-heaptype}{\mathtt{heaptype}} &amp;\Rightarrow&amp; \href{../syntax/types.html#syntax-reftype}{\mathsf{ref}}~\href{../syntax/types.html#syntax-reftype}{\mathsf{null}}~\mathit{ht} \\ &amp;&amp;|&amp;
+\def\mathdef2103#1{{}}\mathdef2103{reference type} &amp; \href{../binary/types.html#binary-reftype}{\mathtt{reftype}} &amp;::=&amp;
+  \def\mathdef2157#1{\mathtt{0x#1}}\mathdef2157{64}~~\mathit{ht}{:}\href{../binary/types.html#binary-heaptype}{\mathtt{heaptype}} &amp;\Rightarrow&amp; \href{../syntax/types.html#syntax-reftype}{\mathsf{ref}}~\mathit{ht} \\ &amp;&amp;|&amp;
+  \def\mathdef2158#1{\mathtt{0x#1}}\mathdef2158{63}~~\mathit{ht}{:}\href{../binary/types.html#binary-heaptype}{\mathtt{heaptype}} &amp;\Rightarrow&amp; \href{../syntax/types.html#syntax-reftype}{\mathsf{ref}}~\href{../syntax/types.html#syntax-reftype}{\mathsf{null}}~\mathit{ht} \\ &amp;&amp;|&amp;
   \mathit{ht}{:}\href{../binary/types.html#binary-absheaptype}{\mathtt{absheaptype}} &amp;\Rightarrow&amp; \href{../syntax/types.html#syntax-reftype}{\mathsf{ref}}~\href{../syntax/types.html#syntax-reftype}{\mathsf{null}}~\mathit{ht} \\
 \end{array}\end{split}\]</div>
 </section>
@@ -149,7 +149,7 @@ Thus, the binary format for type constructors corresponds to the encodings of sm
 <p><a class="reference internal" href="../syntax/types.html#syntax-valtype"><span class="std std-ref">Value types</span></a> are encoded with their respective encoding as a <a class="reference internal" href="#binary-numtype"><span class="std std-ref">number type</span></a>, <a class="reference internal" href="#binary-vectype"><span class="std std-ref">vector type</span></a>, or <a class="reference internal" href="#binary-reftype"><span class="std std-ref">reference type</span></a>.</p>
 <div class="math notranslate nohighlight">
 \[\begin{split}\begin{array}{llclll&#64;{\qquad\qquad}l}
-\def\mathdef2128#1{{}}\mathdef2128{value type} &amp; \href{../binary/types.html#binary-valtype}{\mathtt{valtype}} &amp;::=&amp;
+\def\mathdef2103#1{{}}\mathdef2103{value type} &amp; \href{../binary/types.html#binary-valtype}{\mathtt{valtype}} &amp;::=&amp;
   t{:}\href{../binary/types.html#binary-numtype}{\mathtt{numtype}} &amp;\Rightarrow&amp; t \\ &amp;&amp;|&amp;
   t{:}\href{../binary/types.html#binary-vectype}{\mathtt{vectype}} &amp;\Rightarrow&amp; t \\ &amp;&amp;|&amp;
   t{:}\href{../binary/types.html#binary-reftype}{\mathtt{reftype}} &amp;\Rightarrow&amp; t \\
@@ -166,7 +166,7 @@ Thus, the binary format for types corresponds to the <a class="reference externa
 <p><a class="reference internal" href="../syntax/types.html#syntax-resulttype"><span class="std std-ref">Result types</span></a> are encoded by the respective <a class="reference internal" href="conventions.html#binary-vec"><span class="std std-ref">vectors</span></a> of <a class="reference internal" href="#binary-valtype"><span class="std std-ref">value types</span></a>.</p>
 <div class="math notranslate nohighlight">
 \[\begin{split}\begin{array}{llclll&#64;{\qquad\qquad}l}
-\def\mathdef2128#1{{}}\mathdef2128{result type} &amp; \href{../binary/types.html#binary-resulttype}{\mathtt{resulttype}} &amp;::=&amp;
+\def\mathdef2103#1{{}}\mathdef2103{result type} &amp; \href{../binary/types.html#binary-resulttype}{\mathtt{resulttype}} &amp;::=&amp;
   t^\ast{:\,}\href{../binary/conventions.html#binary-vec}{\mathtt{vec}}(\href{../binary/types.html#binary-valtype}{\mathtt{valtype}}) &amp;\Rightarrow&amp; [t^\ast] \\
 \end{array}\end{split}\]</div>
 </section>
@@ -175,9 +175,9 @@ Thus, the binary format for types corresponds to the <a class="reference externa
 <p><a class="reference internal" href="../syntax/types.html#syntax-functype"><span class="std std-ref">Function types</span></a> are encoded by the respective <a class="reference internal" href="conventions.html#binary-vec"><span class="std std-ref">vectors</span></a> of parameter and result types.</p>
 <div class="math notranslate nohighlight">
 \[\begin{split}\begin{array}{llclll&#64;{\qquad\qquad}l}
-\def\mathdef2128#1{{}}\mathdef2128{function type} &amp; \href{../binary/types.html#binary-functype}{\mathtt{functype}} &amp;::=&amp;
+\def\mathdef2103#1{{}}\mathdef2103{function type} &amp; \href{../binary/types.html#binary-functype}{\mathtt{functype}} &amp;::=&amp;
   \mathit{rt}_1{:\,}\href{../binary/types.html#binary-resulttype}{\mathtt{resulttype}}~~\mathit{rt}_2{:\,}\href{../binary/types.html#binary-resulttype}{\mathtt{resulttype}}
-    &amp;\Rightarrow&amp; \mathit{rt}_1 \href{../syntax/types.html#syntax-instrtype}{\rightarrow} \mathit{rt}_2 \\
+    &amp;\Rightarrow&amp; \mathit{rt}_1 \mathrel{\href{../syntax/types.html#syntax-instrtype}{\rightarrow}} \mathit{rt}_2 \\
 \end{array}\end{split}\]</div>
 </section>
 <section id="aggregate-types">
@@ -185,24 +185,24 @@ Thus, the binary format for types corresponds to the <a class="reference externa
 <p><a class="reference internal" href="../syntax/types.html#syntax-aggrtype"><span class="std std-ref">Aggregate types</span></a> are encoded with their respective <a class="reference internal" href="../syntax/types.html#syntax-fieldtype"><span class="std std-ref">field types</span></a>.</p>
 <div class="math notranslate nohighlight">
 \[\begin{split}\begin{array}{llclll&#64;{\qquad\qquad}l}
-\def\mathdef2128#1{{}}\mathdef2128{array type} &amp; \href{../binary/types.html#binary-arraytype}{\mathtt{arraytype}} &amp;::=&amp;
+\def\mathdef2103#1{{}}\mathdef2103{array type} &amp; \href{../binary/types.html#binary-arraytype}{\mathtt{arraytype}} &amp;::=&amp;
   \mathit{ft}{:\,}\href{../binary/types.html#binary-fieldtype}{\mathtt{fieldtype}}
     &amp;\Rightarrow&amp; \mathit{ft} \\
-\def\mathdef2128#1{{}}\mathdef2128{structure type} &amp; \href{../binary/types.html#binary-structtype}{\mathtt{structtype}} &amp;::=&amp;
+\def\mathdef2103#1{{}}\mathdef2103{structure type} &amp; \href{../binary/types.html#binary-structtype}{\mathtt{structtype}} &amp;::=&amp;
   \mathit{ft}^\ast{:\,}\href{../binary/conventions.html#binary-vec}{\mathtt{vec}}(\href{../binary/types.html#binary-fieldtype}{\mathtt{fieldtype}})
     &amp;\Rightarrow&amp; \mathit{ft}^\ast \\
-\def\mathdef2128#1{{}}\mathdef2128{field type} &amp; \href{../binary/types.html#binary-fieldtype}{\mathtt{fieldtype}} &amp;::=&amp;
+\def\mathdef2103#1{{}}\mathdef2103{field type} &amp; \href{../binary/types.html#binary-fieldtype}{\mathtt{fieldtype}} &amp;::=&amp;
   \mathit{st}{:}\href{../binary/types.html#binary-storagetype}{\mathtt{storagetype}}~~m{:}\href{../binary/types.html#binary-mut}{\mathtt{mut}}
     &amp;\Rightarrow&amp; m~\mathit{st} \\
-\def\mathdef2128#1{{}}\mathdef2128{storage type} &amp; \href{../binary/types.html#binary-storagetype}{\mathtt{storagetype}} &amp;::=&amp;
+\def\mathdef2103#1{{}}\mathdef2103{storage type} &amp; \href{../binary/types.html#binary-storagetype}{\mathtt{storagetype}} &amp;::=&amp;
   t{:}\href{../binary/types.html#binary-valtype}{\mathtt{valtype}}
     &amp;\Rightarrow&amp; t \\ &amp;&amp;|&amp;
   t{:}\href{../binary/types.html#binary-packedtype}{\mathtt{packedtype}}
     &amp;\Rightarrow&amp; t \\
-\def\mathdef2128#1{{}}\mathdef2128{packed type} &amp; \href{../binary/types.html#binary-packedtype}{\mathtt{packedtype}} &amp;::=&amp;
-  \def\mathdef2184#1{\mathtt{0x#1}}\mathdef2184{78}
+\def\mathdef2103#1{{}}\mathdef2103{packed type} &amp; \href{../binary/types.html#binary-packedtype}{\mathtt{packedtype}} &amp;::=&amp;
+  \def\mathdef2159#1{\mathtt{0x#1}}\mathdef2159{78}
     &amp;\Rightarrow&amp; \href{../syntax/runtime.html#syntax-storagetype}{\mathsf{i8}} \\ &amp;&amp;|&amp;
-  \def\mathdef2185#1{\mathtt{0x#1}}\mathdef2185{77}
+  \def\mathdef2160#1{\mathtt{0x#1}}\mathdef2160{77}
     &amp;\Rightarrow&amp; \href{../syntax/runtime.html#syntax-storagetype}{\mathsf{i16}} \\
 \end{array}\end{split}\]</div>
 </section>
@@ -211,30 +211,30 @@ Thus, the binary format for types corresponds to the <a class="reference externa
 <p><a class="reference internal" href="../syntax/types.html#syntax-comptype"><span class="std std-ref">Composite types</span></a> are encoded by a distinct byte followed by a type encoding of the respective form.</p>
 <div class="math notranslate nohighlight">
 \[\begin{split}\begin{array}{llclll&#64;{\qquad\qquad}l}
-\def\mathdef2128#1{{}}\mathdef2128{composite type} &amp; \href{../binary/types.html#binary-comptype}{\mathtt{comptype}} &amp;::=&amp;
-  \def\mathdef2186#1{\mathtt{0x#1}}\mathdef2186{5E}~~\mathit{at}{:}\href{../binary/types.html#binary-arraytype}{\mathtt{arraytype}}
+\def\mathdef2103#1{{}}\mathdef2103{composite type} &amp; \href{../binary/types.html#binary-comptype}{\mathtt{comptype}} &amp;::=&amp;
+  \def\mathdef2161#1{\mathtt{0x#1}}\mathdef2161{5E}~~\mathit{at}{:}\href{../binary/types.html#binary-arraytype}{\mathtt{arraytype}}
     &amp;\Rightarrow&amp; \href{../syntax/types.html#syntax-comptype}{\mathsf{array}}~\mathit{at} \\ &amp;&amp;|&amp;
-  \def\mathdef2187#1{\mathtt{0x#1}}\mathdef2187{5F}~~\mathit{st}{:}\href{../binary/types.html#binary-structtype}{\mathtt{structtype}}
+  \def\mathdef2162#1{\mathtt{0x#1}}\mathdef2162{5F}~~\mathit{st}{:}\href{../binary/types.html#binary-structtype}{\mathtt{structtype}}
     &amp;\Rightarrow&amp; \href{../syntax/types.html#syntax-comptype}{\mathsf{struct}}~\mathit{st} \\ &amp;&amp;|&amp;
-  \def\mathdef2188#1{\mathtt{0x#1}}\mathdef2188{60}~~\mathit{ft}{:}\href{../binary/types.html#binary-functype}{\mathtt{functype}}
+  \def\mathdef2163#1{\mathtt{0x#1}}\mathdef2163{60}~~\mathit{ft}{:}\href{../binary/types.html#binary-functype}{\mathtt{functype}}
     &amp;\Rightarrow&amp; \href{../syntax/types.html#syntax-comptype}{\mathsf{func}}~\mathit{ft} \\
 \end{array}\end{split}\]</div>
 </section>
 <section id="recursive-types">
 <span id="binary-subtype"></span><span id="binary-rectype"></span><span id="index-10"></span><h2>Recursive Types<a class="headerlink" href="#recursive-types" title="Permalink to this heading">¶</a></h2>
-<p><a class="reference internal" href="../syntax/types.html#syntax-rectype"><span class="std std-ref">Recursive types</span></a> are encoded by the byte <span class="math notranslate nohighlight">\(\def\mathdef2189#1{\mathtt{0x#1}}\mathdef2189{4E}\)</span> followed by a <a class="reference internal" href="conventions.html#binary-vec"><span class="std std-ref">vector</span></a> of <a class="reference internal" href="../syntax/types.html#syntax-subtype"><span class="std std-ref">sub types</span></a>.
+<p><a class="reference internal" href="../syntax/types.html#syntax-rectype"><span class="std std-ref">Recursive types</span></a> are encoded by the byte <span class="math notranslate nohighlight">\(\def\mathdef2164#1{\mathtt{0x#1}}\mathdef2164{4E}\)</span> followed by a <a class="reference internal" href="conventions.html#binary-vec"><span class="std std-ref">vector</span></a> of <a class="reference internal" href="../syntax/types.html#syntax-subtype"><span class="std std-ref">sub types</span></a>.
 Additional shorthands are recognized for unary recursions and sub types without super types.</p>
 <div class="math notranslate nohighlight">
 \[\begin{split}\begin{array}{llclll&#64;{\qquad\qquad}l}
-\def\mathdef2128#1{{}}\mathdef2128{recursive type} &amp; \href{../binary/types.html#binary-rectype}{\mathtt{rectype}} &amp;::=&amp;
-  \def\mathdef2190#1{\mathtt{0x#1}}\mathdef2190{4E}~~\mathit{st}^\ast{:\,}\href{../binary/conventions.html#binary-vec}{\mathtt{vec}}(\href{../binary/types.html#binary-subtype}{\mathtt{subtype}})
+\def\mathdef2103#1{{}}\mathdef2103{recursive type} &amp; \href{../binary/types.html#binary-rectype}{\mathtt{rectype}} &amp;::=&amp;
+  \def\mathdef2165#1{\mathtt{0x#1}}\mathdef2165{4E}~~\mathit{st}^\ast{:\,}\href{../binary/conventions.html#binary-vec}{\mathtt{vec}}(\href{../binary/types.html#binary-subtype}{\mathtt{subtype}})
     &amp;\Rightarrow&amp; \href{../syntax/types.html#syntax-rectype}{\mathsf{rec}}~\mathit{st}^\ast \\ &amp;&amp;|&amp;
   \mathit{st}{:}\href{../binary/types.html#binary-subtype}{\mathtt{subtype}}
     &amp;\Rightarrow&amp; \href{../syntax/types.html#syntax-rectype}{\mathsf{rec}}~\mathit{st} \\
-\def\mathdef2128#1{{}}\mathdef2128{sub type} &amp; \href{../binary/types.html#binary-subtype}{\mathtt{subtype}} &amp;::=&amp;
-  \def\mathdef2191#1{\mathtt{0x#1}}\mathdef2191{50}~~x^\ast{:\,}\href{../binary/conventions.html#binary-vec}{\mathtt{vec}}(\href{../binary/modules.html#binary-typeidx}{\mathtt{typeidx}})~~\mathit{ct}{:}\href{../binary/types.html#binary-comptype}{\mathtt{comptype}}
+\def\mathdef2103#1{{}}\mathdef2103{sub type} &amp; \href{../binary/types.html#binary-subtype}{\mathtt{subtype}} &amp;::=&amp;
+  \def\mathdef2166#1{\mathtt{0x#1}}\mathdef2166{50}~~x^\ast{:\,}\href{../binary/conventions.html#binary-vec}{\mathtt{vec}}(\href{../binary/modules.html#binary-typeidx}{\mathtt{typeidx}})~~\mathit{ct}{:}\href{../binary/types.html#binary-comptype}{\mathtt{comptype}}
     &amp;\Rightarrow&amp; \href{../syntax/types.html#syntax-subtype}{\mathsf{sub}}~x^\ast~\mathit{ct} \\ &amp;&amp;|&amp;
-  \def\mathdef2192#1{\mathtt{0x#1}}\mathdef2192{4F}~~x^\ast{:\,}\href{../binary/conventions.html#binary-vec}{\mathtt{vec}}(\href{../binary/modules.html#binary-typeidx}{\mathtt{typeidx}})~~\mathit{ct}{:}\href{../binary/types.html#binary-comptype}{\mathtt{comptype}}
+  \def\mathdef2167#1{\mathtt{0x#1}}\mathdef2167{4F}~~x^\ast{:\,}\href{../binary/conventions.html#binary-vec}{\mathtt{vec}}(\href{../binary/modules.html#binary-typeidx}{\mathtt{typeidx}})~~\mathit{ct}{:}\href{../binary/types.html#binary-comptype}{\mathtt{comptype}}
     &amp;\Rightarrow&amp; \href{../syntax/types.html#syntax-subtype}{\mathsf{sub}}~\href{../syntax/types.html#syntax-subtype}{\mathsf{final}}~x^\ast~\mathit{ct} \\ &amp;&amp;|&amp;
   \mathit{ct}{:}\href{../binary/types.html#binary-comptype}{\mathtt{comptype}}
     &amp;\Rightarrow&amp; \href{../syntax/types.html#syntax-subtype}{\mathsf{sub}}~\href{../syntax/types.html#syntax-subtype}{\mathsf{final}}~\epsilon~\mathit{ct} \\
@@ -245,9 +245,9 @@ Additional shorthands are recognized for unary recursions and sub types without 
 <p><a class="reference internal" href="../syntax/types.html#syntax-limits"><span class="std std-ref">Limits</span></a> are encoded with a preceding flag indicating whether a maximum is present.</p>
 <div class="math notranslate nohighlight">
 \[\begin{split}\begin{array}{llclll}
-\def\mathdef2128#1{{}}\mathdef2128{limits} &amp; \href{../binary/types.html#binary-limits}{\mathtt{limits}} &amp;::=&amp;
-  \def\mathdef2193#1{\mathtt{0x#1}}\mathdef2193{00}~~n{:}\href{../binary/values.html#binary-int}{\def\mathdef2133#1{{\mathtt{u}#1}}\mathdef2133{\mathtt{32}}} &amp;\Rightarrow&amp; \{ \href{../syntax/types.html#syntax-limits}{\mathsf{min}}~n, \href{../syntax/types.html#syntax-limits}{\mathsf{max}}~\epsilon \} \\ &amp;&amp;|&amp;
-  \def\mathdef2194#1{\mathtt{0x#1}}\mathdef2194{01}~~n{:}\href{../binary/values.html#binary-int}{\def\mathdef2133#1{{\mathtt{u}#1}}\mathdef2133{\mathtt{32}}}~~m{:}\href{../binary/values.html#binary-int}{\def\mathdef2133#1{{\mathtt{u}#1}}\mathdef2133{\mathtt{32}}} &amp;\Rightarrow&amp; \{ \href{../syntax/types.html#syntax-limits}{\mathsf{min}}~n, \href{../syntax/types.html#syntax-limits}{\mathsf{max}}~m \} \\
+\def\mathdef2103#1{{}}\mathdef2103{limits} &amp; \href{../binary/types.html#binary-limits}{\mathtt{limits}} &amp;::=&amp;
+  \def\mathdef2168#1{\mathtt{0x#1}}\mathdef2168{00}~~n{:}\href{../binary/values.html#binary-int}{\def\mathdef2108#1{{\mathtt{u}#1}}\mathdef2108{\mathtt{32}}} &amp;\Rightarrow&amp; \{ \href{../syntax/types.html#syntax-limits}{\mathsf{min}}~n, \href{../syntax/types.html#syntax-limits}{\mathsf{max}}~\epsilon \} \\ &amp;&amp;|&amp;
+  \def\mathdef2169#1{\mathtt{0x#1}}\mathdef2169{01}~~n{:}\href{../binary/values.html#binary-int}{\def\mathdef2108#1{{\mathtt{u}#1}}\mathdef2108{\mathtt{32}}}~~m{:}\href{../binary/values.html#binary-int}{\def\mathdef2108#1{{\mathtt{u}#1}}\mathdef2108{\mathtt{32}}} &amp;\Rightarrow&amp; \{ \href{../syntax/types.html#syntax-limits}{\mathsf{min}}~n, \href{../syntax/types.html#syntax-limits}{\mathsf{max}}~m \} \\
 \end{array}\end{split}\]</div>
 </section>
 <section id="memory-types">
@@ -255,7 +255,7 @@ Additional shorthands are recognized for unary recursions and sub types without 
 <p><a class="reference internal" href="../syntax/types.html#syntax-memtype"><span class="std std-ref">Memory types</span></a> are encoded with their <a class="reference internal" href="#binary-limits"><span class="std std-ref">limits</span></a>.</p>
 <div class="math notranslate nohighlight">
 \[\begin{split}\begin{array}{llclll&#64;{\qquad\qquad}l}
-\def\mathdef2128#1{{}}\mathdef2128{memory type} &amp; \href{../binary/types.html#binary-memtype}{\mathtt{memtype}} &amp;::=&amp;
+\def\mathdef2103#1{{}}\mathdef2103{memory type} &amp; \href{../binary/types.html#binary-memtype}{\mathtt{memtype}} &amp;::=&amp;
   \mathit{lim}{:}\href{../binary/types.html#binary-limits}{\mathtt{limits}} &amp;\Rightarrow&amp; \mathit{lim} \\
 \end{array}\end{split}\]</div>
 </section>
@@ -264,7 +264,7 @@ Additional shorthands are recognized for unary recursions and sub types without 
 <p><a class="reference internal" href="../syntax/types.html#syntax-tabletype"><span class="std std-ref">Table types</span></a> are encoded with their <a class="reference internal" href="#binary-limits"><span class="std std-ref">limits</span></a> and the encoding of their element <a class="reference internal" href="../syntax/types.html#syntax-reftype"><span class="std std-ref">reference type</span></a>.</p>
 <div class="math notranslate nohighlight">
 \[\begin{split}\begin{array}{llclll}
-\def\mathdef2128#1{{}}\mathdef2128{table type} &amp; \href{../binary/types.html#binary-tabletype}{\mathtt{tabletype}} &amp;::=&amp;
+\def\mathdef2103#1{{}}\mathdef2103{table type} &amp; \href{../binary/types.html#binary-tabletype}{\mathtt{tabletype}} &amp;::=&amp;
   \mathit{et}{:}\href{../binary/types.html#binary-reftype}{\mathtt{reftype}}~~\mathit{lim}{:}\href{../binary/types.html#binary-limits}{\mathtt{limits}} &amp;\Rightarrow&amp; \mathit{lim}~\mathit{et} \\
 \end{array}\end{split}\]</div>
 </section>
@@ -273,11 +273,11 @@ Additional shorthands are recognized for unary recursions and sub types without 
 <p><a class="reference internal" href="../syntax/types.html#syntax-globaltype"><span class="std std-ref">Global types</span></a> are encoded by their <a class="reference internal" href="#binary-valtype"><span class="std std-ref">value type</span></a> and a flag for their <a class="reference internal" href="../syntax/types.html#syntax-mut"><span class="std std-ref">mutability</span></a>.</p>
 <div class="math notranslate nohighlight">
 \[\begin{split}\begin{array}{llclll}
-\def\mathdef2128#1{{}}\mathdef2128{global type} &amp; \href{../binary/types.html#binary-globaltype}{\mathtt{globaltype}} &amp;::=&amp;
+\def\mathdef2103#1{{}}\mathdef2103{global type} &amp; \href{../binary/types.html#binary-globaltype}{\mathtt{globaltype}} &amp;::=&amp;
   t{:}\href{../binary/types.html#binary-valtype}{\mathtt{valtype}}~~m{:}\href{../binary/types.html#binary-mut}{\mathtt{mut}} &amp;\Rightarrow&amp; m~t \\
-\def\mathdef2128#1{{}}\mathdef2128{mutability} &amp; \href{../binary/types.html#binary-mut}{\mathtt{mut}} &amp;::=&amp;
-  \def\mathdef2195#1{\mathtt{0x#1}}\mathdef2195{00} &amp;\Rightarrow&amp; \href{../syntax/types.html#syntax-mut}{\mathsf{const}} \\ &amp;&amp;|&amp;
-  \def\mathdef2196#1{\mathtt{0x#1}}\mathdef2196{01} &amp;\Rightarrow&amp; \href{../syntax/types.html#syntax-mut}{\mathsf{var}} \\
+\def\mathdef2103#1{{}}\mathdef2103{mutability} &amp; \href{../binary/types.html#binary-mut}{\mathtt{mut}} &amp;::=&amp;
+  \def\mathdef2170#1{\mathtt{0x#1}}\mathdef2170{00} &amp;\Rightarrow&amp; \href{../syntax/types.html#syntax-mut}{\mathsf{const}} \\ &amp;&amp;|&amp;
+  \def\mathdef2171#1{\mathtt{0x#1}}\mathdef2171{01} &amp;\Rightarrow&amp; \href{../syntax/types.html#syntax-mut}{\mathsf{var}} \\
 \end{array}\end{split}\]</div>
 </section>
 </section>

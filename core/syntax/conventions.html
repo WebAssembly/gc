@@ -95,7 +95,7 @@ All parts of this specification are defined in terms of this abstract syntax.</p
 <span id="grammar"></span><span id="index-1"></span><h2>Grammar Notation<a class="headerlink" href="#grammar-notation" title="Permalink to this heading">¶</a></h2>
 <p>The following conventions are adopted in defining grammar rules for abstract syntax.</p>
 <ul class="simple">
-<li><p>Terminal symbols (atoms) are written in sans-serif font or in symbolic form: <span class="math notranslate nohighlight">\(\mathsf{i32}, \mathsf{end}, {\href{../syntax/types.html#syntax-instrtype}{\rightarrow}}, [, ]\)</span>.</p></li>
+<li><p>Terminal symbols (atoms) are written in sans-serif font or in symbolic form: <span class="math notranslate nohighlight">\(\mathsf{i32}, \mathsf{end}, {\mathrel{\href{../syntax/types.html#syntax-instrtype}{\rightarrow}}}, [, ]\)</span>.</p></li>
 <li><p>Nonterminal symbols are written in italic font: <span class="math notranslate nohighlight">\(\mathit{valtype}, \mathit{instr}\)</span>.</p></li>
 <li><p><span class="math notranslate nohighlight">\(A^n\)</span> is a sequence of <span class="math notranslate nohighlight">\(n\geq 0\)</span> iterations  of <span class="math notranslate nohighlight">\(A\)</span>.</p></li>
 <li><p><span class="math notranslate nohighlight">\(A^\ast\)</span> is a possibly empty sequence of iterations of <span class="math notranslate nohighlight">\(A\)</span>.
@@ -161,7 +161,7 @@ where the <span class="math notranslate nohighlight">\(A\)</span> can either be 
 A vector can have at most <span class="math notranslate nohighlight">\(2^{32}-1\)</span> elements.</p>
 <div class="math notranslate nohighlight">
 \[\begin{split}\begin{array}{lllll}
-\def\mathdef2751#1{{}}\mathdef2751{vector} &amp; \href{../syntax/conventions.html#syntax-vec}{\mathit{vec}}(A) &amp;::=&amp;
+\def\mathdef2725#1{{}}\mathdef2725{vector} &amp; \href{../syntax/conventions.html#syntax-vec}{\mathit{vec}}(A) &amp;::=&amp;
   A^n
   &amp; (\mathrel{\mbox{if}} n &lt; 2^{32})\\
 \end{array}\end{split}\]</div>

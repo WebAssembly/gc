@@ -281,7 +281,7 @@ That is, a <a class="reference internal" href="../syntax/types.html#syntax-resul
 <section id="instruction-types">
 <span id="match-instrtype"></span><span id="index-7"></span><h2>Instruction Types<a class="headerlink" href="#instruction-types" title="Permalink to this heading">¶</a></h2>
 <p>Subtyping is further lifted to <a class="reference internal" href="conventions.html#syntax-instrtype"><span class="std std-ref">instruction types</span></a>.
-An <a class="reference internal" href="conventions.html#syntax-instrtype"><span class="std std-ref">instruction type</span></a> <span class="math notranslate nohighlight">\([t_{11}^\ast] \def\mathdef4656#1{\rightarrow_{#1}}\mathdef4656{x_1^\ast} [t_{12}^\ast]\)</span> matches a type <span class="math notranslate nohighlight">\([t_{21}^ast] \def\mathdef4657#1{\rightarrow_{#1}}\mathdef4657{x_2^\ast} [t_{22}^\ast]\)</span> if and only if:</p>
+An <a class="reference internal" href="conventions.html#syntax-instrtype"><span class="std std-ref">instruction type</span></a> <span class="math notranslate nohighlight">\([t_{11}^\ast] \mathrel{\href{../syntax/types.html#syntax-instrtype}{\rightarrow}}_{x_1^\ast} [t_{12}^\ast]\)</span> matches a type <span class="math notranslate nohighlight">\([t_{21}^ast] \mathrel{\href{../syntax/types.html#syntax-instrtype}{\rightarrow}}_{x_2^\ast} [t_{22}^\ast]\)</span> if and only if:</p>
 <ul class="simple">
 <li><p>There is a common sequence of <a class="reference internal" href="../syntax/types.html#syntax-valtype"><span class="std std-ref">value types</span></a> <span class="math notranslate nohighlight">\(t^\ast\)</span> such that <span class="math notranslate nohighlight">\(t_{21}^\ast\)</span> equals <span class="math notranslate nohighlight">\(t^\ast~{t'_{21}}^\ast\)</span> and <span class="math notranslate nohighlight">\(t_{22}^\ast\)</span> equals <span class="math notranslate nohighlight">\(t^\ast~{t'_{22}}^\ast\)</span>.</p></li>
 <li><p>The <a class="reference internal" href="../syntax/types.html#syntax-resulttype"><span class="std std-ref">result type</span></a> <span class="math notranslate nohighlight">\([{t'_{21}}^\ast]\)</span> <a class="reference internal" href="#match-resulttype"><span class="std std-ref">matches</span></a> <span class="math notranslate nohighlight">\([t_{11}^\ast]\)</span>.</p></li>
@@ -301,7 +301,7 @@ An <a class="reference internal" href="conventions.html#syntax-instrtype"><span 
   (C.\href{../valid/conventions.html#context}{\mathsf{locals}}[x] = \href{../syntax/types.html#syntax-init}{\mathrel{\mbox{set}}}~t_x)^\ast
   \end{array}
 }{
-  C \href{../valid/matching.html#match-instrtype}{\vdash} [t_{11}^\ast] \def\mathdef4658#1{\rightarrow_{#1}}\mathdef4658{x_1^\ast} [t_{12}^\ast] \href{../valid/matching.html#match-instrtype}{\leq} [t^\ast~t_{21}^\ast] \def\mathdef4659#1{\rightarrow_{#1}}\mathdef4659{x_2^\ast} [t^\ast~t_{22}^\ast]
+  C \href{../valid/matching.html#match-instrtype}{\vdash} [t_{11}^\ast] \mathrel{\href{../syntax/types.html#syntax-instrtype}{\rightarrow}}_{x_1^\ast} [t_{12}^\ast] \href{../valid/matching.html#match-instrtype}{\leq} [t^\ast~t_{21}^\ast] \mathrel{\href{../syntax/types.html#syntax-instrtype}{\rightarrow}}_{x_2^\ast} [t^\ast~t_{22}^\ast]
 }\end{split}\]</div>
 <div class="admonition note">
 <p class="admonition-title">Note</p>

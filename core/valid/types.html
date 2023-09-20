@@ -164,26 +164,26 @@ However, restrictions apply to most other types, such as <a class="reference int
 <ul class="simple">
 <li><p>The type <span class="math notranslate nohighlight">\(C.\href{../valid/conventions.html#context}{\mathsf{types}}[\href{../syntax/modules.html#syntax-typeidx}{\mathit{typeidx}}]\)</span> must be defined in the context.</p></li>
 <li><p>Let <span class="math notranslate nohighlight">\([t_1^\ast] \href{../syntax/types.html#syntax-functype}{\rightarrow} [t_2^\ast]\)</span> be the <a class="reference internal" href="../syntax/types.html#syntax-functype"><span class="std std-ref">function type</span></a> <span class="math notranslate nohighlight">\(C.\href{../valid/conventions.html#context}{\mathsf{types}}[\href{../syntax/modules.html#syntax-typeidx}{\mathit{typeidx}}]\)</span>.</p></li>
-<li><p>Then the block type is valid as <a class="reference internal" href="conventions.html#syntax-instrtype"><span class="std std-ref">instruction type</span></a> <span class="math notranslate nohighlight">\([t_1^\ast] \href{../syntax/types.html#syntax-instrtype}{\rightarrow} [t_2^\ast]\)</span>.</p></li>
+<li><p>Then the block type is valid as <a class="reference internal" href="conventions.html#syntax-instrtype"><span class="std std-ref">instruction type</span></a> <span class="math notranslate nohighlight">\([t_1^\ast] \mathrel{\href{../syntax/types.html#syntax-instrtype}{\rightarrow}} [t_2^\ast]\)</span>.</p></li>
 </ul>
 <div class="math notranslate nohighlight">
 \[\frac{
   \href{../valid/conventions.html#aux-expand-deftype}{\mathrm{expand}}(C.\href{../valid/conventions.html#context}{\mathsf{types}}[\href{../syntax/modules.html#syntax-typeidx}{\mathit{typeidx}}]) = \href{../syntax/types.html#syntax-comptype}{\mathsf{func}}~[t_1^\ast] \href{../syntax/types.html#syntax-functype}{\rightarrow} [t_2^\ast]
 }{
-  C \href{../valid/types.html#valid-blocktype}{\vdash} \href{../syntax/modules.html#syntax-typeidx}{\mathit{typeidx}} : [t_1^\ast] \href{../syntax/types.html#syntax-instrtype}{\rightarrow} [t_2^\ast]
+  C \href{../valid/types.html#valid-blocktype}{\vdash} \href{../syntax/modules.html#syntax-typeidx}{\mathit{typeidx}} : [t_1^\ast] \mathrel{\href{../syntax/types.html#syntax-instrtype}{\rightarrow}} [t_2^\ast]
 }\]</div>
 </section>
 <section id="xref-syntax-types-syntax-valtype-mathit-valtype">
 <h3><span class="math notranslate nohighlight">\([\href{../syntax/types.html#syntax-valtype}{\mathit{valtype}}^?]\)</span><a class="headerlink" href="#xref-syntax-types-syntax-valtype-mathit-valtype" title="Permalink to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>The value type <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-valtype}{\mathit{valtype}}\)</span> must either be absent, or <a class="reference internal" href="#valid-valtype"><span class="std std-ref">valid</span></a>.</p></li>
-<li><p>Then the block type is valid as <a class="reference internal" href="conventions.html#syntax-instrtype"><span class="std std-ref">instruction type</span></a> <span class="math notranslate nohighlight">\([] \href{../syntax/types.html#syntax-instrtype}{\rightarrow} [\href{../syntax/types.html#syntax-valtype}{\mathit{valtype}}^?]\)</span>.</p></li>
+<li><p>Then the block type is valid as <a class="reference internal" href="conventions.html#syntax-instrtype"><span class="std std-ref">instruction type</span></a> <span class="math notranslate nohighlight">\([] \mathrel{\href{../syntax/types.html#syntax-instrtype}{\rightarrow}} [\href{../syntax/types.html#syntax-valtype}{\mathit{valtype}}^?]\)</span>.</p></li>
 </ul>
 <div class="math notranslate nohighlight">
 \[\frac{
   (C \href{../valid/types.html#valid-valtype}{\vdash} \href{../syntax/types.html#syntax-valtype}{\mathit{valtype}} \mathrel{\mbox{ok}})^?
 }{
-  C \href{../valid/types.html#valid-blocktype}{\vdash} [\href{../syntax/types.html#syntax-valtype}{\mathit{valtype}}^?] : [] \href{../syntax/types.html#syntax-instrtype}{\rightarrow} [\href{../syntax/types.html#syntax-valtype}{\mathit{valtype}}^?]
+  C \href{../valid/types.html#valid-blocktype}{\vdash} [\href{../syntax/types.html#syntax-valtype}{\mathit{valtype}}^?] : [] \mathrel{\href{../syntax/types.html#syntax-instrtype}{\rightarrow}} [\href{../syntax/types.html#syntax-valtype}{\mathit{valtype}}^?]
 }\]</div>
 </section>
 </section>
@@ -221,7 +221,7 @@ However, restrictions apply to most other types, such as <a class="reference int
   \qquad
   (C.\href{../valid/conventions.html#context}{\mathsf{locals}}[x] = \href{../valid/conventions.html#syntax-localtype}{\mathit{localtype}})^\ast
 }{
-  C \href{../valid/types.html#valid-functype}{\vdash} [t_1^\ast] \def\mathdef4740#1{\rightarrow_{#1}}\mathdef4740{x^\ast} [t_2^\ast] \mathrel{\mbox{ok}}
+  C \href{../valid/types.html#valid-functype}{\vdash} [t_1^\ast] \mathrel{\href{../syntax/types.html#syntax-instrtype}{\rightarrow}}_{x^\ast} [t_2^\ast] \mathrel{\mbox{ok}}
 }\]</div>
 </section>
 </section>
