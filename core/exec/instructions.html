@@ -1195,29 +1195,47 @@ S; F; (\href{../syntax/instructions.html#syntax-instr-ref}{\mathsf{ref.null}}~t)
 <ol class="arabic simple">
 <li><p>Assert: due to <a class="reference internal" href="../valid/instructions.html#valid-any-convert-extern"><span class="std std-ref">validation</span></a>, a <a class="reference internal" href="runtime.html#syntax-ref"><span class="std std-ref">reference value</span></a> is on the top of the stack.</p></li>
 <li><p>Pop the value <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-ref}{\mathit{ref}}\)</span> from the stack.</p></li>
+<li><p>If <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-ref}{\mathit{ref}}\)</span> is <span class="math notranslate nohighlight">\(\href{../syntax/instructions.html#syntax-instr-ref}{\mathsf{ref.null}}~\mathit{ht}\)</span>, then:</p>
+<ol class="loweralpha simple">
+<li><p>Push the reference value <span class="math notranslate nohighlight">\((\href{../syntax/instructions.html#syntax-instr-ref}{\mathsf{ref.null}}~\href{../syntax/types.html#syntax-heaptype}{\mathsf{any}})\)</span> to the stack.</p></li>
+</ol>
+</li>
+<li><p>Else:</p>
+<ol class="loweralpha simple">
 <li><p>Assert: due to <a class="reference internal" href="../valid/instructions.html#valid-any-convert-extern"><span class="std std-ref">validation</span></a>, a <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-ref}{\mathit{ref}}\)</span> is an <a class="reference internal" href="runtime.html#syntax-ref-extern"><span class="std std-ref">external reference</span></a>.</p></li>
 <li><p>Let <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}extern}}~\href{../exec/runtime.html#syntax-ref}{\mathit{ref}}'\)</span> be the reference value <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-ref}{\mathit{ref}}\)</span>.</p></li>
 <li><p>Push the reference value <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-ref}{\mathit{ref}}'\)</span> to the stack.</p></li>
 </ol>
+</li>
+</ol>
 <div class="math notranslate nohighlight">
-\[\begin{array}{lcl&#64;{\qquad}l}
-(\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}extern}}~\href{../exec/runtime.html#syntax-ref}{\mathit{ref}})~\href{../syntax/instructions.html#syntax-instr-extern}{\mathsf{any.convert_extern}} &amp;\href{../exec/conventions.html#formal-notation}{\hookrightarrow}&amp; \href{../exec/runtime.html#syntax-ref}{\mathit{ref}}
-\end{array}\]</div>
+\[\begin{split}\begin{array}{lcl&#64;{\qquad}l}
+(\href{../syntax/instructions.html#syntax-instr-ref}{\mathsf{ref.null}} \mathit{ht})~\href{../syntax/instructions.html#syntax-instr-extern}{\mathsf{any.convert_extern}} &amp;\href{../exec/conventions.html#formal-notation}{\hookrightarrow}&amp; (\href{../syntax/instructions.html#syntax-instr-ref}{\mathsf{ref.null}}~\href{../syntax/types.html#syntax-heaptype}{\mathsf{any}}) \\
+(\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}extern}}~\href{../exec/runtime.html#syntax-ref}{\mathit{ref}})~\href{../syntax/instructions.html#syntax-instr-extern}{\mathsf{any.convert_extern}} &amp;\href{../exec/conventions.html#formal-notation}{\hookrightarrow}&amp; \href{../exec/runtime.html#syntax-ref}{\mathit{ref}} \\
+\end{array}\end{split}\]</div>
 </section>
 <section id="xref-syntax-instructions-syntax-instr-extern-mathsf-extern-convert-any">
 <span id="exec-extern-convert-any"></span><h3><span class="math notranslate nohighlight">\(\href{../syntax/instructions.html#syntax-instr-extern}{\mathsf{extern.convert_any}}\)</span><a class="headerlink" href="#xref-syntax-instructions-syntax-instr-extern-mathsf-extern-convert-any" title="Permalink to this heading">¶</a></h3>
 <ol class="arabic simple">
 <li><p>Assert: due to <a class="reference internal" href="../valid/instructions.html#valid-extern-convert-any"><span class="std std-ref">validation</span></a>, a <a class="reference internal" href="runtime.html#syntax-ref"><span class="std std-ref">reference value</span></a> is on the top of the stack.</p></li>
 <li><p>Pop the value <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-ref}{\mathit{ref}}\)</span> from the stack.</p></li>
-<li><p>Let <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-ref}{\mathit{ref}}'\)</span> be the reference value <span class="math notranslate nohighlight">\((\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}extern}}~\href{../exec/runtime.html#syntax-ref}{\mathit{ref}})\)</span>.</p></li>
+<li><p>If <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-ref}{\mathit{ref}}\)</span> is <span class="math notranslate nohighlight">\(\href{../syntax/instructions.html#syntax-instr-ref}{\mathsf{ref.null}}~\mathit{ht}\)</span>, then:</p>
+<ol class="loweralpha simple">
+<li><p>Push the reference value <span class="math notranslate nohighlight">\((\href{../syntax/instructions.html#syntax-instr-ref}{\mathsf{ref.null}}~\href{../syntax/types.html#syntax-heaptype}{\mathsf{extern}})\)</span> to the stack.</p></li>
 </ol>
-<ol class="arabic simple" start="5">
+</li>
+<li><p>Else:</p>
+<ol class="loweralpha simple">
+<li><p>Let <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-ref}{\mathit{ref}}'\)</span> be the reference value <span class="math notranslate nohighlight">\((\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}extern}}~\href{../exec/runtime.html#syntax-ref}{\mathit{ref}})\)</span>.</p></li>
 <li><p>Push the reference value <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-ref}{\mathit{ref}}'\)</span> to the stack.</p></li>
 </ol>
+</li>
+</ol>
 <div class="math notranslate nohighlight">
-\[\begin{array}{lcl&#64;{\qquad}l}
-\href{../exec/runtime.html#syntax-ref}{\mathit{ref}}~\href{../syntax/instructions.html#syntax-instr-extern}{\mathsf{extern.convert_any}} &amp;\href{../exec/conventions.html#formal-notation}{\hookrightarrow}&amp; (\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}extern}}~\href{../exec/runtime.html#syntax-ref}{\mathit{ref}})
-\end{array}\]</div>
+\[\begin{split}\begin{array}{lcl&#64;{\qquad}l}
+(\href{../syntax/instructions.html#syntax-instr-ref}{\mathsf{ref.null}} \mathit{ht})~\href{../syntax/instructions.html#syntax-instr-extern}{\mathsf{extern.convert_any}} &amp;\href{../exec/conventions.html#formal-notation}{\hookrightarrow}&amp; (\href{../syntax/instructions.html#syntax-instr-ref}{\mathsf{ref.null}}~\href{../syntax/types.html#syntax-heaptype}{\mathsf{extern}}) \\
+\href{../exec/runtime.html#syntax-ref}{\mathit{ref}}~\href{../syntax/instructions.html#syntax-instr-extern}{\mathsf{extern.convert_any}} &amp;\href{../exec/conventions.html#formal-notation}{\hookrightarrow}&amp; (\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}extern}}~\href{../exec/runtime.html#syntax-ref}{\mathit{ref}}) &amp; (\mathrel{\mbox{if}} \href{../exec/runtime.html#syntax-ref}{\mathit{ref}} \neq (\href{../syntax/instructions.html#syntax-instr-ref}{\mathsf{ref.null}} \mathit{ht})) \\
+\end{array}\end{split}\]</div>
 </section>
 </section>
 <section id="vector-instructions">
@@ -3230,7 +3248,7 @@ S; F; \href{../exec/runtime.html#syntax-val}{\mathit{val}}^m~\href{../syntax/ins
 </ol>
 <div class="math notranslate nohighlight">
 \[\begin{split}\begin{array}{lcl&#64;{\qquad}l}
-S; \href{../exec/runtime.html#syntax-ref}{\mathit{ref}}~(\href{../syntax/instructions.html#syntax-instr-control}{\mathsf{br\_on\_cast}}~l~\mathit{rt}_1~X{rt}_2) &amp;\href{../exec/conventions.html#formal-notation}{\hookrightarrow}&amp; (\href{../syntax/instructions.html#syntax-instr-control}{\mathsf{br}}~l)
+S; \href{../exec/runtime.html#syntax-ref}{\mathit{ref}}~(\href{../syntax/instructions.html#syntax-instr-control}{\mathsf{br\_on\_cast}}~l~\mathit{rt}_1~X{rt}_2) &amp;\href{../exec/conventions.html#formal-notation}{\hookrightarrow}&amp; \href{../exec/runtime.html#syntax-ref}{\mathit{ref}}~(\href{../syntax/instructions.html#syntax-instr-control}{\mathsf{br}}~l)
   &amp; (\mathrel{\mbox{if}} S \href{../appendix/properties.html#valid-val}{\vdash} \href{../exec/runtime.html#syntax-ref}{\mathit{ref}} : \mathit{rt}
      \land \href{../valid/matching.html#match-reftype}{\vdash} \mathit{rt} \href{../valid/matching.html#match-reftype}{\leq} \href{../exec/types.html#type-inst}{\mathrm{clos}}_{F.\href{../exec/runtime.html#syntax-frame}{\mathsf{module}}}(\mathit{rt}_2)) \\
 S; \href{../exec/runtime.html#syntax-ref}{\mathit{ref}}~(\href{../syntax/instructions.html#syntax-instr-control}{\mathsf{br\_on\_cast}}~l~\mathit{rt}_1~\mathit{rt}_2) &amp;\href{../exec/conventions.html#formal-notation}{\hookrightarrow}&amp; \href{../exec/runtime.html#syntax-ref}{\mathit{ref}}
@@ -3259,7 +3277,7 @@ S; \href{../exec/runtime.html#syntax-ref}{\mathit{ref}}~(\href{../syntax/instruc
 S; \href{../exec/runtime.html#syntax-ref}{\mathit{ref}}~(\href{../syntax/instructions.html#syntax-instr-control}{\mathsf{br\_on\_cast\_fail}}~l~\mathit{rt}_1~X{rt}_2) &amp;\href{../exec/conventions.html#formal-notation}{\hookrightarrow}&amp; \href{../exec/runtime.html#syntax-ref}{\mathit{ref}}
   &amp; (\mathrel{\mbox{if}} S \href{../appendix/properties.html#valid-val}{\vdash} \href{../exec/runtime.html#syntax-ref}{\mathit{ref}} : \mathit{rt}
      \land \href{../valid/matching.html#match-reftype}{\vdash} \mathit{rt} \href{../valid/matching.html#match-reftype}{\leq} \href{../exec/types.html#type-inst}{\mathrm{clos}}_{F.\href{../exec/runtime.html#syntax-frame}{\mathsf{module}}}(\mathit{rt}_2)) \\
-S; \href{../exec/runtime.html#syntax-ref}{\mathit{ref}}~(\href{../syntax/instructions.html#syntax-instr-control}{\mathsf{br\_on\_cast\_fail}}~l~\mathit{rt}_1~\mathit{rt}_2) &amp;\href{../exec/conventions.html#formal-notation}{\hookrightarrow}&amp; (\href{../syntax/instructions.html#syntax-instr-control}{\mathsf{br}}~l)
+S; \href{../exec/runtime.html#syntax-ref}{\mathit{ref}}~(\href{../syntax/instructions.html#syntax-instr-control}{\mathsf{br\_on\_cast\_fail}}~l~\mathit{rt}_1~\mathit{rt}_2) &amp;\href{../exec/conventions.html#formal-notation}{\hookrightarrow}&amp; \href{../exec/runtime.html#syntax-ref}{\mathit{ref}}~(\href{../syntax/instructions.html#syntax-instr-control}{\mathsf{br}}~l)
   &amp; (\mathrel{\mbox{otherwise}}) \\
 \end{array}\end{split}\]</div>
 </section>
