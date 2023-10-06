@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
-    <title>Conventions &#8212; WebAssembly 2.0 + tail calls + function references + gc (Draft 2023-10-05)</title>
+    <title>Conventions &#8212; WebAssembly 2.0 + tail calls + function references + gc (Draft 2023-10-06)</title>
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
     <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
@@ -112,13 +112,13 @@ these forms cannot be used in a program;
 they only occur during <a class="reference internal" href="index.html#valid"><span class="std std-ref">validation</span></a> or <a class="reference internal" href="../exec/index.html#exec"><span class="std std-ref">execution</span></a>.</p>
 <div class="math notranslate nohighlight">
 \[\begin{split}\begin{array}{llrl}
-\def\mathdef4455#1{{}}\mathdef4455{value type} &amp; \href{../syntax/types.html#syntax-valtype}{\mathit{valtype}} &amp;::=&amp;
+\def\mathdef4467#1{{}}\mathdef4467{value type} &amp; \href{../syntax/types.html#syntax-valtype}{\mathit{valtype}} &amp;::=&amp;
   \dots ~|~ \href{../valid/conventions.html#syntax-valtype-ext}{\mathsf{bot}} \\
-\def\mathdef4455#1{{}}\mathdef4455{abstract heap type} &amp; \href{../syntax/types.html#syntax-absheaptype}{\mathit{absheaptype}} &amp;::=&amp;
+\def\mathdef4467#1{{}}\mathdef4467{abstract heap type} &amp; \href{../syntax/types.html#syntax-absheaptype}{\mathit{absheaptype}} &amp;::=&amp;
   \dots ~|~ \href{../valid/conventions.html#syntax-heaptype-ext}{\mathsf{bot}} \\
-\def\mathdef4455#1{{}}\mathdef4455{heap type} &amp; \href{../syntax/types.html#syntax-heaptype}{\mathit{heaptype}} &amp;::=&amp;
+\def\mathdef4467#1{{}}\mathdef4467{heap type} &amp; \href{../syntax/types.html#syntax-heaptype}{\mathit{heaptype}} &amp;::=&amp;
   \dots ~|~ \href{../valid/conventions.html#syntax-deftype}{\mathit{deftype}} ~|~ \href{../syntax/types.html#syntax-heaptype}{\mathsf{rec}}~i \\
-\def\mathdef4455#1{{}}\mathdef4455{sub types} &amp; \href{../syntax/types.html#syntax-subtype}{\mathit{subtype}} &amp;::=&amp;
+\def\mathdef4467#1{{}}\mathdef4467{sub types} &amp; \href{../syntax/types.html#syntax-subtype}{\mathit{subtype}} &amp;::=&amp;
   \href{../syntax/types.html#syntax-subtype}{\mathsf{sub}}~\href{../syntax/types.html#syntax-subtype}{\mathsf{final}}^?~\href{../syntax/types.html#syntax-heaptype}{\mathit{heaptype}}^\ast~\href{../syntax/types.html#syntax-comptype}{\mathit{comptype}} \\
 \end{array}\end{split}\]</div>
 <p>The unique <a class="reference internal" href="../syntax/types.html#syntax-valtype"><span class="std std-ref">value type</span></a> <span class="math notranslate nohighlight">\(\href{../valid/conventions.html#syntax-valtype-ext}{\mathsf{bot}}\)</span> is a <em>bottom type</em> that <a class="reference internal" href="matching.html#match-heaptype"><span class="std std-ref">matches</span></a> all value types.
@@ -175,7 +175,7 @@ the defnition only affects the presence of null and cannot express the absence o
 Each such type is represented as a projection from the <a class="reference internal" href="../syntax/types.html#syntax-rectype"><span class="std std-ref">recursive type</span></a> group it originates from, indexed by its position in that group.</p>
 <div class="math notranslate nohighlight">
 \[\begin{split}\begin{array}{llrl}
-\def\mathdef4455#1{{}}\mathdef4455{defined type} &amp; \href{../valid/conventions.html#syntax-deftype}{\mathit{deftype}} &amp;::=&amp;
+\def\mathdef4467#1{{}}\mathdef4467{defined type} &amp; \href{../valid/conventions.html#syntax-deftype}{\mathit{deftype}} &amp;::=&amp;
   \href{../syntax/types.html#syntax-rectype}{\mathit{rectype}}.i \\
 \end{array}\end{split}\]</div>
 <p>Defined types do not occur in the <a class="reference internal" href="../binary/index.html#binary"><span class="std std-ref">binary</span></a> or <a class="reference internal" href="../text/index.html#text"><span class="std std-ref">text</span></a> format,
@@ -230,7 +230,7 @@ It gives rise to an <em>iso-recursive</em> interpretation of types.</p>
 <p><em>Instruction types</em> classify the behaviour of <a class="reference internal" href="../syntax/instructions.html#syntax-instr"><span class="std std-ref">instructions</span></a> or instruction sequences, by describing how they manipulate the <a class="reference internal" href="../exec/runtime.html#stack"><span class="std std-ref">operand stack</span></a> and the initialization status of <a class="reference internal" href="../syntax/modules.html#syntax-local"><span class="std std-ref">locals</span></a>:</p>
 <div class="math notranslate nohighlight">
 \[\begin{split}\begin{array}{llrl}
-\def\mathdef4455#1{{}}\mathdef4455{instruction type} &amp; \href{../valid/conventions.html#syntax-instrtype}{\mathit{instrtype}} &amp;::=&amp;
+\def\mathdef4467#1{{}}\mathdef4467{instruction type} &amp; \href{../valid/conventions.html#syntax-instrtype}{\mathit{instrtype}} &amp;::=&amp;
   \href{../syntax/types.html#syntax-resulttype}{\mathit{resulttype}} \mathrel{\href{../syntax/types.html#syntax-instrtype}{\rightarrow}}_{\href{../syntax/modules.html#syntax-localidx}{\mathit{localidx}}^\ast} \href{../syntax/types.html#syntax-resulttype}{\mathit{resulttype}} \\
 \end{array}\end{split}\]</div>
 <p>An instruction type <span class="math notranslate nohighlight">\([t_1^\ast] \mathrel{\href{../syntax/types.html#syntax-instrtype}{\rightarrow}}_{x^\ast} [t_2^\ast]\)</span> describes the required input stack with argument values of types <span class="math notranslate nohighlight">\(t_1^\ast\)</span> that an instruction pops off
@@ -247,9 +247,9 @@ they do not occur in programs.</p>
 <p><em>Local types</em> classify <a class="reference internal" href="../syntax/modules.html#syntax-local"><span class="std std-ref">locals</span></a>, by describing their <a class="reference internal" href="../syntax/types.html#syntax-valtype"><span class="std std-ref">value type</span></a> as well as their <em>initialization status</em>:</p>
 <div class="math notranslate nohighlight">
 \[\begin{split}\begin{array}{llrl}
-\def\mathdef4455#1{{}}\mathdef4455{initialization status} &amp; \href{../syntax/types.html#syntax-init}{\mathit{init}} &amp;::=&amp;
+\def\mathdef4467#1{{}}\mathdef4467{initialization status} &amp; \href{../syntax/types.html#syntax-init}{\mathit{init}} &amp;::=&amp;
   \href{../syntax/types.html#syntax-init}{\mathrel{\mbox{set}}} ~|~ \href{../syntax/types.html#syntax-init}{\mathrel{\mbox{unset}}} \\
-\def\mathdef4455#1{{}}\mathdef4455{local type} &amp; \href{../valid/conventions.html#syntax-localtype}{\mathit{localtype}} &amp;::=&amp;
+\def\mathdef4467#1{{}}\mathdef4467{local type} &amp; \href{../valid/conventions.html#syntax-localtype}{\mathit{localtype}} &amp;::=&amp;
   \href{../syntax/types.html#syntax-init}{\mathit{init}}~\href{../syntax/types.html#syntax-valtype}{\mathit{valtype}} \\
 \end{array}\end{split}\]</div>
 <div class="admonition note">
@@ -282,7 +282,7 @@ The label stack is the only part of the context that changes as validation of an
 <p>More concretely, contexts are defined as <a class="reference internal" href="../syntax/conventions.html#notation-record"><span class="std std-ref">records</span></a> <span class="math notranslate nohighlight">\(C\)</span> with abstract syntax:</p>
 <div class="math notranslate nohighlight">
 \[\begin{split}\begin{array}{llll}
-\def\mathdef4455#1{{}}\mathdef4455{context} &amp; C &amp;::=&amp;
+\def\mathdef4467#1{{}}\mathdef4467{context} &amp; C &amp;::=&amp;
   \begin{array}[t]{l&#64;{~}ll}
   \{ &amp; \href{../valid/conventions.html#context}{\mathsf{types}} &amp; \href{../valid/conventions.html#syntax-deftype}{\mathit{deftype}}^\ast, \\
      &amp; \href{../valid/conventions.html#context}{\mathsf{funcs}} &amp; \href{../syntax/types.html#syntax-functype}{\mathit{functype}}^\ast, \\
