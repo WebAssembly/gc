@@ -12,10 +12,10 @@
 
   (func (export "init") (param $x externref)
     (table.set (i32.const 0) (ref.null any))
-    (table.set (i32.const 1) (i31.new (i32.const 7)))
+    (table.set (i32.const 1) (ref.i31 (i32.const 7)))
     (table.set (i32.const 2) (struct.new $st (i32.const 6)))
     (table.set (i32.const 3) (array.new $at (i32.const 5) (i32.const 3)))
-    (table.set (i32.const 4) (extern.internalize (local.get $x)))
+    (table.set (i32.const 4) (any.convert_extern (local.get $x)))
   )
 
   (func (export "br_on_non_null") (param $i i32) (result i32)
@@ -260,6 +260,22 @@
     (type $t (struct))
     (func (param (ref null any)) (result (ref any))
       (block (result (ref $t)) (br_on_cast_fail 1 (ref null any) (ref $t) (local.get 0)))
+    )
+  )
+  "type mismatch"
+)
+(assert_invalid
+  (module
+    (func (result anyref)
+      (br_on_cast_fail 0 eqref anyref (unreachable))
+    )
+  )
+  "type mismatch"
+)
+(assert_invalid
+  (module
+    (func (result anyref)
+      (br_on_cast_fail 0 structref arrayref (unreachable))
     )
   )
   "type mismatch"

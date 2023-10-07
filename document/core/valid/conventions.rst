@@ -33,6 +33,7 @@ The skeleton of a sound and complete algorithm for type-checking instruction seq
 .. _syntax-valtype-ext:
 .. _syntax-heaptype-ext:
 .. _syntax-subtype-ext:
+.. _type-ext:
 .. _type-closed:
 
 Types
@@ -73,6 +74,11 @@ It occurs as the result of :ref:`rolling up <aux-roll-rectype>` the definition o
 
 Finally, the representation of supertypes in a :ref:`sub type <syntax-subtype>` is generalized from mere :ref:`type indices <syntax-typeidx>` to :ref:`heap types <syntax-heaptype>`.
 They occur as :ref:`defined types <syntax-deftype>` or :ref:`recursive type indices <syntax-rectypeidx>` after :ref:`substituting <notation-subst>` type indices or :ref:`rolling up <aux-roll-rectype>` :ref:`recursive types <syntax-rectype>`.
+
+.. note::
+   It is an invariant of the semantics that sub types occur only in one of two forms:
+   either as "syntactic" types as in a source module, where all supertypes are type indices,
+   or as "semantic" types, where all supertypes are resolved to either defined types or recursive type indices.
 
 A type of any form is *closed* when it does not contain a heap type that is a :ref:`type index <syntax-typeidx>` or a recursive type index without a surrounding :ref:`recursive type <syntax-reftype>`,
 i.e., all :ref:`type indices <syntax-typeidx>` have been :ref:`substituted <notation-subst>` with their :ref:`defined type <syntax-deftype>` and all free recursive type indices have been :ref:`unrolled <aux-unroll-rectype>`.
@@ -165,13 +171,13 @@ These operations are extended to :ref:`defined types <syntax-deftype>` and defin
 
 .. math::
    \begin{array}{@{}l@{~}l@{~}l@{~}r@{~}l@{}}
-   \rollrt{x}(\TREC~\subtype^\ast) &=& \TREC~(\subtype[(x + i)^\ast \subst (\REC~i)^\ast])^\ast
+   \rollrt_{x}(\TREC~\subtype^\ast) &=& \TREC~(\subtype[(x + i)^\ast \subst (\REC~i)^\ast])^\ast
    & (\iff & i^\ast = 0 \cdots (|\subtype^\ast| - 1)) \\
    \unrollrt(\TREC~\subtype^\ast) &=& \TREC~(\subtype[(\REC~i)^\ast \subst ((\TREC~\subtype^\ast).i)^\ast])^\ast
    & (\iff & i^\ast = 0 \cdots (|\subtype^\ast| - 1)) \\[2ex]
-   \rolldt{x}(\rectype) &=& ((\TREC~\subtype^\ast).i)^\ast
+   \rolldt_{x}(\rectype) &=& ((\TREC~\subtype^\ast).i)^\ast
    & (\iff & i^\ast = 0 \cdots (|\subtype^\ast| - 1) \\
-   &&& \land & \rollrt{x}(\rectype) = \TREC~\subtype^\ast) \\
+   &&& \land & \rollrt_{x}(\rectype) = \TREC~\subtype^\ast) \\
    \unrolldt(\rectype.i) &=& \subtype^\ast[i]
    & (\iff & \unrollrt(\rectype) = \TREC~\subtype^\ast) \\
    \end{array}
@@ -180,7 +186,7 @@ In addition, the following auxiliary function denotes the *expansion* of a :ref:
 
 .. math::
    \begin{array}{@{}llll@{}}
-   \expanddt(\deftype) &=& \comptype & (\iff \unrolldt(\deftype) = \TSUB~\TFINAL^?~\X{ht}^?~\comptype) \\
+   \expanddt(\deftype) &=& \comptype & (\iff \unrolldt(\deftype) = \TSUB~\TFINAL^?~\X{ht}^\ast~\comptype) \\
    \end{array}
 
 
@@ -197,10 +203,10 @@ Instruction Types
 .. math::
    \begin{array}{llrl}
    \production{instruction type} & \instrtype &::=&
-     \resulttype \toX{\localidx^\ast} \resulttype \\
+     \resulttype \to_{\localidx^\ast} \resulttype \\
    \end{array}
 
-An instruction type :math:`[t_1^\ast] \toX{x^\ast} [t_2^\ast]` describes the required input stack with argument values of types :math:`t_1^\ast` that an instruction pops off
+An instruction type :math:`[t_1^\ast] \to_{x^\ast} [t_2^\ast]` describes the required input stack with argument values of types :math:`t_1^\ast` that an instruction pops off
 and the provided output stack with result values of types :math:`t_2^\ast` that it pushes back.
 Moreover, it enumerates the :ref:`indices <syntax-localidx>` :math:`x^\ast` of locals that have been set by the instruction or sequence.
 
@@ -299,13 +305,11 @@ In addition to field access written :math:`C.\K{field}` the following notation i
 Convention
 ..........
 
-.. todo:: move this elsewhere?
-
 Any form of :ref:`type <syntax-type>` can be *closed* to bring it into :ref:`closed <type-closed>` form relative to a :ref:`context <context>` it is :ref:`valid <valid-type>` in by :ref:`substituting <notation-subst>` each :ref:`type index <syntax-typeidx>` :math:`x` occurring in it with the corresponding :ref:`defined type <syntax-deftype>` :math:`C.\CTYPES[x]`, after first closing the the types in :math:`C.\CTYPES` themselves.
 
 .. math::
    \begin{array}{@{}lcll@{}}
-   \clostype_C(t) &=& t[\subst clostype^\ast(C.\CTYPES)] \\[2ex]
+   \clostype_C(t) &=& t[\subst \clostype^\ast(C.\CTYPES)] \\[2ex]
    \clostype^\ast(\epsilon) &=& \epsilon \\
    \clostype^\ast(\X{dt}^\ast~\X{dt}_N) &=& {\X{dt}'}^\ast~\X{dt}_N[\subst {\X{dt}'}^\ast] & (\iff {\X{dt}'}^\ast = \clostype^\ast(\X{dt}^\ast)) \\
    \end{array}

@@ -258,7 +258,7 @@ Instruction Types
 ~~~~~~~~~~~~~~~~~
 
 Subtyping is further lifted to :ref:`instruction types <syntax-instrtype>`.
-An :ref:`instruction type <syntax-instrtype>` :math:`[t_{11}^\ast] \toX{x_1^\ast} [t_{12}^\ast]` matches a type :math:`[t_{21}^ast] \toX{x_2^\ast} [t_{22}^\ast]` if and only if:
+An :ref:`instruction type <syntax-instrtype>` :math:`[t_{11}^\ast] \to_{x_1^\ast} [t_{12}^\ast]` matches a type :math:`[t_{21}^ast] \to_{x_2^\ast} [t_{22}^\ast]` if and only if:
 
 * There is a common sequence of :ref:`value types <syntax-valtype>` :math:`t^\ast` such that :math:`t_{21}^\ast` equals :math:`t^\ast~{t'_{21}}^\ast` and :math:`t_{22}^\ast` equals :math:`t^\ast~{t'_{22}}^\ast`.
 
@@ -281,7 +281,7 @@ An :ref:`instruction type <syntax-instrtype>` :math:`[t_{11}^\ast] \toX{x_1^\ast
      (C.\CLOCALS[x] = \SET~t_x)^\ast
      \end{array}
    }{
-     C \vdashinstrtypematch [t_{11}^\ast] \toX{x_1^\ast} [t_{12}^\ast] \matchesinstrtype [t^\ast~t_{21}^\ast] \toX{x_2^\ast} [t^\ast~t_{22}^\ast]
+     C \vdashinstrtypematch [t_{11}^\ast] \to_{x_1^\ast} [t_{12}^\ast] \matchesinstrtype [t^\ast~t_{21}^\ast] \to_{x_2^\ast} [t^\ast~t_{22}^\ast]
    }
 
 .. note::
@@ -574,16 +574,16 @@ External Types
 Functions
 .........
 
-An :ref:`external type <syntax-externtype>` :math:`\ETFUNC~\functype_1` matches :math:`\ETFUNC~\functype_2` if and only if:
+An :ref:`external type <syntax-externtype>` :math:`\ETFUNC~\deftype_1` matches :math:`\ETFUNC~\deftype_2` if and only if:
 
-* The :ref:`function type <syntax-functype>` :math:`\functype_1` :ref:`matches <match-functype>` :math:`\functype_2`.
+* The :ref:`defined type <syntax-deftype>` :math:`\deftype_1` :ref:`matches <match-deftype>` :math:`\deftype_2`.
 
 .. math::
    ~\\[-1ex]
    \frac{
-     C \vdashfunctypematch \functype_1 \matchesfunctype \functype_2
+     C \vdashdeftypematch \deftype_1 \matchesfunctype \deftype_2
    }{
-     C \vdashexterntypematch \ETFUNC~\functype_1 \matchesexterntype \ETFUNC~\functype_2
+     C \vdashexterntypematch \ETFUNC~\deftype_1 \matchesexterntype \ETFUNC~\deftype_2
    }
 
 

@@ -678,7 +678,7 @@ let rec check_instr (c : context) (e : instr) (s : infer_result_type) : infer_in
   | RefEq ->
     [RefT (Null, EqHT); RefT (Null, EqHT)] --> [NumT I32T], []
 
-  | I31New ->
+  | RefI31 ->
     [NumT I32T] --> [RefT (NoNull, I31HT)], []
 
   | I31Get ext ->
@@ -946,7 +946,7 @@ let is_const (c : context) (e : instr) =
   match e.it with
   | Const _ | VecConst _
   | RefNull _ | RefFunc _
-  | I31New | StructNew _ | ArrayNew _ | ArrayNewFixed _ -> true
+  | RefI31 | StructNew _ | ArrayNew _ | ArrayNewFixed _ -> true
   | GlobalGet x -> let GlobalT (mut, _t) = global c x in mut = Cons
   | _ -> false
 
@@ -1057,9 +1057,9 @@ let check_module (m : module_) =
     |> check_list check_type m.it.types
     |> check_list check_import m.it.imports
     |> check_list check_func m.it.funcs
-    |> check_list check_global m.it.globals
     |> check_list check_table m.it.tables
     |> check_list check_memory m.it.memories
+    |> check_list check_global m.it.globals
     |> check_list check_elem m.it.elems
     |> check_list check_data m.it.datas
   in

@@ -178,8 +178,7 @@
 .. Types, terminals
 
 .. |toF| mathdef:: \xref{syntax/types}{syntax-functype}{\rightarrow}
-.. |to| mathdef:: \xref{syntax/types}{syntax-instrtype}{\rightarrow}
-.. |toX#1| mathdef:: \xref{syntax/types}{syntax-instrtype}{\rightarrow_{#1}}
+.. |to| mathdef:: \mathrel{\xref{syntax/types}{syntax-instrtype}{\rightarrow}}
 
 .. |BOTH| mathdef:: \xref{valid/conventions}{syntax-heaptype-ext}{\K{bot}}
 .. |BOT| mathdef:: \xref{valid/conventions}{syntax-valtype-ext}{\K{bot}}
@@ -285,11 +284,12 @@
 
 .. |reftypediff| mathdef:: \xref{valid/conventions}{aux-reftypediff}{\setminus}
 
-.. |rollrt#1| mathdef:: \xref{valid/conventions}{aux-roll-rectype}{\F{roll}_{#1}}
+.. |rollrt| mathdef:: \xref{valid/conventions}{aux-roll-rectype}{\F{roll}}
 .. |unrollrt| mathdef:: \xref{valid/conventions}{aux-unroll-rectype}{\F{unroll}}
-.. |rolldt#1| mathdef:: \xref{valid/conventions}{aux-roll-deftype}{\F{roll}^\ast_{#1}}
+.. |rolldt| mathdef:: \xref{valid/conventions}{aux-roll-deftype}{\F{roll}^\ast}
 .. |unrolldt| mathdef:: \xref{valid/conventions}{aux-unroll-deftype}{\F{unroll}}
 .. |expanddt| mathdef:: \xref{valid/conventions}{aux-expand-deftype}{\F{expand}}
+.. |unrollht| mathdef:: \xref{appendix/properties}{aux-unroll-heaptype}{\F{unroll}}
 
 .. |packtype| mathdef:: \xref{syntax/types}{aux-packtype}{\F{pack}}
 .. |unpacktype| mathdef:: \xref{syntax/types}{aux-unpacktype}{\F{unpack}}
@@ -311,6 +311,7 @@
 .. |dataidx| mathdef:: \xref{syntax/modules}{syntax-dataidx}{\X{dataidx}}
 .. |localidx| mathdef:: \xref{syntax/modules}{syntax-localidx}{\X{localidx}}
 .. |labelidx| mathdef:: \xref{syntax/modules}{syntax-labelidx}{\X{labelidx}}
+.. |fieldidx| mathdef:: \xref{syntax/modules}{syntax-fieldidx}{\X{fieldidx}}
 
 
 .. Indices, meta functions
@@ -500,13 +501,13 @@
 .. |ARRAYINITDATA| mathdef:: \xref{syntax/instructions}{syntax-instr-aray}{\K{array.init\_data}}
 .. |ARRAYINITELEM| mathdef:: \xref{syntax/instructions}{syntax-instr-aray}{\K{array.init\_elem}}
 
-.. |I31NEW| mathdef:: \xref{syntax/instructions}{syntax-instr-i31}{\K{i31.new}}
+.. |REFI31| mathdef:: \xref{syntax/instructions}{syntax-instr-i31}{\K{ref.i31}}
 .. |I31GET| mathdef:: \xref{syntax/instructions}{syntax-instr-i31}{\K{i31.get}}
 .. |I31GETS| mathdef:: \xref{syntax/instructions}{syntax-instr-i31}{\K{i31.get\_s}}
 .. |I31GETU| mathdef:: \xref{syntax/instructions}{syntax-instr-i31}{\K{i31.get\_u}}
 
-.. |EXTERNINTERNALIZE| mathdef:: \xref{syntax/instructions}{syntax-instr-extern}{\K{extern.internalize}}
-.. |EXTERNEXTERNALIZE| mathdef:: \xref{syntax/instructions}{syntax-instr-extern}{\K{extern.externalize}}
+.. |ANYCONVERTEXTERN| mathdef:: \xref{syntax/instructions}{syntax-instr-extern}{\K{any.convert_extern}}
+.. |EXTERNCONVERTANY| mathdef:: \xref{syntax/instructions}{syntax-instr-extern}{\K{extern.convert_any}}
 
 .. |CONST| mathdef:: \xref{syntax/instructions}{syntax-instr-numeric}{\K{const}}
 .. |EQZ| mathdef:: \xref{syntax/instructions}{syntax-instr-numeric}{\K{eqz}}
@@ -656,6 +657,11 @@
 .. |expr| mathdef:: \xref{syntax/instructions}{syntax-expr}{\X{expr}}
 
 
+.. Instructions, meta functions
+
+.. |getfield| mathdef:: \xref{exec/instructions}{aux-getfield}{\F{getfield}}
+
+
 
 .. Binary Format
 .. -------------
@@ -741,6 +747,7 @@
 .. |Bdataidx| mathdef:: \xref{binary/modules}{binary-dataidx}{\B{dataidx}}
 .. |Blocalidx| mathdef:: \xref{binary/modules}{binary-localidx}{\B{localidx}}
 .. |Blabelidx| mathdef:: \xref{binary/modules}{binary-labelidx}{\B{labelidx}}
+.. |Bfieldidx| mathdef:: \xref{binary/modules}{binary-fieldidx}{\B{fieldidx}}
 
 
 .. Modules, non-terminals
@@ -897,7 +904,7 @@
 .. |Tpackedtype| mathdef:: \xref{text/types}{text-packedtype}{\T{packedtype}}
 .. |Tcomptype| mathdef:: \xref{text/types}{text-comptype}{\T{comptype}}
 .. |Tsubtype| mathdef:: \xref{text/types}{text-subtype}{\T{subtype}}
-.. |Tdeftype| mathdef:: \xref{text/types}{text-deftype}{\T{deftype}}
+.. |Ttypedef| mathdef:: \xref{text/types}{text-typedef}{\T{typedef}}
 .. |Trectype| mathdef:: \xref{text/types}{text-rectype}{\T{rectype}}
 
 .. |Tglobaltype| mathdef:: \xref{text/types}{text-globaltype}{\T{globaltype}}
@@ -1045,7 +1052,7 @@
 .. |CLABELS| mathdef:: \xref{valid/conventions}{context}{\K{labels}}
 .. |CRETURN| mathdef:: \xref{valid/conventions}{context}{\K{return}}
 .. |CREFS| mathdef:: \xref{valid/conventions}{context}{\K{refs}}
-.. |CRECS| mathdef:: \xref{valid/matching}{context-rec}{\K{rec}}
+.. |CRECS| mathdef:: \xref{valid/matching}{context-rec}{\K{recs}}
 
 
 .. Judgments
@@ -1110,6 +1117,7 @@
 .. |vdashtable| mathdef:: \xref{valid/modules}{valid-table}{\vdash}
 .. |vdashmem| mathdef:: \xref{valid/modules}{valid-mem}{\vdash}
 .. |vdashglobal| mathdef:: \xref{valid/modules}{valid-global}{\vdash}
+.. |vdashglobals| mathdef:: \xref{valid/modules}{valid-globalseq}{\vdash}
 .. |vdashelem| mathdef:: \xref{valid/modules}{valid-elem}{\vdash}
 .. |vdashelemmode| mathdef:: \xref{valid/modules}{valid-elemmode}{\vdash}
 .. |vdashdata| mathdef:: \xref{valid/modules}{valid-data}{\vdash}
@@ -1220,6 +1228,7 @@
 .. |AITYPE| mathdef:: \xref{exec/runtime}{syntax-arrayinst}{\K{type}}
 .. |AIFIELDS| mathdef:: \xref{exec/runtime}{syntax-arrayinst}{\K{fields}}
 
+.. |PACK| mathdef:: \xref{exec/runtime}{syntax-packedval}{\K{pack}}
 .. |I8PACK| mathdef:: \xref{exec/runtime}{syntax-packval}{\K{i8.pack}}
 .. |I16PACK| mathdef:: \xref{exec/runtime}{syntax-packval}{\K{i16.pack}}
 
@@ -1291,12 +1300,12 @@
 
 .. Administrative Instructions, terminals
 
-.. |REFI31| mathdef:: \xref{exec/runtime}{syntax-ref}{\K{ref{.}i31}}
+.. |REFI31NUM| mathdef:: \xref{exec/runtime}{syntax-ref}{\K{ref{.}i31}}
 .. |REFFUNCADDR| mathdef:: \xref{exec/runtime}{syntax-ref}{\K{ref{.}func}}
 .. |REFSTRUCTADDR| mathdef:: \xref{exec/runtime}{syntax-ref}{\K{ref{.}struct}}
 .. |REFARRAYADDR| mathdef:: \xref{exec/runtime}{syntax-ref}{\K{ref{.}array}}
-.. |REFHOSTADDR| mathdef:: \xref{exec/runtime}{syntax-ref.host}{\K{ref{.}host}}
-.. |REFEXTERN| mathdef:: \xref{exec/runtime}{syntax-ref.extern}{\K{ref{.}extern}}
+.. |REFHOSTADDR| mathdef:: \xref{exec/runtime}{syntax-ref}{\K{ref{.}host}}
+.. |REFEXTERN| mathdef:: \xref{exec/runtime}{syntax-ref}{\K{ref{.}extern}}
 .. |TRAP| mathdef:: \xref{exec/runtime}{syntax-trap}{\K{trap}}
 .. |INVOKE| mathdef:: \xref{exec/runtime}{syntax-invoke}{\K{invoke}}
 .. |RETURNINVOKE| mathdef:: \xref{exec/runtime}{syntax-return_invoke}{\K{return\_invoke}}
@@ -1463,6 +1472,8 @@
 
 .. |vdashval| mathdef:: \xref{appendix/properties}{valid-val}{\vdash}
 .. |vdashresult| mathdef:: \xref{appendix/properties}{valid-result}{\vdash}
+.. |vdashfieldval| mathdef:: \xref{appendix/properties}{valid-fieldval}{\vdash}
+.. |vdashpackedval| mathdef:: \xref{appendix/properties}{valid-packedval}{\vdash}
 
 .. |vdashfuncinst| mathdef:: \xref{appendix/properties}{valid-funcinst}{\vdash}
 .. |vdashtableinst| mathdef:: \xref{appendix/properties}{valid-tableinst}{\vdash}
@@ -1470,6 +1481,8 @@
 .. |vdashglobalinst| mathdef:: \xref{appendix/properties}{valid-globalinst}{\vdash}
 .. |vdasheleminst| mathdef:: \xref{appendix/properties}{valid-eleminst}{\vdash}
 .. |vdashdatainst| mathdef:: \xref{appendix/properties}{valid-datainst}{\vdash}
+.. |vdashstructinst| mathdef:: \xref{appendix/properties}{valid-structinst}{\vdash}
+.. |vdasharrayinst| mathdef:: \xref{appendix/properties}{valid-arrayinst}{\vdash}
 .. |vdashexportinst| mathdef:: \xref{appendix/properties}{valid-exportinst}{\vdash}
 .. |vdashmoduleinst| mathdef:: \xref{appendix/properties}{valid-moduleinst}{\vdash}
 
@@ -1485,6 +1498,8 @@
 .. |vdashglobalinstextends| mathdef:: \xref{appendix/properties}{extend-globalinst}{\vdash}
 .. |vdasheleminstextends| mathdef:: \xref{appendix/properties}{extend-eleminst}{\vdash}
 .. |vdashdatainstextends| mathdef:: \xref{appendix/properties}{extend-datainst}{\vdash}
+.. |vdashstructinstextends| mathdef:: \xref{appendix/properties}{extend-structinst}{\vdash}
+.. |vdasharrayinstextends| mathdef:: \xref{appendix/properties}{extend-arrayinst}{\vdash}
 .. |vdashstoreextends| mathdef:: \xref{appendix/properties}{extend-store}{\vdash}
 
 
@@ -1505,6 +1520,8 @@
 .. |Bmodulenamesubsec| mathdef:: \xref{appendix/custom}{binary-modulenamesec}{\B{modulenamesubsec}}
 .. |Bfuncnamesubsec| mathdef:: \xref{appendix/custom}{binary-funcnamesec}{\B{funcnamesubsec}}
 .. |Blocalnamesubsec| mathdef:: \xref{appendix/custom}{binary-localnamesec}{\B{localnamesubsec}}
+.. |Btypenamesubsec| mathdef:: \xref{appendix/custom}{binary-typenamesec}{\B{typenamesubsec}}
+.. |Bfieldnamesubsec| mathdef:: \xref{appendix/custom}{binary-fieldnamesec}{\B{fieldnamesubsec}}
 
 
 .. Embedding

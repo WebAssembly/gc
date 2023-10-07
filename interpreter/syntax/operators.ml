@@ -179,7 +179,7 @@ let ref_test t = RefTest t
 let ref_cast t = RefCast t
 let ref_eq = RefEq
 
-let i31_new = I31New
+let ref_i31 = RefI31
 let i31_get_u = I31Get ZX
 let i31_get_s = I31Get SX
 let struct_new x = StructNew (x, Explicit)
@@ -203,8 +203,8 @@ let array_fill x = ArrayFill x
 let array_init_data x y = ArrayInitData (x, y)
 let array_init_elem x y = ArrayInitElem (x, y)
 
-let extern_internalize = ExternConvert Internalize
-let extern_externalize = ExternConvert Externalize
+let any_convert_extern = ExternConvert Internalize
+let extern_convert_any = ExternConvert Externalize
 
 let i32_clz = Unary (I32 I32Op.Clz)
 let i32_ctz = Unary (I32 I32Op.Ctz)

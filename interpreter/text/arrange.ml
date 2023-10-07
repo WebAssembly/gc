@@ -464,8 +464,8 @@ let initop = function
   | Implicit -> "_default"
 
 let externop = function
-  | Internalize -> "internalize"
-  | Externalize -> "externalize"
+  | Internalize -> "any.convert_extern"
+  | Externalize -> "extern.convert_any"
 
 
 (* Expressions *)
@@ -545,7 +545,7 @@ let rec instr e =
     | RefTest t -> "ref.test", [Atom (ref_type t)]
     | RefCast t -> "ref.cast", [Atom (ref_type t)]
     | RefEq -> "ref.eq", []
-    | I31New -> "i31.new", []
+    | RefI31 -> "ref.i31", []
     | I31Get ext -> "i31.get" ^ extension ext, []
     | StructNew (x, op) -> "struct.new" ^ initop op ^ " " ^ var x, []
     | StructGet (x, y, exto) ->
@@ -562,7 +562,7 @@ let rec instr e =
     | ArrayFill x -> "array.fill " ^ var x, []
     | ArrayInitData (x, y) -> "array.init_data " ^ var x ^ " " ^ var y, []
     | ArrayInitElem (x, y) -> "array.init_elem " ^ var x ^ " " ^ var y, []
-    | ExternConvert op -> "extern." ^ externop op, []
+    | ExternConvert op -> externop op, []
     | Const n -> constop n.it ^ " " ^ num n, []
     | Test op -> testop op, []
     | Compare op -> relop op, []

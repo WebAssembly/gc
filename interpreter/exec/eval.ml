@@ -376,15 +376,16 @@ let rec step (c : config) : config =
             Plain (TableCopy (x, y));
           ]
         else (* d > s *)
+          let n' = I32.sub n 1l in
           vs', List.map (Lib.Fun.flip (@@) e.at) [
-            Plain (Const (I32 (I32.add d 1l) @@ e.at));
-            Plain (Const (I32 (I32.add s 1l) @@ e.at));
-            Plain (Const (I32 (I32.sub n 1l) @@ e.at));
-            Plain (TableCopy (x, y));
-            Plain (Const (I32 d @@ e.at));
-            Plain (Const (I32 s @@ e.at));
+            Plain (Const (I32 (I32.add d n') @@ e.at));
+            Plain (Const (I32 (I32.add s n') @@ e.at));
             Plain (TableGet y);
             Plain (TableSet x);
+            Plain (Const (I32 d @@ e.at));
+            Plain (Const (I32 s @@ e.at));
+            Plain (Const (I32 n' @@ e.at));
+            Plain (TableCopy (x, y));
           ]
 
       | TableInit (x, y), Num (I32 n) :: Num (I32 s) :: Num (I32 d) :: vs' ->
@@ -536,17 +537,18 @@ let rec step (c : config) : config =
             Plain (MemoryCopy);
           ]
         else (* d > s *)
+          let n' = I32.sub n 1l in
           vs', List.map (Lib.Fun.flip (@@) e.at) [
-            Plain (Const (I32 (I32.add d 1l) @@ e.at));
-            Plain (Const (I32 (I32.add s 1l) @@ e.at));
-            Plain (Const (I32 (I32.sub n 1l) @@ e.at));
-            Plain (MemoryCopy);
-            Plain (Const (I32 d @@ e.at));
-            Plain (Const (I32 s @@ e.at));
+            Plain (Const (I32 (I32.add d n') @@ e.at));
+            Plain (Const (I32 (I32.add s n') @@ e.at));
             Plain (Load
               {ty = Types.I32T; align = 0; offset = 0l; pack = Some (Pack8, ZX)});
             Plain (Store
               {ty = Types.I32T; align = 0; offset = 0l; pack = Some Pack8});
+            Plain (Const (I32 d @@ e.at));
+            Plain (Const (I32 s @@ e.at));
+            Plain (Const (I32 n' @@ e.at));
+            Plain (MemoryCopy);
           ]
 
       | MemoryInit x, Num (I32 n) :: Num (I32 s) :: Num (I32 d) :: vs' ->
@@ -609,7 +611,7 @@ let rec step (c : config) : config =
       | RefEq, Ref r1 :: Ref r2 :: vs' ->
         value_of_bool (eq_ref r1 r2) :: vs', []
 
-      | I31New, Num (I32 i) :: vs' ->
+      | RefI31, Num (I32 i) :: vs' ->
         Ref (I31.I31Ref (I31.of_i32 i)) :: vs', []
 
       | I31Get ext, Ref (NullRef _) :: vs' ->

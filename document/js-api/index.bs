@@ -168,6 +168,7 @@ urlPrefix: https://webassembly.github.io/spec/core/; spec: WebAssembly; type: df
         text: var
         text: const
     text: address; url: exec/runtime.html#addresses
+    text: signed_31; url: exec/numerics.html#aux-signed
     text: signed_32; url: exec/numerics.html#aux-signed
     text: memory.grow; url: exec/instructions.html#exec-memory-grow
     text: current frame; url: exec/conventions.html#exec-notation-textual
@@ -186,6 +187,7 @@ spec:ecma-262; type:exception; for:ECMAScript; text:Error
 spec:ecmascript; type:exception; for:ECMAScript; text:TypeError
 spec:ecmascript; type:exception; for:ECMAScript; text:RangeError
 spec:ecmascript; type:interface; for:ECMAScript; text:ArrayBuffer
+spec:ecmascript; type:dfn; text:agent
 spec:webidl; type:dfn; text:resolve
 </pre>
 
@@ -463,16 +465,6 @@ The verification of WebAssembly type requirements is deferred to the
                 If this throws an exception, catch it, [=reject=] |promise| with the exception, and terminate these substeps.
             1. [=Resolve=] |promise| with |instanceObject|.
     1. Return |promise|.
-</div>
-
-<div algorithm="instantiate">
-  To <dfn>synchronously instantiate a WebAssembly module</dfn> from a {{Module}} |moduleObject| and imports |importObject|, perform the following steps:
-    1. Let |module| be |moduleObject|.\[[Module]].
-    1. [=Read the imports=] of |module| with imports |importObject|, and let |imports| be the result.
-    1. [=Instantiate the core of a WebAssembly module=] |module| with |imports|, and let |instance| be the result.
-    1. Let |instanceObject| be a [=/new=] {{Instance}}.
-    1. [=initialize an instance object|Initialize=] |instanceObject| from |module| and |instance|.
-    1. Return |instanceObject|.
 </div>
 
 <div algorithm>
@@ -878,7 +870,7 @@ which can be simultaneously referenced by multiple {{Instance}} objects. Each
 
 <div algorithm>
     To <dfn>create a global object</dfn> from a [=global address=] |globaladdr|, perform the following steps:
-    1. Let |map| be the current [=agent=]'s associated [=Global object cache=].
+    1. Let |map| be the [=surrounding agent=]'s associated [=Global object cache=].
     1. If |map|[|globaladdr|] [=map/exists=],
         1. Return |map|[|globaladdr|].
     1. Let |global| be a [=/new=] {{Global}}.
@@ -1045,7 +1037,7 @@ Note: Exported Functions do not have a \[[Construct]] method and thus it is not 
     1. Otherwise,
         1. Let |method| be [=?=] [$GetMethod$](|ret|, {{@@iterator}}).
         1. If |method| is undefined, [=throw=] a {{TypeError}}.
-        1. Let |values| be [=?=] [$IterableToList$](|ret|, |method|).
+        1. Let |values| be [=?=] [$IteratorToList$]([=?=] [$GetIteratorFromMethod$](|ret|, |method|)).
         1. Let |wasmValues| be a new, empty [=list=].
         1. If |values|'s [=list/size=] is not |resultsSize|, throw a {{TypeError}} exception.
         1. For each |value| and |resultType| in |values| and |results|, paired linearly,
@@ -1079,10 +1071,12 @@ Note: Exported Functions do not have a \[[Construct]] method and thus it is not 
 The algorithm <dfn>ToJSValue</dfn>(|w|) coerces a [=WebAssembly value=] to a JavaScript value by performing the following steps:
 
 1. Assert: |w| is not of  the form [=v128.const=] <var ignore>v128</var>.
-1. If |w| is of the form [=i64.const=] |i64|,
-    1. Let |v| be [=signed_64=](|i64|).
-    1. Return [=ℤ=](|v| interpreted as a mathematical value).
-1. If |w| is of the form [=i32.const=] |i32|, return [=𝔽=]([=signed_32=](|i32| interpreted as a mathematical value)).
+1. If |w| is of the form [=i64.const=] |u64|,
+    1. Let |i64| be [=signed_64=](|u64|).
+    1. Return [=ℤ=](|i64| interpreted as a mathematical value).
+1. If |w| is of the form [=i32.const=] |u32|,
+    1. Let |i32| be [=signed_32=](|i32|).
+    2. Return [=𝔽=](|i32| interpreted as a mathematical value).
 1. If |w| is of the form [=f32.const=] |f32|,
     1. If |f32| is [=+∞=] or [=−∞=], return **+∞**<sub>𝔽</sub> or **-∞**<sub>𝔽</sub>, respectively.
     1. If |f32| is [=nan=], return **NaN**.
@@ -1091,8 +1085,10 @@ The algorithm <dfn>ToJSValue</dfn>(|w|) coerces a [=WebAssembly value=] to a Jav
     1. If |f64| is [=+∞=] or [=−∞=], return **+∞**<sub>𝔽</sub> or **-∞**<sub>𝔽</sub>, respectively.
     1. If |f64| is [=nan=], return **NaN**.
     1. Return [=𝔽=](|f64| interpreted as a mathematical value).
-1. If |w| is of the form [=ref.null=] <var ignore>t</var>, return null.
-1. If |w| is of the form [=ref.i31=] <var ignore>i</var>, return [=ℤ=](|i|).
+1. If |w| is of the form [=ref.null=] |t|, return null.
+1. If |w| is of the form [=ref.i31=] |u31|,
+    1. Let |i31| be [=signed_31=](|u31|).
+    1. Let return [=𝔽=](|i31|).
 1. If |w| is of the form [=ref.struct=] |structaddr|, return the result of creating [=a new Exported GC Object=] from |structaddr| and "struct".
 1. If |w| is of the form [=ref.array=] |arrayaddr|, return the result of creating [=a new Exported GC Object=] from |arrayaddr| and "array".
 1. If |w| is of the form [=ref.func=] |funcaddr|, return the result of creating [=a new Exported Function=] from |funcaddr|.
@@ -1119,10 +1115,12 @@ The algorithm <dfn>ToWebAssemblyValue</dfn>(|v|, |type|) coerces a JavaScript va
 1. Assert: |type| is not [=v128=].
 1. If |type| is [=i64=],
     1. Let |i64| be [=?=] [$ToBigInt64$](|v|).
-    1. Return [=i64.const=] |i64|.
+    1. Let |u64| be the unsigned integer such that |i64| is [=signed_64=](|u64|).
+    1. Return [=i64.const=] |u64|.
 1. If |type| is [=i32=],
     1. Let |i32| be [=?=] [$ToInt32$](|v|).
-    1. Return [=i32.const=] |i32|.
+    1. Let |u32| be the unsigned integer such that |i32| is [=signed_32=](|u32|).
+    1. Return [=i32.const=] |u32|.
 1. If |type| is [=f32=],
     1. Let |number| be [=?=] [$ToNumber$](|v|).
     1. If |number| is **NaN**,
@@ -1140,16 +1138,18 @@ The algorithm <dfn>ToWebAssemblyValue</dfn>(|v|, |type|) coerces a JavaScript va
         1. Let |f64| be |number|.
     1. Return [=f64.const=] |f64|.
 1. If |type| is of the form [=ref=] |null| |heaptype|,
-    1. If [=match_valtype=](|type|, [=ref=] |null| [=heap-type/extern=]),
-        1. Let |r| be [=ToWebAssemblyValue=](|v|, [=ref=] |null| [=heap-type/any=]).
-        1. Return [=ref.extern=] |r|.
     1. If |v| is null,
         1. Let |r| be [=ref.null=] |heaptype|.
-    1. Else if |v| [=is a Number=] and |v| is equal to ? [$ToInt32$](|v|) and [=ℝ=](|v|) < 2<sup>30</sup> and [=ℝ=](|v|) ⩾ -2<sup>30</sup>,
-        1. Let |r| be [=ref.i31=] |v|.
-    1. Else if |v| is an [=Exported Function=],
+    1. Else if [=match_valtype=](|type|, [=ref=] |null| [=heap-type/extern=]),
+        1. Let |ref| be [=ToWebAssemblyValue=](|v|, [=ref=] [=heap-type/any=]).
+        1. Let |r| be [=ref.extern=] |ref|.
+    1. Else if |v| is an [=Exported Function=] and [=match_valtype=](|type|, [=ref=] |null| [=heap-type/func=]),
         1. Let |funcaddr| be the value of |v|'s \[[FunctionAddress]] internal slot.
         1. Let |r| be [=ref.func=] |funcaddr|.
+    1. Else if |v| [=is a Number=] and |v| is equal to [=?=] [$ToInt32$](|v|) and [=ℝ=](|v|) < 2<sup>30</sup> and [=ℝ=](|v|) ⩾ -2<sup>30</sup>,
+        1. Let |i31| [=?=] [$ToInt32$](|v|).
+        1. Let |u31| be the unsigned integer such that |i31| is [=signed_31=](|i31|).
+        1. Let |r| be [=ref.i31=] |u31|.
     1. Else if |v| is an [=Exported GC Object=],
         1. Let |objectaddr| be the value of |v|'s \[[ObjectAddress]] internal slot.
         1. Let |objectkind| be the value of |v|'s \[[ObjectKind]] internal slot.

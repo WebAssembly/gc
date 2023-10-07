@@ -308,7 +308,6 @@ rule token = parse
 
       | "ref.null" -> REF_NULL
       | "ref.func" -> REF_FUNC
-      | "ref.i31" -> REF_I31
       | "ref.struct" -> REF_STRUCT
       | "ref.array" -> REF_ARRAY
       | "ref.extern" -> REF_EXTERN
@@ -320,7 +319,7 @@ rule token = parse
       | "ref.cast" -> REF_CAST
       | "ref.eq" -> REF_EQ
 
-      | "i31.new" -> I31_NEW
+      | "ref.i31" -> REF_I31
       | "i31.get_u" -> I31_GET i31_get_u
       | "i31.get_s" -> I31_GET i31_get_s
 
@@ -346,8 +345,8 @@ rule token = parse
       | "array.init_data" -> ARRAY_INIT_DATA
       | "array.init_elem" -> ARRAY_INIT_ELEM
 
-      | "extern.internalize" -> EXTERN_CONVERT extern_internalize
-      | "extern.externalize" -> EXTERN_CONVERT extern_externalize
+      | "any.convert_extern" -> EXTERN_CONVERT any_convert_extern
+      | "extern.convert_any" -> EXTERN_CONVERT extern_convert_any
 
       | "i32.clz" -> UNARY i32_clz
       | "i32.ctz" -> UNARY i32_ctz

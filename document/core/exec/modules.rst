@@ -291,7 +291,6 @@ Growing :ref:`memories <syntax-meminst>`
 ..................................
 
 .. todo:: update prose for types
-.. todo:: change semantics for globals
 
 The allocation function for :ref:`modules <syntax-module>` requires a suitable list of :ref:`external values <syntax-externval>` that are assumed to :ref:`match <match-externtype>` the :ref:`import <syntax-import>` vector of the module,
 a list of initialization :ref:`values <syntax-val>` for the module's :ref:`globals <syntax-global>`,
@@ -451,17 +450,19 @@ Here, the notation :math:`\F{allocx}^\ast` is shorthand for multiple :ref:`alloc
 
 Moreover, if the dots :math:`\dots` are a sequence :math:`A^n` (as for globals or tables), then the elements of this sequence are passed to the allocation function pointwise.
 
-For types, however, allocation is defined in terms of :ref:`rolling <aux-roll-rectype>`:
+For types, however, allocation is defined in terms of :ref:`rolling <aux-roll-rectype>` and :ref:`substitution <notation-subst>` of all preceding types to produce a list of :ref:`closed <type-closed>` :ref:`defined types <syntax-deftype>`:
+
+.. _alloc-type:
 
 .. math::
    \begin{array}{rlll}
    \alloctype^\ast(\rectype^n) = \deftype^\ast \\[1ex]
    \mbox{where for all $i < n$:} \hfill \\
-   \deftype^\ast[x_i \slice m_i] &=& \rolldt{x_i}(\rectype^n[i])[\subst \deftype^\ast[0 : \slice x_i]) \\
-   x_{i+1} &=& x_i + m_i \land x_n = |\deftype^\ast| \\
+   \rectype^n[i] &=& \REC~\subtype_i^{m_i} \\
+   \deftype^\ast[x_i \slice m_i] &=& \rolldt_{x_i}(\REC~\subtype_i^{m_i})[\subst \deftype^\ast[0 \slice x_i]) \\
+   x_{i+1} &=& x_i + m_i \\
+   x_n &=& |\deftype^\ast| \\
    \end{array}
-
-.. todo:: unify with type closure somehow?
 
 
 .. scratch
@@ -470,7 +471,7 @@ For types, however, allocation is defined in terms of :ref:`rolling <aux-roll-re
    \alloctype^\ast(\rectype^\ast~\rectype') = \deftype^\ast~{\deftype'}^\ast \\[1ex]
    \mbox{where:} \hfill \\
    \deftype^\ast &=& \alloctype^\ast(\reftype^\ast) \\
-   {\deftype'}^\ast &=& \rolldt{|\deftype^\ast|}(\rectype)[\subst \deftype^\ast) \\
+   {\deftype'}^\ast &=& \rolldt_{|\deftype^\ast|}(\rectype)[\subst \deftype^\ast) \\
    \end{array}
 
 .. note::
@@ -657,7 +658,7 @@ where:
 
    Similarly, module :ref:`allocation <alloc-module>` and the :ref:`evaluation <exec-expr>` of :ref:`global <syntax-global>` and :ref:`table <syntax-table>` initializers as well as :ref:`element segments <syntax-elem>` are mutually recursive because the global initialization :ref:`values <syntax-val>` :math:`\val_{\F{g}}^\ast`, :math:`\reff_{\F{t}}`, and element segment contents :math:`(\reff^\ast)^\ast` are passed to the module allocator while depending on the module instance :math:`\moduleinst` and store :math:`S'` returned by allocation.
    Again, this recursion is just a specification device.
-   In practice, the initialization values can :ref:`be determined <exec-initvals>` beforehand by staging module allocation further such that first, the module's own :math:`function instances <syntax-funcinst>` are pre-allocated in the store, then the initializer expressions are evaluated, then the rest of the module instance is allocated, and finally the new function instances' :math:`\AMODULE` fields are set to that module instance.
+   In practice, the initialization values can :ref:`be determined <exec-initvals>` beforehand by staging module allocation further such that first, the module's own :ref:`function instances <syntax-funcinst>` are pre-allocated in the store, then the initializer expressions are evaluated in order, allocating globals on the way, then the rest of the module instance is allocated, and finally the new function instances' :math:`\AMODULE` fields are set to that module instance.
    This is possible because :ref:`validation <valid-module>` ensures that initialization expressions cannot actually call a function, only take their reference.
 
    All failure conditions are checked before any observable mutation of the store takes place.

@@ -66,17 +66,17 @@ The following auxiliary typing rules specify this typing relation relative to a 
    That ensures that it is compatible with any nullable type in that hierarchy.
 
 
-.. _valid-ref.i31:
+.. _valid-ref.i31num:
 
-:ref:`Scalar References <syntax-ref>` :math:`\REFI31~i`
-.......................................................
+:ref:`Scalar References <syntax-ref>` :math:`\REFI31NUM~i`
+..........................................................
 
 * The value is valid with :ref:`reference type <syntax-reftype>` :math:`(\REF~\I31)`.
 
 .. math::
    \frac{
    }{
-     S \vdashval \REFI31~i : \REF~\I31
+     S \vdashval \REFI31NUM~i : \REF~\I31
    }
 
 
@@ -183,7 +183,7 @@ The following auxiliary typing rules specify this typing relation relative to a 
      \qquad
      \vdashheaptypematch t \matchesheaptype \ANY
    }{
-     S \vdashval \REFEXTERN : \REF~\NULL^?~\EXTERN
+     S \vdashval \REFEXTERN~\reff : \REF~\NULL^?~\EXTERN
    }
 
 
