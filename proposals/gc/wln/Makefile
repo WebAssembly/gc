@@ -7,33 +7,25 @@
 # Configuration
 
 NAME =		wln
-UNOPT = 	$(NAME).debug
-OPT =   	$(NAME)
 
 WASMBASE = ../../../interpreter
-WASMDIRS =	util syntax binary script text valid runtime exec host main tests
-WASMFILES = Makefile $(shell cd $(WASMBASE); ls $(foreach DIR,$(WASMDIRS),$(DIR)/*))
+WASMDIRS =	util syntax binary script text valid runtime exec host main unittest jslib
+WASMFILES = Makefile dune dune-project $(shell cd $(WASMBASE); ls $(foreach DIR,$(WASMDIRS),$(DIR)/*))
 
 WASMDIR =		_wasm
 WASMDEPS =	$(WASMFILES:%=$(WASMDIR)/%)
-WASMTESTDIR =	$(WASMBASE)/../test
+WASMTESTDIR =	$(WASMBASE)/../test/core
 
-DIRS =		src
-LIBS =		bigarray wasm
-INCLS =		$(PWD)/_wasm/_build
-FLAGS = 	-lexflags -ml -cflags '-w +a-4-27-37-42-44-45-70 -warn-error +a-3'
-OCB =		ocamlbuild -verbose 8 $(FLAGS) $(DIRS:%=-I %) $(LIBS:%=-lib %) -cflags '$(INCLS:%=-I %)' -lflags '$(INCLS:%=-I %)'
+BUILDDIR =     _build/default
 
 
 # Main targets
 
-.PHONY:		default debug opt unopt
+.PHONY:		default all ci
 
-default:	opt
-debug:		unopt
-opt:		$(OPT)
-unopt:		$(UNOPT)
-all:		unopt opt test
+default:	$(NAME)
+all:		default
+ci:		all test
 
 
 # Mirroring Wasm
@@ -44,43 +36,30 @@ wasm-deps: $(WASMDEPS)
 
 $(WASMDIR):
 		mkdir -p $@
+		touch $@/dune-workspace
 
 $(WASMDIRS:%=$(WASMDIR)/%): $(WASMDIR)/%:
 		mkdir -p $@
 
-$(WASMFILES:%=$(WASMDIR)/%): $(WASMDIR)/%: $(WASMBASE)/% $(WASMDIRS:%=$(WASMDIR)/%)
+$(WASMFILES:%=$(WASMDIR)/%): $(WASMDIR)/%: $(WASMBASE)/% $(WASMDIR) $(WASMDIRS:%=$(WASMDIR)/%)
 		cp $< $@
 
 $(WASMDIR)/_build/wasm.cmx $(WASMDIR)/_build/wasm.cmxa: $(WASMDEPS)
-		make -C $(WASMDIR) TESTDIR=$(WASMTESTDIR) libopt
+		make -C $(WASMDIR) TESTDIR=$(WASMTESTDIR) install
 		touch $@
-		$(OCB) -clean
-
-$(WASMDIR)/_build/wasm.cmo $(WASMDIR)/_build/wasm.cma: $(WASMDEPS)
-		make -C $(WASMDIR) TESTDIR=$(WASMTESTDIR) libunopt
-		touch $@
-		$(OCB) -clean
+		dune clean
 
 
 # Building executable
 
-.INTERMEDIATE:	_tags
-_tags:
-		echo >$@ "true: bin_annot"
-		echo >>$@ "true: debug"
+# Building executable
 
-$(UNOPT): main.byte
-		mv $< $@
+.PHONY:                $(NAME)
 
-$(OPT):		main.native
-		mv $< $@
-
-.PHONY:		main.byte main.native
-main.byte: _tags $(WASMDIR)/_build/wasm.cma
-		$(OCB) -quiet $@
-
-main.native: _tags $(WASMDIR)/_build/wasm.cmxa
-		$(OCB) -quiet $@
+$(NAME):
+	@rm -f $@
+	dune build $@.exe
+	ln $(BUILDDIR)/$@.exe $@
 
 
 # Executing test suite
@@ -91,7 +70,7 @@ TESTS =		$(TESTFILES:%.$(EXT)=%)
 
 .PHONY:		test
 
-test:	$(OPT)
+test:	$(NAME)
 	(cd $(TESTDIR); ../$(NAME) a.wat d/b.wat c.wat -o o.wat -v)
 
 
@@ -101,7 +80,7 @@ test:	$(OPT)
 
 clean: cleantest
 		rm -rf $(WASMDIR) $(RUNTIME).wasm _tags
-		$(OCB) -clean
+		dune clean
 
 cleantest:
 		rm -f test/*.wasm test/*.wat

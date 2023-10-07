@@ -157,7 +157,7 @@ and instr' s = function
   | RefTest rt -> RefTest (ref_type s rt)
   | RefCast rt -> RefCast (ref_type s rt)
   | RefEq -> RefEq
-  | I31New -> I31New
+  | RefI31 -> RefI31
   | I31Get op -> I31Get op
   | StructNew (x, op) -> StructNew (type_idx s x, op)
   | StructGet (x, i, op) -> StructGet (type_idx s x, i, op)

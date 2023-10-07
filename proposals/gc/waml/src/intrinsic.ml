@@ -257,7 +257,7 @@ let compile_push_args ctxt at n compile_eI =
     let tmp = emit_local ctxt at W.(ref_null_ argv) in
     emit ctxt W.[
       i32_const (0l @@ at);
-      i31_new;
+      ref_i31;
       i32_const (int32 n @@ at);
 (* RTTs
       rtt_canon (argv @@ at);
@@ -465,7 +465,7 @@ and compile_func_curry arity ctxt =
         emit ctxt W.[
           (* Array init value *)
           i32_const (0l @@ at);
-          i31_new;
+          ref_i31;
           (* Load source *)
           local_get (closN @@ at);  (* curriedN *)
           struct_get (curriedN @@ at) (curry_arg_idx @@ at);

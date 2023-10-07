@@ -182,7 +182,7 @@ let rec compile_coerce ctxt src dst t at =
   | BlockRep _, _ when T.eq t (T.Tup []) ->
     emit ctxt W.[
       i32_const (0l @@ at);
-      i31_new;
+      ref_i31;
     ]
   | (BlockRep n1 | BoxedRep n1 | BoxedAbsRep n1), BoxedAbsRep n2
   | (BlockRep n1 | BoxedRep n1), (BlockRep n2 | BoxedRep n2) ->
@@ -254,7 +254,7 @@ let rec compile_coerce ctxt src dst t at =
     (match T.norm t with
     | T.Bool | T.Byte | T.Int ->
       emit ctxt W.[
-        i31_new;
+        ref_i31;
       ]
     | T.Float ->
       let boxedfloat = lower_var_type ctxt at T.Float in
@@ -1501,7 +1501,7 @@ and compile_dec ctxt d dst =
         if ts = [] then
           emit ctxt W.[
             i32_const (int32 i @@ x.at);
-            i31_new;
+            ref_i31;
           ]
         else
           emit ctxt W.[
@@ -1509,7 +1509,7 @@ and compile_dec ctxt d dst =
             rtt_canon (typeidx @@ x.at);
 *)
             i32_const (0l @@ x.at);
-            i31_new;
+            ref_i31;
           ];
         let t_data = T.Data (T.fun_flat ts' t) in
         compile_val_var_bind ctxt x t_data rigid_rep None;

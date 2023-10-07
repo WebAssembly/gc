@@ -1,0 +1,28 @@
+(include_subdirs unqualified)
+
+(executable
+  (public_name waml)
+  (modules :standard)
+  (libraries wasm)
+)
+
+(rule
+  (targets waml.ml)
+  (deps src/main.ml)
+  (action (copy src/main.ml waml.ml))
+)
+
+(subdir src
+  (rule
+    (target lexer.ml)
+    (deps lexer.mll)
+    (action
+      (chdir %{workspace_root}
+        (run %{bin:ocamllex} -ml -q -o %{target} %{deps})
+      )
+    )
+  )
+  (ocamlyacc (modules parser))
+)
+
+(env (_ (flags (-w +a-4-27-42-44-45-70 -warn-error +a-3))))

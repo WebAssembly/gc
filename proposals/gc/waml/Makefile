@@ -8,39 +8,32 @@
 
 NAME =		waml
 EXT =			$(NAME)
-UNOPT = 	$(NAME).debug
-OPT =   	$(NAME)
 RUNTIME =	$(NAME)-runtime
 
 WASMBASE =	$(PWD)/../../../interpreter
-WASMDIRS =	util syntax binary script text valid runtime exec host main tests
-WASMFILES = Makefile $(shell cd $(WASMBASE); ls $(foreach DIR,$(WASMDIRS),$(DIR)/*))
+WASMDIRS =	util syntax binary script text valid runtime exec host main unittest jslib
+WASMFILES = Makefile dune dune-project $(shell cd $(WASMBASE); ls $(foreach DIR,$(WASMDIRS),$(DIR)/*))
 
 WASMDIR =		_wasm
 WASMDEPS =	$(WASMFILES:%=$(WASMDIR)/%)
-WASMTESTDIR =	$(WASMBASE)/../test
+WASMTESTDIR =	$(WASMBASE)/../test/corel
+
 
 WASMLINK =	wln
 WASMLINKDIR =	$(PWD)/../$(WASMLINK)
 
-DIRS =		src
-LIBS =		bigarray wasm
-INCLS =		$(PWD)/_wasm/_build
-FLAGS = 	-lexflags -ml -cflags '-w +a-4-27-37-42-44-45-70 -warn-error +a-3'
-OCB =		ocamlbuild -verbose 8 $(FLAGS) $(DIRS:%=-I %) $(LIBS:%=-lib %) -cflags '$(INCLS:%=-I %)' -lflags '$(INCLS:%=-I %)'
-
 NODE =		node --experimental-wasm-gc
+
+BUILDDIR =	_build/default
 
 
 # Main targets
 
-.PHONY:		default debug opt unopt
+.PHONY:		default all ci
 
-default:	opt
-debug:		unopt
-opt:		$(OPT)
-unopt:		$(UNOPT)
-all:		unopt opt test
+default:	$(NAME)
+all:		default
+ci:		all test
 
 
 # Mirroring Wasm
@@ -51,25 +44,23 @@ wasm-deps: $(WASMDEPS)
 
 $(WASMDIR):
 		mkdir -p $@
+		touch $@/dune-workspace
 
 $(WASMDIRS:%=$(WASMDIR)/%): $(WASMDIR)/%:
 		mkdir -p $@
 
-$(WASMFILES:%=$(WASMDIR)/%): $(WASMDIR)/%: $(WASMBASE)/% $(WASMDIRS:%=$(WASMDIR)/%)
+$(WASMFILES:%=$(WASMDIR)/%): $(WASMDIR)/%: $(WASMBASE)/% $(WASMDIR) $(WASMDIRS:%=$(WASMDIR)/%)
 		cp $< $@
 
 $(WASMDIR)/_build/wasm.cmx $(WASMDIR)/_build/wasm.cmxa: $(WASMDEPS)
-		make -C $(WASMDIR) TESTDIR=$(WASMTESTDIR) libopt
+		make -C $(WASMDIR) TESTDIR=$(WASMTESTDIR) install
 		touch $@
-		$(OCB) -clean
-
-$(WASMDIR)/_build/wasm.cmo $(WASMDIR)/_build/wasm.cma: $(WASMDEPS)
-		make -C $(WASMDIR) TESTDIR=$(WASMTESTDIR) libunopt
-		touch $@
-		$(OCB) -clean
+		dune clean
 
 $(WASMDIR)/wasm:	$(WASMDEPS)
+		@echo ==== Building Wasm ====
 		make -C $(WASMDIR) TESTDIR=$(WASMTESTDIR)
+		@echo ==== Done building Wasm ====
 
 
 # Building linker
@@ -82,23 +73,12 @@ $(WASMLINK):
 
 # Building executable
 
-.INTERMEDIATE:	_tags
-_tags:
-		echo >$@ "true: bin_annot"
-		echo >>$@ "true: debug"
+.PHONY:                $(NAME)
 
-$(UNOPT): main.byte
-		mv $< $@
-
-$(OPT):		main.native
-		mv $< $@
-
-.PHONY:		main.byte main.native
-main.byte: _tags $(WASMDIR)/_build/wasm.cma
-		$(OCB) -quiet $@
-
-main.native: _tags $(WASMDIR)/_build/wasm.cmxa
-		$(OCB) -quiet $@
+$(NAME):
+	@rm -f $@
+	dune build $@.exe
+	ln $(BUILDDIR)/$@.exe $@
 
 
 # Executing test suite
@@ -123,29 +103,25 @@ nodetest:		cleantest titletest/Test-node $(RUNTIME).wasm $(TESTFILES:%.$(EXT)=no
 linktest:		titletest/Test-link $(LINKFILES:%.$(WASMLINK)=linktest/%)
 		@make cleantest
 
-titletest/%:	$(OPT)
+titletest/%:	$(NAME)
 		@echo ==== $(@F) ====
 
-evaltest/%:		$(OPT)
+evaltest/%:		$(NAME)
 		@echo -n '$(@F).$(EXT)> '
 		@ ./$(NAME) -r $(shell grep "@FLAGS" $(TESTDIR)/$(@F).$(EXT) | sed 's/.*@FLAGS//g') $(TESTDIR)/$(@F).$(EXT)
 
-debugtest/%:	$(UNOPT)
-		@echo -n '$(@F).$(EXT)> '
-		@ ./$(NAME) -r $(shell grep "@FLAGS" $(TESTDIR)/$(@F).$(EXT) | sed 's/.*@FLAGS//g') $(TESTDIR)/$(@F).$(EXT)
-
-runtimetest:	$(OPT) titletest/Test-runtime
+runtimetest:	$(NAME) titletest/Test-runtime
 		@./$(NAME) -v -g $(TESTDIR)/$(RUNTIME).wasm -g $(TESTDIR)/$(RUNTIME).wat
 		@make cleantest
 
-wasmgen/%:		$(OPT)
+wasmgen/%:		$(NAME)
 	    /bin/echo -n '$(@F).$(EXT)> '; \
 	    ./$(NAME) -c $(shell grep "@FLAGS" $(TESTDIR)/$(@F).$(EXT) | sed 's/.*@FLAGS//g') $(TESTDIR)/$(@F).$(EXT); \
 	    $(WASMBASE)/wasm -d -u $(TESTDIR)/$(@F).wasm -o $(TESTDIR)/$(@F).wast; \
 	    rm $(TESTDIR)/$(@F).wasm; \
 	    $(WASMBASE)/wasm -d $(TESTDIR)/$(@F).wast; \
 
-wasmtest/%:		$(OPT)
+wasmtest/%:		$(NAME)
 	  @ if ! grep -q "@FAIL-WASM" $(TESTDIR)/$(@F).$(EXT); \
 		  then \
 		    /bin/echo -n '$(@F).$(EXT)> '; \
@@ -153,7 +129,7 @@ wasmtest/%:		$(OPT)
 		  else echo '**' Skipping $(@F).$(EXT); \
 		fi
 
-wasmntest/%:	$(OPT)
+wasmntest/%:	$(NAME)
 	  @ if ! grep -q "@FAIL-WASM" $(TESTDIR)/$(@F).$(EXT); \
 		  then \
 		    /bin/echo -n '$(@F).$(EXT)> '; \
@@ -161,7 +137,7 @@ wasmntest/%:	$(OPT)
 		  else echo '**' Skipping $(@F).$(EXT); \
 		fi
 
-nodetest/%:		$(OPT)
+nodetest/%:		$(NAME)
 		@ if ! grep -q "@FAIL-WASM\|@FAIL-V8" $(TESTDIR)/$(@F).$(EXT); \
 		  then \
 		    echo $(@F).$(EXT); \
@@ -184,7 +160,7 @@ linktest/%:		$(WASMDIR)/wasm $(WASMLINK) $(RUNTIME).wasm
 		fi; \
 		# $(NODE) js/$(NAME).js $(TESTDIR)/$(@F)
 
-$(RUNTIME).wasm:	$(OPT)
+$(RUNTIME).wasm:	$(NAME)
 		@./$(NAME) -g $@
 
 
@@ -194,7 +170,7 @@ $(RUNTIME).wasm:	$(OPT)
 
 clean: cleantest
 		rm -rf $(WASMDIR) $(RUNTIME).wasm _tags
-		$(OCB) -clean
+		dune clean
 
 cleantest:
 		rm -f test/*.wasm test/*.wat

@@ -322,28 +322,28 @@ and compile_typ ctxt t =
   let emit ctxt = List.iter (emit_instr ctxt t.at) in
   let ts =
     match type_of t with
-    | T.Bool -> emit ctxt W.[i32_const (1l @@ t.at); i31_new]; []
-    | T.Byte -> emit ctxt W.[i32_const (2l @@ t.at); i31_new]; []
-    | T.Int -> emit ctxt W.[i32_const (3l @@ t.at); i31_new]; []
-    | T.Float -> emit ctxt W.[i32_const (4l @@ t.at); i31_new]; []
-    | T.Text -> emit ctxt W.[i32_const (5l @@ t.at); i31_new]; []
-    | T.Obj -> emit ctxt W.[i32_const (6l @@ t.at); i31_new]; []
+    | T.Bool -> emit ctxt W.[i32_const (1l @@ t.at); ref_i31]; []
+    | T.Byte -> emit ctxt W.[i32_const (2l @@ t.at); ref_i31]; []
+    | T.Int -> emit ctxt W.[i32_const (3l @@ t.at); ref_i31]; []
+    | T.Float -> emit ctxt W.[i32_const (4l @@ t.at); ref_i31]; []
+    | T.Text -> emit ctxt W.[i32_const (5l @@ t.at); ref_i31]; []
+    | T.Obj -> emit ctxt W.[i32_const (6l @@ t.at); ref_i31]; []
     | _ ->
     match t.it with
     | VarT (y, ts) -> compile_typ_var ctxt y ts (type_of t)
     | BoxT t1 ->
       (match type_of t1 with
-      | T.Bool -> emit ctxt W.[i32_const (-1l @@ t.at); i31_new]; []
-      | T.Byte -> emit ctxt W.[i32_const (-2l @@ t.at); i31_new]; []
-      | T.Int -> emit ctxt W.[i32_const (-3l @@ t.at); i31_new]; []
-      | T.Float -> emit ctxt W.[i32_const (-4l @@ t.at); i31_new]; []
-      | _ -> emit ctxt W.[i32_const (7l @@ t.at); i31_new]; [t1]
+      | T.Bool -> emit ctxt W.[i32_const (-1l @@ t.at); ref_i31]; []
+      | T.Byte -> emit ctxt W.[i32_const (-2l @@ t.at); ref_i31]; []
+      | T.Int -> emit ctxt W.[i32_const (-3l @@ t.at); ref_i31]; []
+      | T.Float -> emit ctxt W.[i32_const (-4l @@ t.at); ref_i31]; []
+      | _ -> emit ctxt W.[i32_const (7l @@ t.at); ref_i31]; [t1]
       )
-    | TupT ts -> emit ctxt W.[i32_const (8l @@ t.at); i31_new]; ts
+    | TupT ts -> emit ctxt W.[i32_const (8l @@ t.at); ref_i31]; ts
     | ArrayT (t1, m) ->
       (match m.it with
-      | MutT -> emit ctxt W.[i32_const (9l @@ t.at); i31_new]; [t1]
-      | ConstT -> emit ctxt W.[i32_const (10l @@ t.at); i31_new]; [t1]
+      | MutT -> emit ctxt W.[i32_const (9l @@ t.at); ref_i31]; [t1]
+      | ConstT -> emit ctxt W.[i32_const (10l @@ t.at); ref_i31]; [t1]
       )
     | FuncT (ys, ts1, t2) -> nyi t.at "function types"
     | BoolT | ByteT | IntT | FloatT | TextT | ObjT -> assert false
@@ -536,7 +536,7 @@ and compile_exp ctxt e =
     compile_exp ctxt e1;
     (match type_of e1 with
     | T.Bool | T.Byte ->
-      emit ctxt W.[i31_new]
+      emit ctxt W.[ref_i31]
     | _ ->
       let typeidx = lower_var_type ctxt e.at (type_of e) in
       compile_coerce_val_type ctxt e1.at (type_of e1);

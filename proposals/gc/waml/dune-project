@@ -1,17 +1,17 @@
 (lang dune 2.9)
 
-(name wasm)
+(name waml)
 
 (generate_opam_files true)
 
 (license Apache-2.0)
-(source (github WebAssembly/spec))
+(source (github WebAssembly/gc))
 (authors "Andreas Rossberg <rossberg@mpi-sws.org")
 (maintainers "Andreas Rossberg <rossberg@mpi-sws.org")
 
 (package
-  (name wasm)
-  (synopsis "Library for Wasm syntax and semantics")
-  (tags (wasm webassembly spec interpreter))
+  (name waml)
+  (synopsis "Compiler from Waml to Wasm")
+  (tags (wasm webassembly spec interpreter ml))
   (depends (ocaml (>= 4.12)))
 )
