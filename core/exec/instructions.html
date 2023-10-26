@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
-    <title>Instructions &#8212; WebAssembly 2.0 + tail calls + function references + gc (Draft 2023-10-16)</title>
+    <title>Instructions &#8212; WebAssembly 2.0 + tail calls + function references + gc (Draft 2023-10-26)</title>
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
     <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
@@ -441,7 +441,7 @@ S; F; \href{../exec/runtime.html#syntax-ref}{\mathit{ref}}~(\href{../syntax/inst
 <li><p>Let <span class="math notranslate nohighlight">\(\mathit{si}\)</span> be the <a class="reference internal" href="runtime.html#syntax-structinst"><span class="std std-ref">structure instance</span></a> <span class="math notranslate nohighlight">\(\{\href{../exec/runtime.html#syntax-structinst}{\mathsf{type}}~\href{../valid/conventions.html#syntax-deftype}{\mathit{deftype}}, \href{../exec/runtime.html#syntax-structinst}{\mathsf{fields}}~\href{../exec/runtime.html#syntax-fieldval}{\mathit{fieldval}}^\ast\}\)</span>.</p></li>
 <li><p>Let <span class="math notranslate nohighlight">\(a\)</span> be the length of <span class="math notranslate nohighlight">\(S.\href{../exec/runtime.html#syntax-store}{\mathsf{structs}}\)</span>.</p></li>
 <li><p>Append <span class="math notranslate nohighlight">\(\mathit{si}\)</span> to <span class="math notranslate nohighlight">\(S.\href{../exec/runtime.html#syntax-store}{\mathsf{structs}}\)</span>.</p></li>
-<li><p>Return the <a class="reference internal" href="runtime.html#syntax-ref-struct"><span class="std std-ref">structure reference</span></a> <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}struct}}~a\)</span>.</p></li>
+<li><p>Push the <a class="reference internal" href="runtime.html#syntax-ref-struct"><span class="std std-ref">structure reference</span></a> <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}struct}}~a\)</span> to the stack.</p></li>
 </ol>
 <div class="math notranslate nohighlight">
 \[\begin{split}\begin{array}{lcl&#64;{\qquad}l}
@@ -606,14 +606,14 @@ F; (\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/ins
 <li><p>Let <span class="math notranslate nohighlight">\(\mathit{ai}\)</span> be the <a class="reference internal" href="runtime.html#syntax-arrayinst"><span class="std std-ref">array instance</span></a> <span class="math notranslate nohighlight">\(\{\href{../exec/runtime.html#syntax-arrayinst}{\mathsf{type}}~\href{../valid/conventions.html#syntax-deftype}{\mathit{deftype}}, \href{../exec/runtime.html#syntax-arrayinst}{\mathsf{fields}}~\href{../exec/runtime.html#syntax-fieldval}{\mathit{fieldval}}^\ast\}\)</span>.</p></li>
 <li><p>Let <span class="math notranslate nohighlight">\(a\)</span> be the length of <span class="math notranslate nohighlight">\(S.\href{../exec/runtime.html#syntax-store}{\mathsf{arrays}}\)</span>.</p></li>
 <li><p>Append <span class="math notranslate nohighlight">\(\mathit{ai}\)</span> to <span class="math notranslate nohighlight">\(S.\href{../exec/runtime.html#syntax-store}{\mathsf{arrays}}\)</span>.</p></li>
-<li><p>Return the <a class="reference internal" href="runtime.html#syntax-ref-array"><span class="std std-ref">array reference</span></a> <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}array}}~a\)</span>.</p></li>
+<li><p>Push the <a class="reference internal" href="runtime.html#syntax-ref-array"><span class="std std-ref">array reference</span></a> <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}array}}~a\)</span> to the stack.</p></li>
 </ol>
 <div class="math notranslate nohighlight">
 \[\begin{split}\begin{array}{lcl&#64;{\qquad}l}
 S; F; \href{../exec/runtime.html#syntax-val}{\mathit{val}}^n~(\href{../syntax/instructions.html#syntax-instr-array}{\mathsf{array.new\_fixed}}~x~n) &amp;\href{../exec/conventions.html#formal-notation}{\hookrightarrow}&amp; S'; F; (\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}array}}~|S.\href{../exec/runtime.html#syntax-store}{\mathsf{arrays}}|)
   \\&amp;&amp;
   \begin{array}[t]{&#64;{}r&#64;{~}l&#64;{}}
-   (\mathrel{\mbox{if}} &amp; \href{../valid/conventions.html#aux-expand-deftype}{\mathrm{expand}}(F.\href{../exec/runtime.html#syntax-frame}{\mathsf{module}}.\href{../exec/runtime.html#syntax-moduleinst}{\mathsf{types}}[x]) = \href{../syntax/types.html#syntax-comptype}{\mathsf{array}}~\mathit{ft}^n \\
+   (\mathrel{\mbox{if}} &amp; \href{../valid/conventions.html#aux-expand-deftype}{\mathrm{expand}}(F.\href{../exec/runtime.html#syntax-frame}{\mathsf{module}}.\href{../exec/runtime.html#syntax-moduleinst}{\mathsf{types}}[x]) = \href{../syntax/types.html#syntax-comptype}{\mathsf{array}}~\mathit{ft} \\
    \land &amp; \mathit{ai} = \{\href{../exec/runtime.html#syntax-arrayinst}{\mathsf{type}}~F.\href{../exec/runtime.html#syntax-frame}{\mathsf{module}}.\href{../exec/runtime.html#syntax-moduleinst}{\mathsf{types}}[x], \href{../exec/runtime.html#syntax-arrayinst}{\mathsf{fields}}~(\href{../exec/runtime.html#aux-packval}{\mathrm{pack}}_{\mathit{ft}}(\href{../exec/runtime.html#syntax-val}{\mathit{val}}))^n\} \\
    \land &amp; S' = S \href{../syntax/conventions.html#notation-replace}{\mathrel{\mbox{with}}} \href{../exec/runtime.html#syntax-store}{\mathsf{arrays}} = S.\href{../exec/runtime.html#syntax-store}{\mathsf{arrays}}~\mathit{ai})
   \end{array} \\
@@ -3248,10 +3248,10 @@ S; F; \href{../exec/runtime.html#syntax-val}{\mathit{val}}^m~\href{../syntax/ins
 </ol>
 <div class="math notranslate nohighlight">
 \[\begin{split}\begin{array}{lcl&#64;{\qquad}l}
-S; \href{../exec/runtime.html#syntax-ref}{\mathit{ref}}~(\href{../syntax/instructions.html#syntax-instr-control}{\mathsf{br\_on\_cast}}~l~\mathit{rt}_1~X{rt}_2) &amp;\href{../exec/conventions.html#formal-notation}{\hookrightarrow}&amp; \href{../exec/runtime.html#syntax-ref}{\mathit{ref}}~(\href{../syntax/instructions.html#syntax-instr-control}{\mathsf{br}}~l)
+S; F; \href{../exec/runtime.html#syntax-ref}{\mathit{ref}}~(\href{../syntax/instructions.html#syntax-instr-control}{\mathsf{br\_on\_cast}}~l~\mathit{rt}_1~\mathit{rt}_2) &amp;\href{../exec/conventions.html#formal-notation}{\hookrightarrow}&amp; \href{../exec/runtime.html#syntax-ref}{\mathit{ref}}~(\href{../syntax/instructions.html#syntax-instr-control}{\mathsf{br}}~l)
   &amp; (\mathrel{\mbox{if}} S \href{../appendix/properties.html#valid-val}{\vdash} \href{../exec/runtime.html#syntax-ref}{\mathit{ref}} : \mathit{rt}
      \land \href{../valid/matching.html#match-reftype}{\vdash} \mathit{rt} \href{../valid/matching.html#match-reftype}{\leq} \href{../exec/types.html#type-inst}{\mathrm{clos}}_{F.\href{../exec/runtime.html#syntax-frame}{\mathsf{module}}}(\mathit{rt}_2)) \\
-S; \href{../exec/runtime.html#syntax-ref}{\mathit{ref}}~(\href{../syntax/instructions.html#syntax-instr-control}{\mathsf{br\_on\_cast}}~l~\mathit{rt}_1~\mathit{rt}_2) &amp;\href{../exec/conventions.html#formal-notation}{\hookrightarrow}&amp; \href{../exec/runtime.html#syntax-ref}{\mathit{ref}}
+S; F; \href{../exec/runtime.html#syntax-ref}{\mathit{ref}}~(\href{../syntax/instructions.html#syntax-instr-control}{\mathsf{br\_on\_cast}}~l~\mathit{rt}_1~\mathit{rt}_2) &amp;\href{../exec/conventions.html#formal-notation}{\hookrightarrow}&amp; \href{../exec/runtime.html#syntax-ref}{\mathit{ref}}
   &amp; (\mathrel{\mbox{otherwise}}) \\
 \end{array}\end{split}\]</div>
 </section>
@@ -3274,10 +3274,10 @@ S; \href{../exec/runtime.html#syntax-ref}{\mathit{ref}}~(\href{../syntax/instruc
 </ol>
 <div class="math notranslate nohighlight">
 \[\begin{split}\begin{array}{lcl&#64;{\qquad}l}
-S; \href{../exec/runtime.html#syntax-ref}{\mathit{ref}}~(\href{../syntax/instructions.html#syntax-instr-control}{\mathsf{br\_on\_cast\_fail}}~l~\mathit{rt}_1~X{rt}_2) &amp;\href{../exec/conventions.html#formal-notation}{\hookrightarrow}&amp; \href{../exec/runtime.html#syntax-ref}{\mathit{ref}}
+S; F; \href{../exec/runtime.html#syntax-ref}{\mathit{ref}}~(\href{../syntax/instructions.html#syntax-instr-control}{\mathsf{br\_on\_cast\_fail}}~l~\mathit{rt}_1~\mathit{rt}_2) &amp;\href{../exec/conventions.html#formal-notation}{\hookrightarrow}&amp; \href{../exec/runtime.html#syntax-ref}{\mathit{ref}}
   &amp; (\mathrel{\mbox{if}} S \href{../appendix/properties.html#valid-val}{\vdash} \href{../exec/runtime.html#syntax-ref}{\mathit{ref}} : \mathit{rt}
      \land \href{../valid/matching.html#match-reftype}{\vdash} \mathit{rt} \href{../valid/matching.html#match-reftype}{\leq} \href{../exec/types.html#type-inst}{\mathrm{clos}}_{F.\href{../exec/runtime.html#syntax-frame}{\mathsf{module}}}(\mathit{rt}_2)) \\
-S; \href{../exec/runtime.html#syntax-ref}{\mathit{ref}}~(\href{../syntax/instructions.html#syntax-instr-control}{\mathsf{br\_on\_cast\_fail}}~l~\mathit{rt}_1~\mathit{rt}_2) &amp;\href{../exec/conventions.html#formal-notation}{\hookrightarrow}&amp; \href{../exec/runtime.html#syntax-ref}{\mathit{ref}}~(\href{../syntax/instructions.html#syntax-instr-control}{\mathsf{br}}~l)
+S; F; \href{../exec/runtime.html#syntax-ref}{\mathit{ref}}~(\href{../syntax/instructions.html#syntax-instr-control}{\mathsf{br\_on\_cast\_fail}}~l~\mathit{rt}_1~\mathit{rt}_2) &amp;\href{../exec/conventions.html#formal-notation}{\hookrightarrow}&amp; \href{../exec/runtime.html#syntax-ref}{\mathit{ref}}~(\href{../syntax/instructions.html#syntax-instr-control}{\mathsf{br}}~l)
   &amp; (\mathrel{\mbox{otherwise}}) \\
 \end{array}\end{split}\]</div>
 </section>
