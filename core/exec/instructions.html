@@ -736,16 +736,20 @@ S; F; (\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/
 <li><p>Push the value <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-val}{\mathit{val}}\)</span> to the stack.</p></li>
 </ol>
 <div class="math notranslate nohighlight">
-\[\begin{split}\begin{array}{lcl&#64;{\qquad}l}
-S; F; (\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}array}}~a)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~i)~(\href{../syntax/instructions.html#syntax-instr-array}{\mathsf{array.get}}\mathsf{\_}\href{../syntax/instructions.html#syntax-sx}{\mathit{sx}}^?~x) &amp;\href{../exec/conventions.html#formal-notation}{\hookrightarrow}&amp; \href{../exec/runtime.html#syntax-val}{\mathit{val}}
-  &amp;
+\[\begin{split}~\\[-1ex]
+\begin{array}{lcl&#64;{\qquad}l}
+S; F; (\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}array}}~a)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~i)~(\href{../syntax/instructions.html#syntax-instr-array}{\mathsf{array.get}}\mathsf{\_}\href{../syntax/instructions.html#syntax-sx}{\mathit{sx}}^?~x) \href{../exec/conventions.html#formal-notation}{\hookrightarrow} \href{../exec/runtime.html#syntax-trap}{\mathsf{trap}}
+\\ \qquad
+ (\mathrel{\mbox{if}} i \geq |\href{../exec/runtime.html#syntax-store}{\mathsf{arrays}}[a].\href{../exec/runtime.html#syntax-arrayinst}{\mathsf{fields}}|)
+\\[1ex]
+S; F; (\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}array}}~a)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~i)~(\href{../syntax/instructions.html#syntax-instr-array}{\mathsf{array.get}}\mathsf{\_}\href{../syntax/instructions.html#syntax-sx}{\mathit{sx}}^?~x) \href{../exec/conventions.html#formal-notation}{\hookrightarrow} \href{../exec/runtime.html#syntax-val}{\mathit{val}}
+\\ \qquad
   \begin{array}[t]{&#64;{}r&#64;{~}l&#64;{}}
    (\mathrel{\mbox{if}} &amp; \href{../valid/conventions.html#aux-expand-deftype}{\mathrm{expand}}(F.\href{../exec/runtime.html#syntax-frame}{\mathsf{module}}.\href{../exec/runtime.html#syntax-moduleinst}{\mathsf{types}}[x]) = \href{../syntax/types.html#syntax-comptype}{\mathsf{array}}~\mathit{ft} \\
-   \land &amp; \href{../exec/runtime.html#syntax-val}{\mathit{val}} = \href{../exec/runtime.html#aux-unpackval}{\mathrm{unpack}}^{\href{../syntax/instructions.html#syntax-sx}{\mathit{sx}}^?}_{\mathit{ft}}(S.\href{../exec/runtime.html#syntax-store}{\mathsf{arrays}}[a].\href{../exec/runtime.html#syntax-arrayinst}{\mathsf{fields}}[i]))
-  \end{array} \\
-S; F; (\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}array}}~a)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~i)~(\href{../syntax/instructions.html#syntax-instr-array}{\mathsf{array.get}}\mathsf{\_}\href{../syntax/instructions.html#syntax-sx}{\mathit{sx}}^?~x) &amp;\href{../exec/conventions.html#formal-notation}{\hookrightarrow}&amp; \href{../exec/runtime.html#syntax-trap}{\mathsf{trap}}
-  &amp; (\mathrel{\mbox{otherwise}}) \\
-S; F; (\href{../syntax/instructions.html#syntax-instr-ref}{\mathsf{ref.null}}~t)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~i)~(\href{../syntax/instructions.html#syntax-instr-array}{\mathsf{array.get}}\mathsf{\_}\href{../syntax/instructions.html#syntax-sx}{\mathit{sx}}^?~x) &amp;\href{../exec/conventions.html#formal-notation}{\hookrightarrow}&amp; \href{../exec/runtime.html#syntax-trap}{\mathsf{trap}}
+   \land &amp; \href{../exec/runtime.html#syntax-val}{\mathit{val}} = \href{../exec/runtime.html#aux-unpackval}{\mathrm{unpack}}^{\href{../syntax/instructions.html#syntax-sx}{\mathit{sx}}^?}_{\mathit{ft}}(S.\href{../exec/runtime.html#syntax-store}{\mathsf{arrays}}[a].\href{../exec/runtime.html#syntax-arrayinst}{\mathsf{fields}}[i])) \\
+  \end{array}
+\\[1ex]
+S; F; (\href{../syntax/instructions.html#syntax-instr-ref}{\mathsf{ref.null}}~t)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~i)~(\href{../syntax/instructions.html#syntax-instr-array}{\mathsf{array.get}}\mathsf{\_}\href{../syntax/instructions.html#syntax-sx}{\mathit{sx}}^?~x) \href{../exec/conventions.html#formal-notation}{\hookrightarrow} \href{../exec/runtime.html#syntax-trap}{\mathsf{trap}}
 \end{array}\end{split}\]</div>
 </section>
 <section id="xref-syntax-instructions-syntax-instr-array-mathsf-array-set-x">
@@ -781,16 +785,20 @@ S; F; (\href{../syntax/instructions.html#syntax-instr-ref}{\mathsf{ref.null}}~t)
 <li><p>Replace the <a class="reference internal" href="runtime.html#syntax-fieldval"><span class="std std-ref">field value</span></a> <span class="math notranslate nohighlight">\(S.\href{../exec/runtime.html#syntax-store}{\mathsf{arrays}}[a].\href{../exec/runtime.html#syntax-arrayinst}{\mathsf{fields}}[i]\)</span> with <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-fieldval}{\mathit{fieldval}}\)</span>.</p></li>
 </ol>
 <div class="math notranslate nohighlight">
-\[\begin{split}\begin{array}{lcl&#64;{\qquad}l}
-S; F; (\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}array}}~a)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~i)~\href{../exec/runtime.html#syntax-val}{\mathit{val}}~(\href{../syntax/instructions.html#syntax-instr-array}{\mathsf{array.set}}~x) &amp;\href{../exec/conventions.html#formal-notation}{\hookrightarrow}&amp; S'; \epsilon
-  &amp;
+\[\begin{split}~\\[-1ex]
+\begin{array}{lcl&#64;{\qquad}l}
+S; F; (\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}array}}~a)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~i)~\href{../exec/runtime.html#syntax-val}{\mathit{val}}~(\href{../syntax/instructions.html#syntax-instr-array}{\mathsf{array.set}}~x) \href{../exec/conventions.html#formal-notation}{\hookrightarrow} \href{../exec/runtime.html#syntax-trap}{\mathsf{trap}}
+\\ \qquad
+ (\mathrel{\mbox{if}} i \geq |\href{../exec/runtime.html#syntax-store}{\mathsf{arrays}}[a].\href{../exec/runtime.html#syntax-arrayinst}{\mathsf{fields}}|)
+\\[1ex]
+S; F; (\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}array}}~a)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~i)~\href{../exec/runtime.html#syntax-val}{\mathit{val}}~(\href{../syntax/instructions.html#syntax-instr-array}{\mathsf{array.set}}~x) \href{../exec/conventions.html#formal-notation}{\hookrightarrow} S'; \epsilon
+\\ \qquad
   \begin{array}[t]{&#64;{}r&#64;{~}l&#64;{}}
   (\mathrel{\mbox{if}} &amp; \href{../valid/conventions.html#aux-expand-deftype}{\mathrm{expand}}(F.\href{../exec/runtime.html#syntax-frame}{\mathsf{module}}.\href{../exec/runtime.html#syntax-moduleinst}{\mathsf{types}}[x]) = \href{../syntax/types.html#syntax-comptype}{\mathsf{struct}}~\mathit{ft}^n \\
-   \land &amp; S' = S \href{../syntax/conventions.html#notation-replace}{\mathrel{\mbox{with}}} \href{../exec/runtime.html#syntax-store}{\mathsf{arrays}}[a].\href{../exec/runtime.html#syntax-arrayinst}{\mathsf{fields}}[i] = \href{../exec/runtime.html#aux-packval}{\mathrm{pack}}_{\mathit{ft}}(\href{../exec/runtime.html#syntax-val}{\mathit{val}}))
-  \end{array} \\
-S; F; (\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}array}}~a)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~i)~\href{../exec/runtime.html#syntax-val}{\mathit{val}}~(\href{../syntax/instructions.html#syntax-instr-array}{\mathsf{array.set}}~x) &amp;\href{../exec/conventions.html#formal-notation}{\hookrightarrow}&amp; \href{../exec/runtime.html#syntax-trap}{\mathsf{trap}}
-  &amp; (\mathrel{\mbox{otherwise}}) \\
-S; F; (\href{../syntax/instructions.html#syntax-instr-ref}{\mathsf{ref.null}}~t)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~i)~\href{../exec/runtime.html#syntax-val}{\mathit{val}}~(\href{../syntax/instructions.html#syntax-instr-array}{\mathsf{array.set}}~x) &amp;\href{../exec/conventions.html#formal-notation}{\hookrightarrow}&amp; \href{../exec/runtime.html#syntax-trap}{\mathsf{trap}}
+   \land &amp; S' = S \href{../syntax/conventions.html#notation-replace}{\mathrel{\mbox{with}}} \href{../exec/runtime.html#syntax-store}{\mathsf{arrays}}[a].\href{../exec/runtime.html#syntax-arrayinst}{\mathsf{fields}}[i] = \href{../exec/runtime.html#aux-packval}{\mathrm{pack}}_{\mathit{ft}}(\href{../exec/runtime.html#syntax-val}{\mathit{val}})) \\
+  \end{array}
+\\[1ex]
+S; F; (\href{../syntax/instructions.html#syntax-instr-ref}{\mathsf{ref.null}}~t)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~i)~\href{../exec/runtime.html#syntax-val}{\mathit{val}}~(\href{../syntax/instructions.html#syntax-instr-array}{\mathsf{array.set}}~x) \href{../exec/conventions.html#formal-notation}{\hookrightarrow} \href{../exec/runtime.html#syntax-trap}{\mathsf{trap}}
 \end{array}\end{split}\]</div>
 </section>
 <section id="xref-syntax-instructions-syntax-instr-array-mathsf-array-len">
