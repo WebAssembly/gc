@@ -794,7 +794,7 @@ S; F; (\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}array}}~a)~(\href{..
 S; F; (\href{../exec/runtime.html#syntax-ref}{\mathsf{ref{.}array}}~a)~(\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/instructions.html#syntax-instr-numeric}{\mathsf{const}}~i)~\href{../exec/runtime.html#syntax-val}{\mathit{val}}~(\href{../syntax/instructions.html#syntax-instr-array}{\mathsf{array.set}}~x) \href{../exec/conventions.html#formal-notation}{\hookrightarrow} S'; \epsilon
 \\ \qquad
   \begin{array}[t]{&#64;{}r&#64;{~}l&#64;{}}
-  (\mathrel{\mbox{if}} &amp; \href{../valid/conventions.html#aux-expand-deftype}{\mathrm{expand}}(F.\href{../exec/runtime.html#syntax-frame}{\mathsf{module}}.\href{../exec/runtime.html#syntax-moduleinst}{\mathsf{types}}[x]) = \href{../syntax/types.html#syntax-comptype}{\mathsf{struct}}~\mathit{ft}^n \\
+  (\mathrel{\mbox{if}} &amp; \href{../valid/conventions.html#aux-expand-deftype}{\mathrm{expand}}(F.\href{../exec/runtime.html#syntax-frame}{\mathsf{module}}.\href{../exec/runtime.html#syntax-moduleinst}{\mathsf{types}}[x]) = \href{../syntax/types.html#syntax-comptype}{\mathsf{array}}~\mathit{ft} \\
    \land &amp; S' = S \href{../syntax/conventions.html#notation-replace}{\mathrel{\mbox{with}}} \href{../exec/runtime.html#syntax-store}{\mathsf{arrays}}[a].\href{../exec/runtime.html#syntax-arrayinst}{\mathsf{fields}}[i] = \href{../exec/runtime.html#aux-packval}{\mathrm{pack}}_{\mathit{ft}}(\href{../exec/runtime.html#syntax-val}{\mathit{val}})) \\
   \end{array}
 \\[1ex]
