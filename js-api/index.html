@@ -6,7 +6,7 @@
   <meta content="ED" name="w3c-status">
   <meta content="Bikeshed version 82ce88815, updated Thu Sep 7 16:33:55 2023 -0700" name="generator">
   <link href="https://www.w3.org/TR/wasm-js-api-2/" rel="canonical">
-  <meta content="a74f788dca616c0bc8e2d2ccd9a5bcb0d25e682d" name="document-revision">
+  <meta content="f9607ac7d1e3047f951e75579076019a1aaa99e3" name="document-revision">
 <style>
 emu-const {
     font-family: serif;
@@ -674,7 +674,7 @@ var.selected6 { background-color: #FFBCF2; box-shadow: 0 0 0 2px #FFBCF2; }
   <div class="head">
    <p data-fill-with="logo"><a class="logo" href="https://www.w3.org/"> <img alt="W3C" height="48" src="https://www.w3.org/StyleSheets/TR/2021/logos/W3C" width="72"> </a> </p>
    <h1 class="p-name no-ref" id="title">WebAssembly JavaScript Interface</h1>
-   <p id="w3c-state"><a href="https://www.w3.org/standards/types#ED">Editor’s Draft</a>, <time class="dt-updated" datetime="2023-11-06">6 November 2023</time></p>
+   <p id="w3c-state"><a href="https://www.w3.org/standards/types#ED">Editor’s Draft</a>, <time class="dt-updated" datetime="2023-11-07">7 November 2023</time></p>
    <details open>
     <summary>More details about this document</summary>
     <div data-fill-with="spec-metadata">
@@ -2553,19 +2553,24 @@ In practice, an implementation may run out of resources for valid modules below 
    <ul>
     <li>The maximum size of a module is 1,073,741,824 bytes (1 GiB).
     <li>The maximum number of types defined in the types section is 1,000,000.
+    <li>The maximum number of recursion groups defined in the types sections is 1,000,000.
+    <li>The maximum number of types defined in a recursion group is 1,000,000.
+    <li>The maximum depth of a defined subtype hierarchy is 63 (where a type defined with no supertype has depth 0). 
     <li>The maximum number of functions defined in a module is 1,000,000.
     <li>The maximum number of imports declared in a module is 100,000.
     <li>The maximum number of exports declared in a module is 100,000.
     <li>The maximum number of globals defined in a module is 1,000,000.
     <li>The maximum number of data segments defined in a module is 100,000.
     <li>The maximum number of tables, including declared or imported tables, is 100,000.
-    <li>The maximum size of a table is 10,000,000.
+    <li>The maximum size of a table is 10000000.
     <li>The maximum number of table entries in any table initialization is 10,000,000.
     <li>The maximum number of memories, including declared or imported memories, is 1.
     <li>The maximum number of parameters to any function or block is 1,000.
     <li>The maximum number of return values for any function or block is 1,000.
     <li>The maximum size of a function body, including locals declarations, is 7,654,321 bytes.
     <li>The maximum number of locals declared in a function, including implicitly declared as parameters, is 50,000.
+    <li>The maximum number of fields in a struct is 10,000.
+    <li>The maximum number of operands to <code>array.new_fixed</code> is 10,000.
    </ul>
    <p>An implementation must throw a <code class="idl"><a data-link-type="idl" href="#exceptiondef-runtimeerror" id="ref-for-exceptiondef-runtimeerror③">RuntimeError</a></code> if one of the following limits is exceeded during runtime:
 In practice, an implementation may run out of resources for valid modules below these limits.</p>
