@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
-    <title>Modules &#8212; WebAssembly 2.0 + tail calls + function references + gc (Draft 2023-11-07)</title>
+    <title>Modules &#8212; WebAssembly 2.0 + tail calls + function references + gc (Draft 2023-11-08)</title>
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
     <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
@@ -150,7 +150,7 @@ Furthermore, most definitions are themselves classified with a suitable type.</p
 <li><p>Let <span class="math notranslate nohighlight">\(C'\)</span> be the same <a class="reference internal" href="conventions.html#context"><span class="std std-ref">context</span></a> as <span class="math notranslate nohighlight">\(C\)</span>,
 but with:</p>
 <ul>
-<li><p><span class="math notranslate nohighlight">\(\href{../valid/conventions.html#context}{\mathsf{locals}}\)</span> set to the sequence of <a class="reference internal" href="../syntax/types.html#syntax-valtype"><span class="std std-ref">value types</span></a> <span class="math notranslate nohighlight">\((\href{../syntax/types.html#syntax-init}{\mathrel{\mbox{set}}}~t_1)^\ast~\href{../valid/conventions.html#syntax-localtype}{\mathit{localtype}}^\ast\)</span>, concatenating parameters and locals,</p></li>
+<li><p><span class="math notranslate nohighlight">\(\href{../valid/conventions.html#context}{\mathsf{locals}}\)</span> set to the sequence of <a class="reference internal" href="../syntax/types.html#syntax-valtype"><span class="std std-ref">value types</span></a> <span class="math notranslate nohighlight">\((\href{../syntax/types.html#syntax-init}{\mathsf{set}}~t_1)^\ast~\href{../valid/conventions.html#syntax-localtype}{\mathit{localtype}}^\ast\)</span>, concatenating parameters and locals,</p></li>
 <li><p><span class="math notranslate nohighlight">\(\href{../valid/conventions.html#context}{\mathsf{labels}}\)</span> set to the singular sequence containing only <a class="reference internal" href="../syntax/types.html#syntax-resulttype"><span class="std std-ref">result type</span></a> <span class="math notranslate nohighlight">\([t_2^\ast]\)</span>.</p></li>
 <li><p><span class="math notranslate nohighlight">\(\href{../valid/conventions.html#context}{\mathsf{return}}\)</span> set to the <a class="reference internal" href="../syntax/types.html#syntax-resulttype"><span class="std std-ref">result type</span></a> <span class="math notranslate nohighlight">\([t_2^\ast]\)</span>.</p></li>
 </ul>
@@ -163,11 +163,11 @@ the expression <span class="math notranslate nohighlight">\(\href{../syntax/inst
 \[\frac{
   \href{../valid/conventions.html#aux-expand-deftype}{\mathrm{expand}}(C.\href{../valid/conventions.html#context}{\mathsf{types}}[x]) = \href{../syntax/types.html#syntax-comptype}{\mathsf{func}}~[t_1^\ast] \href{../syntax/types.html#syntax-functype}{\rightarrow} [t_2^\ast]
   \qquad
-  (C \href{../valid/modules.html#valid-local}{\vdash} t : \href{../syntax/types.html#syntax-init}{\mathit{init}}~t)^\ast
+  (C \href{../valid/modules.html#valid-local}{\vdash} \{\href{../syntax/modules.html#syntax-local}{\mathsf{type}}~t\} : \href{../syntax/types.html#syntax-init}{\mathit{init}}~t)^\ast
   \qquad
-  C,\href{../valid/conventions.html#context}{\mathsf{locals}}\,(\href{../syntax/types.html#syntax-init}{\mathrel{\mbox{set}}}~t_1)^\ast~(\href{../syntax/types.html#syntax-init}{\mathit{init}}~t)^\ast,\href{../valid/conventions.html#context}{\mathsf{labels}}~[t_2^\ast],\href{../valid/conventions.html#context}{\mathsf{return}}~[t_2^\ast] \href{../valid/instructions.html#valid-expr}{\vdash} \href{../syntax/instructions.html#syntax-expr}{\mathit{expr}} : [t_2^\ast]
+  C,\href{../valid/conventions.html#context}{\mathsf{locals}}\,(\href{../syntax/types.html#syntax-init}{\mathsf{set}}~t_1)^\ast~(\href{../syntax/types.html#syntax-init}{\mathit{init}}~t)^\ast,\href{../valid/conventions.html#context}{\mathsf{labels}}~[t_2^\ast],\href{../valid/conventions.html#context}{\mathsf{return}}~[t_2^\ast] \href{../valid/instructions.html#valid-expr}{\vdash} \href{../syntax/instructions.html#syntax-expr}{\mathit{expr}} : [t_2^\ast]
 }{
-  C \href{../valid/modules.html#valid-func}{\vdash} \{ \href{../syntax/modules.html#syntax-func}{\mathsf{type}}~x, \href{../syntax/modules.html#syntax-func}{\mathsf{locals}}~t^\ast, \href{../syntax/modules.html#syntax-func}{\mathsf{body}}~\href{../syntax/instructions.html#syntax-expr}{\mathit{expr}} \} : C.\href{../valid/conventions.html#context}{\mathsf{types}}[x]
+  C \href{../valid/modules.html#valid-func}{\vdash} \{ \href{../syntax/modules.html#syntax-func}{\mathsf{type}}~x, \href{../syntax/modules.html#syntax-func}{\mathsf{locals}}~\{\href{../syntax/modules.html#syntax-local}{\mathsf{type}}~t\}^\ast, \href{../syntax/modules.html#syntax-func}{\mathsf{body}}~\href{../syntax/instructions.html#syntax-expr}{\mathit{expr}} \} : C.\href{../valid/conventions.html#context}{\mathsf{types}}[x]
 }\]</div>
 </section>
 </section>
@@ -180,12 +180,12 @@ the expression <span class="math notranslate nohighlight">\(\href{../syntax/inst
 <li><p>The <a class="reference internal" href="../syntax/types.html#syntax-valtype"><span class="std std-ref">value type</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-valtype}{\mathit{valtype}}\)</span> must be <a class="reference internal" href="types.html#valid-valtype"><span class="std std-ref">valid</span></a>.</p></li>
 <li><p>If <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-valtype}{\mathit{valtype}}\)</span> is <a class="reference internal" href="types.html#valid-defaultable"><span class="std std-ref">defaultable</span></a>, then:</p>
 <ul>
-<li><p>The local is valid with <a class="reference internal" href="conventions.html#syntax-localtype"><span class="std std-ref">local type</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-init}{\mathrel{\mbox{set}}}~\href{../syntax/types.html#syntax-valtype}{\mathit{valtype}}\)</span>.</p></li>
+<li><p>The local is valid with <a class="reference internal" href="conventions.html#syntax-localtype"><span class="std std-ref">local type</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-init}{\mathsf{set}}~\href{../syntax/types.html#syntax-valtype}{\mathit{valtype}}\)</span>.</p></li>
 </ul>
 </li>
 <li><p>Else:</p>
 <ul>
-<li><p>The local is valid with <a class="reference internal" href="conventions.html#syntax-localtype"><span class="std std-ref">local type</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-init}{\mathrel{\mbox{unset}}}~\href{../syntax/types.html#syntax-valtype}{\mathit{valtype}}\)</span>.</p></li>
+<li><p>The local is valid with <a class="reference internal" href="conventions.html#syntax-localtype"><span class="std std-ref">local type</span></a> <span class="math notranslate nohighlight">\(\href{../syntax/types.html#syntax-init}{\mathsf{unset}}~\href{../syntax/types.html#syntax-valtype}{\mathit{valtype}}\)</span>.</p></li>
 </ul>
 </li>
 </ul>
@@ -195,13 +195,13 @@ the expression <span class="math notranslate nohighlight">\(\href{../syntax/inst
   \qquad
   C \href{../valid/types.html#valid-defaultable}{\vdash} t \href{../valid/types.html#valid-defaultable}{\mathrel{\mbox{defaultable}}}
 }{
-  C \href{../valid/modules.html#valid-local}{\vdash} \{ \href{../syntax/modules.html#syntax-local}{\mathsf{type}}~t \} : \href{../syntax/types.html#syntax-init}{\mathrel{\mbox{set}}}~t \mathrel{\mbox{ok}}
+  C \href{../valid/modules.html#valid-local}{\vdash} \{ \href{../syntax/modules.html#syntax-local}{\mathsf{type}}~t \} : \href{../syntax/types.html#syntax-init}{\mathsf{set}}~t
 }\]</div>
 <div class="math notranslate nohighlight">
 \[\frac{
   C \href{../valid/types.html#valid-valtype}{\vdash} t \mathrel{\mbox{ok}}
 }{
-  C \href{../valid/modules.html#valid-local}{\vdash} \{ LTYPE~t \} : \href{../syntax/types.html#syntax-init}{\mathrel{\mbox{unset}}}~t \mathrel{\mbox{ok}}
+  C \href{../valid/modules.html#valid-local}{\vdash} \{ \href{../syntax/modules.html#syntax-local}{\mathsf{type}}~t \} : \href{../syntax/types.html#syntax-init}{\mathsf{unset}}~t
 }\]</div>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
