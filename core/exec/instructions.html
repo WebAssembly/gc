@@ -665,7 +665,7 @@ S; F; (\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}.\href{../syntax/
   \begin{array}[t]{&#64;{}r&#64;{~}l&#64;{}}
    (\mathrel{\mbox{if}} &amp; \href{../valid/conventions.html#aux-expand-deftype}{\mathrm{expand}}(F.\href{../exec/runtime.html#syntax-frame}{\mathsf{module}}.\href{../exec/runtime.html#syntax-moduleinst}{\mathsf{types}}[x]) = \href{../syntax/types.html#syntax-comptype}{\mathsf{array}}~\mathit{ft}^n \\
    \land &amp; t = \href{../syntax/types.html#aux-unpacktype}{\mathrm{unpack}}(\mathit{ft}) \\
-   \land &amp; (\href{../exec/numerics.html#aux-bytes}{\mathrm{bytes}}_{\mathit{ft}}(c))^n = S.\href{../exec/runtime.html#syntax-store}{\mathsf{datas}}[F.\href{../exec/runtime.html#syntax-frame}{\mathsf{module}}.\href{../exec/runtime.html#syntax-moduleinst}{\mathsf{dataaddrs}}[y]].\href{../exec/runtime.html#syntax-datainst}{\mathsf{data}}[s \href{../syntax/conventions.html#notation-slice}{\mathrel{\mathbf{:}}} n\cdot|\mathit{ft}|/8] \\
+   \land &amp; \href{../syntax/conventions.html#notation-concat}{\mathrm{concat}}((\href{../exec/numerics.html#aux-bytes}{\mathrm{bytes}}_{\mathit{ft}}(c))^n) = S.\href{../exec/runtime.html#syntax-store}{\mathsf{datas}}[F.\href{../exec/runtime.html#syntax-frame}{\mathsf{module}}.\href{../exec/runtime.html#syntax-moduleinst}{\mathsf{dataaddrs}}[y]].\href{../exec/runtime.html#syntax-datainst}{\mathsf{data}}[s \href{../syntax/conventions.html#notation-slice}{\mathrel{\mathbf{:}}} n\cdot|\mathit{ft}|/8] \\
   \end{array} \\
 \end{array}\end{split}\]</div>
 </section>
