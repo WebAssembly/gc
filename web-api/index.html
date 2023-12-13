@@ -4,9 +4,9 @@
   <meta content="width=device-width, initial-scale=1, shrink-to-fit=no" name="viewport">
   <title>WebAssembly Web API</title>
   <meta content="ED" name="w3c-status">
-  <meta content="Bikeshed version 82ce88815, updated Thu Sep 7 16:33:55 2023 -0700" name="generator">
+  <meta content="Bikeshed version 5dc73194b, updated Mon Dec 11 17:50:16 2023 -0800" name="generator">
   <link href="https://www.w3.org/TR/wasm-web-api-2/" rel="canonical">
-  <meta content="026ffeab0d4c5031879d63a0cbb22243dce16055" name="document-revision">
+  <meta content="93f81bb49387ef19687488379ec791fbf14544c0" name="revision">
 <style>/* Boilerplate: style-autolinks */
 .css.css, .property.property, .descriptor.descriptor {
     color: var(--a-normal-text);
@@ -332,11 +332,15 @@ figcaption:not(.no-marker)::before {
 :root {
     --dfnpanel-bg: #ddd;
     --dfnpanel-text: var(--text);
+    --dfnpanel-target-bg: #ffc;
+    --dfnpanel-target-outline: orange;
 }
 @media (prefers-color-scheme: dark) {
     :root {
         --dfnpanel-bg: #222;
         --dfnpanel-text: var(--text);
+        --dfnpanel-target-bg: #333;
+        --dfnpanel-target-outline: silver;
     }
 }
 .dfn-panel {
@@ -359,11 +363,13 @@ figcaption:not(.no-marker)::before {
 .dfn-panel > b { display: block; }
 .dfn-panel a { color: var(--dfnpanel-text); }
 .dfn-panel a:not(:hover) { text-decoration: none !important; border-bottom: none !important; }
+.dfn-panel a:focus {
+    outline: 5px auto Highlight;
+    outline: 5px auto -webkit-focus-ring-color;
+}
 .dfn-panel > b + b { margin-top: 0.25em; }
 .dfn-panel ul { padding: 0 0 0 1em; list-style: none; }
 .dfn-panel li a {
-    white-space: pre;
-    display: inline-block;
     max-width: calc(300px - 1.5em - 1em);
     overflow: hidden;
     text-overflow: ellipsis;
@@ -372,67 +378,79 @@ figcaption:not(.no-marker)::before {
 .dfn-panel.activated {
     display: inline-block;
     position: fixed;
-    left: .5em;
+    left: 8px;
     bottom: 2em;
     margin: 0 auto;
     max-width: calc(100vw - 1.5em - .4em - .5em);
     max-height: 30vh;
+    transition: left 1s ease-out, bottom 1s ease-out;
 }
 
-.dfn-paneled[role="button"] { cursor: pointer; }
-</style>
-<style>/* Boilerplate: style-dfn-panel */
-:root {
-    --dfnpanel-bg: #ddd;
-    --dfnpanel-text: var(--text);
+.dfn-panel .link-item:hover {
+    text-decoration: underline;
 }
-@media (prefers-color-scheme: dark) {
-    :root {
-        --dfnpanel-bg: #222;
-        --dfnpanel-text: var(--text);
+.dfn-panel .link-item .copy-icon {
+    opacity: 0;
+}
+.dfn-panel .link-item:hover .copy-icon,
+.dfn-panel .link-item .copy-icon:focus {
+    opacity: 1;
+}
+
+.dfn-panel .copy-icon {
+    display: inline-block;
+    margin-right: 0.5em;
+    width: 0.85em;
+    height: 1em;
+    border-radius: 3px;
+    background-color: #ccc;
+    cursor: pointer;
+}
+
+.dfn-panel .copy-icon .icon {
+    width: 100%;
+    height: 100%;
+    background-color: #fff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+}
+
+.dfn-panel .copy-icon .icon::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border: 1px solid black;
+    background-color: #ccc;
+    opacity: 0.25;
+    transform: translate(3px, -3px);
+}
+
+.dfn-panel .copy-icon:active .icon::before {
+    opacity: 1;
+}
+
+.dfn-paneled[role="button"] { cursor: help; }
+
+.highlighted {
+    animation: target-fade 3s;
+}
+
+@keyframes target-fade {
+    from {
+        background-color: var(--dfnpanel-target-bg);
+        outline: 5px solid var(--dfnpanel-target-outline);
+    }
+    to {
+        color: var(--a-normal-text);
+        background-color: transparent;
+        outline: transparent;
     }
 }
-.dfn-panel {
-    position: absolute;
-    z-index: 35;
-    width: 20em;
-    width: 300px;
-    height: auto;
-    max-height: 500px;
-    overflow: auto;
-    padding: 0.5em 0.75em;
-    font: small Helvetica Neue, sans-serif, Droid Sans Fallback;
-    background: var(--dfnpanel-bg);
-    color: var(--dfnpanel-text);
-    border: outset 0.2em;
-    white-space: normal; /* in case it's moved into a pre */
-}
-.dfn-panel:not(.on) { display: none; }
-.dfn-panel * { margin: 0; padding: 0; text-indent: 0; }
-.dfn-panel > b { display: block; }
-.dfn-panel a { color: var(--dfnpanel-text); }
-.dfn-panel a:not(:hover) { text-decoration: none !important; border-bottom: none !important; }
-.dfn-panel > b + b { margin-top: 0.25em; }
-.dfn-panel ul { padding: 0 0 0 1em; list-style: none; }
-.dfn-panel li a {
-    white-space: pre;
-    display: inline-block;
-    max-width: calc(300px - 1.5em - 1em);
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.dfn-panel.activated {
-    display: inline-block;
-    position: fixed;
-    left: .5em;
-    bottom: 2em;
-    margin: 0 auto;
-    max-width: calc(100vw - 1.5em - .4em - .5em);
-    max-height: 30vh;
-}
-
-.dfn-paneled[role="button"] { cursor: pointer; }
 </style>
 <style>/* Boilerplate: style-issues */
 a[href].issue-return {
@@ -452,6 +470,43 @@ a[href].issue-return {
 [data-md] > :last-child {
     margin-bottom: 0;
 }
+</style>
+<style>/* Boilerplate: style-ref-hints */
+:root {
+    --ref-hint-bg: #ddd;
+    --ref-hint-text: var(--text);
+}
+@media (prefers-color-scheme: dark) {
+    :root {
+        --ref-hint-bg: #222;
+        --ref-hint-text: var(--text);
+    }
+}
+
+.ref-hint {
+    display: none;
+    position: absolute;
+    z-index: 35;
+    width: 20em;
+    width: 300px;
+    height: auto;
+    max-height: 500px;
+    overflow: auto;
+    padding: 0.5em 0.5em;
+    font: small Helvetica Neue, sans-serif, Droid Sans Fallback;
+    background: var(--ref-hint-bg);
+    color: var(--ref-hint-text);
+    border: outset 0.2em;
+    white-space: normal; /* in case it's moved into a pre */
+}
+
+.ref-hint.on {
+    display: inline-block;
+}
+
+.ref-hint * { margin: 0; padding: 0; text-indent: 0; }
+
+.ref-hint ul { padding: 0 0 0 1em; list-style: none; }
 </style>
 <style>/* Boilerplate: style-selflinks */
 
@@ -512,13 +567,6 @@ dfn > a.self-link:hover {
 a.self-link::before            { content: "¶"; }
 .heading > a.self-link::before { content: "§"; }
 dfn > a.self-link::before      { content: "#"; }
-</style>
-<style>/* Boilerplate: style-syntax-highlighting */
-
-            pre.idl.highlight {
-                background: var(--borderedblock-bg, var(--def-bg));
-            }
-            
 </style>
 <style>/* Boilerplate: style-syntax-highlighting */
 
@@ -669,7 +717,7 @@ var.selected6 { background-color: #FFBCF2; box-shadow: 0 0 0 2px #FFBCF2; }
   <div class="head">
    <p data-fill-with="logo"><a class="logo" href="https://www.w3.org/"> <img alt="W3C" height="48" src="https://www.w3.org/StyleSheets/TR/2021/logos/W3C" width="72"> </a> </p>
    <h1 class="p-name no-ref" id="title">WebAssembly Web API</h1>
-   <p id="w3c-state"><a href="https://www.w3.org/standards/types#ED">Editor’s Draft</a>, <time class="dt-updated" datetime="2023-11-14">14 November 2023</time></p>
+   <p id="w3c-state"><a href="https://www.w3.org/standards/types#ED">Editor’s Draft</a>, <time class="dt-updated" datetime="2023-12-13">13 December 2023</time></p>
    <details open>
     <summary>More details about this document</summary>
     <div data-fill-with="spec-metadata">
@@ -791,7 +839,7 @@ and the <a href="https://www.w3.org/TR/wasm-web-api/">WebAssembly Web API</a>.
         <p>If <var>response</var>’s <a data-link-type="dfn" href="https://fetch.spec.whatwg.org/#concept-response-status" id="ref-for-concept-response-status">status</a> is not an <a data-link-type="dfn" href="https://fetch.spec.whatwg.org/#ok-status" id="ref-for-ok-status①">ok status</a>, <a data-link-type="dfn" href="https://webidl.spec.whatwg.org/#reject" id="ref-for-reject①">reject</a> <var>returnValue</var> with a <code class="idl"><a data-link-type="idl" href="https://tc39.github.io/ecma262/#sec-native-error-types-used-in-this-standard-typeerror" id="ref-for-sec-native-error-types-used-in-this-standard-typeerror④">TypeError</a></code> and abort these substeps.</p>
        <li data-md>
         <p><a data-link-type="dfn" href="https://fetch.spec.whatwg.org/#concept-body-consume-body" id="ref-for-concept-body-consume-body">Consume</a> <var>response</var>’s body as an <code class="idl"><a data-link-type="idl" href="https://tc39.github.io/ecma262/#sec-arraybuffer-objects" id="ref-for-sec-arraybuffer-objects">ArrayBuffer</a></code>, and let <var>bodyPromise</var> be the result.</p>
-        <p class="note" role="note"><span class="marker">Note:</span> Although it is specified here that the response is consumed entirely before compilation proceeds, that is purely for ease of specification; implementations are likely to instead perform processing in a streaming fashion. The difference is unobservable, and thus the simpler model is specified.</p>
+        <p class="note" role="note"><span class="marker">Note:</span> Although it is specified here that the response is consumed entirely before compilation proceeds, that is purely for ease of specification; implementations are likely to instead perform processing in a streaming fashion. The difference is unobservable, and thus the simpler model is specified. </p>
        <li data-md>
         <p><a data-link-type="dfn" href="https://webidl.spec.whatwg.org/#upon-fulfillment" id="ref-for-upon-fulfillment①">Upon fulfillment</a> of <var>bodyPromise</var> with value <var>bodyArrayBuffer</var>:</p>
         <ol>
@@ -1140,10 +1188,179 @@ review, approval, and registration with IANA.</p>
 <script>/* Boilerplate: script-dfn-panel */
 "use strict";
 {
-    const dfnsJson = window.dfnsJson || {};
+    // Functions, divided by link type, that wrap an autolink's
+    // contents with the appropriate outer syntax.
+    // Alternately, a string naming another type they format
+    // the same as.
+    const typeFormatters = {
+        'dfn': (text) => `[=${text}=]`,
+        'abstract-op': (text) => `[\$${text}\$]`,
+        'value': (text) => `''${text}''`,
+        'http-header': (text) => `[:${text}:]`,
+        'idl': (text) => `{{${text}}}`,
+        'interface': 'idl',
+        'constructor': 'idl',
+        'method': 'idl',
+        'argument': 'idl',
+        'attribute': 'idl',
+        'callback': 'idl',
+        'dictionary': 'idl',
+        'dict-member': 'idl',
+        'enum': 'idl',
+        'enum-value': 'idl',
+        'exception': 'idl',
+        'const': 'idl',
+        'typedef': 'idl',
+        'stringifier': 'idl',
+        'serializer': 'idl',
+        'iterator': 'idl',
+        'maplike': 'idl',
+        'setlike': 'idl',
+        'extended-attribute': 'idl',
+        'event': 'idl',
+        'element': (element) => `<{${element}}>`,
+        'element-state': 'element',
+        'element-attr': 'element',
+        'attr-value': 'element',
+        'scheme': 'dfn',
+        'permission': 'dfn',
+        'grammar': (text) => `${text} (within a <pre class=prod>)`,
+        'type': (text)=> `<<${text}>>`,
+        'property': (text) => `'${text}'`,
+        'descriptor': 'property',
+        'function': 'value',
+        'at-rule': 'value',
+        'selector': 'value',
+    };
+    const typesUsingFor = new Set(
+        [
+            "descriptor",
+            "value",
+            "element-attr",
+            "attr-value",
+            "element-state",
+            "method",
+            "constructor",
+            "argument",
+            "attribute",
+            "const",
+            "dict-member",
+            "event",
+            "enum-value",
+            "stringifier",
+            "serializer",
+            "iterator",
+            "maplike",
+            "setlike",
+            "state",
+            "mode",
+            "context",
+            "facet",
+        ],
+    )
+    const typesNotUsingFor = new Set(
+        [
+            "property",
+            "element",
+            "interface",
+            "namespace",
+            "callback",
+            "dictionary",
+            "enum",
+            "exception",
+            "typedef",
+            "http-header",
+            "permission",
+        ],
+    )
+    function linkFormatterFromType(type) {
+        const fnOrType = typeFormatters[type];
+        if(typeof fnOrType === 'string') {
+            // follow the alias
+            return linkFormatterFromType(fnOrType);
+        }
+        return fnOrType;
+    };
 
-    function genDfnPanel({dfnID, url, dfnText, refSections, external}) {
-        return mk.aside({
+    function genLinkingSyntaxes(dfn) {
+        if(dfn.tagName != "DFN") return;
+
+        const type = dfn.getAttribute('data-dfn-type');
+        if(!type) {
+            console.log(`<dfn> doesn't have a data-dfn-type:`, dfn);
+            return [];
+        }
+
+        // Return a function that wraps link text based on the type
+        const linkFormatter = linkFormatterFromType(type);
+        if(!linkFormatter) {
+            console.log(`<dfn> has an unknown data-dfn-type:`, dfn);
+            return [];
+        }
+
+        let ltAlts;
+        if(dfn.hasAttribute('data-lt')) {
+            ltAlts = dfn.getAttribute('data-lt')
+                .split("|")
+                .map(x=>x.trim());
+        } else {
+            ltAlts = [dfn.textContent.trim()];
+        }
+        if(type == "type") {
+            // lt of "<foo>", but "foo" is the interior;
+            // <<foo/bar>> is how you write it with a for,
+            // not <foo/<bar>> or whatever.
+            for(var i = 0; i < ltAlts.length; i++) {
+                const lt = ltAlts[i];
+                const match = /<(.*)>/.exec(lt);
+                if(match) { ltAlts[i] = match[1]; }
+            }
+        }
+
+        let forAlts;
+        if(dfn.hasAttribute('data-dfn-for')) {
+            forAlts = dfn.getAttribute('data-dfn-for')
+                .split(",")
+                .map(x=>x.trim());
+        } else {
+            forAlts = [''];
+        }
+
+        let linkingSyntaxes = [];
+        if(!typesUsingFor.has(type)) {
+            for(const lt of ltAlts) {
+                linkingSyntaxes.push(linkFormatter(lt));
+            }
+        }
+        if(!typesNotUsingFor.has(type)) {
+            for(const f of forAlts) {
+                linkingSyntaxes.push(linkFormatter(`${f}/${ltAlts[0]}`))
+            }
+        }
+        return [
+            mk.b({}, 'Possible linking syntaxes:'),
+            mk.ul({},
+                ...linkingSyntaxes.map(link => {
+                    const copyLink = async () =>
+                        await navigator.clipboard.writeText(link);
+                    return mk.li({},
+                        mk.div({ class: 'link-item' },
+                            mk.button({
+                                class: 'copy-icon', title: 'Copy',
+                                type: 'button',
+                                _onclick: copyLink,
+                                tabindex: 0,
+                            }, mk.span({ class: 'icon' }) ),
+                            mk.span({}, link)
+                        )
+                    );
+                })
+            )
+        ];
+    }
+
+    function genDfnPanel({ dfn, dfnID, url, dfnText, refSections, external }) {
+        const dfnPanel = mk.aside({
             class: "dfn-panel",
             id: `infopanel-for-${dfnID}`,
             "data-for": dfnID,
@@ -1151,16 +1368,14 @@ review, approval, and registration with IANA.</p>
             },
             mk.span({id:`infopaneltitle-for-${dfnID}`, style:"display:none"},
                 `Info about the '${dfnText}' ${external?"external":""} reference.`),
-            mk.a({href:url}, url),
+            mk.a({href:url, class:"dfn-link"}, url),
             mk.b({}, "Referenced in:"),
             mk.ul({},
                 ...refSections.map(section=>
                     mk.li({},
                         ...section.refs.map((ref, refI)=>
                             [
-                                mk.a({
-                                    href: `#${ref.id}`
-                                    },
+                                mk.a({ href: `#${ref.id}` },
                                     (refI == 0) ? section.title : `(${refI + 1})`
                                 ),
                                 " ",
@@ -1169,7 +1384,11 @@ review, approval, and registration with IANA.</p>
                     ),
                 ),
             ),
+            genLinkingSyntaxes(dfn),
         );
+        dfnPanel.forDfn = dfn;
+        if(!dfn) { console.log(dfnPanel); }
+        return dfnPanel;
     }
 
     function genAllDfnPanels() {
@@ -1178,20 +1397,16 @@ review, approval, and registration with IANA.</p>
             const dfn = document.getElementById(dfnID);
             if(!dfn) {
                 console.log(`Can't find dfn#${dfnID}.`, panelData);
-            } else {
-                const panel = genDfnPanel(panelData);
-                append(document.body, panel);
-                insertDfnPopupAction(dfn, panel)
+                continue;
             }
+            const panel = genDfnPanel({ ...panelData, dfn });
+            append(document.body, panel);
+            insertDfnPopupAction(panel)
         }
     }
 
     document.addEventListener("DOMContentLoaded", ()=>{
         genAllDfnPanels();
-
-        // Add popup behavior to all dfns to show the corresponding dfn-panel.
-        var dfns = queryAll('.dfn-paneled');
-        for(let dfn of dfns) { ; }
 
         document.body.addEventListener("click", (e) => {
             // If not handled already, just hide all dfn panels.
@@ -1199,75 +1414,84 @@ review, approval, and registration with IANA.</p>
         });
     })
 
-
     function hideAllDfnPanels() {
         // Turn off any currently "on" or "activated" panels.
         queryAll(".dfn-panel.on, .dfn-panel.activated").forEach(el=>hideDfnPanel(el));
     }
 
-    function showDfnPanel(dfnPanel, dfn) {
+    function showDfnPanel(dfnPanel) {
         hideAllDfnPanels(); // Only display one at this time.
+
+        const dfn = dfnPanel.forDfn;
         dfn.setAttribute("aria-expanded", "true");
+
         dfnPanel.classList.add("on");
-        dfnPanel.style.left = "5px";
-        dfnPanel.style.top = "0px";
-        const panelRect = dfnPanel.getBoundingClientRect();
-        const panelWidth = panelRect.right - panelRect.left;
-        if (panelRect.right > document.body.scrollWidth) {
-            // Panel's overflowing the screen.
-            // Just drop it below the dfn and flip it rightward instead.
-            // This still wont' fix things if the screen is *really* wide,
-            // but fixing that's a lot harder without 'anchor()'.
-            dfnPanel.style.top = "1.5em";
-            dfnPanel.style.left = "auto";
-            dfnPanel.style.right = "0px";
+        positionDfnPanel(dfnPanel);
+
+        let tabIndex = 100;
+        dfn.tabIndex = tabIndex++;
+        // Increment tabindex for each anchor and button tags in panel
+        const tabbable = dfnPanel.querySelectorAll(":is(a, button)");
+        for (const el of tabbable) {
+            el.tabIndex = tabIndex++;
         }
     }
+
+    function positionDfnPanel(dfnPanel) {
+        const dfn = dfnPanel.forDfn;
+        const dfnPos = getRootLevelAbsolutePosition(dfn);
+        dfnPanel.style.top = dfnPos.bottom + "px";
+        dfnPanel.style.left = dfnPos.left + "px";
+
+        const panelPos = dfnPanel.getBoundingClientRect();
+        const panelMargin = 8;
+        const maxRight = document.body.parentNode.clientWidth - panelMargin;
+        if (panelPos.right > maxRight) {
+            const overflowAmount = panelPos.right - maxRight;
+            const newLeft = Math.max(panelMargin, dfnPos.left - overflowAmount);
+            dfnPanel.style.left = newLeft + "px";
+        }}
 
     function pinDfnPanel(dfnPanel) {
         // Switch it to "activated" state, which pins it.
         dfnPanel.classList.add("activated");
+        dfnPanel.style.position = "fixed";
         dfnPanel.style.left = null;
         dfnPanel.style.top = null;
     }
 
-    function hideDfnPanel(dfnPanel, dfn) {
-        if(!dfn) {
-            dfn = document.getElementById(dfnPanel.getAttribute("data-for"));
-        }
-        dfn.setAttribute("aria-expanded", "false")
+    function hideDfnPanel(dfnPanel) {
+        const dfn = dfnPanel.forDfn;
+        dfn.setAttribute("aria-expanded", "false");
+        dfn.tabIndex = undefined;
+        dfnPanel.style.position = "absolute"; // unfix it
         dfnPanel.classList.remove("on");
         dfnPanel.classList.remove("activated");
     }
 
-    function toggleDfnPanel(dfnPanel, dfn) {
+    function toggleDfnPanel(dfnPanel) {
         if(dfnPanel.classList.contains("on")) {
-            hideDfnPanel(dfnPanel, dfn);
+            hideDfnPanel(dfnPanel);
         } else {
-            showDfnPanel(dfnPanel, dfn);
+            showDfnPanel(dfnPanel);
         }
     }
 
-    function insertDfnPopupAction(dfn, dfnPanel) {
-        // Find dfn panel
-        const panelWrapper = document.createElement('span');
-        panelWrapper.appendChild(dfnPanel);
-        panelWrapper.style.position = "relative";
-        panelWrapper.style.height = "0px";
-        dfn.insertAdjacentElement("afterend", panelWrapper);
+    function insertDfnPopupAction(dfnPanel) {
+        const dfn = dfnPanel.forDfn;
         dfn.setAttribute('role', 'button');
         dfn.setAttribute('aria-expanded', 'false')
         dfn.tabIndex = 0;
         dfn.classList.add('has-dfn-panel');
         dfn.addEventListener('click', (event) => {
-            showDfnPanel(dfnPanel, dfn);
+            showDfnPanel(dfnPanel);
             event.stopPropagation();
         });
         dfn.addEventListener('keypress', (event) => {
             const kc = event.keyCode;
             // 32->Space, 13->Enter
             if(kc == 32 || kc == 13) {
-                toggleDfnPanel(dfnPanel, dfn);
+                toggleDfnPanel(dfnPanel);
                 event.stopPropagation();
                 event.preventDefault();
             }
@@ -1275,9 +1499,11 @@ review, approval, and registration with IANA.</p>
 
         dfnPanel.addEventListener('click', (event) => {
             if (event.target.nodeName == 'A') {
+                scrollToTargetAndHighlight(event);
                 pinDfnPanel(dfnPanel);
             }
             event.stopPropagation();
+            refocusOnTarget(event);
         });
 
         dfnPanel.addEventListener('keydown', (event) => {
@@ -1288,159 +1514,72 @@ review, approval, and registration with IANA.</p>
             }
         })
     }
-}
-</script>
-<script>/* Boilerplate: script-dfn-panel */
-"use strict";
-{
-    const dfnsJson = window.dfnsJson || {};
 
-    function genDfnPanel({dfnID, url, dfnText, refSections, external}) {
-        return mk.aside({
-            class: "dfn-panel",
-            id: `infopanel-for-${dfnID}`,
-            "data-for": dfnID,
-            "aria-labelled-by":`infopaneltitle-for-${dfnID}`,
-            },
-            mk.span({id:`infopaneltitle-for-${dfnID}`, style:"display:none"},
-                `Info about the '${dfnText}' ${external?"external":""} reference.`),
-            mk.a({href:url}, url),
-            mk.b({}, "Referenced in:"),
-            mk.ul({},
-                ...refSections.map(section=>
-                    mk.li({},
-                        ...section.refs.map((ref, refI)=>
-                            [
-                                mk.a({
-                                    href: `#${ref.id}`
-                                    },
-                                    (refI == 0) ? section.title : `(${refI + 1})`
-                                ),
-                                " ",
-                            ]
-                        ),
-                    ),
-                ),
-            ),
+    function refocusOnTarget(event) {
+        const target = event.target;
+        setTimeout(() => {
+            // Refocus on the event.target element.
+            // This is needed after browser scrolls to the destination.
+            target.focus();
+        });
+    }
+
+    // Returns the root-level absolute position {left and top} of element.
+    function getRootLevelAbsolutePosition(el) {
+        const boundsRect = el.getBoundingClientRect();
+        let xPos = 0;
+        let yPos = 0;
+
+        while (el) {
+            let xScroll = el.scrollLeft;
+            let yScroll = el.scrollTop;
+
+            // Ignore scrolling of body.
+            if (el.tagName === "BODY") {
+                xScroll = 0;
+                yScroll = 0;
+            }
+            xPos += (el.offsetLeft - xScroll + el.clientLeft);
+            yPos += (el.offsetTop - yScroll + el.clientTop);
+
+            el = el.offsetParent;
+        }
+        return {
+            left: xPos,
+            top: yPos,
+            right: xPos + boundsRect.width,
+            bottom: yPos + boundsRect.height,
+        };
+    }
+
+    function scrolledIntoView(element) {
+        const rect = element.getBoundingClientRect();
+        return (
+            rect.top > 0 &&
+            rect.bottom < window.innerHeight
         );
     }
 
-    function genAllDfnPanels() {
-        for(const panelData of Object.values(window.dfnpanelData)) {
-            const dfnID = panelData.dfnID;
-            const dfn = document.getElementById(dfnID);
-            if(!dfn) {
-                console.log(`Can't find dfn#${dfnID}.`, panelData);
-            } else {
-                const panel = genDfnPanel(panelData);
-                append(document.body, panel);
-                insertDfnPopupAction(dfn, panel)
+    function scrollToTargetAndHighlight(event) {
+        let hash = event.target.hash;
+        if (hash) {
+            hash = decodeURIComponent(hash.substring(1));
+            const dest = document.getElementById(hash);
+            if (dest) {
+                // Maybe prevent default scroll.
+                if (scrolledIntoView(dest)) {
+                    event.preventDefault();
+                }
+                dest.classList.add('highlighted');
+                setTimeout(() => dest.classList.remove('highlighted'), 1000);
             }
         }
     }
 
-    document.addEventListener("DOMContentLoaded", ()=>{
-        genAllDfnPanels();
-
-        // Add popup behavior to all dfns to show the corresponding dfn-panel.
-        var dfns = queryAll('.dfn-paneled');
-        for(let dfn of dfns) { ; }
-
-        document.body.addEventListener("click", (e) => {
-            // If not handled already, just hide all dfn panels.
-            hideAllDfnPanels();
-        });
-    })
-
-
-    function hideAllDfnPanels() {
-        // Turn off any currently "on" or "activated" panels.
-        queryAll(".dfn-panel.on, .dfn-panel.activated").forEach(el=>hideDfnPanel(el));
-    }
-
-    function showDfnPanel(dfnPanel, dfn) {
-        hideAllDfnPanels(); // Only display one at this time.
-        dfn.setAttribute("aria-expanded", "true");
-        dfnPanel.classList.add("on");
-        dfnPanel.style.left = "5px";
-        dfnPanel.style.top = "0px";
-        const panelRect = dfnPanel.getBoundingClientRect();
-        const panelWidth = panelRect.right - panelRect.left;
-        if (panelRect.right > document.body.scrollWidth) {
-            // Panel's overflowing the screen.
-            // Just drop it below the dfn and flip it rightward instead.
-            // This still wont' fix things if the screen is *really* wide,
-            // but fixing that's a lot harder without 'anchor()'.
-            dfnPanel.style.top = "1.5em";
-            dfnPanel.style.left = "auto";
-            dfnPanel.style.right = "0px";
-        }
-    }
-
-    function pinDfnPanel(dfnPanel) {
-        // Switch it to "activated" state, which pins it.
-        dfnPanel.classList.add("activated");
-        dfnPanel.style.left = null;
-        dfnPanel.style.top = null;
-    }
-
-    function hideDfnPanel(dfnPanel, dfn) {
-        if(!dfn) {
-            dfn = document.getElementById(dfnPanel.getAttribute("data-for"));
-        }
-        dfn.setAttribute("aria-expanded", "false")
-        dfnPanel.classList.remove("on");
-        dfnPanel.classList.remove("activated");
-    }
-
-    function toggleDfnPanel(dfnPanel, dfn) {
-        if(dfnPanel.classList.contains("on")) {
-            hideDfnPanel(dfnPanel, dfn);
-        } else {
-            showDfnPanel(dfnPanel, dfn);
-        }
-    }
-
-    function insertDfnPopupAction(dfn, dfnPanel) {
-        // Find dfn panel
-        const panelWrapper = document.createElement('span');
-        panelWrapper.appendChild(dfnPanel);
-        panelWrapper.style.position = "relative";
-        panelWrapper.style.height = "0px";
-        dfn.insertAdjacentElement("afterend", panelWrapper);
-        dfn.setAttribute('role', 'button');
-        dfn.setAttribute('aria-expanded', 'false')
-        dfn.tabIndex = 0;
-        dfn.classList.add('has-dfn-panel');
-        dfn.addEventListener('click', (event) => {
-            showDfnPanel(dfnPanel, dfn);
-            event.stopPropagation();
-        });
-        dfn.addEventListener('keypress', (event) => {
-            const kc = event.keyCode;
-            // 32->Space, 13->Enter
-            if(kc == 32 || kc == 13) {
-                toggleDfnPanel(dfnPanel, dfn);
-                event.stopPropagation();
-                event.preventDefault();
-            }
-        });
-
-        dfnPanel.addEventListener('click', (event) => {
-            if (event.target.nodeName == 'A') {
-                pinDfnPanel(dfnPanel);
-            }
-            event.stopPropagation();
-        });
-
-        dfnPanel.addEventListener('keydown', (event) => {
-            if(event.keyCode == 27) { // Escape key
-                hideDfnPanel(dfnPanel, dfn);
-                event.stopPropagation();
-                event.preventDefault();
-            }
-        })
-    }
+    window.addEventListener("resize", () => {
+        // Pin any visible dfn panel
+        queryAll(".dfn-panel.on, .dfn-panel.activated").forEach(el=>positionDfnPanel(el));
+    });
 }
 </script>
 <script>/* Boilerplate: script-dfn-panel-json */
@@ -1686,6 +1825,263 @@ function parseHTML(markup) {
 		return el.content;
 	}
 }
+</script>
+<script>/* Boilerplate: script-ref-hints */
+"use strict";
+{
+    function genRefHint(link, ref) {
+        const linkText = link.textContent;
+        let dfnTextElements = '';
+        if (ref.text != linkText) {
+            dfnTextElements =
+                mk.li({},
+                    mk.b({}, "DFN: "),
+                    mk.code({ class: "dfn-text" }, ref.text)
+                );
+        }
+        const forList = ref.for_;
+        const forListElements = forList.length === 0 ? '' : mk.li({},
+            mk.b({}, "For: "),
+            mk.ul({},
+                ...forList.map(forItem =>
+                    mk.li({},
+                        mk.span({}, `${forItem}`)
+                    ),
+                ),
+            ),
+        );
+        const url = ref.url;
+        const safeUrl = encodeURIComponent(url);
+        const hintPanel = mk.aside({
+            class: "ref-hint",
+            id: `ref-hint-for-${safeUrl}`,
+            "data-for": url,
+            "aria-labelled-by": `ref-hint-for-${safeUrl}`,
+        },
+            mk.ul({},
+                dfnTextElements,
+                mk.li({},
+                    mk.b({}, "URL: "),
+                    mk.a({ href: url, class: "ref" }, url),
+                ),
+                mk.li({},
+                    mk.b({}, "Type: "),
+                    mk.span({}, `${ref.type}`),
+                ),
+                mk.li({},
+                    mk.b({}, "Spec: "),
+                    mk.span({}, `${ref.spec ? ref.spec : ''}`),
+                ),
+                forListElements
+            ),
+        );
+        hintPanel.forLink = link;
+        return hintPanel;
+    }
+    function genAllRefHints() {
+        for(const refData of Object.values(window.refsData)) {
+            const refUrl = refData.url;
+            const links = document.querySelectorAll(`a[href="${refUrl}"]`);
+            if (links.length == 0) {
+                console.log(`Can't find link href="${refUrl}".`, refData);
+                continue;
+            }
+            for (let i = 0; i < links.length; i++) {
+                const link = links[i];
+                const hint = genRefHint(link, refData);
+                append(document.body, hint);
+                insertLinkPopupAction(hint)
+            }
+        }
+    }
+
+    function hideAllRefHints() {
+        queryAll(".ref-hint.on").forEach(el=>hideRefHint(el));
+    }
+
+    function hideRefHint(refHint) {
+        const link = refHint.forLink;
+        link.setAttribute("aria-expanded", "false");
+        refHint.style.position = "absolute"; // unfix it
+        refHint.classList.remove("on");
+        const teardown = refHint.teardownEventListeners;
+        if (teardown) {
+            refHint.teardownEventListeners = undefined;
+            teardown();
+        }
+    }
+
+    function showRefHint(refHint) {
+        hideAllRefHints(); // Only display one at this time.
+
+        const link = refHint.forLink;
+        link.setAttribute("aria-expanded", "true");
+        refHint.classList.add("on");
+        positionRefHint(refHint);
+        setupRefHintEventListeners(refHint);
+    }
+
+    function setupRefHintEventListeners(refHint) {
+        if (refHint.teardownEventListeners) return;
+        const link = refHint.forLink;
+        // Add event handlers to hide the refHint after the user moves away
+        // from both the link and refHint, if not hovering either within one second.
+        let timeout = null;
+        const startHidingRefHint = (event) => {
+            if (timeout) {
+                clearTimeout(timeout);
+            }
+            timeout = setTimeout(() => {
+                hideRefHint(refHint);
+            }, 1000);
+        }
+        const resetHidingRefHint = (event) => {
+            if (timeout) clearTimeout(timeout);
+            timeout = null;
+        };
+        link.addEventListener("mouseleave", startHidingRefHint);
+        link.addEventListener("mouseenter", resetHidingRefHint);
+        link.addEventListener("blur", startHidingRefHint);
+        link.addEventListener("focus", resetHidingRefHint);
+        refHint.addEventListener("mouseleave", startHidingRefHint);
+        refHint.addEventListener("mouseenter", resetHidingRefHint);
+        refHint.addEventListener("blur", startHidingRefHint);
+        refHint.addEventListener("focus", resetHidingRefHint);
+
+        refHint.teardownEventListeners = () => {
+            // remove event listeners
+            resetHidingRefHint();
+            link.removeEventListener("mouseleave", startHidingRefHint);
+            link.removeEventListener("mouseenter", resetHidingRefHint);
+            link.removeEventListener("blur", startHidingRefHint);
+            link.removeEventListener("focus", resetHidingRefHint);
+            refHint.removeEventListener("mouseleave", startHidingRefHint);
+            refHint.removeEventListener("mouseenter", resetHidingRefHint);
+            refHint.removeEventListener("blur", startHidingRefHint);
+            refHint.removeEventListener("focus", resetHidingRefHint);
+        };
+    }
+
+    function positionRefHint(refHint) {
+        const link = refHint.forLink;
+        const linkPos = getRootLevelAbsolutePosition(link);
+        refHint.style.top = linkPos.bottom + "px";
+        refHint.style.left = linkPos.left + "px";
+
+        const panelPos = refHint.getBoundingClientRect();
+        const panelMargin = 8;
+        const maxRight = document.body.parentNode.clientWidth - panelMargin;
+        if (panelPos.right > maxRight) {
+            const overflowAmount = panelPos.right - maxRight;
+            const newLeft = Math.max(panelMargin, linkPos.left - overflowAmount);
+            refHint.style.left = newLeft + "px";
+        }
+    }
+
+    // TODO: shared util
+    // Returns the root-level absolute position {left and top} of element.
+    function getRootLevelAbsolutePosition(el) {
+        const boundsRect = el.getBoundingClientRect();
+        let xPos = 0;
+        let yPos = 0;
+
+        while (el) {
+            let xScroll = el.scrollLeft;
+            let yScroll = el.scrollTop;
+
+            // Ignore scrolling of body.
+            if (el.tagName === "BODY") {
+                xScroll = 0;
+                yScroll = 0;
+            }
+            xPos += (el.offsetLeft - xScroll + el.clientLeft);
+            yPos += (el.offsetTop - yScroll + el.clientTop);
+
+            el = el.offsetParent;
+        }
+        return {
+            left: xPos,
+            top: yPos,
+            right: xPos + boundsRect.width,
+            bottom: yPos + boundsRect.height,
+        };
+    }
+
+    function insertLinkPopupAction(refHint) {
+        const link = refHint.forLink;
+        // link.setAttribute('role', 'button');
+        link.setAttribute('aria-expanded', 'false')
+        link.classList.add('has-ref-hint');
+        link.addEventListener('mouseover', (event) => {
+            showRefHint(refHint);
+        });
+        link.addEventListener('focus', (event) => {
+            showRefHint(refHint);
+        })
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        genAllRefHints();
+
+        document.body.addEventListener("click", (e) => {
+            // If not handled already, just hide all link panels.
+            hideAllRefHints();
+        });
+    });
+
+    window.addEventListener("resize", () => {
+        // Hide any open ref hint.
+        hideAllRefHints();
+    });
+}
+</script>
+<script>/* Boilerplate: script-ref-hints-json */
+window.refsData = {};
+window.refsData['https://webidl.spec.whatwg.org/#Exposed'] = {"text": "Exposed", "type": "extended-attribute", "spec": "webidl", "shortname": "webidl", "level": "1", "status": "current", "url": "https://webidl.spec.whatwg.org/#Exposed", "export": true, "normative": true, "for_": []};
+window.refsData['https://webassembly.github.io/spec/js-api/#namespacedef-webassembly'] = {"text": "WebAssembly", "type": "namespace", "spec": "wasmjs", "shortname": "wasmjs", "level": "", "status": "anchor-block", "url": "https://webassembly.github.io/spec/js-api/#namespacedef-webassembly", "export": true, "normative": true, "for_": []};
+window.refsData['https://webidl.spec.whatwg.org/#idl-promise'] = {"text": "Promise", "type": "interface", "spec": "webidl", "shortname": "webidl", "level": "1", "status": "current", "url": "https://webidl.spec.whatwg.org/#idl-promise", "export": true, "normative": true, "for_": []};
+window.refsData['https://webassembly.github.io/spec/js-api/#module'] = {"text": "Module", "type": "interface", "spec": "wasmjs", "shortname": "wasmjs", "level": "", "status": "anchor-block", "url": "https://webassembly.github.io/spec/js-api/#module", "export": true, "normative": true, "for_": []};
+window.refsData['#dom-webassembly-compilestreaming'] = {"text": "compileStreaming(source)", "type": "method", "spec": "wasm-web-api-2", "shortname": "wasm-web-api", "level": "2", "status": "local", "url": "#dom-webassembly-compilestreaming", "export": true, "normative": true, "for_": ["WebAssembly"]};
+window.refsData['https://fetch.spec.whatwg.org/#response'] = {"text": "Response", "type": "interface", "spec": "fetch", "shortname": "fetch", "level": "1", "status": "current", "url": "https://fetch.spec.whatwg.org/#response", "export": true, "normative": true, "for_": []};
+window.refsData['https://webassembly.github.io/spec/js-api/#dictdef-webassemblyinstantiatedsource'] = {"text": "WebAssemblyInstantiatedSource", "type": "interface", "spec": "wasmjs", "shortname": "wasmjs", "level": "", "status": "anchor-block", "url": "https://webassembly.github.io/spec/js-api/#dictdef-webassemblyinstantiatedsource", "export": true, "normative": true, "for_": []};
+window.refsData['#dom-webassembly-instantiatestreaming'] = {"text": "instantiateStreaming(source, importObject)", "type": "method", "spec": "wasm-web-api-2", "shortname": "wasm-web-api", "level": "2", "status": "local", "url": "#dom-webassembly-instantiatestreaming", "export": true, "normative": true, "for_": ["WebAssembly"]};
+window.refsData['https://webidl.spec.whatwg.org/#idl-object'] = {"text": "object", "type": "interface", "spec": "webidl", "shortname": "webidl", "level": "1", "status": "current", "url": "https://webidl.spec.whatwg.org/#idl-object", "export": true, "normative": true, "for_": []};
+window.refsData['#compile-a-potential-webassembly-response'] = {"text": "compile a potential webassembly response", "type": "dfn", "spec": "wasm-web-api-2", "shortname": "wasm-web-api", "level": "2", "status": "local", "url": "#compile-a-potential-webassembly-response", "export": true, "normative": true, "for_": []};
+window.refsData['https://webassembly.github.io/spec/js-api/#instantiate-a-promise-of-a-module'] = {"text": "instantiate a promise of a module", "type": "dfn", "spec": "wasmjs", "shortname": "wasmjs", "level": "", "status": "anchor-block", "url": "https://webassembly.github.io/spec/js-api/#instantiate-a-promise-of-a-module", "export": true, "normative": true, "for_": []};
+window.refsData['https://html.spec.whatwg.org/#cors-same-origin'] = {"text": "cors-same-origin", "type": "dfn", "spec": "html", "shortname": "html", "level": "", "status": "anchor-block", "url": "https://html.spec.whatwg.org/#cors-same-origin", "export": true, "normative": true, "for_": []};
+window.refsData['https://fetch.spec.whatwg.org/#ok-status'] = {"text": "ok status", "type": "dfn", "spec": "fetch", "shortname": "fetch", "level": "1", "status": "current", "url": "https://fetch.spec.whatwg.org/#ok-status", "export": true, "normative": true, "for_": []};
+window.refsData['https://tc39.github.io/ecma262/#sec-native-error-types-used-in-this-standard-typeerror'] = {"text": "TypeError", "type": "exception", "spec": "ecma-262", "shortname": "ecma", "level": "262", "status": "anchor-block", "url": "https://tc39.github.io/ecma262/#sec-native-error-types-used-in-this-standard-typeerror", "export": true, "normative": true, "for_": ["ECMAScript"]};
+window.refsData['https://webassembly.github.io/spec/js-api/#exceptiondef-compileerror'] = {"text": "CompileError", "type": "exception", "spec": "wasmjs", "shortname": "wasmjs", "level": "", "status": "anchor-block", "url": "https://webassembly.github.io/spec/js-api/#exceptiondef-compileerror", "export": true, "normative": true, "for_": []};
+window.refsData['https://webidl.spec.whatwg.org/#a-new-promise'] = {"text": "a new promise", "type": "dfn", "spec": "webidl", "shortname": "webidl", "level": "1", "status": "current", "url": "https://webidl.spec.whatwg.org/#a-new-promise", "export": true, "normative": true, "for_": []};
+window.refsData['https://webidl.spec.whatwg.org/#upon-fulfillment'] = {"text": "upon fulfillment", "type": "dfn", "spec": "webidl", "shortname": "webidl", "level": "1", "status": "current", "url": "https://webidl.spec.whatwg.org/#upon-fulfillment", "export": true, "normative": true, "for_": []};
+window.refsData['https://fetch.spec.whatwg.org/#concept-response-response'] = {"text": "response", "type": "dfn", "spec": "fetch", "shortname": "fetch", "level": "1", "status": "current", "url": "https://fetch.spec.whatwg.org/#concept-response-response", "export": true, "normative": true, "for_": ["Response"]};
+window.refsData['https://fetch.spec.whatwg.org/#concept-header-list-get'] = {"text": "get", "type": "dfn", "spec": "fetch", "shortname": "fetch", "level": "1", "status": "current", "url": "https://fetch.spec.whatwg.org/#concept-header-list-get", "export": true, "normative": true, "for_": ["header list"]};
+window.refsData['https://fetch.spec.whatwg.org/#concept-response-header-list'] = {"text": "header list", "type": "dfn", "spec": "fetch", "shortname": "fetch", "level": "1", "status": "current", "url": "https://fetch.spec.whatwg.org/#concept-response-header-list", "export": true, "normative": true, "for_": ["response"]};
+window.refsData['https://fetch.spec.whatwg.org/#http-tab-or-space-byte'] = {"text": "http tab or space byte", "type": "dfn", "spec": "fetch", "shortname": "fetch", "level": "1", "status": "current", "url": "https://fetch.spec.whatwg.org/#http-tab-or-space-byte", "export": true, "normative": true, "for_": []};
+window.refsData['https://infra.spec.whatwg.org/#byte-case-insensitive'] = {"text": "byte-case-insensitive", "type": "dfn", "spec": "infra", "shortname": "infra", "level": "1", "status": "current", "url": "https://infra.spec.whatwg.org/#byte-case-insensitive", "export": true, "normative": true, "for_": []};
+window.refsData['https://webidl.spec.whatwg.org/#reject'] = {"text": "reject", "type": "dfn", "spec": "webidl", "shortname": "webidl", "level": "1", "status": "current", "url": "https://webidl.spec.whatwg.org/#reject", "export": true, "normative": true, "for_": []};
+window.refsData['https://fetch.spec.whatwg.org/#concept-response-status'] = {"text": "status", "type": "dfn", "spec": "fetch", "shortname": "fetch", "level": "1", "status": "current", "url": "https://fetch.spec.whatwg.org/#concept-response-status", "export": true, "normative": true, "for_": ["response"]};
+window.refsData['https://fetch.spec.whatwg.org/#concept-body-consume-body'] = {"text": "consume body", "type": "dfn", "spec": "fetch", "shortname": "fetch", "level": "", "status": "anchor-block", "url": "https://fetch.spec.whatwg.org/#concept-body-consume-body", "export": true, "normative": true, "for_": []};
+window.refsData['https://tc39.github.io/ecma262/#sec-arraybuffer-objects'] = {"text": "ArrayBuffer", "type": "interface", "spec": "ecma-262", "shortname": "ecma", "level": "262", "status": "anchor-block", "url": "https://tc39.github.io/ecma262/#sec-arraybuffer-objects", "export": true, "normative": true, "for_": []};
+window.refsData['https://webidl.spec.whatwg.org/#dfn-get-buffer-source-copy'] = {"text": "get a copy of the buffer source", "type": "dfn", "spec": "webidl", "shortname": "webidl", "level": "1", "status": "current", "url": "https://webidl.spec.whatwg.org/#dfn-get-buffer-source-copy", "export": true, "normative": true, "for_": []};
+window.refsData['https://webassembly.github.io/spec/js-api/#asynchronously-compile-a-webassembly-module'] = {"text": "asynchronously compile a webassembly module", "type": "dfn", "spec": "wasmjs", "shortname": "wasmjs", "level": "", "status": "anchor-block", "url": "https://webassembly.github.io/spec/js-api/#asynchronously-compile-a-webassembly-module", "export": true, "normative": true, "for_": []};
+window.refsData['https://html.spec.whatwg.org/multipage/webappapis.html#networking-task-source'] = {"text": "networking task source", "type": "dfn", "spec": "html", "shortname": "html", "level": "1", "status": "current", "url": "https://html.spec.whatwg.org/multipage/webappapis.html#networking-task-source", "export": true, "normative": true, "for_": []};
+window.refsData['https://webidl.spec.whatwg.org/#resolve'] = {"text": "resolve", "type": "dfn", "spec": "webidl", "shortname": "webidl", "level": "1", "status": "current", "url": "https://webidl.spec.whatwg.org/#resolve", "export": true, "normative": true, "for_": []};
+window.refsData['https://webidl.spec.whatwg.org/#upon-rejection'] = {"text": "upon rejection", "type": "dfn", "spec": "webidl", "shortname": "webidl", "level": "1", "status": "current", "url": "https://webidl.spec.whatwg.org/#upon-rejection", "export": true, "normative": true, "for_": []};
+window.refsData['https://html.spec.whatwg.org/multipage/structured-data.html#serializable'] = {"text": "Serializable", "type": "extended-attribute", "spec": "html", "shortname": "html", "level": "1", "status": "current", "url": "https://html.spec.whatwg.org/multipage/structured-data.html#serializable", "export": true, "normative": true, "for_": []};
+window.refsData['https://html.spec.whatwg.org/multipage/structured-data.html#serialization-steps'] = {"text": "serialization steps", "type": "dfn", "spec": "html", "shortname": "html", "level": "1", "status": "current", "url": "https://html.spec.whatwg.org/multipage/structured-data.html#serialization-steps", "export": true, "normative": true, "for_": []};
+window.refsData['https://webidl.spec.whatwg.org/#datacloneerror'] = {"text": "DataCloneError", "type": "exception", "spec": "webidl", "shortname": "webidl", "level": "1", "status": "current", "url": "https://webidl.spec.whatwg.org/#datacloneerror", "export": true, "normative": true, "for_": []};
+window.refsData['https://webidl.spec.whatwg.org/#idl-DOMException'] = {"text": "DOMException", "type": "interface", "spec": "webidl", "shortname": "webidl", "level": "1", "status": "current", "url": "https://webidl.spec.whatwg.org/#idl-DOMException", "export": true, "normative": true, "for_": []};
+window.refsData['https://html.spec.whatwg.org/multipage/structured-data.html#sub-serialization'] = {"text": "sub-serialization", "type": "dfn", "spec": "html", "shortname": "html", "level": "1", "status": "current", "url": "https://html.spec.whatwg.org/multipage/structured-data.html#sub-serialization", "export": true, "normative": true, "for_": []};
+window.refsData['https://tc39.github.io/ecma262/#current-realm'] = {"text": "current realm", "type": "dfn", "spec": "ecma-262", "shortname": "ecma", "level": "262", "status": "anchor-block", "url": "https://tc39.github.io/ecma262/#current-realm", "export": true, "normative": true, "for_": []};
+window.refsData['https://tc39.github.io/ecma262/#sec-agent-clusters'] = {"text": "agent cluster", "type": "dfn", "spec": "ecma-262", "shortname": "ecma", "level": "262", "status": "anchor-block", "url": "https://tc39.github.io/ecma262/#sec-agent-clusters", "export": true, "normative": true, "for_": []};
+window.refsData['https://html.spec.whatwg.org/multipage/structured-data.html#deserialization-steps'] = {"text": "deserialization steps", "type": "dfn", "spec": "html", "shortname": "html", "level": "1", "status": "current", "url": "https://html.spec.whatwg.org/multipage/structured-data.html#deserialization-steps", "export": true, "normative": true, "for_": []};
+window.refsData['https://html.spec.whatwg.org/multipage/structured-data.html#sub-deserialization'] = {"text": "sub-deserialization", "type": "dfn", "spec": "html", "shortname": "html", "level": "1", "status": "current", "url": "https://html.spec.whatwg.org/multipage/structured-data.html#sub-deserialization", "export": true, "normative": true, "for_": []};
+window.refsData['https://webassembly.github.io/spec/js-api/#compile-a-webassembly-module'] = {"text": "compile a webassembly module", "type": "dfn", "spec": "wasmjs", "shortname": "wasmjs", "level": "", "status": "anchor-block", "url": "https://webassembly.github.io/spec/js-api/#compile-a-webassembly-module", "export": true, "normative": true, "for_": []};
+window.refsData['https://webassembly.github.io/spec/core/syntax/modules.html#syntax-funcidx'] = {"text": "function index", "type": "dfn", "spec": "webassembly", "shortname": "webassembly", "level": "", "status": "anchor-block", "url": "https://webassembly.github.io/spec/core/syntax/modules.html#syntax-funcidx", "export": true, "normative": true, "for_": []};
+window.refsData['https://webassembly.github.io/spec/js-api/#dom-webassembly-instantiate'] = {"text": "instantiate", "type": "dfn", "spec": "wasmjs", "shortname": "wasmjs", "level": "", "status": "anchor-block", "url": "https://webassembly.github.io/spec/js-api/#dom-webassembly-instantiate", "export": true, "normative": true, "for_": []};
+window.refsData['https://webassembly.github.io/spec/js-api/#exported-function'] = {"text": "exported function", "type": "dfn", "spec": "wasmjs", "shortname": "wasmjs", "level": "", "status": "anchor-block", "url": "https://webassembly.github.io/spec/js-api/#exported-function", "export": true, "normative": true, "for_": []};
+window.refsData['https://webassembly.github.io/spec/core/appendix/custom.html?highlight=name%20section#binary-namesec'] = {"text": "name section", "type": "dfn", "spec": "webassembly", "shortname": "webassembly", "level": "", "status": "anchor-block", "url": "https://webassembly.github.io/spec/core/appendix/custom.html?highlight=name%20section#binary-namesec", "export": true, "normative": true, "for_": []};
 </script>
 <script>/* Boilerplate: script-var-click-highlighting */
 /*
