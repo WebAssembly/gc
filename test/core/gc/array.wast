@@ -152,7 +152,7 @@
   (type $vec (array i8))
   (type $mvec (array (mut i8)))
 
-  (data $d "\00\01\02\0ff\04")
+  (data $d "\00\01\02\ff\04")
 
   (func $new (export "new") (result (ref $vec))
     (array.new_data $vec $d (i32.const 1) (i32.const 3))
