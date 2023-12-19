@@ -193,7 +193,7 @@
 
 (assert_return (invoke "new") (ref.array))
 (assert_return (invoke "new") (ref.eq))
-(assert_return (invoke "get_u" (i32.const 0)) (i32.const 1))
+(assert_return (invoke "get_u" (i32.const 2)) (i32.const 0xff))
 (assert_return (invoke "get_s" (i32.const 2)) (i32.const -1))
 (assert_return (invoke "set_get" (i32.const 1) (i32.const 7)) (i32.const 7))
 (assert_return (invoke "len") (i32.const 3))
