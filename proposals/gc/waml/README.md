@@ -33,7 +33,7 @@ The `waml` implementation encompasses:
 
 The compiler makes use of [most of the constructs](#under-the-hood) in the GC proposal's MVP.
 
-For example, here is a short transcript of a REPL session with [`wob -c -x`](#invocation):
+For example, here is a short transcript of a REPL session with [`waml -c -x`](#invocation):
 ```
 proposals/gc/waml$ ./waml -x -c
 waml 0.1 interpreter
