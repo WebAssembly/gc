@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
-    <title>Validation Algorithm &#8212; WebAssembly 2.0 + tail calls + function references + gc (Draft 2024-01-17)</title>
+    <title>Validation Algorithm &#8212; WebAssembly 2.0 + tail calls + function references + gc (Draft 2024-01-27)</title>
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
     <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
@@ -165,6 +165,25 @@ In the graph representation, all recursive types are effectively infinitely <a c
 <span class="k">func</span> <span class="nf">is_func</span>(<span class="nf">t</span> : comp_type) : bool
 <span class="k">func</span> <span class="nf">is_struct</span>(<span class="nf">t</span> : comp_type) : bool
 <span class="k">func</span> <span class="nf">is_array</span>(<span class="nf">t</span> : comp_type) : bool
+</pre></div>
+</div>
+<p>Finally, the following function computes the least precise supertype of a given <a class="reference internal" href="../syntax/types.html#syntax-heaptype"><span class="std std-ref">heap type</span></a> (its corresponding top type):</p>
+<div class="highlight-pseudo notranslate"><div class="highlight"><pre><span></span><span class="k">func</span> <span class="nf">top_heap_type</span>(<span class="nf">t</span> : heap_type) : heap_type =
+  <span class="k">switch</span> (t)
+    <span class="k">case</span> (Any | Eq | I31 | Struct | Array | None)
+      <span class="k">return</span> Any
+    <span class="k">case</span> (Func | Nofunc)
+      <span class="k">return</span> Func
+    <span class="k">case</span> (Extern | Noextern)
+      <span class="k">return</span> Extern
+    <span class="k">case</span> (Def(dt))
+      <span class="k">switch</span> (dt.rec.types[dt.proj].body)
+        <span class="k">case</span> (Struct(_) | Array(_))
+          <span class="k">return</span> Any
+        <span class="k">case</span> (Func(_))
+          <span class="k">return</span> Func
+    <span class="k">case</span> (Bot)
+      raise CannotOccurInSource
 </pre></div>
 </div>
 </section>
@@ -354,6 +373,11 @@ Other instructions are checked in a similar manner.</p>
     <span class="k">case</span> (ref.as_non_null)
       <span class="k">let</span> <span class="nf">rt</span> = pop_ref()
       push_val(Ref(rt.heap, false))
+
+    <span class="k">case</span> (ref.test rt)
+      validate_ref_type(rt)
+      pop_val(Ref(top_heap_type(rt), true))
+      push_val(I32)
 
     <span class="k">case</span> (local.get x)
       get_local(x)
