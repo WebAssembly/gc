@@ -376,7 +376,7 @@ In contrast,</p>
   \qquad
   \mathit{ft}^\ast[y] = \href{../syntax/types.html#syntax-mut}{\mathit{mut}}~\mathit{st}
   \qquad
-  \href{../syntax/instructions.html#syntax-sx}{\mathit{sx}} = \epsilon \Leftrightarrow \mathit{st} = \href{../syntax/types.html#aux-unpacktype}{\mathrm{unpack}}(\mathit{st})
+  \href{../syntax/instructions.html#syntax-sx}{\mathit{sx}}^? = \epsilon \Leftrightarrow \mathit{st} = \href{../syntax/types.html#aux-unpacktype}{\mathrm{unpack}}(\mathit{st})
 }{
   C \href{../valid/instructions.html#valid-instr}{\vdash} \href{../syntax/instructions.html#syntax-instr-struct}{\mathsf{struct.get}}\mathsf{\_}\href{../syntax/instructions.html#syntax-sx}{\mathit{sx}}^?~x~y : [(\href{../syntax/types.html#syntax-reftype}{\mathsf{ref}}~\href{../syntax/types.html#syntax-reftype}{\mathsf{null}}~x)] \mathrel{\href{../syntax/types.html#syntax-instrtype}{\rightarrow}} [\href{../syntax/types.html#aux-unpacktype}{\mathrm{unpack}}(\mathit{st})]
 }\]</div>
@@ -508,7 +508,7 @@ In contrast,</p>
 \[\frac{
   \href{../valid/conventions.html#aux-expand-deftype}{\mathrm{expand}}(C.\href{../valid/conventions.html#context}{\mathsf{types}}[x]) = \href{../syntax/types.html#syntax-comptype}{\mathsf{array}}~(\href{../syntax/types.html#syntax-mut}{\mathit{mut}}~\mathit{st})
   \qquad
-  \href{../syntax/instructions.html#syntax-sx}{\mathit{sx}} = \epsilon \Leftrightarrow \mathit{st} = \href{../syntax/types.html#aux-unpacktype}{\mathrm{unpack}}(\mathit{st})
+  \href{../syntax/instructions.html#syntax-sx}{\mathit{sx}}^? = \epsilon \Leftrightarrow \mathit{st} = \href{../syntax/types.html#aux-unpacktype}{\mathrm{unpack}}(\mathit{st})
 }{
   C \href{../valid/instructions.html#valid-instr}{\vdash} \href{../syntax/instructions.html#syntax-instr-array}{\mathsf{array.get}}\mathsf{\_}\href{../syntax/instructions.html#syntax-sx}{\mathit{sx}}^?~x : [(\href{../syntax/types.html#syntax-reftype}{\mathsf{ref}}~\href{../syntax/types.html#syntax-reftype}{\mathsf{null}}~x)~\href{../syntax/types.html#syntax-valtype}{\mathsf{i32}}] \mathrel{\href{../syntax/types.html#syntax-instrtype}{\rightarrow}} [\href{../syntax/types.html#aux-unpacktype}{\mathrm{unpack}}(\mathit{st})]
 }\]</div>
