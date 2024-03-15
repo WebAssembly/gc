@@ -1344,7 +1344,7 @@ The :ref:`type system <type-system>` of WebAssembly features both :ref:`subtypin
 That has the effect that every instruction or instruction sequence can be classified with multiple different instruction types.
 
 However, the typing rules still allow deriving *principal types* for instruction sequences.
-That is, every valid instruction sequence has one particular type scheme, possibly containing some unconstrained place holder *type variables*, that is a subtype of all its valid instruction types, after substituting its type variables with suitable specific types.
+That is, every valid instruction sequence has one particular type scheme, possibly containing some place holder *type variables*, that is a subtype of all its valid instruction types, after substituting its type variables with suitable specific types. Type variables may only be constrained by closed upper bounds they must :ref:`match <match>`.
 
 Moreover, when deriving an instruction type in a "forward" manner, i.e., the *input* of the instruction sequence is already fixed to specific types,
 then it has a principal *output* type expressible without type variables, up to a possibly :ref:`polymorphic stack <polymorphism>` bottom representable with one single variable.
@@ -1358,7 +1358,7 @@ In other words, "forward" principal types are effectively *closed*.
 
    A typing algorithm capable of handling *partial* instruction sequences (as might be considered for program analysis or program manipulation)
    needs to introduce type variables and perform substitutions,
-   but it does not need to perform backtracking or record any non-syntactic constraints on these type variables.
+   but it does not need to perform backtracking or record any non-syntactic constraints other than upper bounds on these type variables.
 
 Technically, the :ref:`syntax <syntax-type>` of :ref:`heap <syntax-heaptype>`, :ref:`value <syntax-valtype>`, and :ref:`result <syntax-resulttype>` types can be enriched with type variables as follows:
 
@@ -1373,7 +1373,7 @@ Technically, the :ref:`syntax <syntax-type>` of :ref:`heap <syntax-heaptype>`, :
    \production{value type} & \valtype &::=&
      \dots ~|~ \alpha_{\valtype} ~|~ \alpha_{\X{numvectype}} \\
    \production{result type} & \resulttype &::=&
-     [\alpha_{\valtype^\ast}^?~\valtype^\ast] \\
+     [(\alpha_\valtype \matchesvaltype \valtype)^\ast~\valtype^\ast]~\text{TODO:\ ensure\ bounds\ are\ closed} \\
    \end{array}
 
 where each :math:`\alpha_{\X{xyz}}` ranges over a set of type variables for syntactic class :math:`\X{xyz}`, respectively.
