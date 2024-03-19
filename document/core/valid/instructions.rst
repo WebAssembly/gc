@@ -1960,13 +1960,15 @@ Control Instructions
 
 * Let :math:`[t^\ast]` be the :ref:`result type <syntax-resulttype>` :math:`C.\CLABELS[l]`.
 
-* Then the instruction is valid with type :math:`[t^\ast~\I32] \to [t^\ast]`.
+* Then the instruction is valid with type :math:`[t_1^\ast~\I32] \to [t_1^\ast]` for any :ref:`valid <valid-resulttype>` :ref:`result type <syntax-resulttype>` :math:`[t_1^\ast]` that :ref:`matches <match-resulttype>` :math:`[t^\ast]`.
 
 .. math::
    \frac{
      C.\CLABELS[l] = [t^\ast]
+     \qquad
+     C \vdashresulttypematch [t_1^\ast] \matchesresulttype [t^\ast]
    }{
-     C \vdashinstr \BRIF~l : [t^\ast~\I32] \to [t^\ast]
+     C \vdashinstr \BRIF~l : [t_1^\ast~\I32] \to [t_1^\ast]
    }
 
 .. note::
