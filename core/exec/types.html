@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
-    <title>Types &#8212; WebAssembly 2.0 + tail calls + function references + gc (Draft 2024-04-23)</title>
+    <title>Types &#8212; WebAssembly 2.0 + tail calls + function references + gc (Draft 2024-04-28)</title>
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
     <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
@@ -99,7 +99,7 @@
 <span id="type-inst"></span><span id="index-1"></span><h2>Instantiation<a class="headerlink" href="#instantiation" title="Permalink to this heading">¶</a></h2>
 <p>Any form of <a class="reference internal" href="../syntax/types.html#syntax-type"><span class="std std-ref">type</span></a> can be <em>instantiated</em> into a <a class="reference internal" href="../valid/conventions.html#type-closed"><span class="std std-ref">closed</span></a> type inside a <a class="reference internal" href="runtime.html#syntax-moduleinst"><span class="std std-ref">module instance</span></a> by <a class="reference internal" href="../valid/conventions.html#notation-subst"><span class="std std-ref">substituting</span></a> each <a class="reference internal" href="../syntax/modules.html#syntax-typeidx"><span class="std std-ref">type index</span></a> <span class="math notranslate nohighlight">\(x\)</span> occurring in it with the corresponding <a class="reference internal" href="../valid/conventions.html#syntax-deftype"><span class="std std-ref">defined type</span></a> <span class="math notranslate nohighlight">\(\href{../exec/runtime.html#syntax-moduleinst}{\mathit{moduleinst}}.\href{../exec/runtime.html#syntax-moduleinst}{\mathsf{types}}[x]\)</span>.</p>
 <div class="math notranslate nohighlight">
-\[\href{../exec/types.html#type-inst}{\mathrm{clos}}_{\href{../exec/runtime.html#syntax-moduleinst}{\mathit{moduleinst}}}(t) = t[\href{../syntax/conventions.html#notation-subst}{\mathrel{\mathbf{:=}}} \href{../exec/runtime.html#syntax-moduleinst}{\mathit{moduleinst}}.\href{../exec/runtime.html#syntax-moduleinst}{\mathsf{types}}]\]</div>
+\[\href{../exec/types.html#type-inst}{\mathrm{clos}}_{\href{../exec/runtime.html#syntax-moduleinst}{\mathit{moduleinst}}}(t) = t[\href{../valid/conventions.html#notation-subst}{\mathrel{\mathbf{:=}}} \href{../exec/runtime.html#syntax-moduleinst}{\mathit{moduleinst}}.\href{../exec/runtime.html#syntax-moduleinst}{\mathsf{types}}]\]</div>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>This is the runtime equivalent to <a class="reference internal" href="../valid/conventions.html#type-closure"><span class="std std-ref">type closure</span></a>.</p>

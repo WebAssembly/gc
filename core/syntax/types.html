@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
-    <title>Types &#8212; WebAssembly 2.0 + tail calls + function references + gc (Draft 2024-04-23)</title>
+    <title>Types &#8212; WebAssembly 2.0 + tail calls + function references + gc (Draft 2024-04-28)</title>
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
     <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
@@ -132,7 +132,7 @@ Values of vector type can be stored in <a class="reference internal" href="modul
 </section>
 </section>
 <section id="heap-types">
-<span id="syntax-heaptype"></span><span id="syntax-i31"></span><span id="type-concrete"></span><span id="type-abstract"></span><span id="index-3"></span><h2>Heap Types<a class="headerlink" href="#heap-types" title="Permalink to this heading">¶</a></h2>
+<span id="syntax-absheaptype"></span><span id="syntax-heaptype"></span><span id="syntax-i31"></span><span id="type-concrete"></span><span id="type-abstract"></span><span id="index-3"></span><h2>Heap Types<a class="headerlink" href="#heap-types" title="Permalink to this heading">¶</a></h2>
 <p><em>Heap types</em> classify objects in the runtime <a class="reference internal" href="../exec/runtime.html#store"><span class="std std-ref">store</span></a>.
 There are three disjoint hierarchies of heap types:</p>
 <ul class="simple">
@@ -263,12 +263,19 @@ Structures are heterogeneous, but require static indexing, while arrays need to 
 \def\mathdef2883#1{{}}\mathdef2883{storage type} &amp; \href{../syntax/types.html#syntax-storagetype}{\mathit{storagetype}} &amp;::=&amp;
   \href{../syntax/types.html#syntax-valtype}{\mathit{valtype}} ~|~ \href{../syntax/types.html#syntax-packedtype}{\mathit{packedtype}} \\
 \def\mathdef2883#1{{}}\mathdef2883{packed type} &amp; \href{../syntax/types.html#syntax-packedtype}{\mathit{packedtype}} &amp;::=&amp;
-  \href{../syntax/runtime.html#syntax-storagetype}{\mathsf{i8}} ~|~ \href{../syntax/runtime.html#syntax-storagetype}{\mathsf{i16}} \\
+  \href{../syntax/types.html#syntax-storagetype}{\mathsf{i8}} ~|~ \href{../syntax/types.html#syntax-storagetype}{\mathsf{i16}} \\
 \end{array}\end{split}\]</div>
-<section id="bitwidth-fieldtype">
-<span id="id4"></span><h3>Conventions<a class="headerlink" href="#bitwidth-fieldtype" title="Permalink to this heading">¶</a></h3>
-<ul class="simple">
-<li><p>The notation <span class="math notranslate nohighlight">\(|t|\)</span> for <a class="reference internal" href="#bitwidth-valtype"><span class="std std-ref">bit width</span></a> extends to packed types as well, that is, <span class="math notranslate nohighlight">\(|\href{../syntax/runtime.html#syntax-storagetype}{\mathsf{i8}}| = 8\)</span> and <span class="math notranslate nohighlight">\(|\href{../syntax/runtime.html#syntax-storagetype}{\mathsf{i16}}| = 16\)</span>.</p></li>
+<section id="aux-unpacktype">
+<span id="bitwidth-fieldtype"></span><span id="id4"></span><h3>Conventions<a class="headerlink" href="#aux-unpacktype" title="Permalink to this heading">¶</a></h3>
+<ul>
+<li><p>The notation <span class="math notranslate nohighlight">\(|t|\)</span> for <a class="reference internal" href="#bitwidth-valtype"><span class="std std-ref">bit width</span></a> extends to packed types as well, that is, <span class="math notranslate nohighlight">\(|\href{../syntax/types.html#syntax-storagetype}{\mathsf{i8}}| = 8\)</span> and <span class="math notranslate nohighlight">\(|\href{../syntax/types.html#syntax-storagetype}{\mathsf{i16}}| = 16\)</span>.</p></li>
+<li><p>The auxiliary function <span class="math notranslate nohighlight">\(\href{../syntax/types.html#aux-unpacktype}{\mathrm{unpack}}\)</span> maps a storage type to the <a class="reference internal" href="#syntax-valtype"><span class="std std-ref">value type</span></a> obtained when accessing a field:</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{array}{lll}
+\href{../syntax/types.html#aux-unpacktype}{\mathrm{unpack}}(\href{../syntax/types.html#syntax-valtype}{\mathit{valtype}}) &amp;=&amp; \href{../syntax/types.html#syntax-valtype}{\mathit{valtype}} \\
+\href{../syntax/types.html#aux-unpacktype}{\mathrm{unpack}}(\href{../syntax/types.html#syntax-packedtype}{\mathit{packedtype}}) &amp;=&amp; \href{../syntax/types.html#syntax-valtype}{\mathsf{i32}} \\
+\end{array}\end{split}\]</div>
+</li>
 </ul>
 </section>
 </section>
