@@ -477,18 +477,18 @@ Correspondingly, all allocation and cast instructions will get counter parts tak
 The MVP does not support any type parameters for types or functions (also known as _parametric polymorphism_ or _generics_).
 The only feasible ways to compile source-level polymorphism to the MVP are:
 
-1. via type specialisation and code duplication (also known as _monomorphisation_),
+1. via type specialisation and code duplication (also known as _monomorphization_),
 2. by using a _uniform representation_ (e.g., `anyref`) for all values passed to polymorphic definitions
 
 Both methods have severe limitations:
 
-1. Monomorphisation is only feasible for 2nd-class polymorphism, where use-def relations are statically known. That excludes features like polymorphic methods, polymorphic closures, existential types, GADTs, first-class modules, and other type system features present in many languages. Monomorphisation with such features would require a whole-program analysis and defunctionalisation of polymorphism, which is both complex, more costly at runtime, and giving up on separate compilation and linking. Furthermore, there are features like polymorphic recursion for which even that isn't possible.
+1. Monomorphization is only feasible for 2nd-class polymorphism, where use-def relations are statically known. That excludes features like polymorphic methods, polymorphic closures, existential types, GADTs, first-class modules, and other type system features present in many languages. Monomorphization with such features would require a whole-program analysis and defunctionalisation of polymorphism, which is both complex, more costly at runtime, and giving up on separate compilation and linking. Furthermore, there are features like polymorphic recursion for which even that isn't possible.
 
   For example, the visitor pattern in object-oriented programming requires an `accept` method in every traversable object. In order to enable traversals with varying result types, a visitor, and hence the corresponding`accept` methods, ought to be generic:
   ```
   accept<T>(visitor : Visitor<T>) : T
   ```
-  In languages limited by monomorphisation, such as C++, this pattern typically cannot be expressed and requires cumbersome workarounds (in C++ terminology, template virtual methods are not allowed).
+  In languages limited by monomorphization, such as C++, this pattern typically cannot be expressed and requires cumbersome workarounds (in C++ terminology, template virtual methods are not allowed).
 
   To demonstrate polymorphic recursion, here is a (contrived but simple) OCaml example due to @gasche, tweaked to show that such recursion can imply instantiating other functions and concrete data types at a statically unbounded number of types:
   ```
@@ -507,7 +507,7 @@ Both methods have severe limitations:
 
   let pow2 n = loop n () (fun _ -> 1)
   ```
-  Due to `tree` being nested to arbitrary depth `n` (which may be an input to the program), it is not possible to monomorphise this code. Instead, a compiler would have to detect this case and fall back to a uniform representation for the different instantiations of the type `tree` in the loop -- and all other code it is passed to, such as `sum` (in the limit, this could be almost all of the program).
+  Due to `tree` being nested to arbitrary depth `n` (which may be an input to the program), it is not possible to monomorphize this code. Instead, a compiler would have to detect this case and fall back to a uniform representation for the different instantiations of the type `tree` in the loop -- and all other code it is passed to, such as `sum` (in the limit, this could be almost all of the program).
 
 2. A uniform representation cannot be expressed in the MVP without losing all static type information and thereby requiring costly runtime checks at every use site. For example, if `anyref` is used as the uniform type of all values, passing a value through a polymorphic function will require forgetting its static type on the way in (because the function only takes `anyref`) and recovering it with a downcast on the way out (because the function only returns `anyref`). Worse, any composite type, like tuples, arrays, records, or lists, must be implemented with field and element type `anyref` throughout, because their values could not be passed to a function that is polymorphic in their field or element type otherwise.
 
