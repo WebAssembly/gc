@@ -380,8 +380,8 @@ Other instructions are checked in a similar manner.
        case (br_if n)
          error_if(ctrls.size() < n)
          pop_val(I32)
-         pop_vals(label_types(ctrls[n]))
-         push_vals(label_types(ctrls[n]))
+         let vts = pop_vals(label_types(ctrls[n]))
+         push_vals(vts)
 
        case (br_table n* m)
          pop_val(I32)
