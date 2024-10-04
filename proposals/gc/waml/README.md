@@ -142,7 +142,7 @@ lpath :
   upath '.' lid                            qualified
 
 upath :
-  lid                                      plain
+  uid                                      plain
   upath '.' uid                            qualified
 ```
 
@@ -230,7 +230,7 @@ dec ::=
   'data' uid lid* '=' (uid typ*)|*         algebraic data type
   'module' uid ('(' uid ':' sig ')')* (':' sig)? '=' mod     module
   'signature' uid '=' sig                  signature
-  'rec' dec (and' dec)*                    recursion
+  'rec' dec ('and' dec)*                   recursion
   'include' mod                            inclusion
 ```
 Notes:
