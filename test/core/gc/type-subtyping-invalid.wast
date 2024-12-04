@@ -12,8 +12,8 @@
   (module
     ;; When fields are const, a subtype's reference fields cannot be supertypes of
     ;; the supertype's fields, they must be subtypes.
-    (type $a (sub    (struct (field (mut (ref null none))))))
-    (type $b (sub $a (struct (field (mut (ref null any))))))
+    (type $a (sub    (struct (field (ref null none)))))
+    (type $b (sub $a (struct (field (ref null any)))))
   )
   "sub type 1 does not match super type"
  )
