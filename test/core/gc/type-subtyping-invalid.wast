@@ -19,19 +19,19 @@
  )
 
 (assert_invalid
- (module
-   ;; The mutability of fields must be the same.
-   (type $c (sub    (struct (field (mut (ref null any))))))
-   (type $d (sub $c (struct (field      (ref null none)))))
+  (module
+    ;; The mutability of fields must be the same.
+    (type $c (sub    (struct (field (mut (ref null any))))))
+    (type $d (sub $c (struct (field      (ref null any)))))
   )
   "sub type 1 does not match super type"
 )
 
 (assert_invalid
- (module
-   ;; The mutability of fields must be the same.
-   (type $c (sub    (struct (field      (ref null any)))))
-   (type $d (sub $c (struct (field (mut (ref null none))))))
+  (module
+    ;; The mutability of fields must be the same.
+    (type $c (sub    (struct (field      (ref null any)))))
+    (type $d (sub $c (struct (field (mut (ref null any))))))
   )
   "sub type 1 does not match super type"
 )
