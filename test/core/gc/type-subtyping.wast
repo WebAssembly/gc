@@ -280,12 +280,12 @@
   )
 )
 (assert_return (invoke "run"))
-(assert_trap (invoke "fail1") "indirect call")
-(assert_trap (invoke "fail2") "indirect call")
-(assert_trap (invoke "fail3") "indirect call")
-(assert_trap (invoke "fail4") "cast")
-(assert_trap (invoke "fail5") "cast")
-(assert_trap (invoke "fail6") "cast")
+(assert_trap (invoke "fail1") "indirect call type mismatch")
+(assert_trap (invoke "fail2") "indirect call type mismatch")
+(assert_trap (invoke "fail3") "indirect call type mismatch")
+(assert_trap (invoke "fail4") "cast failure")
+(assert_trap (invoke "fail5") "cast failure")
+(assert_trap (invoke "fail6") "cast failure")
 
 (module
   (type $t1 (sub (func)))
@@ -311,10 +311,10 @@
     (drop)
   )
 )
-(assert_trap (invoke "fail1") "indirect call")
-(assert_trap (invoke "fail2") "indirect call")
-(assert_trap (invoke "fail3") "cast")
-(assert_trap (invoke "fail4") "cast")
+(assert_trap (invoke "fail1") "indirect call type mismatch")
+(assert_trap (invoke "fail2") "indirect call type mismatch")
+(assert_trap (invoke "fail3") "cast failure")
+(assert_trap (invoke "fail4") "cast failure")
 
 (module
   (type $t1 (sub (func)))
@@ -608,7 +608,7 @@
     (rec (type $g1 (sub $f1 (func))) (type (struct)))
     (func (import "M5" "g") (type $g1))
   )
-  "incompatible import"
+  "incompatible import type"
 )
 
 (module
@@ -700,7 +700,7 @@
     (rec (type $f11 (sub (func))) (type $f12 (sub $f11 (func))))
     (func (import "M10" "f") (type $f11))
   )
-  "incompatible import"
+  "incompatible import type"
 )
 
 (module
@@ -716,7 +716,7 @@
     (rec (type $f11 (sub (func))) (type $f12 (sub $f01 (func))))
     (func (import "M11" "f") (type $f11))
   )
-  "incompatible import"
+  "incompatible import type"
 )
 
 
