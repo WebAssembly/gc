@@ -16,7 +16,7 @@ WASMFILES = Makefile dune dune-project $(shell cd $(WASMBASE); ls $(foreach DIR,
 
 WASMDIR =		_wasm
 WASMDEPS =	$(WASMFILES:%=$(WASMDIR)/%)
-WASMTESTDIR =	$(WASMBASE)/../test/corel
+WASMTESTDIR =	$(WASMBASE)/../test/core
 
 
 WASMLINK =	wln
